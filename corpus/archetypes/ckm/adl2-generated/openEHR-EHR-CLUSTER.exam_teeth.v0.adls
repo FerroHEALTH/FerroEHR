@@ -1,0 +1,371 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b3738091-4e8b-48a3-9434-28038661fd06; build_uid=774bce3d-fa13-4c58-9d96-595ea3cdd3fa)
+    openEHR-EHR-CLUSTER.exam_teeth.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::ja]>
+
+description
+    original_author = <
+        ["name"] = <"">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"113CCC7E715601E5E93DA9215AD1DFCA">
+    >
+    details = <
+        ["ja"] = <
+            language = <[ISO_639-1::ja]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© Takahiro Nakahara
+Shinji Kobayashi
+© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Examination of teeth
+        items cardinality matches {1..*; unordered} matches {
+            CLUSTER[at0001] occurrences matches {0..1} matches {    -- Specific findings
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Type
+                        value matches {
+                            DV_CODED_TEXT[at9001] matches {
+                                defining_code matches {[ac9000]}    -- Type (synthesised)
+                            }
+                        }
+                    }
+                    CLUSTER[at0003] occurrences matches {0..1} matches {    -- Plaque
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Status
+                                value matches {
+                                    DV_TEXT[at9002]
+                                }
+                            }
+                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Aspect
+                                value matches {
+                                    DV_TEXT[at9003]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Missing
+                        value matches {
+                            DV_BOOLEAN[at9004] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Atrition
+                        value matches {
+                            DV_BOOLEAN[at9005] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0008] occurrences matches {0..1} matches {    -- Dislocation
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Present
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Direction
+                        value matches {
+                            DV_TEXT[at9007]
+                        }
+                    }
+                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Axis
+                        value matches {
+                            DV_TEXT[at9008]
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0012] occurrences matches {0..1} matches {    -- Treated
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Crown
+                        value matches {
+                            DV_TEXT[at9009]
+                        }
+                    }
+                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Filling
+                        value matches {
+                            DV_TEXT[at9010]
+                        }
+                    }
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Inlay
+                        value matches {
+                            DV_TEXT[at9011]
+                        }
+                    }
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9012]
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0017] occurrences matches {0..1} matches {    -- Caries
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Decayed
+                        value matches {
+                            DV_TEXT[at9013]
+                        }
+                    }
+                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Depth
+                        value matches {
+                            DV_QUANTITY[at9014]
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0020] occurrences matches {0..1} matches {    -- Congenital anomaly
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Present
+                        value matches {
+                            DV_TEXT[at9015]
+                        }
+                    }
+                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9016]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0023] occurrences matches {0..1} matches {    -- No abnormality detected
+                value matches {
+                    DV_BOOLEAN[at9017] matches {
+                        value matches {True, False}
+                    }
+                }
+            }
+            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Clinical description
+                value matches {
+                    DV_TEXT[at9018]
+                }
+            }
+            allow_archetype ELEMENT[at0025] matches {    -- Examination findings
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype ELEMENT[at0026] matches {    -- Examination not done
+                include
+                    archetype_id/value matches {/openEHR-EHR-ELEMENT\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            CLUSTER[at0027] occurrences matches {0..1} matches {    -- Teeth examined
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9019]
+                        }
+                    }
+                    allow_archetype ELEMENT[at0029] matches {    -- Anotomical location
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+            ELEMENT[at0030] occurrences matches {0..1} matches {    -- Shape
+                value matches {
+                    DV_TEXT[at9020]
+                }
+            }
+            ELEMENT[at0031] occurrences matches {0..1} matches {    -- Colour
+                value matches {
+                    DV_TEXT[at9021]
+                }
+            }
+            allow_archetype ELEMENT[at0032] matches {    -- Multimedia representation
+                include
+                    archetype_id/value matches {/openEHR-EHR-ELEMENT\.multimedia(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0033] occurrences matches {0..1} matches {    -- Clinical interpretation
+                value matches {
+                    DV_TEXT[at9022]
+                }
+            }
+            ELEMENT[at0034] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9023]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["ja"] = <
+            ["at0000"] = <
+                text = <"Examination of teeth">
+                description = <"unknown">
+            >
+            ["at0001"] = <
+                text = <"Specific findings">
+                description = <"*">
+            >
+            ["at0002"] = <
+                text = <"Type">
+                description = <"*">
+            >
+            ["at0003"] = <
+                text = <"Plaque">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Status">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"Aspect">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"Missing">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Atrition">
+                description = <"*">
+            >
+            ["at0008"] = <
+                text = <"Dislocation">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"Present">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Direction">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"Axis">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Treated">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"Crown">
+                description = <"*">
+            >
+            ["at0014"] = <
+                text = <"Filling">
+                description = <"*">
+            >
+            ["at0015"] = <
+                text = <"Inlay">
+                description = <"*">
+            >
+            ["at0016"] = <
+                text = <"Description">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"Caries">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"Decayed">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"Depth">
+                description = <"*">
+            >
+            ["at0020"] = <
+                text = <"Congenital anomaly">
+                description = <"*">
+            >
+            ["at0021"] = <
+                text = <"Present">
+                description = <"*">
+            >
+            ["at0022"] = <
+                text = <"Description">
+                description = <"*">
+            >
+            ["at0023"] = <
+                text = <"No abnormality detected">
+                description = <"*">
+            >
+            ["at0024"] = <
+                text = <"Clinical description">
+                description = <"*">
+            >
+            ["at0025"] = <
+                text = <"Examination findings">
+                description = <"*">
+            >
+            ["at0026"] = <
+                text = <"Examination not done">
+                description = <"*">
+            >
+            ["at0027"] = <
+                text = <"Teeth examined">
+                description = <"*">
+            >
+            ["at0028"] = <
+                text = <"Description">
+                description = <"*">
+            >
+            ["at0029"] = <
+                text = <"Anotomical location">
+                description = <"*">
+            >
+            ["at0030"] = <
+                text = <"Shape">
+                description = <"*">
+            >
+            ["at0031"] = <
+                text = <"Colour">
+                description = <"*">
+            >
+            ["at0032"] = <
+                text = <"Multimedia representation">
+                description = <"*">
+            >
+            ["at0033"] = <
+                text = <"Clinical interpretation">
+                description = <"*">
+            >
+            ["at0034"] = <
+                text = <"Comment">
+                description = <"*">
+            >
+            ["at0035"] = <
+                text = <"Permanent">
+                description = <"*">
+            >
+            ["at0036"] = <
+                text = <"Diciduous">
+                description = <"*">
+            >
+            ["at0037"] = <
+                text = <"Implanted">
+                description = <"*">
+            >
+            ["ac9000"] = <
+                text = <"Type (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0035", "at0036", "at0037">
+        >
+    >

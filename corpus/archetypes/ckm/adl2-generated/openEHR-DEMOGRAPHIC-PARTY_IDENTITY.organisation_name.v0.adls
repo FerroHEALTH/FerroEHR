@@ -1,0 +1,268 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1fa0438c-489e-4343-8200-61b54fb4168c; build_uid=4f750b46-c402-4ae8-89a0-1435fef8df3d)
+    openEHR-DEMOGRAPHIC-PARTY_IDENTITY.organisation_name.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            author = <
+                ["name"] = <"Seung-Jong Yu">
+                ["organisation"] = <"NOUSCO Co.,Ltd.">
+            >
+            accreditation = <"Certified Board of Family Medicine in South Korea">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Sergio Miranda Freire">
+                ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+                ["email"] = <"sergio@lampada.uerj.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sergio Miranda Freire & Rigoleta Dutra Mediano Dias">
+        ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+        ["email"] = <"sergio@lampada.uerj.br">
+        ["date"] = <"2009-05-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Rigoleta Dutra, Ministry of Defense, Brazil (openEHR Editor)", "Sergio Freire, State University of Rio de Janeiro, Brazil (openEHR Editor)", "Sebastian Garde, Ocean Informatics, Germany (Editor)", "Omer Hotomaroglu, Turkey (Editor)", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"ISO/DTS 27527:2007(E) - Provider Identification - Draft Technnical Specification - International Organization for Standardization">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"9457782903D514145D6E98E21795F45B">
+    >
+    details = <
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            purpose = <"기관 이름의 표현.">
+            keywords = <"*인적정보 서비스(ko)", "*기관 이름(ko)">
+            use = <"기관 이름을 표현하는 인적정보 서비스에서 사용됨.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Representação do nome de uma Organização.">
+            keywords = <"serviço demográfico", "nome da organização">
+            use = <"Usado em serviços de demografia para coletar dados sobre o nome de uma organização.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Representation of an organisation name.">
+            keywords = <"demographic service", "organisation name">
+            use = <"Used in demographic services to represent an organisation name.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    PARTY_IDENTITY[at0000] matches {    -- Organisation name
+        name matches {
+            DV_TEXT[at9006]
+            DV_CODED_TEXT[at9007] matches {
+                defining_code matches {[ac9001]}    -- Organisation name (synthesised)
+            }
+        }
+        details matches {
+            ITEM_TREE[at0001] matches {    -- Items
+                items cardinality matches {2} matches {
+                    ELEMENT[at0010] occurrences matches {1} matches {    -- Name
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                    ELEMENT[at0011] occurrences matches {1} matches {    -- Identifier
+                        value matches {
+                            DV_TEXT[at9005]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["ko"] = <
+            ["at0000"] = <
+                text = <"기관 이름">
+                description = <"기관 이름.">
+            >
+            ["at0001"] = <
+                text = <"항목">
+                description = <"식별 컴포넌트.">
+            >
+            ["at0010"] = <
+                text = <"이름">
+                description = <"기관이 알려지거나 연락받는 이름.">
+            >
+            ["at0011"] = <
+                text = <"식별자">
+                description = <"기관의 이름의 유일한 식별자.">
+            >
+            ["at0020"] = <
+                text = <"기관 유니트/섹션/디비젼 이름">
+                description = <"기관 내에서 자체 분리된 식별을 갖는 사업 유니트, 섹션 또는 디비젼에서 사용됨.">
+            >
+            ["at0021"] = <
+                text = <"서비스 위치 이름">
+                description = <"서비스 위치 이름이 기관 이름의 중요한 부분이고 식별 목적을 위해 사용되는 곳에서 사용됨. 예. Mobile immunization Unit at Bankstown.">
+            >
+            ["at0022"] = <
+                text = <"비즈니스 이름">
+                description = <"거래 목적으로만 사용되는 비즈니스 이름.">
+            >
+            ["at0023"] = <
+                text = <"지역적으로 사용되는 이름">
+                description = <"지역 이름을 위해 사용됨, 예. 회사 등록 이름이나 비즈니스 이름과 차이가 있는 이름에 의해 알려진 의료행위를 하는 곳.">
+            >
+            ["at0024"] = <
+                text = <"이름 약자">
+                description = <"기관이 알려진 이름 약자, 예. HIC.">
+            >
+            ["at0025"] = <
+                text = <"사업 이름">
+                description = <"일반적으로 완전한 기관 이름은 식별의 모호성을 피하기위해 사용되어야 함. 이것은 보통 회사 등록 이름과 같음.">
+            >
+            ["at0026"] = <
+                text = <"기타">
+                description = <"기관 이름이 위에 나열된 범주 중에 하나에 맞지 않을 때 사용됨.">
+            >
+            ["at0027"] = <
+                text = <"모름">
+                description = <"기관 이름 타입을 모를 때 사용됨.">
+            >
+            ["ac9001"] = <
+                text = <"기관 이름 (synthesised)">
+                description = <"기관 이름. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Nome da organização">
+                description = <"Nome da organização.">
+            >
+            ["at0001"] = <
+                text = <"Itens">
+                description = <"Itens que compõem a identificação da organização.">
+            >
+            ["at0010"] = <
+                text = <"Nome">
+                description = <"O nome pelo qual a organização é conhecida.">
+            >
+            ["at0011"] = <
+                text = <"Identificador">
+                description = <"O identificador único deste nome para esta organização.">
+            >
+            ["at0020"] = <
+                text = <"Nome da unidade/seção/divisão organizacional">
+                description = <"Usado onde uma unidade, seção, ou divisão dentro da organização pode ter a sua própria identidade separada.">
+            >
+            ["at0021"] = <
+                text = <"Nome da localização do serviço">
+                description = <"Usado onde o nome da localização do serviço for uma parte importante do nome da organização, por exemplo, Unidade de Imunização Móvel em Caxias.">
+            >
+            ["at0022"] = <
+                text = <"Nome comercial">
+                description = <"Nome comercial usado somente para finalidades comerciais.">
+            >
+            ["at0023"] = <
+                text = <"Nome usado localmente">
+                description = <"Para nomes usado localmente, por exemplo, onde uma instalação médica é conhecida por um nome que é diferente do nome de registro ou nome comercial da empresa.">
+            >
+            ["at0024"] = <
+                text = <"Nome abreviado">
+                description = <"Um nome curto ou abreviado pelo qual a organização é conhecida, por exemplo, INCA.">
+            >
+            ["at0025"] = <
+                text = <"Nome da empresa">
+                description = <"Geralmente o nome completo da organização deve ser usado para evitar qualquer ambiguidade na identificação. Este deve ser usualmente o mesmo que o nome de registro da empresa.">
+            >
+            ["at0026"] = <
+                text = <"Outro">
+                description = <"Usado quando o nome da organização não se enquadra em nenhuma das categorias listadas acima.">
+            >
+            ["at0027"] = <
+                text = <"Desconhecido">
+                description = <"Usado quando o tipo de nome da organização for desconhecido.">
+            >
+            ["ac9001"] = <
+                text = <"Nome da organização (synthesised)">
+                description = <"Nome da organização. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Organisation name">
+                description = <"An organisation name.">
+            >
+            ["at0001"] = <
+                text = <"Items">
+                description = <"Identification components.">
+            >
+            ["at0010"] = <
+                text = <"Name">
+                description = <"The name by which an organisation is known or called.">
+            >
+            ["at0011"] = <
+                text = <"Identifier">
+                description = <"The unique identifier of this name for this organisation.">
+            >
+            ["at0020"] = <
+                text = <"Organisational unit/section/division name">
+                description = <"Used where a business unit, section, or division within an organisation mat have its own separate identity.">
+            >
+            ["at0021"] = <
+                text = <"Service location name">
+                description = <"Used where the service location name is an important part of the organisation name and is used for identification purposes, e.g. Mobile immunization Unit at Bankstown.">
+            >
+            ["at0022"] = <
+                text = <"Business name">
+                description = <"Business name used only for trading purposes.">
+            >
+            ["at0023"] = <
+                text = <"Locally used name">
+                description = <"Used for local names, e.g. where a medical practice is known by a name that is different from the company registration name or business name.">
+            >
+            ["at0024"] = <
+                text = <"Abbreviated name">
+                description = <"A short name or an abbreviated name by which the organisation is known, e.g., HIC.">
+            >
+            ["at0025"] = <
+                text = <"Enterprise name">
+                description = <"Generally the complete organisation name should be used to avoid any ambiguity in identification. This should usually be the same as the company registration name.">
+            >
+            ["at0026"] = <
+                text = <"Other">
+                description = <"Used when the organisation name does not fit into any one of the categories listed above.">
+            >
+            ["at0027"] = <
+                text = <"Unknown">
+                description = <"Used when the organisation name type is unknown.">
+            >
+            ["ac9001"] = <
+                text = <"Organisation name (synthesised)">
+                description = <"An organisation name. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0020", "at0021", "at0022", "at0023", "at0024", "at0025", "at0026", "at0027">
+        >
+    >

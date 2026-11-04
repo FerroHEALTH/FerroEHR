@@ -1,0 +1,109 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=85c135b8-e444-4036-8c29-7dce613f43f8; build_uid=0618eb09-bd30-4abc-b4e2-2da95ddac9df)
+    openEHR-EHR-CLUSTER.empower_stress.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ilias Lamprinos">
+        ["organisation"] = <"Intracom Telecom">
+        ["email"] = <"labil@intracom.gr">
+        ["date"] = <"2012-12-03">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Hans Demski, Helmholtz Zentrum München GmbH, demski@helmholtz-muenchen.de", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Hans Demski, Helmholtz Zentrum München GmbH, demski@helmholtz-muenchen.de">
+        ["MD5-CAM-1.0.1"] = <"706605CBDFA44C71BC332556F646D0FB">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"This archetype is used to facilitate recording of the perceived level of stress of a subject.
+
+Based on the data model developed within the EMPOWER project, www.empower-fp7,eu.">
+            use = <"Self-assesment of the subject's level of stress, as an observation of daily living.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Stress Level (EMPOWER)
+        items cardinality matches {1; unordered} matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- Stress
+                value matches {
+                    DV_ORDINAL[at9001] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0005]}],    -- Peaceful
+                            [{1}, {[at0006]}],    -- Calm
+                            [{2}, {[at0007]}],    -- Worried
+                            [{3}, {[at0008]}],    -- Nervous
+                            [{4}, {[at0009]}]    -- Stressful
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Stress Level (EMPOWER)">
+                description = <"Stress level provides a description of the perceived stress level.">
+            >
+            ["at0001"] = <
+                text = <"Stress">
+                description = <"Indicates the level of stress as perceived by the patient.">
+            >
+            ["at0005"] = <
+                text = <"Peaceful">
+                description = <"Feeling peaceful.">
+            >
+            ["at0006"] = <
+                text = <"Calm">
+                description = <"Feeling calm.">
+            >
+            ["at0007"] = <
+                text = <"Worried">
+                description = <"Feeling worried.">
+            >
+            ["at0008"] = <
+                text = <"Nervous">
+                description = <"Feeling nervous.">
+            >
+            ["at0009"] = <
+                text = <"Stressful">
+                description = <"Feeling stressful.">
+            >
+            ["ac9001"] = <
+                text = <"Stress (synthesised)">
+                description = <"Indicates the level of stress as perceived by the patient. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["MTH"] = <
+            ["at0000"] = <http://MTH.org/id/C1319127>
+            ["at0001"] = <http://MTH.org/id/C1319127>
+            ["at0005"] = <http://MTH.org/id/C0516623>
+            ["at0006"] = <http://MTH.org/id/C0522165>
+            ["at0007"] = <http://MTH.org/id/C0850735>
+            ["at0008"] = <http://MTH.org/id/C0849963>
+            ["at0009"] = <http://MTH.org/id/C0231297>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009">
+        >
+    >

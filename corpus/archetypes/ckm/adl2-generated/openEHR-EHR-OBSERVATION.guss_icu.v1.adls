@@ -1,0 +1,728 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=69bc35a5-0268-4369-b85f-088414f94f33; build_uid=e4f8ce23-eec0-406c-a64f-96bb6cf499fa)
+    openEHR-EHR-OBSERVATION.guss_icu.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand">
+                ["organisation"] = <"Helse Vest IKT">
+                ["email"] = <"john.tore.valand@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"John Tore Valand">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["email"] = <"john.tore.valand@helse-vest-ikt.no">
+        ["date"] = <"2025-02-03">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Stein Arne Rimehaug, Sunnaas sykehus, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Keisha Barwise, openEHR Operations Program, Jamaica", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Martin Brierley, Lovisenberg Diakonale Sykehus, Norway", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "Inger Elise Engelund, Fagsenter for pasientrapporterte data, Helse Bergen HF, Norway", "Kristina Fjone, Oslo universitetssykehus, Norway", "Brita Fosser Olsen, Sykehuset Østfold, Norway", "Aleksander Furnes, Helse Nord IKT, Norway", "Ciprian Gerstenberger, Helse Nord IKT, Norway", "Tore Gravdal, Tietoevry Care, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Matteus Janicki, Akershus Universitetssykehus, Norway", "June Marie Nepstad Knappskog, Helse Nord IKT AS, Norway (openEHR Editor)", "Anne Kristine Brekka, SSHF, Norway", "Kanika Kuwelker, Helse Vest IKT, Norway", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Eli Larsen, UNN, Norway (openEHR Editor)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Jonas Lyshaug, FSE/ HN IKT, Norway", "Charlotte Marie Schanke, Oslo Universitetssykehus, Norway", "Andjela Marjanovic, Better, Slovenia", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Marlene Pérez Colman, Digital Health and Care Wales, United Kingdom", "Vuk Radnić, Better, Slovenia", "Terje Sagmyr, Helse Vest IKT, Norway (openEHR Editor)", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)", "Elizaveta Yurchenko, GKU IAC at Department of Information Technologies of the city of Moscow (DIT Moscow), Russia", "Karsten Øvretveit, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Troll C, Trapl‐Grundschober M, Teuschl Y, Cerrito A, Compte MG, Siegemund M. A bedside swallowing screen for the identification of post‐extubation dysphagia on the intensive care unit ‐ validation of">
+        ["2"] = <"the Gugging Swallowing Screen (GUSS)‐ICU. BMC Anesthesiol. 2023;23:122. doi: 10.1186/s12871‐023‐0207">
+        ["3"] = <"University for Continuing Education Krems. GUSS - Gugging Swallowing Screen [Internet]. [cited 2025 September 05]. Available from: https://www.donau-uni.ac.at/en/university/faculties/health-medicine/departments/clinical-neurosciences-preventive-medicine/research/research-projects/guss/guss-translations-icu.html">
+        ["4"] = <"Brierley M, Seidler Krone V, Troll C, Trapl‐Grundschober M. Gugging Swallow Screen for Intensive Care Units (GUSS‐ICU) – Norsk revidert versjon (Norwegian revised version). Res Gate. 2023 Sep. doi: 10.13140/RG.2.2.17273.44648.">
+        ["5"] = <"The IDDSI Framwork. International Dysphagia Standardization Initiative. Retrieved from: https://www.iddsi.org/standards/framework">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"D277D6D72CC3FC1AF016FC9F2E641CC4">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere resultatene for hver enkelt parameter og totalskår for Gugging Swallowing Screen for Intensive Care Units (GUSS-ICU).
+">
+            keywords = <"svelging, dysfagi, aspirasjon, intensivavdeling, slag, ekstubasjon", ...>
+            use = <"Brukes for å registrere resultatene for hver enkelt parameter og totalskår for Gugging Swallowing Screen for Intensive Care Units (GUSS-ICU).
+
+openEHR-arketyper er fritt tilgjengelige under en åpen lisens, men det spesifikke innholdet i denne Gugging Swallowing Screen for Intensive Care Units (GUSS-ICU)-arketypen er antatt opphavsrettslig beskyttet. All bruk av denne arketypen i implementasjoner må gjøres i henhold til eventuelle vilkår gitt av innehaverne av opphavsretten.
+ 
+Informasjon om opphavsrett: GUSS - Gugging Swallowing Screen - University for Continuing Education Krems [Internet], available from https://www.donau-uni.ac.at/en/university/faculties/health-medicine/departments/health-sciences-medicine-research/clinical-neurosciences/research/research-projects/guss/guss-icu.html">
+            misuse = <"Skal ikke brukes for å registrere resultatene for Gugging Swallowing Screen (GUSS). Bruk arketypen OBSERVATION.guss til dette formålet.
+">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the result for each component parameter and the total sum for the Gugging Swallowing Screen for Intensive Care Units (GUSS-ICU).">
+            keywords = <"dysphagia, aspiration, swallowing, ICU, intensive care unit, stroke, extubation", ...>
+            use = <"Use to record the result for each component parameter and their total sum for the Gugging Swallowing Screen for Intensive Care Units (GUSS-ICU).
+
+While openEHR archetypes are all freely available under an open license, the specific content of this Gugging Swallowing Screen for Intensive Care Units (GUSS-ICU) archetype is assumed to be copyright protected, although the terms of copyright are not known at the time of publication. Any use of this archetype within implementations must be in compliance with any terms established by the copyright owners. 
+
+Copyright information: Gugging Swallowing Screen for Intensive Care Units (GUSS-ICU) - University for Continuing Education Krems [Internet], available from https://www.donau-uni.ac.at/en/university/faculties/health-medicine/departments/health-sciences-medicine-research/clinical-neurosciences/research/research-projects/guss/guss-icu.html.">
+            misuse = <"Not to be used to record the Gugging Swallowing Screen (GUSS). Use the OBSERVATION.guss archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Gugging Swallowing Screen for Intensive Care Units (GUSS - ICU)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    CLUSTER[at0004] occurrences matches {0..1} matches {    -- Preliminary Investigation / Indirect Swallowing Test
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- RASS from 0 to +2
+                                                value matches {
+                                                    DV_ORDINAL[at9011] matches {
+                                                        [value, symbol] matches {
+                                                            [{1}, {[at0006]}],    -- Yes
+                                                            [{0}, {[at0007]}]    -- No
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0035] occurrences matches {0..1} matches {    -- Stridor present
+                                                value matches {
+                                                    DV_ORDINAL[at9012] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0036]}],    -- Yes
+                                                            [{1}, {[at0037]}]    -- No
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Coughing and/or throat clearing efficiently
+                                                value matches {
+                                                    DV_ORDINAL[at9013] matches {
+                                                        [value, symbol] matches {
+                                                            [{1}, {[at0012]}],    -- Yes
+                                                            [{0}, {[at0013]}]    -- No
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Swallowing saliva possible
+                                                value matches {
+                                                    DV_ORDINAL[at9014] matches {
+                                                        [value, symbol] matches {
+                                                            [{1}, {[at0014]}],    -- Yes
+                                                            [{0}, {[at0015]}]    -- No
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Drooling (saliva)
+                                                value matches {
+                                                    DV_ORDINAL[at9015] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0016]}],    -- Yes
+                                                            [{1}, {[at0017]}]    -- No
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Change of voice after swallowing saliva
+                                                value matches {
+                                                    DV_ORDINAL[at9016] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0018]}],    -- Yes
+                                                            [{1}, {[at0019]}]    -- No
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0020] occurrences matches {0..1} matches {    -- Sum
+                                                value matches {
+                                                    DV_COUNT[at9017] matches {
+                                                        magnitude matches {|0..6|}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0021] occurrences matches {0..1} matches {    -- Direct Swallowing Test (4 subtests)
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Semisolid
+                                                value matches {
+                                                    DV_ORDINAL[at9018] matches {
+                                                        [value, symbol] matches {
+                                                            [{1}, {[at0039]}],    -- Pass
+                                                            [{0}, {[at0040]}]    -- Fail
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Liquids
+                                                value matches {
+                                                    DV_ORDINAL[at9019] matches {
+                                                        [value, symbol] matches {
+                                                            [{1}, {[at0047]}],    -- Pass
+                                                            [{0}, {[at0048]}]    -- Fail
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Solids
+                                                value matches {
+                                                    DV_ORDINAL[at9020] matches {
+                                                        [value, symbol] matches {
+                                                            [{1}, {[at0049]}],    -- Pass
+                                                            [{0}, {[at0050]}]    -- Fail
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Liquids & Solids
+                                                value matches {
+                                                    DV_ORDINAL[at9021] matches {
+                                                        [value, symbol] matches {
+                                                            [{1}, {[at0051]}],    -- Pass
+                                                            [{0}, {[at0052]}]    -- Fail
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0026] occurrences matches {0..1} matches {    -- Sum
+                                                value matches {
+                                                    DV_COUNT[at9022] matches {
+                                                        magnitude matches {|0..4|}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Total sum
+                                        value matches {
+                                            DV_COUNT[at9023] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- Severity code
+                                        value matches {
+                                            DV_CODED_TEXT[at9024] matches {
+                                                defining_code matches {[ac9010]}    -- Severity code (synthesised)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0028] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0029] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Gugging Swallowing Screen for Intensive Care Units (GUSS - ICU)">
+                description = <"Et verktøy som brukes for å screene for dysfagi og aspirasjonsrisiko etter ekstubering på intensivavdelingen.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert tidspunkthendelse">
+                description = <"Standard uspesifisert tidspunkt- eller intervallhendelse som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Del A: Forhåndsjekk / Indirekte svelgetest">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Richmond Agitation-Sedation Scale (RASS) skåre 0 - +2">
+                description = <"Richmond Agitation-Sedation Scale (RASS)">
+            >
+            ["at0006"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Kan hoste eller kremte?">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Kan svelge spytt?">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Sikling?">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Endret stemme etter svelging?">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Sum">
+                description = <"Summen av Del A: Forhåndsjekk / Indirekte svelgetest.">
+            >
+            ["at0021"] = <
+                text = <"Del B: Svelgetest">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Tykt">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Tynt">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Fast">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Fast og flytende">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Sum">
+                description = <"Summen av Del B: Svelgetest.">
+            >
+            ["at0027"] = <
+                text = <"Totalsum">
+                description = <"Sum av Del A: Forhåndsjekk / Indirekte svelgetest og Del B: Svelgetest.">
+            >
+            ["at0029"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0030"] = <
+                text = <"Evaluering">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Ikke bestått forhåndssjekk. (Alvorlig dysfagi. Alvorlig aspirasjonsrisiko)">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Tykk drikke bestått. Tynn drikke ikke bestått. (Moderat dysfagi. Aspirasjonsrisiko)">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Tykk drikke bestått. Tynn drikke bestått. Fast føde ikke bestått. (Lettgradelig til moderat dysfagi. Noen grad av aspirasjonsrisiko)">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Tykk drikke bestått. Tynn drikke bestått. Fast føde bestått. Fast og flytende ikke bestått. (Lettgradelig dysfagi. Lav aspirasjonsrisiko)">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Respirasjonsbesvær/stridor?">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Alle konsistenser bestått. (Minimal eller ingen dysfagi. Minimal aspirasjonsrisiko)">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Bestått">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Ikke bestått">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Bestått">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Ikke bestått">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Bestått">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Ikke bestått">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Bestått">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Ikke bestått">
+                description = <"">
+            >
+            ["ac9024"] = <
+                text = <"Richmond Agitation-Sedation Scale (RASS) skåre 0 - +2 (synthesised)">
+                description = <"Richmond Agitation-Sedation Scale (RASS) (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"Respirasjonsbesvær/stridor? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"Kan hoste eller kremte? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Kan svelge spytt? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9028"] = <
+                text = <"Sikling? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9029"] = <
+                text = <"Endret stemme etter svelging? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9030"] = <
+                text = <"Tykt (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"Tynt (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"Fast (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9033"] = <
+                text = <"Fast og flytende (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Evaluering (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Gugging Swallowing Screen for Intensive Care Units (GUSS - ICU)">
+                description = <"An assessment score used for the identification of post-extubation dysphagia and aspiration risk in the intensive care unit (ICU).">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Preliminary Investigation / Indirect Swallowing Test">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"RASS from 0 to +2">
+                description = <"Richmond Agitation-Sedation Scale (RASS).">
+            >
+            ["at0006"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Coughing and/or throat clearing efficiently">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Swallowing saliva possible">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Drooling (saliva)">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Change of voice after swallowing saliva">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Sum">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Direct Swallowing Test (4 subtests)">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Semisolid">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Liquids">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Solids">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Liquids & Solids">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Sum">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Total sum">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0030"] = <
+                text = <"Severity code">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Preliminary investigation or semisolids failed. (Severe Dysphagia with high risk of aspiration)">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Semisolids passed, fluids failed. (Moderate dysphagia with aspiration risk)">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Semisolids passed, fluids passed,solids failed. (Mild dysphagia with low risk of aspiration)">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Semisolids passed, fluids passed, solids passed, mixed textures failed. (Mild dysphagia with low risk of aspiration)">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Stridor present">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"All textures passed. (Minimal/no Dysphagia; Minimal/no risk of aspiration)">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Pass">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Fail">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Pass">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Fail">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Pass">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Fail">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Pass">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Fail">
+                description = <"">
+            >
+            ["ac9024"] = <
+                text = <"RASS from 0 to +2 (synthesised)">
+                description = <"Richmond Agitation-Sedation Scale (RASS). (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"Stridor present (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"Coughing and/or throat clearing efficiently (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Swallowing saliva possible (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9028"] = <
+                text = <"Drooling (saliva) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9029"] = <
+                text = <"Change of voice after swallowing saliva (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9030"] = <
+                text = <"Semisolid (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"Liquids (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"Solids (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9033"] = <
+                text = <"Liquids & Solids (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Severity code (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9031"] = <
+            id = <"ac9031">
+            members = <"at0047", "at0048">
+        >
+        ["ac9030"] = <
+            id = <"ac9030">
+            members = <"at0039", "at0040">
+        >
+        ["ac9033"] = <
+            id = <"ac9033">
+            members = <"at0051", "at0052">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0031", "at0032", "at0033", "at0034", "at0038">
+        >
+        ["ac9032"] = <
+            id = <"ac9032">
+            members = <"at0049", "at0050">
+        >
+        ["ac9029"] = <
+            id = <"ac9029">
+            members = <"at0018", "at0019">
+        >
+        ["ac9024"] = <
+            id = <"ac9024">
+            members = <"at0006", "at0007">
+        >
+        ["ac9028"] = <
+            id = <"ac9028">
+            members = <"at0016", "at0017">
+        >
+        ["ac9027"] = <
+            id = <"ac9027">
+            members = <"at0014", "at0015">
+        >
+        ["ac9026"] = <
+            id = <"ac9026">
+            members = <"at0012", "at0013">
+        >
+        ["ac9025"] = <
+            id = <"ac9025">
+            members = <"at0036", "at0037">
+        >
+    >

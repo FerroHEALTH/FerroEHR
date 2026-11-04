@@ -1,0 +1,477 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d6751f75-9f9a-43fa-baf4-8faf3c7ba239; build_uid=6ad3e280-c1a6-47c5-a491-c29597418f4f)
+    openEHR-EHR-OBSERVATION.six_cit.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Nelio Borrozzino">
+                ["organisation"] = <"Prontmed">
+                ["email"] = <"nelio.borrozzino@prontmed.com">
+            >
+            accreditation = <"MS Gerontology">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Hildegard Franke">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"hildi@freshehr.com">
+        ["date"] = <"2016-02-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Ian McNicoll, freshEHR Clinical Informatics Ltd.", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: https://ckm.apperta.org/ckm/archetypes/1051.32.384">
+        ["2"] = <"6CIT Test – Official Application Website. Available from: http://6cit.co.uk/ [cited 25 Feb 2021].">
+    >
+    other_details = <
+        ["current_contact"] = <"Hildegard Franke, freshEHR Clinical Informatics Ltd.<hildi@freshehr.com>">
+        ["MD5-CAM-1.0.1"] = <"4FD53A5E972999A34C5D6ECC98C5A52C">
+    >
+    details = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Registrar os resultados para cada parâmetro e sua totalidade para o Teste de Declínio Cognitivo de 6 itens (6CIT)">
+            keywords = <"6CIT(en)", "Teste de declínio cognitivo de 6 itens (pt)", "Cognitivo", "Deficiência", "Demência">
+            use = <"Use para registrar os resultados para cada parâmetro de componente e a totalidade do 6CIT.
+
+Embora os arquétipos openEHR estejam todos disponíveis gratuitamente sob uma licença aberta, o conteúdo específico deste arquétipo 6CIT é protegido por direitos autorais. Qualquer uso do arquétipo em implementações deve estar em conformidade com os termos estabelecidos pelos proprietários dos direitos autorais.
+
+O Kingshill Research Centre, Swindon, Reino Unido detém os direitos autorais da The Kingshill Versão 2000 do 6CIT, mas permite o uso gratuito para profissionais de saúde.
+
+Informações sobre direitos autorais: https://6cit.co.uk/.">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter and their total sum for the 6CIT.">
+            keywords = <"6CIT", "cognitive", "impairment", "dementia">
+            use = <"Use to record the results for each component parameter and their total sum for the 6CIT.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this 6CIT archetype is copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners. 
+
+The Kingshill Research Centre, Swindon, UK owns the copyright to The Kingshill Version 2000 of the 6CIT but allows free usage to healthcare professionals.
+
+Copyright information: https://6cit.co.uk/.">
+            misuse = <"">
+            copyright = <"© Apperta Foundation, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- 6 Item Cognitive Impairment Test (6CIT)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- What year is it?
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- Correct
+                                                    [{4}, {[at0006]}]    -- Incorrect
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- What month is it?
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0008]}],    -- Correct
+                                                    [{3}, {[at0009]}]    -- Incorrect
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- About what time is it?
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0011]}],    -- Correct
+                                                    [{3}, {[at0012]}]    -- Incorrect
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Count backwards from 20
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0014]}],    -- Correct
+                                                    [{2}, {[at0015]}],    -- 1 error
+                                                    [{4}, {[at0016]}]    -- More than 1 error
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Say the months of the year in reverse
+                                        value matches {
+                                            DV_ORDINAL[at9010] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0018]}],    -- Correct
+                                                    [{2}, {[at0019]}],    -- 1 error
+                                                    [{4}, {[at0020]}]    -- More than 1 error
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Repeat address phrase
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0022]}],    -- Correct
+                                                    [{2}, {[at0023]}],    -- 1 error
+                                                    [{4}, {[at0024]}],    -- 2 errors
+                                                    [{6}, {[at0025]}],    -- 3 errors
+                                                    [{8}, {[at0026]}],    -- 4 errors
+                                                    [{10}, {[at0027]}]    -- All wrong
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9012] matches {
+                                                magnitude matches {|0..28|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0031] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0032] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Teste de Declínio Cognitivo de 6 Itens (6CIT)">
+                description = <"Um questionário de avaliação usado para rastrear a demência.">
+            >
+            ["at0002"] = <
+                text = <"Qualquer evento">
+                description = <"Evento de ponto no tempo ou intervalo padrão, não especificado, que pode ser definido explicitamente em um modelo ou em tempo de execução.">
+            >
+            ["at0004"] = <
+                text = <"Em que ano estamos?">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Correto">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Incorreto">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Em que mês estamos?">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Correto">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Incorreto">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Que horas são (aproximadamente)?">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Correto">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Incorreto">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Conte de trás para frente de 20 a 1.">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Correto">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Um(1) erro">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Mais do que um(1) erro">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Diga os meses do ano de trás para frente. (na ordem inversa)">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Correto">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"um (1) erro">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"mais do que um (1) erro">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Repita a frase com o endereço/moradia">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Correto">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"um (1) erro">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"dois (2) erros">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"três (3) erros">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"quatro (4) erros">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Tudo errado">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Pontuação total">
+                description = <"A soma total de cada parâmetro de componente para o 6CIT.">
+            >
+            ["at0032"] = <
+                text = <"Extensão">
+                description = <"Informações adicionais necessárias para estender o modelo com conteúdo local ou para alinhar com outros modelos de referência ou formalismos.">
+                comment = <"Por exemplo: requisitos de informações locais; ou metadados adicionais para alinhar com padrões FHIR">
+            >
+            ["ac9012"] = <
+                text = <"Em que ano estamos? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Em que mês estamos? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Que horas são (aproximadamente)? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Conte de trás para frente de 20 a 1. (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Diga os meses do ano de trás para frente. (na ordem inversa) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Repita a frase com o endereço/moradia (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"6 Item Cognitive Impairment Test (6CIT)">
+                description = <"An assessment score used to screen for dementia.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"What year is it?">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Correct">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Incorrect">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"What month is it?">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Correct">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Incorrect">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"About what time is it?">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Correct">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Incorrect">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Count backwards from 20">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Correct">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"1 error">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"More than 1 error">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Say the months of the year in reverse">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Correct">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"1 error">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"More than 1 error">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Repeat address phrase">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Correct">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"1 error">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"2 errors">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"3 errors">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"4 errors">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"All wrong">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Total score">
+                description = <"The total sum of each component parameter for the 6CIT.">
+            >
+            ["at0032"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9012"] = <
+                text = <"What year is it? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"What month is it? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"About what time is it? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Count backwards from 20 (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Say the months of the year in reverse (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Repeat address phrase (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0008", "at0009">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0005", "at0006">
+        >
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0022", "at0023", "at0024", "at0025", "at0026", "at0027">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0018", "at0019", "at0020">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0014", "at0015", "at0016">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0011", "at0012">
+        >
+    >

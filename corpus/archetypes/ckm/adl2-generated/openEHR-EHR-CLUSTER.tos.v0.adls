@@ -1,0 +1,104 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3853e42a-fa1d-49d5-9f60-e08bc44e6c26; build_uid=6dc7f8db-cf0d-4777-874e-e7f695a7a923)
+    openEHR-EHR-CLUSTER.tos.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2013-01-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Kerrie Lee, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    references = <
+        ["1"] = <"Derived from: Tos classification, Draft Archetype [Internet]. Digital Health Agency, Australian Digital Health Agency Clinical Knowledge Manager. No longer available.">
+        ["2"] = <"Tos M, Poulsen G. Attic retractions following secretory otitis. Acta Otolaryngol. 1980 May-Jun;89(5-6):479-86. PubMed PMID: 7192477.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"A6FE6608AD6AB809E0A4B070F0A421EC">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the grading of attic retraction of the tympanic membrane, based on the classification by Tos and Poulsen.">
+            keywords = <"retraction", "tympanic", "membrane", "pars flaccida", "attic", "drum">
+            use = <"Use to record the grading of tympanic membrane retraction, particularly by specialist physicians. 
+
+Designed to be optionally nested within the CLUSTER.exam_tympanic_membrane archetype to provide additional detail on tympanic membrane retraction, if it is useful within a given clinical scenario.
+
+This archetype extends the Tos Classification to allow recording of Tos Grade 5 which is described in some documentation but is not described in the original paper and appears not to be in common usage.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Tos Classification
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Tos Classification
+                value matches {
+                    DV_ORDINAL[at9001] matches {
+                        [value, symbol] matches {
+                            [{1}, {[at0002]}],    -- Grade 1
+                            [{2}, {[at0003]}],    -- Grade 2
+                            [{3}, {[at0004]}],    -- Grade 3
+                            [{4}, {[at0005]}],    -- Grade 4
+                            [{5}, {[at0006]}]    -- Grade 5
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Tos Classification">
+                description = <"A classification of the degree of tympanic membrane pars flaccida retraction, related to extent and severity and as described by Tos and Poulsen.">
+            >
+            ["at0001"] = <
+                text = <"Tos Classification">
+                description = <"Grading of the degree of tympanic membrane pars tensa retraction / atelectasis based on the Tos & Poulson Classification.">
+            >
+            ["at0002"] = <
+                text = <"Grade 1">
+                description = <"Pars flaccida is dimpled and is more retracted than normal. It is not adherent to the malleus (airspace visible).">
+            >
+            ["at0003"] = <
+                text = <"Grade 2">
+                description = <"Retraction onto neck of malleus - no airspace visible behind membrane.">
+            >
+            ["at0004"] = <
+                text = <"Grade 3">
+                description = <"Retraction extends beyond osseous malleus full extent seen.">
+            >
+            ["at0005"] = <
+                text = <"Grade 4">
+                description = <"Erosion of outer attic wall. Part of the retraction pocket may be hidden.">
+            >
+            ["at0006"] = <
+                text = <"Grade 5">
+                description = <"Bottom of the retraction pocket can be seen only by using an endoscope.">
+            >
+            ["ac9001"] = <
+                text = <"Tos Classification (synthesised)">
+                description = <"Grading of the degree of tympanic membrane pars tensa retraction / atelectasis based on the Tos & Poulson Classification. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0002", "at0003", "at0004", "at0005", "at0006">
+        >
+    >

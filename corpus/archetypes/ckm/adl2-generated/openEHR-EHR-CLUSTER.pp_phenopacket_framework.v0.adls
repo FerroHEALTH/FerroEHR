@@ -1,0 +1,121 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c78e79a6-3671-4f98-b030-c4d651a57e13; build_uid=3f83b2a6-8036-4cad-a69e-cb75e2e56997)
+    openEHR-EHR-CLUSTER.pp_phenopacket_framework.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-09-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"9BE3F8F0DFED663A22D1D73600BA675E">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Phenopacket framework
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0002] occurrences matches {1} matches {    -- id
+                value matches {
+                    DV_IDENTIFIER[at9000]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- subject
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            allow_archetype CLUSTER[at0004] matches {    -- phenotypic_features
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_phenotypic_feature\.v0\..*/}
+            }
+            allow_archetype CLUSTER[at0005] matches {    -- biosamples
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_biosample\.v0\..*/}
+            }
+            allow_archetype CLUSTER[at0006] matches {    -- gene
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_gene\.v0\..*/}
+            }
+            allow_archetype CLUSTER[at0007] matches {    -- variants
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_variant\.v0\..*/}
+            }
+            allow_archetype CLUSTER[at0008] matches {    -- diseases
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_disease\.v0\..*/}
+            }
+            allow_archetype CLUSTER[at0009] matches {    -- hts_files
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_htsfile\.v0\..*/}
+            }
+            allow_archetype CLUSTER[at0010] matches {    -- meta_data
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_metadata\.v0\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Phenopacket framework">
+                description = <"Phenotypic framework">
+            >
+            ["at0002"] = <
+                text = <"id">
+                description = <"*">
+            >
+            ["at0003"] = <
+                text = <"subject">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"phenotypic_features">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"biosamples">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"gene">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"variants">
+                description = <"*">
+            >
+            ["at0008"] = <
+                text = <"diseases">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"hts_files">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"meta_data">
+                description = <"*">
+            >
+        >
+    >

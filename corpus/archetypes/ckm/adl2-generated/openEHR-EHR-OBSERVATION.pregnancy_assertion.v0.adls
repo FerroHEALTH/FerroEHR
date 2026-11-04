@@ -1,0 +1,320 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=752bdebc-9c67-4190-b872-db5361dab992; build_uid=ee938c73-6795-40a1-9c1b-791da1f8f2e6)
+    openEHR-EHR-OBSERVATION.pregnancy_assertion.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Sarah Ballout, Natalia Strauch, Darin Leonhardt">
+                ["organisation"] = <"MHH-Hannover, Medizinische Hochschule Hannover, PLRI für medizinische Informatik/ Medizinische Hochschule">
+                ["email"] = <"ballout.sarah@mh-hannover.de, Strauch.Natalia@mh-hannover.de, leonhardt.darin@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Eli Larsen, Liv Laugen, Vebjørn Arntzen, John Tore Valand">
+                ["organisation"] = <"Universitetssykehuset Nord-Norge, ​Oslo University Hospital Norway, Helse Vest IKT">
+                ["email"] = <"eli.larsen@unn.no, liv.laugen@ous-hf.no, varntzen@ous-hf.no, john.tore.valand@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Marit Alice Venheim">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["email"] = <"marit.alice.venheim@helse-vest-ikt-no">
+        ["date"] = <"2020-05-05">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Marit Alice Venheim, Helse Vest IKT, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Sparked AU, CSIRO, Australia", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Tara Bonet Chinillach, Catalan Health Service, Spain", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "Grete Hovde Bøe, Sykehuspartner HF, Norway (openEHR Editor)", "Michelle Currie, SavantSolutions4HIT, LLC, United States", "Inger Elise Engelund, Fagsenter for pasientrapporterte data, Helse Bergen HF, Norway", "Aleksander Furnes, Helse Nord IKT, Norway (openEHR Editor)", "Ciprian Gerstenberger, Helse Nord IKT, Norway (openEHR Editor)", "William Goossen, Results 4 Care, Netherlands", "Heather Grain, Llewelyn Grain Informatics, Australia", "Atle Hansen, Universitetssykehuset Nord-Norge, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Henri Huttunen, UNA Oy, Finland", "Juliette Jager, Tietoevry, Norway", "June Marie Nepstad Knappskog, Helse Nord IKT AS, Norway (openEHR Editor), Norway (openEHR Editor)", "Elin Kristiansen, Sykehuspartner HF, Norway (openEHR Editor)", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Eli Larsen, UNN, Norway (openEHR Editor)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Darin Leonhardt, PLRI für medizinische Informatik/ Medizinische Hochschule, Germany", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "June Marie Knappskog, Helse Nord IKT AS, Norway (openEHR Norway redaktør), Norway", "Cecilia Mascia, CRS4, Italy", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Patrick Fergal McSharry, MSMS(I) and SESLHD, Australia", "Martin Milde, Helse Vest IKT, Norway (openEHR Editor)", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Marianne Opsahl Bredesen, Helse Nord IKT HF, Norway", "Jayashree Panickar, India", "Ana Pascual Segura, Catsalut, Spain", "Anton Pichugin, GKU IAC at Department of Information Technologies of the city of Moscow (DIT Moscow), Russia", "Marlene Pérez Colman, Digital Health and Care Wales, United Kingdom", "Bipinkumar Rathod, NHS, United Kingdom", "Ruben Rognmo, Helse Nord IKT, Norway", "Terje Sagmyr, Helse Vest IKT, Norway (openEHR Editor)", "Videha Sharma, University of Manchester, United Kingdom", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Averil Tam, CSIRO, Australia", "Nyree Taylor, CSIRO, Australia", "John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)", "Marte Vassli Gullesen, HNIKT, Norway", "Wouter Zanen, Eurotranplant, Netherlands", "Karsten Øvretveit, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"4FBB7D380A21F781CC5D4AAB3401144C">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To record a clinician’s assertion of the presence or absence of pregnancy at a specific point in time, typically to support clinical decision-making. (en)">
+            keywords = <"*pregnancy (en)", "*pregnant (en)", "*exclusion (en)", "*confirmation (en)">
+            use = <"*Use to record a clinician’s point-in-time assertion of confirmed presence or confirmed absence of pregnancy.
+
+The assertion applies only at the time it is made and may be supported by a clinical ‘Justification’ documenting the evidence on which it is based, such as relevant test results or past diagnoses and surgical procedures.
+
+Confirmation that pregnancy is present or absent is critical to safe clinical decision-making because it may alter diagnostic and management approaches. For example:
+- evaluation of abdominal pain may differ between pregnant and non-pregnant individuals
+- standard treatment protocols may require modification during pregnancy to avoid harm to the fetus
+- some treatment options may be contraindicated during pregnancy but available once pregnancy has been excluded. (en)">
+            misuse = <"*Not to be used to record summary information about a current or past pregnancy. Use the EVALUATION.pregnancy_summary archetype for this purpose.
+
+Not to be used to record a suspicion of, or level of uncertainty about, a diagnosis of pregnancy, such as 'possible', 'probable', 'suspected', or 'confirmed'. Use the EVALUATION.problem_diagnosis for this purpose.
+
+Not to be used to record the individual’s current pregnancy-related care state so that relevant pregnancy considerations can be taken into account in clinical decision-making. Use the EVALUATION.pregnancy_care_state for this purpose.
+
+Not to be used to record details about procedures performed related to a pregnancy, such as terminations or instrumental deliveries. Use the ACTION.procedure for this purpose.
+
+Not to be used in the context of questionnaire-style representations, such as self-reported data with questions like 'Are you currently pregnant?' The need for a specific archetype for this purpose is acknowledged but had not yet been developed at the time of publication of this archetype.
+
+Not to be used to record absence of known pregnancy history. The need for a specific archetype for this purpose is acknowledged but had not yet been developed at the time of publication of this archetype. (en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere et utsagn fra en kliniker om tilstedeværelse eller fravær av graviditet på et gitt tidspunkt, vanligvis for å støtte kliniske beslutninger.">
+            keywords = <"graviditet", "gravid", "ekskludering", "utelukkelse", "bekreftelse", "svangerskap">
+            use = <"Brukes for å registrere et utsagn fra en kliniker om bekreftet tilstedeværelse eller fravær av graviditet på et gitt tidspunkt.
+
+Utsagnet gjelder kun på tidspunktet det avgis, og kan støttes av en klinisk ‘Begrunnelse’ som dokumenterer grunnlaget for utsagnet, som for eksempel relevante prøveresultater eller tidligere diagnoser og kirurgiske prosedyrer.
+
+Bekreftelse av om graviditet foreligger eller ikke er avgjørende for trygg klinisk beslutningstaking, ettersom det kan påvirke både diagnostiske vurderinger og valg av behandling. For eksempel:
+
+- utredning av magesmerter kan være forskjellig hos gravide og ikke-gravide personer;
+- standard behandlingsprotokoller kan måtte justeres under graviditet for å  unngå skade på fosteret; og
+- noen behandlingsalternativer kan være kontraindisert under graviditet, men aktuelle dersom graviditet er utelukket.">
+            misuse = <"Skal ikke brukes til å registrere sammendrag om en nåværende eller tidligere graviditet. Bruk arketypen EVALUATION.pregnancy_summary (Graviditetssammenfatning) til dette formålet.
+
+Skal ikke brukes for å registrere mistanke om eller grad av usikkerhet om individet er gravid, som for eksempel \"mulig\", \"sannsynlig\", \"mistenkt\" eller \"bekreftet\". Bruk EVALUATION.problem_diagnosis (Problem/diagnose) til dette.
+
+Skal ikke brukes for å registrere individets pågående svangerskapsomsorgsrelaterte opplysninger til bruk for vurderinger og beslutninger knyttet til dette. Bruk EVALUATION.pregnancy_care_state for dette.
+
+Skal ikke brukes til å registrere detaljer om prosedyrer utført under en graviditet, for eksempel avbrudd eller fødsel. Bruk arketypen ACTION.procedure (Prosedyre) for dette formålet.
+
+Skal ikke brukes i sammenheng med spørreskjema for eksempel selvrapporterte data med spørsmål som \"Er du gravid?\". Behovet for en spesifikk arketype for dette formålet er anerkjent, men den var ennå ikke utviklet på tidspunktet da denne arketypen ble publisert.
+
+Skal ikke brukes til å registrere at man mangler svangerskapshistorikk. Behovet for en spesifikk arketype for dette formålet er anerkjent, men den var ennå ikke utviklet på tidspunktet da denne arketypen ble publisert.@All">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a clinician’s assertion of the presence or absence of pregnancy at a specific point in time, typically to support clinical decision-making.">
+            keywords = <"pregnancy", "pregnant", "exclusion", "confirmation">
+            use = <"Use to record a clinician’s point-in-time assertion of confirmed presence or confirmed absence of pregnancy.
+
+The assertion applies only at the time it is made and may be supported by a clinical ‘Justification’ documenting the evidence on which it is based, such as relevant test results or past diagnoses and surgical procedures.
+
+Confirmation that pregnancy is present or absent is critical to safe clinical decision-making because it may alter diagnostic and management approaches. For example:
+- evaluation of abdominal pain may differ between pregnant and non-pregnant individuals
+- standard treatment protocols may require modification during pregnancy to avoid harm to the fetus
+- some treatment options may be contraindicated during pregnancy but available once pregnancy has been excluded.">
+            misuse = <"Not to be used to record summary information about a current or past pregnancy. Use the EVALUATION.pregnancy_summary archetype for this purpose.
+
+Not to be used to record a suspicion of, or level of uncertainty about, a diagnosis of pregnancy, such as 'possible', 'probable', 'suspected', or 'confirmed'. Use the EVALUATION.problem_diagnosis for this purpose.
+
+Not to be used to record the individual’s current pregnancy-related care state so that relevant pregnancy considerations can be taken into account in clinical decision-making. Use the EVALUATION.pregnancy_care_state for this purpose.
+
+Not to be used to record details about procedures performed related to a pregnancy, such as terminations or instrumental deliveries. Use the ACTION.procedure for this purpose.
+
+Not to be used in the context of questionnaire-style representations, such as self-reported data with questions like 'Are you currently pregnant?' The need for a specific archetype for this purpose is acknowledged but had not yet been developed at the time of publication of this archetype.
+
+Not to be used to record absence of known pregnancy history. The need for a specific archetype for this purpose is acknowledged but had not yet been developed at the time of publication of this archetype.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Pregnancy assertion
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    POINT_EVENT[at0016] occurrences matches {0..1} matches {    -- Any point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {1} matches {    -- Pregnancy assertion
+                                        value matches {
+                                            DV_CODED_TEXT[at9001] matches {
+                                                defining_code matches {[ac9000]}    -- Pregnancy assertion (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Justification
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0019] matches {    -- Clinical evidence
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.clinical_evidence(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9003]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0017] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0018] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Feststellung der Schwangerschaft">
+                description = <"*A declaration made by a clinician of the presence or absence of pregnancy at a specific point in time, as confirmed by available clinical evidence and valid only at the time it is made. (en)">
+            >
+            ["at0004"] = <
+                text = <"Feststellung der Schwangerschaft">
+                description = <"*A statement or declaration about the pregnancy status of the individual at a specific point in time. (en)">
+                comment = <"*This assertion is considered valid only at the  time it is made and typically to support safe clinical decision-making. Assumed values and expressions of uncertainty are intentionally excluded. (en)">
+            >
+            ["at0005"] = <
+                text = <"Schwanger">
+                description = <"Die Schwangerschaft wurde bestätigt.">
+            >
+            ["at0007"] = <
+                text = <"Nicht schwanger">
+                description = <"Eine Schwangerschaft wurde so weit wie möglich ausgeschlossen.">
+            >
+            ["at0009"] = <
+                text = <"Rechtfertigung">
+                description = <"*Narrative description of the clinical evidence supporting the assertion. (en)">
+            >
+            ["at0015"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Informationen über die Schwangerschaft, die nicht in anderen Feldern erfasst wurden.">
+            >
+            ["at0016"] = <
+                text = <"Jeder Zeitpunkt des Ereignisses">
+                description = <"Standardmäßiges, nicht spezifiziertes Ereignis zu einem bestimmten Zeitpunkt, das explizit in einer Vorlage oder zur Laufzeit definiert werden kann.">
+            >
+            ["at0018"] = <
+                text = <"Erweiterungen">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen.">
+            >
+            ["at0019"] = <
+                text = <"Klinischer Nachweis">
+                description = <"Strukturierte klinische Nachweise zur Untermauerung der Feststellung.">
+                comment = <"*For example: relevant test results or past diagnoses and surgical procedures. (en)">
+            >
+            ["ac9000"] = <
+                text = <"Feststellung der Schwangerschaft (synthesised)">
+                description = <"*A statement or declaration about the pregnancy status of the individual at a specific point in time. (en) (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Utsagn om graviditet">
+                description = <"En erklæring fra en kliniker som bekrefter om individet er gravid eller ikke på et bestemt tidspunkt, og som kun anses som gyldig på det tidspunktet den er avgitt.">
+            >
+            ["at0004"] = <
+                text = <"Utsagn om graviditet">
+                description = <"Et utsagn eller erklæring om individets graviditetsstatus på et bestemt tidspunkt.">
+                comment = <"Dette utsagnet anses som korrekt kun på det tidspunktet det avgis, og er vanligvis ment å støtte trygg klinisk beslutningstaking. Antatte verdier og uttrykk for usikkerhet er bevisst utelatt.">
+            >
+            ["at0005"] = <
+                text = <"Gravid">
+                description = <"Graviditet er bekreftet.">
+            >
+            ["at0007"] = <
+                text = <"Ikke gravid">
+                description = <"Graviditet er utelukket, så godt det kan fastslås.">
+            >
+            ["at0009"] = <
+                text = <"Begrunnelse">
+                description = <"Fritekstbeskrivelse av det kliniske grunnlaget som støtter utsagnet.">
+            >
+            ["at0015"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere beskrivelse angående utsagnet om graviditetsstatus som ikke fanges i andre felt.">
+            >
+            ["at0016"] = <
+                text = <"Uspesifisert tidspunkthendelse">
+                description = <"Standard uspesifisert tidspunkthendelse som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0018"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller eller formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0019"] = <
+                text = <"Klinisk dokumentasjon">
+                description = <"Strukturert klinisk dokumentasjon som støtter utsagnet.">
+                comment = <"For eksempel relevante laboratoriesvar eller tidligere diagnoser og kirurgiske prosedyrer.">
+            >
+            ["ac9000"] = <
+                text = <"Utsagn om graviditet (synthesised)">
+                description = <"Et utsagn eller erklæring om individets graviditetsstatus på et bestemt tidspunkt. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Pregnancy assertion">
+                description = <"A declaration made by a clinician of the presence or absence of pregnancy at a specific point in time, as confirmed by available clinical evidence and valid only at the time it is made.">
+            >
+            ["at0004"] = <
+                text = <"Pregnancy assertion">
+                description = <"A declaration made by a clinician of the presence or absence of pregnancy at a specific point in time.">
+                comment = <"This assertion is considered valid only at the time it is made and typically to support safe clinical decision-making. Assumed values and expressions of uncertainty are intentionally excluded.">
+            >
+            ["at0005"] = <
+                text = <"Pregnant">
+                description = <"Pregnancy has been confirmed.">
+            >
+            ["at0007"] = <
+                text = <"Not pregnant">
+                description = <"Pregnancy has been excluded, as best as can be determined.">
+            >
+            ["at0009"] = <
+                text = <"Justification">
+                description = <"Narrative description of the clinical evidence supporting the assertion.">
+            >
+            ["at0015"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the pregnancy assertion, not captured in other fields.">
+            >
+            ["at0016"] = <
+                text = <"Any point in time event">
+                description = <"Default, unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0018"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0019"] = <
+                text = <"Clinical evidence">
+                description = <"Structured clinical evidence supporting the assertion.">
+                comment = <"For example: relevant test results or past diagnoses and surgical procedures.">
+            >
+            ["ac9000"] = <
+                text = <"Pregnancy assertion (synthesised)">
+                description = <"A declaration made by a clinician of the presence or absence of pregnancy at a specific point in time. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0005"] = <http://snomed.info/id/77386006>
+            ["at0007"] = <http://snomed.info/id/60001007>
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0005", "at0007">
+        >
+    >

@@ -1,0 +1,71 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f010cca0-3786-4407-a43f-34babe7ff819; build_uid=5820d94c-27eb-4e72-a565-52ca350ae265)
+    openEHR-EHR-OBSERVATION.ejection_fraction-left_ventricle.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-OBSERVATION.ejection_fraction.v0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-01-29">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"9156AFCB08A57CD7B468425E2D1B0644">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the calculated ejection fraction from the left ventricle of the heart.">
+            keywords = <"ejection", "fraction", "ef">
+            use = <"Use to record the calculated ejection fraction from the left ventricle of the heart.
+
+The volume measurements will be recorded in other archetypes, specific for the purpose.
+
+Measurements of ejection fraction for the same chamber, but by different modalities, are not interchangeable.">
+            misuse = <"Not to be used to record the ejection fraction for any anatomical site other than the left ventricle - use the parent archetype OBSERVATION.ejection_fraction for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000.1] matches {    -- Left ventricular ejection fraction
+        /data[at0001]/events[at0002]/data[at0003]/items matches {
+            ELEMENT[at0004.1] matches {    -- Chamber
+                value matches {
+                    DV_CODED_TEXT[at0.9000] matches {
+                        defining_code matches {[at0.1]}    -- Left ventricle
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Left ventricular ejection fraction">
+                description = <"The volumetric fraction of fluid ejected from the left ventricle with each heartbeat.">
+            >
+            ["at0004.1"] = <
+                text = <"Chamber">
+                description = <"The organ or part of organ where the volumes were measured.">
+                comment = <"For example: atrium; left ventricle; gall bladder; leg vein">
+            >
+            ["at0.1"] = <
+                text = <"Left ventricle">
+                description = <"">
+            >
+        >
+    >

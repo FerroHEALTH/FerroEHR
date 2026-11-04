@@ -1,0 +1,307 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ce33a1da-c695-4e60-83b8-d33f40e4cb7d; build_uid=f2112ac3-bf66-41db-989d-27f623505a74)
+    openEHR-EHR-CLUSTER.anatomical_location_gingivae.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::ja]>
+
+description
+    original_author = <
+        ["name"] = <"">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"2443150FF3ACA32A33AF0FBCF5F960A9">
+    >
+    details = <
+        ["ja"] = <
+            language = <[ISO_639-1::ja]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© Takahiro Nakahara
+Shinji Kobayashi
+© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Anatomical location gingiva
+        items cardinality matches {1..*; unordered} matches {
+            CLUSTER[at0017] occurrences matches {0..1} matches {    -- Aspect
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Buccal
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Lingual
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Medial
+                        value matches {
+                            DV_TEXT[at9005]
+                        }
+                    }
+                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Distal
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Aloveolar crest
+                        value matches {
+                            DV_TEXT[at9007]
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0002] matches {    -- Location
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Normal status
+                        value matches {
+                            DV_BOOLEAN[at9008] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                    CLUSTER[at0004] matches {    -- Absolute measurement
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Landmark
+                                value matches {
+                                    DV_CODED_TEXT[at9009] matches {
+                                        defining_code matches {[ac9000]}    -- Landmark (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0006] occurrences matches {0..1} matches {    -- XYZ
+                                value matches {
+                                    DV_QUANTITY[at9010]
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0007] matches {    -- Relative location
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Landmark
+                                value matches {
+                                    DV_TEXT[at9011]
+                                }
+                            }
+                            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Direction
+                                value matches {
+                                    DV_CODED_TEXT[at9012] matches {
+                                        defining_code matches {[ac9001]}    -- Direction (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Distance from landmark
+                                value matches {
+                                    DV_QUANTITY[at9013]
+                                }
+                            }
+                            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9014]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0012] matches {    -- Site
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Relative location
+                        value matches {
+                            DV_QUANTITY[at9015]
+                        }
+                    }
+                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Absolute measurement
+                        value matches {
+                            DV_QUANTITY[at9016]
+                        }
+                    }
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Name
+                        value matches {
+                            DV_CODED_TEXT[at9017] matches {
+                                defining_code matches {[ac9002]}    -- Name (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["ja"] = <
+            ["at0000"] = <
+                text = <"Anatomical location gingiva">
+                description = <"unknown">
+            >
+            ["at0002"] = <
+                text = <"Location">
+                description = <"*">
+            >
+            ["at0003"] = <
+                text = <"Normal status">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Absolute measurement">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"Landmark">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"XYZ">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Relative location">
+                description = <"*">
+            >
+            ["at0008"] = <
+                text = <"Landmark">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"Direction">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Distance from landmark">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"Description">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Site">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"Relative location">
+                description = <"*">
+            >
+            ["at0014"] = <
+                text = <"Absolute measurement">
+                description = <"*">
+            >
+            ["at0015"] = <
+                text = <"Name">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"Aspect">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"Buccal">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"Lingual">
+                description = <"*">
+            >
+            ["at0020"] = <
+                text = <"Medial">
+                description = <"*">
+            >
+            ["at0021"] = <
+                text = <"Distal">
+                description = <"*">
+            >
+            ["at0022"] = <
+                text = <"Aloveolar crest">
+                description = <"*">
+            >
+            ["at0023"] = <
+                text = <"N point(nasion)">
+                description = <"*">
+            >
+            ["at0024"] = <
+                text = <"S point(Sella turccia)">
+                description = <"*">
+            >
+            ["at0025"] = <
+                text = <"Baccal">
+                description = <"*">
+            >
+            ["at0026"] = <
+                text = <"Lingual">
+                description = <"*">
+            >
+            ["at0027"] = <
+                text = <"Medial">
+                description = <"*">
+            >
+            ["at0028"] = <
+                text = <"Distal">
+                description = <"*">
+            >
+            ["at0029"] = <
+                text = <"Periodontal pocket">
+                description = <"*">
+            >
+            ["at0030"] = <
+                text = <"Col">
+                description = <"*">
+            >
+            ["at0031"] = <
+                text = <"Alveolar mucosa">
+                description = <"*">
+            >
+            ["at0032"] = <
+                text = <"Mucogingival junction">
+                description = <"*">
+            >
+            ["at0033"] = <
+                text = <"Attached gingiva">
+                description = <"*">
+            >
+            ["at0034"] = <
+                text = <"Free gigiva">
+                description = <"*">
+            >
+            ["at0035"] = <
+                text = <"Interdental gingivia">
+                description = <"*">
+            >
+            ["ac9000"] = <
+                text = <"Landmark (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Direction (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Name (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0029", "at0030", "at0031", "at0032", "at0033", "at0034", "at0035">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0025", "at0026", "at0027", "at0028">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0023", "at0024">
+        >
+    >

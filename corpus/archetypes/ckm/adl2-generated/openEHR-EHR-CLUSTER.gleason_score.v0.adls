@@ -1,0 +1,408 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=8109a0e2-209f-4d6f-8d3c-a4cf282a270b; build_uid=0388b284-f8bc-44e1-9589-6060eadc3304)
+    openEHR-EHR-CLUSTER.gleason_score.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Jan Schladetzky, Alina Rehberg">
+                ["organisation"] = <"University Hospital Schleswig-Holstein﻿​, Medizinische Hochschule Hannover">
+                ["email"] = <"jan.schladetzky@uksh.de, rehberg.alina@mh-hannover.de">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics UK">
+        ["email"] = <"ian@freshehr.com">
+        ["date"] = <"2016-05-31">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"David Rowed, Ocean Informatics, Australia", "Heather Leslie, Ocean Informatics, Australia", "Matt Cordell, NEHTA, Australia", "David McKillop, NEHTA, Australia", "Cathy Richardson, NEHTA, Australia", "Koray Atalag, University of Auckland, New Zealand", "David Ellis, RCPA, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Derived from: Gleason Score, Draft archetype [Internet]. Apperta UK, Apperta UK Clinical Knowledge Manager [cited: 2022-03-31]. Available from: https://ckm.apperta.org/ckm/archetypes/1051.32.376">
+        ["2"] = <"Gleason grading system. In: Wikipedia, the free encyclopedia [Internet]. 2016 [cited 2016 May 31]. Available from: https://en.wikipedia.org/w/index.php?title=Gleason_grading_system&oldid=722952620">
+        ["3"] = <"Royal College of Pathologists of Australasia. Prostate Cancer (Radical Prostatectomy) Structured Reporting Protocol (1st Edition 2010). [Internet]. 2010;[cited 2010 Mar 21 ] Available from: http://www.rcpa.edu.au//static/File/Asset%20library/public%20documents/Publications/StructuredReporting/PROSTATE%20CANCER%20RAD%20PROS%20STRUCTURED%20REPORTING%20PROTOCOL%20for%20web.pdf">
+        ["4"] = <"Royal College of Pathologists. Dataset for prostate cancer histopathology reports [Internet]. 2009 ;[cited 2009 Jul 30 ]">
+        ["5"] = <"Available from: http://www.rcpath.org/index.asp?PageID=1164">
+        ["6"] = <"College of American Pathologists. Protocol for the examination of specimens from patients with invasive carcinomas of the prostate gland [Internet]. 2007 Apr ;[cited 2009 Jul 30 ] Available from: http://www.cap.org/apps/docs/committees/cancer/cancer_protocols/2006/prostate06_ckw.pdf">
+        ["7"] = <"Epstein JI, Zelefsky MJ, Sjoberg DD, Nelson JB, Egevad L, Magi-Galluzzi C, Vickers AJ, Parwani AV, Reuter VE, Fine SW, Eastham JA. A contemporary prostate cancer grading system: a validated alternative to the Gleason score. European urology. 2016 Mar 31;69(3):428-35.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"7F7752328814828A811FB48D670B7997">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung von Befunde im Zusammenhang mit dem Gleason-Score (Version ISUP2005) - einer Graduierungsskala für Prostatakrebs, ratifiziert von der International Society of Urological Pathologists (ISUP).">
+            keywords = <"Histopathologie", "Krebs", "Labor", "Prostata", "Histologie", "Bösartigkeit", "Labor", "Pathologie", "Gleason", "Score", "Grad", "Graduierung">
+            use = <"Zur Darstellung von Befunden im Zusammenhang mit dem Gleason-Score (Version ISUP2005) - einer Graduierungsskala für Prostatakrebs, ratifiziert von der International Society of Urological Pathologists (ISUP).
+
+Als Komponenten-Archetyp im Kontext einer Reihe von Archetypen, die einen Histopathologie-Bericht bilden, z.B. OBSERVATION.laboratory_test.histopathology.">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record findings related to the Gleason Score (ISUP2005 version) - a prostate cancer grading score ratified by the International Society of Urological Pathologists (ISUP).">
+            keywords = <"histopathology", "cancer", "laboratory", "prostate", "histology", "malignancy", "lab", "pathology", "Gleason", "score", "grade", "grading">
+            use = <"Use to record findings related to the Gleason Score (ISUP2005 version) - a prostate cancer grading score ratified by the International Society of Urological Pathologists (ISUP).
+
+Use as a component archetype in the context of a suite of archetypes that make up a histopathology report ie OBSERVATION.laboratory_test.histopathology.">
+            misuse = <"">
+            copyright = <"© copyright (c) 2010 openEHR foundation, Clinical Models UK, openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Gleason Score
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0166] occurrences matches {0..1} matches {    -- Primary Gleason grade
+                value matches {
+                    DV_ORDINAL[at9004] matches {
+                        [value, symbol] matches {
+                            [{1}, {[at0250]}],    -- Grade 1
+                            [{2}, {[at0251]}],    -- Grade 2
+                            [{3}, {[at0252]}],    -- Grade 3
+                            [{4}, {[at0253]}],    -- Grade 4
+                            [{5}, {[at0254]}]    -- Grade 5
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0182] occurrences matches {0..1} matches {    -- Secondary Gleason grade
+                value matches {
+                    DV_ORDINAL[at9005] matches {
+                        [value, symbol] matches {
+                            [{1}, {[at0255]}],    -- Grade 1
+                            [{2}, {[at0256]}],    -- Grade 2
+                            [{3}, {[at0257]}],    -- Grade 3
+                            [{4}, {[at0258]}],    -- Grade 4
+                            [{5}, {[at0259]}]    -- Grade 5
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0183] occurrences matches {0..1} matches {    -- Tertiary Gleason grade
+                value matches {
+                    DV_ORDINAL[at9006] matches {
+                        [value, symbol] matches {
+                            [{1}, {[at0260]}],    -- Grade 1
+                            [{2}, {[at0261]}],    -- Grade 2
+                            [{3}, {[at0262]}],    -- Grade 3
+                            [{4}, {[at0263]}],    -- Grade 4
+                            [{5}, {[at0264]}]    -- Grade 5
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0197] occurrences matches {0..1} matches {    -- Total Gleason score
+                value matches {
+                    DV_COUNT[at9007] matches {
+                        magnitude matches {|2..10|}
+                    }
+                }
+            }
+            ELEMENT[at0265] occurrences matches {0..1} matches {    -- Gleason Grade Group
+                value matches {
+                    DV_ORDINAL[at9008] matches {
+                        [value, symbol] matches {
+                            [{1}, {[at0266]}],    -- Grade Group 1
+                            [{2}, {[at0267]}],    -- Grade Group 2
+                            [{3}, {[at0268]}],    -- Grade Group 3
+                            [{4}, {[at0269]}],    -- Grade Group 4
+                            [{5}, {[at0270]}]    -- Grade Group 5
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Gleason-Score">
+                description = <"Gleason-Score (Version ISUP2005) - eine Graduierungsskala für Prostatakrebs, ratifiziert von der International Society of Urological Pathologists (ISUP), einschließlich Gleason-Grad-Gruppen.
+">
+            >
+            ["at0166"] = <
+                text = <"Primärer Gleason-Grad">
+                description = <"Der primäre Gleason-Grad.">
+            >
+            ["at0182"] = <
+                text = <"Sekundärer Gleason-Grad">
+                description = <"Der sekundäre Gleason-Grad.">
+            >
+            ["at0183"] = <
+                text = <"Tertiärer Gleason-Grad">
+                description = <"Der tertiäre Gleason-Grad.">
+            >
+            ["at0197"] = <
+                text = <"Gesamter Gleason-Score">
+                description = <"Die Summe des primären und sekundären Gleason-Grades.">
+                comment = <"Der gesamte Gleason-Score berücksichtigt nicht den tertiären Gleason-Grad.">
+            >
+            ["at0250"] = <
+                text = <"Grad 1">
+                description = <"Die krebsartige Prostata ähnelt stark normalem Prostatagewebe. Die Drüsen sind klein, wohlgeformt und dicht angeordnet.">
+            >
+            ["at0251"] = <
+                text = <"Grad 2">
+                description = <"Das Gewebe weist immer noch wohlgeformte Drüsen auf, jedoch sind sie größer und weisen mehr Gewebe zwischen sich auf.">
+            >
+            ["at0252"] = <
+                text = <"Grad 3">
+                description = <"Das Gewebe hat immer noch erkennbare Drüsen, aber die Zellen sind dunkler. Bei starker Vergrößerung haben einige dieser Zellen die Drüsen verlassen und begonnen, in das umliegende Gewebe einzudringen.">
+            >
+            ["at0253"] = <
+                text = <"Grad 4">
+                description = <"Das Gewebe hat nur wenige erkennbare Drüsen. Viele Zellen sind in das umliegende Gewebe eingedrungen.">
+            >
+            ["at0254"] = <
+                text = <"Grad 5">
+                description = <"Das Gewebe besitzt keine erkennbaren Drüsen. Häufig finden sich lediglich Zellschichten im umliegenden Gewebe.">
+            >
+            ["at0255"] = <
+                text = <"Grad 1">
+                description = <"Die krebsartige Prostata ähnelt stark normalem Prostatagewebe. Die Drüsen sind klein, wohlgeformt und dicht angeordnet.">
+            >
+            ["at0256"] = <
+                text = <"Grad 2">
+                description = <"Das Gewebe weist immer noch wohlgeformte Drüsen auf, jedoch sind sie größer und weisen mehr Gewebe zwischen sich auf.">
+            >
+            ["at0257"] = <
+                text = <"Grad 3">
+                description = <"Das Gewebe hat immer noch erkennbare Drüsen, aber die Zellen sind dunkler. Bei starker Vergrößerung haben einige dieser Zellen die Drüsen verlassen und begonnen, in das umliegende Gewebe einzudringen.">
+            >
+            ["at0258"] = <
+                text = <"Grad 4">
+                description = <"Das Gewebe hat nur wenige erkennbare Drüsen. Viele Zellen sind in das umliegende Gewebe eingedrungen.">
+            >
+            ["at0259"] = <
+                text = <"Grad 5">
+                description = <"Das Gewebe besitzt keine erkennbaren Drüsen. Häufig finden sich lediglich Zellschichten im umliegenden Gewebe.">
+            >
+            ["at0260"] = <
+                text = <"Grad 1">
+                description = <"Die krebsartige Prostata ähnelt stark normalem Prostatagewebe. Die Drüsen sind klein, wohlgeformt und dicht angeordnet.">
+            >
+            ["at0261"] = <
+                text = <"Grad 2">
+                description = <"Das Gewebe weist immer noch wohlgeformte Drüsen auf, jedoch sind sie größer und weisen mehr Gewebe zwischen sich auf.">
+            >
+            ["at0262"] = <
+                text = <"Grad 3">
+                description = <"Das Gewebe hat immer noch erkennbare Drüsen, aber die Zellen sind dunkler. Bei starker Vergrößerung haben einige dieser Zellen die Drüsen verlassen und begonnen, in das umliegende Gewebe einzudringen.">
+            >
+            ["at0263"] = <
+                text = <"Grad 4">
+                description = <"Das Gewebe hat nur wenige erkennbare Drüsen. Viele Zellen sind in das umliegende Gewebe eingedrungen.">
+            >
+            ["at0264"] = <
+                text = <"Grad 5">
+                description = <"Das Gewebe besitzt keine erkennbaren Drüsen. Häufig finden sich lediglich Zellschichten im umliegenden Gewebe.">
+            >
+            ["at0265"] = <
+                text = <"Gleason-Grad-Gruppe">
+                description = <"Die Gleason-Grad-Gruppe.">
+            >
+            ["at0266"] = <
+                text = <"Graduierungsgruppe 1">
+                description = <"Gleason-Score kleiner oder gleich 6.">
+            >
+            ["at0267"] = <
+                text = <"Graduierungsgruppe 2">
+                description = <"Gleason-Score 7 (Primärer Grad 3 + Sekundärer Grad 4).">
+            >
+            ["at0268"] = <
+                text = <"Graduierungsgruppe 3">
+                description = <"Gleason-Score 7 (Primärer Grad 4 + Sekundärer Grad 3).">
+            >
+            ["at0269"] = <
+                text = <"Graduierungsgruppe 4">
+                description = <"Gleason-Score 8.">
+            >
+            ["at0270"] = <
+                text = <"Graduierungsgruppe 5">
+                description = <"Gleason-Score 9-10.">
+            >
+            ["ac9008"] = <
+                text = <"Primärer Gleason-Grad (synthesised)">
+                description = <"Der primäre Gleason-Grad. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Sekundärer Gleason-Grad (synthesised)">
+                description = <"Der sekundäre Gleason-Grad. (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Tertiärer Gleason-Grad (synthesised)">
+                description = <"Der tertiäre Gleason-Grad. (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Gleason-Grad-Gruppe (synthesised)">
+                description = <"Die Gleason-Grad-Gruppe. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Gleason Score">
+                description = <"Gleason Score (ISUP2005 version) - a prostate cancer grading score ratified by the International Society of Urological Pathologists (ISUP), including Gleason Grade Groups.">
+            >
+            ["at0166"] = <
+                text = <"Primary Gleason grade">
+                description = <"The primary Gleason grade.">
+            >
+            ["at0182"] = <
+                text = <"Secondary Gleason grade">
+                description = <"The secondary Gleason grade.">
+            >
+            ["at0183"] = <
+                text = <"Tertiary Gleason grade">
+                description = <"The tertiary Gleason grade.">
+            >
+            ["at0197"] = <
+                text = <"Total Gleason score">
+                description = <"The sum of the primary and secondary Gleason grades.">
+                comment = <"The total Gleason score does not take account of the tertiary Gleason grade.">
+            >
+            ["at0250"] = <
+                text = <"Grade 1">
+                description = <"The cancerous prostate closely resembles normal prostate tissue. The glands are small, well-formed, and closely packed.">
+            >
+            ["at0251"] = <
+                text = <"Grade 2">
+                description = <"The tissue still has well-formed glands, but they are larger and have more tissue between them.">
+            >
+            ["at0252"] = <
+                text = <"Grade 3">
+                description = <"The tissue still has recognizable glands, but the cells are darker. At high magnification, some of these cells have left the glands and are beginning to invade the surrounding tissue.">
+            >
+            ["at0253"] = <
+                text = <"Grade 4">
+                description = <"The tissue has few recognizable glands. Many cells are invading the surrounding tissue.">
+            >
+            ["at0254"] = <
+                text = <"Grade 5">
+                description = <"The tissue does not have recognizable glands. There are often just sheets of cells throughout the surrounding tissue.">
+            >
+            ["at0255"] = <
+                text = <"Grade 1">
+                description = <"The cancerous prostate closely resembles normal prostate tissue. The glands are small, well-formed, and closely packed.">
+            >
+            ["at0256"] = <
+                text = <"Grade 2">
+                description = <"The tissue still has well-formed glands, but they are larger and have more tissue between them.">
+            >
+            ["at0257"] = <
+                text = <"Grade 3">
+                description = <"The tissue still has recognizable glands, but the cells are darker. At high magnification, some of these cells have left the glands and are beginning to invade the surrounding tissue.">
+            >
+            ["at0258"] = <
+                text = <"Grade 4">
+                description = <"The tissue has few recognizable glands. Many cells are invading the surrounding tissue.">
+            >
+            ["at0259"] = <
+                text = <"Grade 5">
+                description = <"The tissue does not have recognizable glands. There are often just sheets of cells throughout the surrounding tissue.">
+            >
+            ["at0260"] = <
+                text = <"Grade 1">
+                description = <"The cancerous prostate closely resembles normal prostate tissue. The glands are small, well-formed, and closely packed.">
+            >
+            ["at0261"] = <
+                text = <"Grade 2">
+                description = <"The tissue still has well-formed glands, but they are larger and have more tissue between them.">
+            >
+            ["at0262"] = <
+                text = <"Grade 3">
+                description = <"The tissue still has recognizable glands, but the cells are darker. At high magnification, some of these cells have left the glands and are beginning to invade the surrounding tissue.">
+            >
+            ["at0263"] = <
+                text = <"Grade 4">
+                description = <"The tissue has few recognizable glands. Many cells are invading the surrounding tissue.">
+            >
+            ["at0264"] = <
+                text = <"Grade 5">
+                description = <"The tissue does not have recognizable glands. There are often just sheets of cells throughout the surrounding tissue.">
+            >
+            ["at0265"] = <
+                text = <"Gleason Grade Group">
+                description = <"The Gleason Grade Group.">
+            >
+            ["at0266"] = <
+                text = <"Grade Group 1">
+                description = <"Gleason score less than or equal to 6.">
+            >
+            ["at0267"] = <
+                text = <"Grade Group 2">
+                description = <"Gleason score 7 (Primary grade 3 + Secondary grade 4).">
+            >
+            ["at0268"] = <
+                text = <"Grade Group 3">
+                description = <"Gleason score 7 (Primary grade 4 + Secondary grade 3).">
+            >
+            ["at0269"] = <
+                text = <"Grade Group 4">
+                description = <"Gleason score 8.">
+            >
+            ["at0270"] = <
+                text = <"Grade Group 5">
+                description = <"Gleason score 9-10.">
+            >
+            ["ac9008"] = <
+                text = <"Primary Gleason grade (synthesised)">
+                description = <"The primary Gleason grade. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Secondary Gleason grade (synthesised)">
+                description = <"The secondary Gleason grade. (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Tertiary Gleason grade (synthesised)">
+                description = <"The tertiary Gleason grade. (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Gleason Grade Group (synthesised)">
+                description = <"The Gleason Grade Group. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0166"] = <http://snomed.info/id/384994009>
+            ["at0182"] = <http://snomed.info/id/384995005>
+            ["at0183"] = <http://snomed.info/id/385002007>
+            ["at0197"] = <http://snomed.info/id/372278000>
+        >
+    >
+    value_sets = <
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0266", "at0267", "at0268", "at0269", "at0270">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0260", "at0261", "at0262", "at0263", "at0264">
+        >
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0255", "at0256", "at0257", "at0258", "at0259">
+        >
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0250", "at0251", "at0252", "at0253", "at0254">
+        >
+    >

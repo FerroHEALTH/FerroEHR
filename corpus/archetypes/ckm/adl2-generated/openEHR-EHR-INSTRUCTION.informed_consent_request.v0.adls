@@ -1,0 +1,295 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1131bc6c-830c-4e5b-98aa-c63f23bfa3d6; build_uid=48c7eeee-d848-4f55-bc78-a5c3b7ff3165)
+    openEHR-EHR-INSTRUCTION.informed_consent_request.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Emma Malm">
+                ["organisation"] = <"Karolinska Universitetssjukhuset">
+                ["email"] = <"emma.malm@cambio.se">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2012-10-09">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"ASTM Standard E2369 - 05, \"Standard Specification for Continuity of Care Record (CCR)\", ASTM International, West Conshohocken, PA, 2003, DOI: 10.1520/E2369-05E02, www.astm.org.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"4405B4E8EB3A5E4A99CA68AFA23F7992">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera en formell begäran om att få inhämta samt registrera informerat samtycke för en patient (eller dennes ombud) för en föreslagen åtgärd, prövning eller annan vårdrelaterad aktivitet.">
+            keywords = <"samtycke", "informerat", "prövning", "åtgärd">
+            use = <"Används för att registrera en formell begäran om att få inhämta samt registrera informerat samtycke för en patient (eller dennes ombud) för en föreslagen åtgärd, prövning eller annan vårdrelaterad aktivitet. Vid del av vårdplan kan detta behöva registreras som en formell förhållningsorder. Om den förslagna åtgärden, prövningen eller annan aktivitet ska utföras i en annan fysisk miljö bör begäran registreras i förväg. 
+
+Denna arketyp har utformats som ett adekvat ramverk för att begära informerat samtycke. För att uppnå de specifika kraven för mer komplexa kliniska scenarier kan extra information tilläggas under \"Details\" SLOT. Exempelvis kan arketypen CLUSTER.consent_details användas för att inkludera ytterligare samtycksuppgifter. Även andra arketyper kan utvecklas och medtas i samma SLOT för att inkludera fler detaljer om den aktuella åtgärden, prövningen eller aktiviteten.">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a formal request or instruction to gain and record informed consent from a subject (or the subject's agent) for a proposed procedure, trial or other healthcare-related activity.">
+            keywords = <"consent", "informed", "trial", "procedure", "operation">
+            use = <"Use to record a formal request or instruction to gain and record informed consent from a subject (or the subject's agent) for a proposed procedure, trial or other healthcare-related activity. This may need to be recorded as a formal instruction when part of a care plan or ahead of time when there is a distributed care team preparing a patient for a procedure, trial or activity to be performed in a different physical environment.
+
+This archetype has been designed to be a framework that will be adequate for ordering or requesting a simple informed consent, but allow for additional details to be optionally added within the 'Details' SLOT to meet the specific requirements of a more complex clinical scenario.  For example, additional consent details can be included using the CLUSTER.consent_details archetype. Other archetypes can be developed and optionally included in the same SLOT for the purpose of including specific details about the procedure, trial or activity.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    INSTRUCTION[at0000] matches {    -- Informed consent request
+        activities cardinality matches {0..*; unordered} matches {
+            ACTIVITY[at0002] occurrences matches {0..1} matches {    -- Current Activity
+                action_archetype_id matches {/openEHR-EHR-ACTION\.informed_consent\.v1/}
+                description matches {
+                    ITEM_TREE[at0003] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Proposed procedure/trial/activity
+                                value matches {
+                                    DV_TEXT[at9000]
+                                }
+                            }
+                            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9001]
+                                }
+                            }
+                            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Intent
+                                value matches {
+                                    DV_TEXT[at9002]
+                                }
+                            }
+                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Consent description
+                                value matches {
+                                    DV_TEXT[at9003]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0008] matches {    -- Details
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.consent_details(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.procedure_details(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                            }
+                            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Start date
+                                value matches {
+                                    DV_DATE_TIME[at9004]
+                                }
+                            }
+                            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Date consent required
+                                value matches {
+                                    DV_DATE_TIME[at9005]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0012] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Proposed consent document
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0013] matches {    -- Responsible provider
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.individual_professional(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0014] matches {    -- Proposed requester
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.individual_personal(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.individual_professional(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                    }
+                    CLUSTER[at0019] matches {    -- Patient information
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0020] occurrences matches {0..1} matches {    -- Name
+                                value matches {
+                                    DV_TEXT[at9007]
+                                }
+                            }
+                            ELEMENT[at0021] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9008]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0023] matches {    -- Multimedia representation
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0024] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Begäran om informerat samtycke">
+                description = <"Begäran om att få inhämta och registrera informerat samtycke för en patient (eller dennes ombud) för en föreslagen åtgärd, prövning eller annan vårdrelaterad aktivitet (inklusive behandlingar och utredningar), grundat på en tydlig förståelse av fakta, konsekvenser och möjliga framtida konsekvenser för patienten (eller dennes ombud).">
+            >
+            ["at0002"] = <
+                text = <"Nuvarande aktivitet">
+                description = <"Nuvarande aktivitet.">
+            >
+            ["at0004"] = <
+                text = <"Föreslagen åtgärd/prövning/aktivitet">
+                description = <"Identifiering av det föreslagna indexförförandet/prövningen/aktiviteten (inklusive rätt sida/rätt plats där det är lämpligt).">
+            >
+            ["at0005"] = <
+                text = <"Samtyckesbeskrivning">
+                description = <"Beskrivning av det informerade samtycke som krävs innan förslagen åtgärd, klinisk prövning eller annan vårdrelaterad aktivitet utförs.">
+            >
+            ["at0008"] = <
+                text = <"Detaljerad information">
+                description = <"Detaljerad information om förslagen åtgärd, klinisk prövning eller annan vårdrelaterad aktivitet, alternativt enskilda komponentaktiviteter i indexförförandet/prövningen/aktiviteten.">
+                comment = <"Till exempel: avsikt/syfte; detaljer kring anestesi; avslöjande av väsentliga risker; och förslagna förmåner.">
+            >
+            ["at0009"] = <
+                text = <"Startdatum">
+                description = <"Föreslaget startdatum samt tid (valfritt) för det föreslagna indexförfarandet, kliniska prövningen eller annan vårdrelaterad aktivitet.">
+            >
+            ["at0013"] = <
+                text = <"Ansvarig vårdgivare">
+                description = <"Ansvarig vårdgivare för föreslagen åtgärd, prövning eller annan vårdrelaterad aktivitet.">
+            >
+            ["at0014"] = <
+                text = <"Förfrågare">
+                description = <"Vårdgivare som begär samtycke från patienten.">
+            >
+            ["at0015"] = <
+                text = <"Datum då samtycket krävs">
+                description = <"Datum och tid (valfritt) då samtycket krävs.">
+            >
+            ["at0016"] = <
+                text = <"Beskrivning">
+                description = <"Beskrivning av förslagen åtgärd, klinisk prövning eller annan vårdrelaterad aktivitet.">
+            >
+            ["at0017"] = <
+                text = <"Avsikt">
+                description = <"Beskrivning av avsikten med föreslagen åtgärd, klinisk prövning eller annan vårdrelaterad aktivitet.">
+            >
+            ["at0018"] = <
+                text = <"Dokument med patients samtycke">
+                description = <"Identifiering av samtyckesform eller dokument.">
+            >
+            ["at0019"] = <
+                text = <"Patientinformation">
+                description = <"Detaljerad patientinformation tillgänglig för patienten eller dennes ombud.">
+            >
+            ["at0020"] = <
+                text = <"Namn">
+                description = <"Identifiering av information som skall göras tillgänglig.">
+            >
+            ["at0021"] = <
+                text = <"Beskrivning">
+                description = <"Beskrivning av den patientinformation som skall göras tillgänglig.">
+            >
+            ["at0023"] = <
+                text = <"Multimedia">
+                description = <"Digital representation av den patientinformation som skall göras tillgänglig.">
+            >
+            ["at0024"] = <
+                text = <"Tilläggsinformation">
+                description = <"Plats för att infoga tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.">
+                comment = <"Exempelvis lokala informationskrav eller metadata för anpassning till FHIR- eller CIMI-motsvarigheter.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Informed consent request">
+                description = <"Request or instruction to gain and record informed consent from a subject (or the subject's agent) for a proposed procedure, trial or other healthcare-related activity (including treatments and investigations), based upon a clear appreciation and understanding of the facts, implications, and possible future consequences by the subject (or the subject's agent).">
+            >
+            ["at0002"] = <
+                text = <"Current Activity">
+                description = <"Current Activity.">
+            >
+            ["at0004"] = <
+                text = <"Proposed procedure/trial/activity">
+                description = <"Identification of the index proposed procedure/trial/activity (including correct side/correct site, where appropriate).">
+            >
+            ["at0005"] = <
+                text = <"Consent description">
+                description = <"Narrative description of the informed consent required before performing the proposed procedure, clinical trial or healthcare-related activity.">
+            >
+            ["at0008"] = <
+                text = <"Details">
+                description = <"Detailed information on the proposed procedure, clinical trial or healthcare-related activity, or indiviual component activities of the  index procedure/trial/activity.">
+                comment = <"For example: intent/purpose; anaesthetic details; disclosure of material risks; and proposed benefits discussed.">
+            >
+            ["at0009"] = <
+                text = <"Start date">
+                description = <"Proposed start date, and optional time, for the proposed index procedure, clinical trial or healthcare-related activity.">
+            >
+            ["at0013"] = <
+                text = <"Responsible provider">
+                description = <"Healthcare provider who has oversight and responsibility for the procedure, clinical trial or healthcare-related activity.">
+            >
+            ["at0014"] = <
+                text = <"Proposed requester">
+                description = <"Healthcare provider who is proposed to request consent from the subject.">
+            >
+            ["at0015"] = <
+                text = <"Date consent required">
+                description = <"Date, and optional time,  by which the consent is required.">
+            >
+            ["at0016"] = <
+                text = <"Description">
+                description = <"Narrative description of the proposed procedure, clinical trial or healthcare-related activity.">
+            >
+            ["at0017"] = <
+                text = <"Intent">
+                description = <"Description of the intent of the proposed procedure, clinical trial or healthcare-related activity.">
+            >
+            ["at0018"] = <
+                text = <"Proposed consent document">
+                description = <"Identification of the consent form or document proposed for use.">
+            >
+            ["at0019"] = <
+                text = <"Patient information">
+                description = <"Details about Patient Information proposed to be made available to the subject or subject's agent.">
+            >
+            ["at0020"] = <
+                text = <"Name">
+                description = <"Identification of the information to be made available.">
+            >
+            ["at0021"] = <
+                text = <"Description">
+                description = <"Narrative description of the patient information to be made available.">
+            >
+            ["at0023"] = <
+                text = <"Multimedia representation">
+                description = <"Digital representation of the Patient Information to be made available.">
+            >
+            ["at0024"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+        >
+    >

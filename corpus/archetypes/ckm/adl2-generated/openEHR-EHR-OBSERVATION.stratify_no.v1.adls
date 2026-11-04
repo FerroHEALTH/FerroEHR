@@ -1,0 +1,483 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3c48f220-460b-4aa4-9f91-7ac0beb0e3f8; build_uid=b189345c-fc6c-48d7-a6ea-011d08b7f1de)
+    openEHR-EHR-OBSERVATION.stratify_no.v1.0.1
+
+language
+    original_language = <[ISO_639-1::nb]>
+    translations = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            author = <
+                ["name"] = <"Micaela Thierley">
+                ["organisation"] = <"Helse Bergen, Norway">
+                ["email"] = <"micaela.thierley@helse-bergen.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Micaela Thierley">
+        ["organisation"] = <"Helse Bergen HF, Seksjon for e-helse">
+        ["email"] = <"micaela.thierley@helse-bergen.no">
+        ["date"] = <"2014-07-04">
+    >
+    original_namespace = <"no.nasjonalikt">
+    original_publisher = <"Nasjonal IKT">
+    other_contributors = <"Anne Pauline Anderssen, Helse Nord RHF, Norway", "Vebjørn Arntzen, Oslo universitetssykehus HF, Norway", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (Nasjonal IKT redaktør)", "Lars Bitsch-Larsen, Haukeland University Hospital, Bergen, Norway", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Kåre Flø, DIPS ASA, Norway", "Einar Fosse, UNN HF, Norwegian Centre for Integrated Care and Telemedicine, Norway", "Bente Gjelsvik, Helse Bergen, Norway", "Nina Hauge, Helse Fonna, Norway", "Ingrid Heitmann, Oslo universitetssykehus HF, Norway", "Erling Are Hole, Helse Bergen, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Sabine Leh, Helse-Bergen, Norway", "Heather Leslie, Ocean Informatics, Australia", "Siv Marie Lien, DIPS ASA, Norway", "Hallvard Lærum, Oslo Universitetssykehus HF, Norway", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Hugo Nilssen, UNN HF K3K/Tromsø, Norway", "Bjørn Næss, DIPS ASA, Norway", "Rune Pedersen, Universitetssykehuset i Nord Norge, Norway", "Micaela Thierley, Helse Bergen, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"no.nasjonalikt">
+    custodian_organisation = <"Nasjonal IKT">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Oliver D, Britton M, Seed P,  Martin FC , Hopper A H. Development and evaluation of evidence based risk assessment tool (STRATIFY) to predict which elderly inpatients will fall: case-control and cohort studies. BMJ 1997;315:1049">
+        ["2"] = <"Sekretariatet for nasjonalt pasientsikkerhetsprogram, Helsedirektoratet. Forebygging av fall i helseinstitusjoner [Internett]; [sitert 17.06.2015]. Tilgjengelig fra: http://www.pasientsikkerhetsprogrammet.no/no/I+trygge+hender/Innsatsomr%C3%A5der/Forebygging+av+fall+i+helseinstitusjoner.453.cms">
+    >
+    other_details = <
+        ["current_contact"] = <"Micaela Thierley, Helse Bergen, micaela.thierley@helse-bergen.no">
+        ["MD5-CAM-1.0.1"] = <"CB42B91EA4E562C614679595832D1251">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"Til bruk for kartlegging av fallrisiko for pasienter over 65 år og andre voksne med nevrologiske eller kognitive sykdomstilstander eller betydelige synshemninger.">
+            use = <"Risikovurdering av alle pasienter over 65 år og andre voksne med nevrologiske eller kognitive sykdomstilstander eller betydelige synshemninger innen ett døgn i helseinstitusjon.
+
+Elementene under clusteret Forflytning + rørlighet/gangfunksjon ble i den opprinnelige STRATIFY hentet fra Barthel Index. Siden STRATIFY og Barthel gjennom valideringer og oversettelser siden har divergert, gjøres denne arketypen uavhengig av Barthel-arketypen.
+
+Den endelige summen kan registreres manuelt (det vil si regnet ut og lagt inn av klinikeren) eller automatisk (automatisk summering basert på de registrerte verdier).">
+            misuse = <"">
+            copyright = <"© Nasjonal IKT HF">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For screening for falls risk in patients over 65 years of age, and other adults with neurological or cognitive conditions or significant visual impairment.">
+            keywords = <"risk", "fall", "balance">
+            use = <"To be used for risk assessment of all patients over the age of 65 and other adults with neurological or cognitive conditions or significant visual impairment, within 24h of being admitted to a healtchare institution.
+
+The dataelements 'Transfer' and 'Mobility' under the cluster 'Transfer + Mobility' was in the original STRATIFY collected from the Barthel ADL Index. As STRATIFY and Barthel has diverged, is this archetype made independent of the Barthel archetype.
+
+The final score can either be calculated manually (entered by the clinician) or automatically (automatic calculation based on the values recorded).">
+            misuse = <"">
+            copyright = <"© Nasjonal IKT HF">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- STRATIFY
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Uspesifisert hendelse
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Fall de siste tre måneder
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0011]}],    -- Nei
+                                                    [{1}, {[at0012]}]    -- Ja
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Synshemminger
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0015]}],    -- Nei
+                                                    [{1}, {[at0017]}]    -- Ja
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Urolig atferd
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0013]}],    -- Nei
+                                                    [{1}, {[at0014]}]    -- Ja
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Hyppige toalettbesøk
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0018]}],    -- Nei
+                                                    [{1}, {[at0019]}]    -- Ja
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0022] occurrences matches {0..1} matches {    -- Forflytning + rørlighet/gangfunksjon
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Forflytning fra seng til stol
+                                                value matches {
+                                                    DV_ORDINAL[at9010] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0026]}],    -- Kan ikke flytte seg
+                                                            [{1}, {[at0027]}],    -- Trenger stor/vesentlig hjelp
+                                                            [{2}, {[at0028]}],    -- Trenger lite hjelp
+                                                            [{3}, {[at0029]}]    -- Selvstendig med eller uten hjelpemidler
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Rørlighet/gangfunksjon
+                                                value matches {
+                                                    DV_ORDINAL[at9011] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0030]}],    -- Ikke mobil
+                                                            [{1}, {[at0031]}],    -- Selvstendig med hjelp av rullestol
+                                                            [{2}, {[at0032]}],    -- Bruker gå-hjelpemiddel eller går med hjelp av en person
+                                                            [{3}, {[at0034]}]    -- Selvstendig
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Svarpoeng
+                                                value matches {
+                                                    DV_COUNT[at9012] matches {
+                                                        magnitude matches {|0..1|}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Poeng totalt
+                                        value matches {
+                                            DV_COUNT[at9013] matches {
+                                                magnitude matches {|0..5|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"STRATIFY">
+                description = <"Vurderingsverktøy for identifisering av fallrisiko hos eldre pasienter på sykehus eller andre heldøgnsinstitusjoner. Denne versjonen er basert på den modifiserte norske oversettelsen som er tatt i bruk av det nasjonale pasientsikkerhetsprogrammet.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i en template eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Fall de siste tre måneder">
+                description = <"Har pasient hatt noen fall i de siste 3 månedene?">
+                comment = <"score 0 for Usann/ Nei, 
+score 1 for Sann/ Ja.">
+            >
+            ["at0005"] = <
+                text = <"Urolig atferd">
+                description = <"Er pasient urolig?">
+                comment = <"score 0 for Usann/ Nei, 
+score 1 for Sann/ Ja.">
+            >
+            ["at0006"] = <
+                text = <"Synshemminger">
+                description = <"Er pasient synsskadet/synshemmet i et slikt omfang at hverdagslig funksjoner er påvirket?">
+                comment = <"score 0 for Usann/ Nei, 
+score 1 for Sann/ Ja.">
+            >
+            ["at0007"] = <
+                text = <"Hyppige toalettbesøk">
+                description = <"Oppfatter du at pasient har spesielt behov av å besøke toalett ofte?">
+                comment = <"score 0 for Usann/ Nei, 
+score 1 for Sann/ Ja.">
+            >
+            ["at0009"] = <
+                text = <"Poeng totalt">
+                description = <"Sum av poeng fra alle elementene.">
+                comment = <"0 = lav risko, 
+1 = moderat risko, 
+>2 = høy risko.">
+            >
+            ["at0011"] = <
+                text = <"Nei">
+                description = <"Pasienten har ikke hatt noen fall siste 3 måneder.">
+            >
+            ["at0012"] = <
+                text = <"Ja">
+                description = <"Pasienten har hatt fall siste 3 måneder.">
+            >
+            ["at0013"] = <
+                text = <"Nei">
+                description = <"Pasienten viser ikke urolig atferd.">
+            >
+            ["at0014"] = <
+                text = <"Ja">
+                description = <"Pasienten viser urolig atferd.">
+            >
+            ["at0015"] = <
+                text = <"Nei">
+                description = <"Pasienten har ikke store synshemminger.">
+            >
+            ["at0017"] = <
+                text = <"Ja">
+                description = <"Pasienten har store synshemminger.">
+            >
+            ["at0018"] = <
+                text = <"Nei">
+                description = <"Oppfatter ikke at pasient har behov for hyppige toalettbesøk.">
+            >
+            ["at0019"] = <
+                text = <"Ja">
+                description = <"Oppfatter at pasient har behov for hyppige toalettbesøk.">
+            >
+            ["at0022"] = <
+                text = <"Forflytning + rørlighet/gangfunksjon">
+                description = <"Summering av verdien fra \"Forflytning fra seng til stol\" og verdien fra \"Rørlighet/gangfunksjon\" utgjør \"Svarpoeng\", som brukes i summering av \"Poeng totalt\".">
+            >
+            ["at0023"] = <
+                text = <"Forflytning fra seng til stol">
+                description = <"Beskriv pasientens prestasjonsnivå for forflytning fra seng til stol.">
+            >
+            ["at0024"] = <
+                text = <"Rørlighet/gangfunksjon">
+                description = <"Beskriver pasientens nivå av rørlighet/gangfunksjon.">
+            >
+            ["at0025"] = <
+                text = <"Svarpoeng">
+                description = <"Poengene fra Forflytning fra seng til stol og Rørlighet/gangfunksjon legges sammen. Er summen 0-2 eller 5-6 gis 0 poeng. Er summen 3-4 gis 1 poeng.">
+            >
+            ["at0026"] = <
+                text = <"Kan ikke flytte seg">
+                description = <"*(nb)">
+            >
+            ["at0027"] = <
+                text = <"Trenger stor/vesentlig hjelp">
+                description = <"*(nb)">
+            >
+            ["at0028"] = <
+                text = <"Trenger lite hjelp">
+                description = <"*(nb)">
+            >
+            ["at0029"] = <
+                text = <"Selvstendig med eller uten hjelpemidler">
+                description = <"*(nb)">
+            >
+            ["at0030"] = <
+                text = <"Ikke mobil">
+                description = <"*(nb)">
+            >
+            ["at0031"] = <
+                text = <"Selvstendig med hjelp av rullestol">
+                description = <"*(nb)">
+            >
+            ["at0032"] = <
+                text = <"Bruker gå-hjelpemiddel eller går med hjelp av en person">
+                description = <"*(nb)">
+            >
+            ["at0034"] = <
+                text = <"Selvstendig">
+                description = <"*(nb)">
+            >
+            ["ac9013"] = <
+                text = <"Fall de siste tre måneder (synthesised)">
+                description = <"Har pasient hatt noen fall i de siste 3 månedene? (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Synshemminger (synthesised)">
+                description = <"Er pasient synsskadet/synshemmet i et slikt omfang at hverdagslig funksjoner er påvirket? (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Urolig atferd (synthesised)">
+                description = <"Er pasient urolig? (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Hyppige toalettbesøk (synthesised)">
+                description = <"Oppfatter du at pasient har spesielt behov av å besøke toalett ofte? (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Forflytning fra seng til stol (synthesised)">
+                description = <"Beskriv pasientens prestasjonsnivå for forflytning fra seng til stol. (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"Rørlighet/gangfunksjon (synthesised)">
+                description = <"Beskriver pasientens nivå av rørlighet/gangfunksjon. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"STRATIFY Falls Risk Assessment Tool">
+                description = <"Assessment tool for identifying falls risk in elderly patients admitted to hospital or other 24h healthcare institutions. This version of the tool is based on a modified Norwegian translation, which has been deployed by the The Norwegian Patient Safety Programme.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Falls during the last three months">
+                description = <"Has the patient fallen during the last 3 months?">
+                comment = <"Score 0 for False/no,
+Score 1 for True/yes.">
+            >
+            ["at0005"] = <
+                text = <"Agitation">
+                description = <"Does the patient show agitated, desoriented or confused behaviour?">
+                comment = <"Score 0 for False/no,
+Score 1 for True/yes.">
+            >
+            ["at0006"] = <
+                text = <"Visual impairments">
+                description = <"Is the patient visually impaired to the extent that everyday function is affected?">
+                comment = <"Score 0 for False/no,
+Score 1 for True/yes.">
+            >
+            ["at0007"] = <
+                text = <"Frequent toileting">
+                description = <"Do you think the patient is in need of especially frequent toileting?">
+                comment = <"Score 0 for False/no,
+Score 1 for True/yes.">
+            >
+            ["at0009"] = <
+                text = <"Total score">
+                description = <"Sum of the scores from all the elements.">
+                comment = <"0 = low risk, 
+1 = moderate risk,
+>2 = high risk.">
+            >
+            ["at0011"] = <
+                text = <"No">
+                description = <"The patient hasn't had any falls during the last 3 months.">
+            >
+            ["at0012"] = <
+                text = <"Yes">
+                description = <"The patient has had falls during the last 3 months.">
+            >
+            ["at0013"] = <
+                text = <"No">
+                description = <"The patient doesn't show agitated behaviour.">
+            >
+            ["at0014"] = <
+                text = <"Yes">
+                description = <"The patient shows agitated behaviour.">
+            >
+            ["at0015"] = <
+                text = <"No">
+                description = <"The patient doesn't have significant visual impairments.">
+            >
+            ["at0017"] = <
+                text = <"Yes">
+                description = <"The patient has significant visual impairments.">
+            >
+            ["at0018"] = <
+                text = <"No">
+                description = <"The patient isn't in need of frequent toileting.">
+            >
+            ["at0019"] = <
+                text = <"Yes">
+                description = <"The patient is in need of frequent toileting.">
+            >
+            ["at0022"] = <
+                text = <"Transfer + Mobility">
+                description = <"The sum of the scores from the elements 'Transfer' and 'Mobility' are used in 'Points', which is then used in the 'Total score'.">
+            >
+            ["at0023"] = <
+                text = <"Transfer">
+                description = <"Describe the patient's level of independence in transfer from bed to a chair.">
+            >
+            ["at0024"] = <
+                text = <"Mobility">
+                description = <"Describe the patient's level of independent mobility.">
+            >
+            ["at0025"] = <
+                text = <"Points">
+                description = <"The points from \"Transfer\" and \"Mobility\" are added together. If the sum is 0-2 or 5-6, 0 points are given. If the sum is 3-4, 1 point is given.">
+            >
+            ["at0026"] = <
+                text = <"Unable to move">
+                description = <"**(nb)(nb)">
+            >
+            ["at0027"] = <
+                text = <"Needs major help">
+                description = <"**(nb)(nb)">
+            >
+            ["at0028"] = <
+                text = <"Needs minor help">
+                description = <"**(nb)(nb)">
+            >
+            ["at0029"] = <
+                text = <"Independent with or without aids">
+                description = <"**(nb)(nb)">
+            >
+            ["at0030"] = <
+                text = <"Immobile">
+                description = <"**(nb)(nb)">
+            >
+            ["at0031"] = <
+                text = <"Independent in a wheelchair">
+                description = <"**(nb)(nb)">
+            >
+            ["at0032"] = <
+                text = <"Uses a walking aid or walks with help of one person">
+                description = <"**(nb)(nb)">
+            >
+            ["at0034"] = <
+                text = <"Independent">
+                description = <"**(nb)(nb)">
+            >
+            ["ac9013"] = <
+                text = <"Falls during the last three months (synthesised)">
+                description = <"Has the patient fallen during the last 3 months? (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Visual impairments (synthesised)">
+                description = <"Is the patient visually impaired to the extent that everyday function is affected? (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Agitation (synthesised)">
+                description = <"Does the patient show agitated, desoriented or confused behaviour? (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Frequent toileting (synthesised)">
+                description = <"Do you think the patient is in need of especially frequent toileting? (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Transfer (synthesised)">
+                description = <"Describe the patient's level of independence in transfer from bed to a chair. (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"Mobility (synthesised)">
+                description = <"Describe the patient's level of independent mobility. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0011", "at0012">
+        >
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0026", "at0027", "at0028", "at0029">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0018", "at0019">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0013", "at0014">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0015", "at0017">
+        >
+        ["ac9018"] = <
+            id = <"ac9018">
+            members = <"at0030", "at0031", "at0032", "at0034">
+        >
+    >

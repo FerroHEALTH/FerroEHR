@@ -1,0 +1,563 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=99b0925d-20fe-4ddd-afc8-a9cfea3d6fb1; build_uid=799e27af-8676-49f1-84f3-808dd892b759)
+    openEHR-EHR-OBSERVATION.hearing_screening_result.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Kerrie Lee">
+        ["email"] = <"kerrie.lee2@bigpond.com">
+        ["date"] = <"2012-12-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Stephen Chu, NEHTA, Australia", "Kathy Currie, Northern Territory Health, Australia", "Jade Frederiksen, Hearing Health Program, DoH, Australia", "Sam Harkus, Australian Hearing, Australia", "Sam Heard, Ocean Informatics, Australia", "Paul Hickey, Hearing Health Program, Australia", "Oliver Hosking, Remote Health NT, Australia", "Anthony Leech, Hearing Health, Australia", "Kerrie Lee, Ngaanyatjarra Health Service, Australia (Editor)", "Heather Leslie, Atomica Informatics, Australia (Editor)", "Rebecca Matthews, NT Hearing Services - NTG, Australia", "Mark Ramjan, NT Department of Health, Australia", "Bojana Sarkic, Northern Territory Government, Australia", "Fiona Wake, RAHC, Australia", "Amarjit Anand, NT Department of Health/NT Hearing, Australia", "Kimberley Crebbin, NT Hearing Services, Australia", "Lisa Dawson, NT Hearing Services, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Derived from: Hearing screening result, Draft archetype [Internet]. Australian Digital Health Agency (NEHTA), ADHA Clinical Knowledge Manager. Authored: 2012 Dec 14. Available at: http://dcm.nehta.org.au/ckm#showArchetype_1013.1.1133_4 (discontinued).">
+        ["2"] = <"Sabini P, Sclafani AP. Efficacy of serologic testing in asymmetric sensorineural hearing loss. Otolaryngol Head Neck Surg. 2000 Apr;122(4):469-76. PubMed PMID: 10740163.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"16AB79C85D07DFC390FE1B65A96D3E34">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record of results of a hearing screening assessment and the screening outcome.">
+            keywords = <"hearing", "test", "audiometry", "acuity", "decibels", "screen", "screening", "VROA", "VRA", "play", "AABR", "neonatal", "audiogram">
+            use = <"Use to record subject responses to hearing screening for one ear at a time or both ears simultaneously.
+
+Use to record the outcome of all responses to hearing screening (or Screening Outcome). 
+
+This archetype has been designed to capture screening assessment for hearing, using pass/fail criteria, for the following tests:
+- Pure Tone Audiometry;
+- Play Audiometry;
+- Automated Auditory Brainstem Response; and
+- Visual Reinforcement Orientation Audiometry.
+
+All of the data elements are recorded using a single method or protocol. If, during the test, any of the protocol parameters need to be modified, then the subsequent part of the test will need to be recorded within a separate instance of the test data, using the updated protocol parameters.">
+            misuse = <"Not to be used for hearing threshold assessment - use the OBSERVATION.audiogram archetype.
+
+Not to be used to record other auditory assessments such as:
+- Behavioural Observation Audiometry (BOA);
+- Most Comfortable Listening Level (MCL) and Uncomfortable Listening Level (UCL);
+- Auditory Brainstem Response (ABR) for diagnostic purposes
+- Transient Evoked Otoacoustic Emission (TEOAE); and
+- Distortion Product Otoacoustic Emission (DPOAE).
+These assessments need to be recorded in specific archetypes for the purpose.">
+            copyright = <"© Northern Territory Department of Health (Australia), openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Hearing screening test result
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Any point in time
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0037] occurrences matches {1} matches {    -- Test result name
+                                        value matches {
+                                            DV_TEXT[at9010]
+                                        }
+                                    }
+                                    CLUSTER[at0006] occurrences matches {0..3} matches {    -- Test
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0007] occurrences matches {1} matches {    -- Test ear
+                                                value matches {
+                                                    DV_CODED_TEXT[at9011] matches {
+                                                        defining_code matches {[ac9000]}    -- Test ear (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            CLUSTER[at0048] matches {    -- Stimulus response
+                                                items cardinality matches {2..*; unordered} matches {
+                                                    ELEMENT[at0011] occurrences matches {1} matches {    -- Frequency
+                                                        value matches {
+                                                            DV_QUANTITY[at9012] matches {
+                                                                property matches {[at9001]}    -- Frequency
+                                                                [magnitude, units, precision] matches {
+                                                                    [{|500.0..4000.0|}, {"Hz"}, {0}],
+                                                                    [{|0.5..4.0|}, {"kHz"}, {1}]
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0012] occurrences matches {1} matches {    -- Intensity
+                                                        value matches {
+                                                            DV_QUANTITY[at9013] matches {
+                                                                property matches {[at9002]}    -- Loudness
+                                                                magnitude matches {|0.0..50.0|}
+                                                                units matches {"dB"}
+                                                                precision matches {0}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0137] occurrences matches {0..1} matches {    -- Response
+                                                        value matches {
+                                                            DV_CODED_TEXT[at9014] matches {
+                                                                defining_code matches {[ac9003]}    -- Response (synthesised)
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0122] occurrences matches {0..1} matches {    -- No test result
+                                                value matches {
+                                                    DV_BOOLEAN[at9015] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0123] occurrences matches {0..1} matches {    -- Reason for no test result
+                                                value matches {
+                                                    DV_TEXT[at9016]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0051] occurrences matches {0..1} matches {    -- Screening outcome
+                                        value matches {
+                                            DV_CODED_TEXT[at9017] matches {
+                                                defining_code matches {[ac9004]}    -- Screening outcome (synthesised)
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0143] matches {    -- Multimedia
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    allow_archetype CLUSTER[at0146] matches {    -- Test not done
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9018]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0013] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Sleep status
+                                        value matches {
+                                            DV_CODED_TEXT[at9019] matches {
+                                                defining_code matches {[ac9005; at30]}    -- Sleep status (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0140] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9020]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    POINT_EVENT[at0142] occurrences matches {0..1} matches {    -- Neonatal screening
+                        data matches {
+                            use_node ITEM_TREE[at9021] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                        state matches {
+                            use_node ITEM_TREE[at9022] /data[at0001]/events[at0002]/state[at0013]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0032] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0144] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0075] occurrences matches {0..1} matches {    -- Test environment
+                        value matches {
+                            DV_CODED_TEXT[at9023] matches {
+                                defining_code matches {[ac9030]}    -- Test environment (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0145] occurrences matches {0..1} matches {    -- Background noise
+                        value matches {
+                            DV_CODED_TEXT[at9024] matches {
+                                defining_code matches {[ac9007]}    -- Background noise (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0034] occurrences matches {0..1} matches {    -- Test stimulus
+                        value matches {
+                            DV_CODED_TEXT[at9025] matches {
+                                defining_code matches {[ac9008]}    -- Test stimulus (synthesised)
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0047] matches {    -- Test device
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0116] matches {    -- Earphones
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0134] occurrences matches {0..2} matches {    -- Reliability
+                        value matches {
+                            DV_TEXT[at9026]
+                        }
+                    }
+                    ELEMENT[at0089] occurrences matches {0..1} matches {    -- Calibration reference dB
+                        value matches {
+                            DV_CODED_TEXT[at9027] matches {
+                                defining_code matches {[ac9009]}    -- Calibration reference dB (synthesised)
+                            }
+                        }
+                    }
+                    CLUSTER[at0102] matches {    -- Screening assessment pass criteria
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0107] occurrences matches {0..1} matches {    -- Screening frequency
+                                value matches {
+                                    DV_QUANTITY[at9028] matches {
+                                        property matches {[at9001]}    -- Frequency
+                                        [magnitude, units, precision] matches {
+                                            [{|0.125..16.0|}, {"kHz"}, {3}],
+                                            [{|125.0..16000.0|}, {"Hz"}, {0}]
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0106] occurrences matches {0..1} matches {    -- Screening level
+                                value matches {
+                                    DV_QUANTITY[at9029] matches {
+                                        property matches {[at9002]}    -- Loudness
+                                        magnitude matches {|-10.0..120.0|}
+                                        units matches {"dB"}
+                                        precision matches {0}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0120] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9030]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Hearing screening test result">
+                description = <"Record of results of a hearing screening assessment and the screening outcome.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time">
+                description = <"Default, unspecified point in time which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0006"] = <
+                text = <"Test">
+                description = <"The screening test result which can be recorded per ear or for both ears simultaneously.">
+            >
+            ["at0007"] = <
+                text = <"Test ear">
+                description = <"Identification of the ear to which the test stimulus is being presented.">
+            >
+            ["at0008"] = <
+                text = <"Left ear">
+                description = <"The test stimuli were presented to the left ear only.">
+            >
+            ["at0009"] = <
+                text = <"Right ear">
+                description = <"The test stimuli were presented to the right ear only.">
+            >
+            ["at0011"] = <
+                text = <"Frequency">
+                description = <"The stimulus frequency tested.">
+                comment = <"Frequency is not applicable if a click stimulus is presented.">
+            >
+            ["at0012"] = <
+                text = <"Intensity">
+                description = <"The stimulus intensity tested.">
+            >
+            ["at0027"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the test results and intepretation not captured in other fields.">
+            >
+            ["at0028"] = <
+                text = <"Sleep status">
+                description = <"The status of the subject during testing.">
+            >
+            ["at0029"] = <
+                text = <"Awake">
+                description = <"The test subject was awake during the testing.">
+            >
+            ["at0030"] = <
+                text = <"Asleep">
+                description = <"The test subject was asleep during testing.">
+            >
+            ["at0034"] = <
+                text = <"Test stimulus">
+                description = <"Identification of the frequency-specific stimulus used in screening.">
+            >
+            ["at0035"] = <
+                text = <"Tone burst">
+                description = <"The test stimulus is a tone burst centred on the specified frequency.">
+            >
+            ["at0036"] = <
+                text = <"Click">
+                description = <"The test stimulus is a click.">
+            >
+            ["at0037"] = <
+                text = <"Test result name">
+                description = <"Identification of the type of screening test performed.">
+                comment = <"Coding with an external terminology is preferred, where possible. Applicable tests using a screening protocol include: Pure Tone Audiometry; Play Audiometry; Auditory Brainstem Response; Automated Auditory Brainstem Response; and Visual Reinforcement Orientation Audiometry.">
+            >
+            ["at0047"] = <
+                text = <"Test device">
+                description = <"Details of device used to conduct the test.">
+                comment = <"For example: details about the audiometer">
+            >
+            ["at0048"] = <
+                text = <"Stimulus response">
+                description = <"The grouping of the subject's response to each stimulus presented.">
+            >
+            ["at0049"] = <
+                text = <"Binaural">
+                description = <"The test stimuli were presented to both ears simultaneously in a soundfield.">
+            >
+            ["at0051"] = <
+                text = <"Screening outcome">
+                description = <"Overall result of screening.">
+                comment = <"In some existing screening programs, the result has previously been recorded as one of three options: 'Pass', 'Re-test' or 'Refer'. This confounds the result with subsequent next actions. This data element is recording the outcome of the test alone - thus 'Pass' or 'Fail' are the only two options. Following a 'Fail' result, a clinical system can support the clinician to initiate appropriate a subsequent activity (eg based on other information such as previous screening test results) - either a rescheduling of the screening test (ie a 'Re-test') or initiation of a referral for further investigation (ie  a 'Refer'). ">
+            >
+            ["at0052"] = <
+                text = <"Pass">
+                description = <"The test was passed, based on screening criteria.">
+            >
+            ["at0053"] = <
+                text = <"Fail">
+                description = <"The test was failed, based on screening criteria.">
+            >
+            ["at0075"] = <
+                text = <"Test environment">
+                description = <"The physical environment in which the audiometric test is administered.">
+                comment = <"This data element is commonly used in industry hearing programs.">
+            >
+            ["at0076"] = <
+                text = <"Audiometric booth">
+                description = <"Sound-treated test environment that meets audiometric standards for ambient noise.">
+            >
+            ["at0077"] = <
+                text = <"Clinically significant">
+                description = <"The background noise may compromise test results.">
+            >
+            ["at0078"] = <
+                text = <"Not clinically significant">
+                description = <"The background noise is not likely to compromise test results.">
+            >
+            ["at0079"] = <
+                text = <"Non-sound treated room">
+                description = <"Test environment that does not meet audiometric standards for ambient noise.">
+            >
+            ["at0080"] = <
+                text = <"Warble tone">
+                description = <"The test stimulus is a frequency modulated tone centred on the specified frequency.">
+            >
+            ["at0081"] = <
+                text = <"Pure tone">
+                description = <"The test stimulus is a pure tone centred on the specified frequency.">
+            >
+            ["at0089"] = <
+                text = <"Calibration reference dB">
+                description = <"Scale used for acoustic calibration check.">
+            >
+            ["at0090"] = <
+                text = <"db SPL">
+                description = <"The sound pressure level scale was used.">
+            >
+            ["at0091"] = <
+                text = <"dB HL">
+                description = <"The hearing level scale was used.">
+            >
+            ["at0092"] = <
+                text = <"dB nHL">
+                description = <"The normal hearing level scale was used.">
+            >
+            ["at0102"] = <
+                text = <"Screening assessment pass criteria">
+                description = <"Criteria used to determine a screening assessement pass.">
+            >
+            ["at0106"] = <
+                text = <"Screening level">
+                description = <"Identification of the level of stimulus used to determine a screening assessment pass.">
+            >
+            ["at0107"] = <
+                text = <"Screening frequency">
+                description = <"Identification of the stimulus frequency used to determine a screening assessment pass.">
+                comment = <"This data element is not used if the Test Stimulus is specified as a Click.">
+            >
+            ["at0116"] = <
+                text = <"Earphones">
+                description = <"Details of earphones, either insert or external, used to conduct the test.">
+            >
+            ["at0120"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the protocol for the screening test not captured in other fields.">
+                comment = <"For example, the co-operation of the subject or description of the method used for testing.">
+            >
+            ["at0122"] = <
+                text = <"No test result">
+                description = <"No test result is available for the test ear.">
+                comment = <"Record as True if the clinician was unable to record a result for the test ear or binaural testing in a soundfield, as defined by the 'Test Ear' data element.">
+            >
+            ["at0123"] = <
+                text = <"Reason for no test result">
+                description = <"Reason why no result is available for the test ear.">
+                comment = <"Coding with an external terminology is preferred, where possible. For example, patient was not cooperative; patient was not capable; ran out of time.">
+            >
+            ["at0134"] = <
+                text = <"Reliability">
+                description = <"Narrative description of the reliability of the test results, as determined by the tester.">
+                comment = <"If an appropriate value set can be determined, this could be coded. The maximum occurrences of this data element have been set to two to allow for both narrative and a coded value to be selected in a template.">
+            >
+            ["at0137"] = <
+                text = <"Response">
+                description = <"The response of the test subject as a consequence of presentation of the frequency/intensity pair.">
+            >
+            ["at0138"] = <
+                text = <"Positive response">
+                description = <"The subject responded, in a prescribed manner, to the stimulus.">
+            >
+            ["at0139"] = <
+                text = <"No response">
+                description = <"The subject did not respond to the stimulus.">
+            >
+            ["at0140"] = <
+                text = <"Confounding factors">
+                description = <"Narrative description of factors, not recorded elsewhere, that may contribute to the screening result.">
+                comment = <"For example: The infant was crying at the time of testing.">
+            >
+            ["at0141"] = <
+                text = <"Narrow band noise">
+                description = <"The test stimulus is a narrow band noise centred on the specified frequency.">
+            >
+            ["at0142"] = <
+                text = <"Neonatal screening">
+                description = <"Test performed soon after birth to screen for hearing defects that warrant urgent investigation.">
+            >
+            ["at0143"] = <
+                text = <"Multimedia">
+                description = <"Digital representation of the test results.">
+            >
+            ["at0144"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0145"] = <
+                text = <"Background noise">
+                description = <"The amount of noise present in the test environment.">
+                comment = <"If testing is conducted in an audiometric booth, this data element is redundant.">
+            >
+            ["at0146"] = <
+                text = <"Test not done">
+                description = <"Details to explicitly record that this test was not performed.">
+            >
+            ["at9002"] = <
+                text = <"Loudness">
+                description = <"Loudness">
+            >
+            ["at9001"] = <
+                text = <"Frequency">
+                description = <"Frequency">
+            >
+            ["ac9000"] = <
+                text = <"Test ear (synthesised)">
+                description = <"Identification of the ear to which the test stimulus is being presented. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Response (synthesised)">
+                description = <"The response of the test subject as a consequence of presentation of the frequency/intensity pair. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Screening outcome (synthesised)">
+                description = <"Overall result of screening. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Sleep status (synthesised)">
+                description = <"The status of the subject during testing. (synthesised)">
+            >
+            ["ac9030"] = <
+                text = <"Test environment (synthesised)">
+                description = <"The physical environment in which the audiometric test is administered. (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"Background noise (synthesised)">
+                description = <"The amount of noise present in the test environment. (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"Test stimulus (synthesised)">
+                description = <"Identification of the frequency-specific stimulus used in screening. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Calibration reference dB (synthesised)">
+                description = <"Scale used for acoustic calibration check. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9002"] = <http://openehr.org/id/123>
+            ["at9001"] = <http://openehr.org/id/382>
+        >
+    >
+    value_sets = <
+        ["ac9030"] = <
+            id = <"ac9030">
+            members = <"at0076", "at0079">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0009", "at0008", "at0049">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0029", "at0030">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0052", "at0053">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0138", "at0139">
+        >
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0090", "at0091", "at0092">
+        >
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0036", "at0035", "at0080", "at0141", "at0081">
+        >
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at0077", "at0078">
+        >
+    >

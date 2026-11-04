@@ -1,0 +1,2471 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d7464154-d7a2-4c0f-8892-67cacb23f6cf; build_uid=b9a39035-9b21-4cd4-952a-c7782a384370)
+    openEHR-EHR-OBSERVATION.ecg_result.v1.0.4
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Aljoscha Kindermann, Kim Sommer">
+                ["organisation"] = <"University Hospital of Heidelberg, MHH">
+                ["email"] = <"aljoscha.kindermann@med.uni-heidelberg.de, sommer.kimkatrin@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Helse Vest IKT AS">
+                ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Omer Hotomaroglu">
+        ["organisation"] = <"Tepe International">
+        ["email"] = <"omermatrix@ada.net.tr">
+        ["date"] = <"2007-07-18">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Morten Aas, Diakonhjemmet Sykehus, Norway", "Marit Alice Venheim, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Ole Andreas Bjordal, Webmed, Norway", "Erling Are Hole, Helse Bergen, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway", "Koray Atalag, University of Auckland, New Zealand", "Heidi Aursand, Oslo universitetssykehus, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Ivar Berge, Oslo Universitetssykehus, Norway", "Greg Burch, Tiny Medical Apps, United Kingdom", "Marja Buur, Medisch Centrum Alkmaar/ Code24, Netherlands", "Tamsin Cockayne, Australia", "Marc Cotran, identity vision systems, Canada", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Einar Engtrø, DIPS AS, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Sam Heard, Ocean Informatics, Australia", "Eugene Igras, IRIS Systems, Inc., Canada", "Lars Ivar Mehlum, Nasjonal IKT HF, Norway", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Mikkel Johan Gaup Grønmo, Forvaltningssenter EPJ, Helse Nord, Norway (Nasjonal IKT redaktør)", "Aljoscha Kindermann, University Hospital of Heidelberg, Germany", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Anette Larsson, Tieto Sweden AB, Sweden", "Liv Laugen, Oslo universitetssykehus, Norway (Nasjonal IKT redaktør)", "Øygunn Leite Kallevik, Helse Bergen, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Siv Marie Lien, DIPS ASA, Norway", "Hildegard McNicoll, freshEHR Clinical Informatics Ltd., United Kingdom", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Jayashree Panickar, Karolinska Institute, Sweden", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Raymond Simkus, Brookswood Family Practice, Canada", "Niclas Skyttberg, Karolinska Institutet, Sweden", "Trine Strand, Oslo Universitetssykehus (OUS), Norway", "Tim Sturgill, United States", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Andreas Sundstrom, Capio S:t Gorans Hospital, Sweden", "Nyree Taylor, Ocean Informatics, Australia", "Micaela Thierley, Helse Vest IKT, Norway", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "Anders Thurin, VGR, Sweden", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Stian Torleif Varpe, Helse Vest IKT, Norway", "Jesus Trigo, Public University of Navarre, Spain", "Karl Trygve Kalleberg, Oslo Universitetssykehus, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"ECG Report Templates [Internet]. Digital Imaging and Communications in Medicine (DICOM) Standards Committee. DICOM PS3.16 2018 c - Content Mapping Resource; 2018. Available from: http://dicom.nema.org/medical/dicom/current/output/html/part16.html#sect_ECGReportTemplates">
+        ["2"] = <"Electrode Placement Values [Internet]. Digital Imaging and Communications in Medicine (DICOM) Standards Committee. DICOM PS3.16 2018 c - Content Mapping Resource; 2018. Available from: http://dicom.nema.org/MEDICAL/dicom/2016a/output/chtml/part16/sect_CID_3263.html.">
+        ["3"] = <"Life in the Fastlane [Internet]. Australia: #FOAMed Medical Education Resources; c2007-2018. ECG Limb Lead Reversals; 2017 Apr 4 [cited 2018 Jul 17]. Available from: https://lifeinthefastlane.com/ecg-library/limb-lead-reversals/.">
+        ["4"] = <"Electrocardiography [Internet]. St. Petersburg (FL): Wikimedia Foundation, Inc; c2001-2018. Wikipedia; 2018 Jun 24  [cited 2018 Jul 17]. Available from: https://en.wikipedia.org/wiki/Electrocardiography#Electrodes_and_leads.">
+        ["5"] = <"Nelwan SP, Meij SH, van Dam TB, Kors JA. Correction of ECG variations caused by body position changes and electrode placement during ST-T monitoring. J Electrocardiol. 2001;34 Suppl:213-6. PubMed PMID: 11781959.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"F0CDAB35DB0614EC716AE837F7A2B378">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Dokumentation der erzeugten elektrischen Aktivität des Herzens über einen kurzen Zeitraum und der entsprechenden klinischen Interpretation.">
+            keywords = <"Elektrokardiograf", "ECG", "EKG", "Electrokardiogramm", "Elektrokardiografie", "3-Kanal", "5-Kanal", "15-Kanal12-Kanal", "Belastungs-EKG", "Ruhe-EKG", "Rhythmusstreifen", "Standard-EKG", "18-Kanal">
+            use = <"Verwenden Sie diesen Archetyp zur Dokumentation der Ergebnisse eines 3-, 5-, 12-, 15- oder 18-Kanal-Elektrokardiogramms (EKG), sowie der entsprechenden klinischen Interpretation. Jede EKG Variante kann durch ein separates Template weiter eingeschränkt werden um eine einfache Wiederverwendung zu erlauben.
+
+Das standardmäßig gesetzte 'Beliebiges Ereignis' kann in Templates oder bei Laufzeit eingeschränkt werden, um spezifische EKG Messungen während körperlicher Betätigung oder Belastung aufzuzeichnen.">
+            misuse = <"Nicht zur Aufzeichnung der Ergebnisse von ambulanter Herzüberwachung oder stationärer Telemetrie verwenden.
+
+Nicht zur Aufzeichnung von Ergebnisse der transösophagealen Echokardiografie Untersuchung (TEE) verwenden.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere målinger av elektrisk aktivitet generert av hjertet i en kort tidsperiode, og kliniske tolkninger av denne målingen.">
+            keywords = <"elektrokardiograf", "ECG", "EKG", "elektrokardiogram", "3-avleding", "5-avledning", "15-avledning", "12-avledning", "stress-EKG", "hvilende EKG", "18-avledning", "belastnings-ekg", "arbeids-ekg", "rytmeforstyrrelse", "hjerteundersøkelse", "hjertediagram">
+            use = <"Brukes for å registrere resultatene av et 3-, 5-, 12-, 15- eller 18-avlednings elektrokardiogram (EKG), og tilknyttede kliniske tolkninger. Hver variant av EKG kan uttrykkes som tilpasninger av arketypen i et templat, for å legge til rette for enkel gjenbruk.
+
+\"Uspesifisert hendelse\" kan tilpasses i templater eller applikasjoner for å spesifikt registrere EKGer som er tatt under fysisk belastning.">
+            misuse = <"Skal ikke brukes for å registrere resultater fra ambulatorisk EKG-monitorering eller telemetri.
+
+Skal ikke brukes for å registrere resultater fra transøsofageal elektrokardiografi.">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل تفسير تخطيط كهربية القلب عن النشاط الكهربي للقلب باستخدام جهيزة مخطط كهربية القلب.">
+            keywords = <"مُخَطَّط كهربية القلب", "عملية تخطيط كهربية القلب", "12 اتجاه">
+            use = <"يستخدم لتسجيل تفاصيل تخطيط كهربية القلب الذي يستخدم 12 اتجاه بما في ذلك المعايير و التفسير.
+يستخدم لتسجيل تفاصيل اختبارات تخطيط كهربية القلب الذي يتم إجراؤه في أثناء المجهود البدني و الاختبار عند وجود ضغط.">
+            misuse = <"لا يستخدم لتسجيل الاتجهات غير العيارية لتخطيط كهربية القلب.
+لا يستخدم لتسجيل مِرقَب /مِنطَر هولتر.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the measurements of electrical activity generated by the heart over a short period of time and its associated clinical interpretation.">
+            keywords = <"electrocardiograph", "ECG", "EKG", "electrocardiogram", "electrocardiography", "3 lead", "5 lead", "15 lead", "12 lead", "stress ECG", "resting ECG", "rhythm strip", "standard ECG", "18 lead">
+            use = <"Use to record the results of a 3-, 5-, 12-, 15- or 18-lead electrocardiograph (ECG) and its associated clinical interpretation. Each ECG variation can be constrained in a separate template to allow for easy re-use.
+
+The default 'Any event' can be constrained in templates or at run time to specifically record ECGs conducted during exercise or under stress-testing conditions.">
+            misuse = <"Not to be used to record the results from ongoing cardiac monitoring or telemetry.
+
+Not to be used to record results from trans-oesophageal electrophysiological studies.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- ECG result
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0005] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0100] occurrences matches {0..1} matches {    -- ECG type
+                                        value matches {
+                                            DV_TEXT[at9007]
+                                        }
+                                    }
+                                    ELEMENT[at0094] occurrences matches {0..1} matches {    -- Atrial heart rate
+                                        value matches {
+                                            DV_QUANTITY[at9008] matches {
+                                                property matches {[at9000]}    -- Frequency
+                                                magnitude matches {|>=0.0|}
+                                                units matches {"/min"}
+                                                precision matches {0}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Ventricular heart rate
+                                        value matches {
+                                            DV_QUANTITY[at9009] matches {
+                                                property matches {[at9000]}    -- Frequency
+                                                magnitude matches {|>=0.0|}
+                                                units matches {"/min"}
+                                                precision matches {0}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- QT interval global
+                                        value matches {
+                                            DV_QUANTITY[at9012] matches {
+                                                property matches {[at9001]}    -- Time
+                                                magnitude matches {|>=0.0|}
+                                                units matches {"ms"}
+                                                precision matches {0}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- QTc interval global
+                                        value matches {
+                                            DV_QUANTITY[at9013] matches {
+                                                property matches {[at9001]}    -- Time
+                                                magnitude matches {|>=0.0|}
+                                                units matches {"ms"}
+                                                precision matches {0}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- PR interval global
+                                        value matches {
+                                            DV_QUANTITY[at9010] matches {
+                                                property matches {[at9001]}    -- Time
+                                                magnitude matches {|>=0.0|}
+                                                units matches {"ms"}
+                                                precision matches {0}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- QRS duration global
+                                        value matches {
+                                            DV_QUANTITY[at9011] matches {
+                                                property matches {[at9001]}    -- Time
+                                                magnitude matches {|>=0.0|}
+                                                units matches {"ms"}
+                                                precision matches {0}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0105] occurrences matches {0..1} matches {    -- RR interval global
+                                        value matches {
+                                            DV_QUANTITY[at9064]
+                                        }
+                                    }
+                                    ELEMENT[at0096] occurrences matches {0..1} matches {    -- Clinical information provided
+                                        value matches {
+                                            DV_TEXT[at9052]
+                                        }
+                                    }
+                                    ELEMENT[at0009] matches {    -- Device interpretation
+                                        value matches {
+                                            DV_TEXT[at9053]
+                                        }
+                                    }
+                                    ELEMENT[at0101] matches {    -- Finding
+                                        value matches {
+                                            DV_TEXT[at9054]
+                                        }
+                                    }
+                                    ELEMENT[at0081] matches {    -- ECG diagnosis
+                                        value matches {
+                                            DV_TEXT[at9055]
+                                        }
+                                    }
+                                    ELEMENT[at0089] occurrences matches {0..1} matches {    -- Conclusion
+                                        value matches {
+                                            DV_TEXT[at9056]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0083] matches {    -- Multimedia representation
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.media_capture(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                                    }
+                                    ELEMENT[at0090] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9057]
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- P axis
+                                        value matches {
+                                            DV_QUANTITY[at9014] matches {
+                                                property matches {[at9002]}    -- Angle, plane
+                                                units matches {"deg"}
+                                            }
+                                            DV_TEXT[at9015]
+                                        }
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- QRS axis
+                                        value matches {
+                                            DV_QUANTITY[at9016] matches {
+                                                property matches {[at9002]}    -- Angle, plane
+                                                units matches {"deg"}
+                                            }
+                                            DV_TEXT[at9017]
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- T axis
+                                        value matches {
+                                            DV_QUANTITY[at9018] matches {
+                                                property matches {[at9002]}    -- Angle, plane
+                                                units matches {"deg"}
+                                            }
+                                            DV_TEXT[at9019]
+                                        }
+                                    }
+                                    CLUSTER[at0027] occurrences matches {0..15} matches {    -- Per-lead
+                                        name matches {
+                                            DV_CODED_TEXT[at9020] matches {
+                                                defining_code matches {[ac9003]}    -- Per-lead (synthesised)
+                                            }
+                                        }
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0098] occurrences matches {0..1} matches {    -- Description
+                                                value matches {
+                                                    DV_TEXT[at9021]
+                                                }
+                                            }
+                                            ELEMENT[at0041] occurrences matches {0..1} matches {    -- P amplitude
+                                                value matches {
+                                                    DV_QUANTITY[at9022] matches {
+                                                        property matches {[at9004]}    -- Voltage, electrical
+                                                        units matches {"mV"}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0028] occurrences matches {0..1} matches {    -- P duration
+                                                value matches {
+                                                    DV_QUANTITY[at9023] matches {
+                                                        property matches {[at9001]}    -- Time
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"ms"}
+                                                        precision matches {0}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0042] occurrences matches {0..1} matches {    -- P area
+                                                value matches {
+                                                    DV_QUANTITY[at9024] matches {
+                                                        property matches {[at9005]}    -- Electric potential
+                                                        [units] matches {
+                                                            [{"4.uV.ms{Ashman units}"}],
+                                                            [{"uV.ms"}]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0043] occurrences matches {0..1} matches {    -- P' amplitude
+                                                value matches {
+                                                    DV_QUANTITY[at9025] matches {
+                                                        property matches {[at9004]}    -- Voltage, electrical
+                                                        units matches {"mV"}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0044] occurrences matches {0..1} matches {    -- P' duration
+                                                value matches {
+                                                    DV_QUANTITY[at9026] matches {
+                                                        property matches {[at9001]}    -- Time
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"ms"}
+                                                        precision matches {0}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0046] occurrences matches {0..1} matches {    -- P' area
+                                                value matches {
+                                                    DV_QUANTITY[at9027] matches {
+                                                        property matches {[at9005]}    -- Electric potential
+                                                        [units] matches {
+                                                            [{"4.uV.ms{Ashman units}"}],
+                                                            [{"uV.ms"}]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0048] occurrences matches {0..1} matches {    -- Q amplitude
+                                                value matches {
+                                                    DV_QUANTITY[at9028] matches {
+                                                        property matches {[at9004]}    -- Voltage, electrical
+                                                        units matches {"mV"}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0049] occurrences matches {0..1} matches {    -- Q duration
+                                                value matches {
+                                                    DV_QUANTITY[at9029] matches {
+                                                        property matches {[at9001]}    -- Time
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"ms"}
+                                                        precision matches {0}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0050] occurrences matches {0..1} matches {    -- R amplitude
+                                                value matches {
+                                                    DV_QUANTITY[at9030] matches {
+                                                        property matches {[at9004]}    -- Voltage, electrical
+                                                        units matches {"mV"}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0051] occurrences matches {0..1} matches {    -- R duration
+                                                value matches {
+                                                    DV_QUANTITY[at9031] matches {
+                                                        property matches {[at9001]}    -- Time
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"ms"}
+                                                        precision matches {0}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0053] occurrences matches {0..1} matches {    -- S amplitude
+                                                value matches {
+                                                    DV_QUANTITY[at9032] matches {
+                                                        property matches {[at9004]}    -- Voltage, electrical
+                                                        units matches {"mV"}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0054] occurrences matches {0..1} matches {    -- S duration
+                                                value matches {
+                                                    DV_QUANTITY[at9033] matches {
+                                                        property matches {[at9001]}    -- Time
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"ms"}
+                                                        precision matches {0}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0055] occurrences matches {0..1} matches {    -- R' amplitude
+                                                value matches {
+                                                    DV_QUANTITY[at9034] matches {
+                                                        property matches {[at9004]}    -- Voltage, electrical
+                                                        units matches {"mV"}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0056] occurrences matches {0..1} matches {    -- R' duration
+                                                value matches {
+                                                    DV_QUANTITY[at9035] matches {
+                                                        property matches {[at9001]}    -- Time
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"ms"}
+                                                        precision matches {0}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0057] occurrences matches {0..1} matches {    -- S' amplitude
+                                                value matches {
+                                                    DV_QUANTITY[at9036] matches {
+                                                        property matches {[at9004]}    -- Voltage, electrical
+                                                        units matches {"mV"}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0058] occurrences matches {0..1} matches {    -- S' duration
+                                                value matches {
+                                                    DV_QUANTITY[at9037] matches {
+                                                        property matches {[at9001]}    -- Time
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"ms"}
+                                                        precision matches {0}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0059] occurrences matches {0..1} matches {    -- Ventricular Activation Time (VAT)
+                                                value matches {
+                                                    DV_QUANTITY[at9038] matches {
+                                                        property matches {[at9001]}    -- Time
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"ms"}
+                                                        precision matches {0}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0060] occurrences matches {0..1} matches {    -- QRS p-p
+                                                value matches {
+                                                    DV_QUANTITY[at9039] matches {
+                                                        property matches {[at9004]}    -- Voltage, electrical
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"mV"}
+                                                        precision matches {2}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0061] occurrences matches {0..1} matches {    -- QRS duration
+                                                value matches {
+                                                    DV_QUANTITY[at9040] matches {
+                                                        property matches {[at9001]}    -- Time
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"ms"}
+                                                        precision matches {0}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0062] occurrences matches {0..1} matches {    -- QRS area
+                                                value matches {
+                                                    DV_QUANTITY[at9041] matches {
+                                                        property matches {[at9005]}    -- Electric potential
+                                                        [units] matches {
+                                                            [{"4.uV.ms{Ashman units}"}],
+                                                            [{"uV.ms"}]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0063] occurrences matches {0..1} matches {    -- ST onset
+                                                value matches {
+                                                    DV_QUANTITY[at9042] matches {
+                                                        property matches {[at9004]}    -- Voltage, electrical
+                                                        units matches {"mV"}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0064] occurrences matches {0..1} matches {    -- ST midpoint
+                                                value matches {
+                                                    DV_QUANTITY[at9043] matches {
+                                                        property matches {[at9004]}    -- Voltage, electrical
+                                                        units matches {"mV"}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0065] occurrences matches {0..1} matches {    -- ST 80ms
+                                                value matches {
+                                                    DV_QUANTITY[at9044] matches {
+                                                        property matches {[at9004]}    -- Voltage, electrical
+                                                        units matches {"mV"}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0106] occurrences matches {0..1} matches {    -- ST 60ms
+                                                value matches {
+                                                    DV_QUANTITY[at9065] matches {
+                                                        property matches {[at9004]}    -- Voltage, electrical
+                                                        units matches {"mV"}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0066] occurrences matches {0..1} matches {    -- ST end
+                                                value matches {
+                                                    DV_QUANTITY[at9045] matches {
+                                                        property matches {[at9004]}    -- Voltage, electrical
+                                                        units matches {"mV"}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0067] occurrences matches {0..1} matches {    -- ST duration
+                                                value matches {
+                                                    DV_QUANTITY[at9046] matches {
+                                                        property matches {[at9001]}    -- Time
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"ms"}
+                                                        precision matches {0}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0068] occurrences matches {0..1} matches {    -- ST slope
+                                                value matches {
+                                                    DV_QUANTITY[at9047] matches {
+                                                        property matches {[at9002]}    -- Angle, plane
+                                                        magnitude matches {|-90.0..90.0|}
+                                                        units matches {"deg"}
+                                                        precision matches {0}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0069] occurrences matches {0..1} matches {    -- ST segment morphology
+                                                value matches {
+                                                    DV_CODED_TEXT[at9048] matches {
+                                                        defining_code matches {[ac9006]}    -- ST segment morphology (synthesised)
+                                                    }
+                                                    DV_TEXT[at9066]
+                                                }
+                                            }
+                                            ELEMENT[at0073] occurrences matches {0..1} matches {    -- T amplitude
+                                                value matches {
+                                                    DV_QUANTITY[at9049] matches {
+                                                        property matches {[at9004]}    -- Voltage, electrical
+                                                        units matches {"mV"}
+                                                        precision matches {2}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0074] occurrences matches {0..1} matches {    -- T duration
+                                                value matches {
+                                                    DV_QUANTITY[at9050] matches {
+                                                        property matches {[at9001]}    -- Time
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"ms"}
+                                                        precision matches {0}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0075] occurrences matches {0..1} matches {    -- T area
+                                                value matches {
+                                                    DV_QUANTITY[at9051] matches {
+                                                        property matches {[at9005]}    -- Electric potential
+                                                        [units] matches {
+                                                            [{"4.uV.ms{Ashman units}"}],
+                                                            [{"uV.ms"}]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            allow_archetype CLUSTER[at0114] matches {    -- Lead details
+                                                include
+                                                    archetype_id/value matches {/.*/}
+                                            }
+                                            ELEMENT[at0115] occurrences matches {0..1} matches {    -- Lead comment
+                                                value matches {
+                                                    DV_TEXT[at9067]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0113] matches {    -- Additional details
+                                        include
+                                            archetype_id/value matches {/.*/}
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0077] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0079] matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9058]
+                                        }
+                                    }
+                                    ELEMENT[at0116] matches {    -- Pacemaker stimulation
+                                        value matches {
+                                            DV_TEXT[at9068]
+                                        }
+                                    }
+                                    ELEMENT[at0107] occurrences matches {0..1} matches {    -- Position
+                                        value matches {
+                                            DV_CODED_TEXT[at9069] matches {
+                                                defining_code matches {[ac9063]}    -- Position (synthesised)
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0080] occurrences matches {0..1} matches {    -- Level of exertion
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.level_of_exertion(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0078] occurrences matches {0..1} matches {    -- Tilt
+                                        value matches {
+                                            DV_QUANTITY[at9059] matches {
+                                                magnitude matches {|-90.0..90.0|}
+                                                units matches {"deg"}
+                                                precision matches {0}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0003] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0102] matches {    -- Technical quality
+                        value matches {
+                            DV_TEXT[at9060]
+                        }
+                    }
+                    ELEMENT[at0097] occurrences matches {0..1} matches {    -- ECG lead placement
+                        value matches {
+                            DV_TEXT[at9061]
+                        }
+                    }
+                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- QTc algorithm
+                        value matches {
+                            DV_TEXT[at9062]
+                        }
+                    }
+                    ELEMENT[at0095] occurrences matches {0..1} matches {    -- Device interpretation comment
+                        value matches {
+                            DV_TEXT[at9063]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0076] occurrences matches {0..1} matches {    -- Recording device
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0082] occurrences matches {0..1} matches {    -- Viewing device
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0088] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"EKG Ergebnis">
+                description = <"Messung der vom Herzen erzeugten elektrischen Aktivität.">
+                comment = <"Auch als Elektrokardiogramm oder ECG bezeichnet.">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardmäßiger, nicht näher beschriebener Zeitpunkt oder Intervall Ereignis, welches in einem Template oder bei der Anwendung genauer definiert werden kann.">
+            >
+            ["at0007"] = <
+                text = <"Globale QT-Zeit">
+                description = <"Zeitintervall vom Anfang des QRS Komplexes bis zum Ende der T-Welle über mehrere Ableitungen hinweg.">
+            >
+            ["at0008"] = <
+                text = <"Globale QTc-Zeit">
+                description = <"Frequenzkorrigierte QT-Zeit.">
+            >
+            ["at0009"] = <
+                text = <"Geräteinterpretation">
+                description = <"Ein vom EKG Gerät interpretiertes EKG-Ergebnis.">
+                comment = <"Es können mehrere Kommentare sein. Die Kodierung der Interpretation mittels einer Terminologie ist, falls möglich, bevorzugt. Zum Beispiel: Normaler Sinusrhythmus; ischämische ST-T-Strecken-Veränderungen in den anterioren Ableitungen; und/oder schlechte R-Progression in der rechten präkordialen Ableitung.">
+            >
+            ["at0012"] = <
+                text = <"Globale PQ-Zeit">
+                description = <"Intervalmessung vom Beginn der P-Welle bis zum Beginn des QRS-Komplex im EKG als Ganzes (Mehrere Ableitungen).">
+                comment = <"Die PQ-Zeit wird vom Beginn der P-Welle bis zum Beginn des QRS-Komplex gemessen.">
+            >
+            ["at0013"] = <
+                text = <"Herzfrequenz">
+                description = <"Die Frequenz der elektrischen Kontraktionen des Ventrikels im EKG als Ganzes (mehrere Ableitungen).">
+                comment = <"Auch bekannt als Kammerfrequenz, QRS-Frequenz oder elektrische Herzfrequenz. Die Herzfrequenz wird von R-Welle zu R-Welle gemessen.">
+            >
+            ["at0014"] = <
+                text = <"Globale QRS-Dauer">
+                description = <"Dauer des QRS Komplex, gemessen von dessen Beginn bis zum Anfang des ST Segments (J-Punkt) über mehrere Ableitungen hinweg.">
+                comment = <"Die QRS-Dauer wird vom Beginn des QRS Komplexes bis zum Beginn des ST Segments (J-Punkt) gemessen.">
+            >
+            ["at0020"] = <
+                text = <"P-Achse">
+                description = <"Durchschnittliche Ausrichtung der elektrischen Aktivität während der atriellen Depolarisation.">
+                comment = <"Zum Beispiel: Normale Achse oder Linksabweichung; oder Gradzahl.">
+            >
+            ["at0021"] = <
+                text = <"QRS-Achse">
+                description = <"Durchschnittliche Ausrichtung der elektrischen Aktivität während der ventrikulären Depolarisation.">
+                comment = <"Zum Beispiel: Normale Achse oder Linksabweichung; oder Gradzahl.">
+            >
+            ["at0022"] = <
+                text = <"T-Achse">
+                description = <"Durchschnittliche Ausrichtung der elektrischen Aktivität während der atriellen Repolarisation.">
+                comment = <"Zum Beispiel: Normale Achse oder Linksabweichung; oder Gradzahl.">
+            >
+            ["at0025"] = <
+                text = <"QTc Algorithmus">
+                description = <"Algorithmus, der verwendet wurde um das QT-Interval zu korrigieren.">
+            >
+            ["at0027"] = <
+                text = <"Pro Ableitung">
+                description = <"Details zu den gemessenen Parametern für jede genannte Ableitung (angegeben in der Einschränkung des Laufzeitnamens).">
+            >
+            ["at0028"] = <
+                text = <"P-Dauer">
+                description = <"Dauer der P-Welle.">
+            >
+            ["at0029"] = <
+                text = <"Ableitung I">
+                description = <"Ableitung I ist die Spannungsdifferenz zwischen der linken Armelektrode und der rechten Armelektrode, die bei Null Grad auf den linken Arm gerichtet ist.">
+            >
+            ["at0030"] = <
+                text = <"Ableitung II">
+                description = <"Ableitung II ist die Spannungsdifferenz zwischen der linken Beinelektrode und der rechten Armelektrode, die bei +60 Grad auf das linke Bein gerichtet ist.">
+            >
+            ["at0031"] = <
+                text = <"Ableitung III">
+                description = <"Ableitung III ist die Spannungsdifferenz zwischen der linken Beinelektrode und der linken Armelektrode, die bei +120 Grad auf das linke Bein gerichtet ist.">
+            >
+            ["at0032"] = <
+                text = <"Ableitung aVR">
+                description = <"Die aVR Ableitung hat die positive Elektrode am rechten Arm und der negative Pol ist eine Kombination aus der linken Armelektrode und der linken Beinelektrode. Sie ist bei -150 Grad auf den rechten Arm gerichtet.">
+            >
+            ["at0033"] = <
+                text = <"Ableitung aVL">
+                description = <"Die aVL Ableitung hat die positive Elektrode am linken Arm und der negative Pol ist eine Kombination aus der rechten Armelektrode und der linken Beinelektrode. Sie ist bei -30 Grad auf die linke Armelektrode ausgerichtet.">
+            >
+            ["at0034"] = <
+                text = <"Ableitung aVF">
+                description = <"Die aVF Ableitung hat die positive Elektrode am linken Bein und der negative Pol ist eine Kombination aus rechter Armelektrode und linker Armelektrode. Sie ist bei +90 Grad richtung linker Beinelektrode ausgerichtet.">
+            >
+            ["at0035"] = <
+                text = <"Ableitung V1">
+                description = <"Eine präkordiale Ableitung, die rechts vom Sternum im vierten Interkostalraum platziert wird. Sie wird auch als Ableitung V2R bezeichnet.">
+            >
+            ["at0036"] = <
+                text = <"Ableitung V2">
+                description = <"Eine präkordiale Ableitung, die links vom Sternum im vierten Interkostalraum platziert wird. Sie wird auch als Ableitung V1R bezeichnet.">
+            >
+            ["at0037"] = <
+                text = <"Ableitung V3">
+                description = <"Eine präkordiale Ableitung, die zwischen Ableitung V2 und V4 platziert wird.">
+            >
+            ["at0038"] = <
+                text = <"Ableitung V4">
+                description = <"Eine präkordiale Ableitung, die im linken fünften Interkostalraum auf der Midklavikularlinie platziert wird.">
+            >
+            ["at0039"] = <
+                text = <"Ableitung V5">
+                description = <"Eine präkordiale Ableitung, die auf gleicher Höhe wie Ableitung V4 auf der linken anterioren Axillarlinie platziert wird.">
+            >
+            ["at0040"] = <
+                text = <"Ableitung V6">
+                description = <"Eine präkordiale Ableitung, die auf gleicher Höhe wie Ableitung V5 auf der linken Midaxillarlinie platziert wird.">
+            >
+            ["at0041"] = <
+                text = <"P-Amplitude">
+                description = <"Amplitude der P-Welle.">
+            >
+            ["at0042"] = <
+                text = <"P-Fläche">
+                description = <"Fläche einer monophasischen P-Welle oder die Fläche des initialen Anteils einer biphasischen P-Welle.">
+            >
+            ["at0043"] = <
+                text = <"P'-Amplitude">
+                description = <"Amplitude der P'-Welle.">
+            >
+            ["at0044"] = <
+                text = <"P'-Dauer">
+                description = <"Dauer der P'-Welle.">
+            >
+            ["at0046"] = <
+                text = <"P'-Fläche">
+                description = <"Fläche des terminalen Anteils einer biphasischen P-Welle.">
+            >
+            ["at0048"] = <
+                text = <"Q-Amplitude">
+                description = <"Amplitude der Q-Welle.">
+            >
+            ["at0049"] = <
+                text = <"Q-Dauer">
+                description = <"Dauer der Q-Welle.">
+            >
+            ["at0050"] = <
+                text = <"R-Amplitude">
+                description = <"Amplitude der R-Welle.">
+            >
+            ["at0051"] = <
+                text = <"R-Dauer">
+                description = <"Dauer der R-Welle.">
+            >
+            ["at0053"] = <
+                text = <"S-Amplitude">
+                description = <"Amplitude der S-Welle.">
+            >
+            ["at0054"] = <
+                text = <"S-Dauer">
+                description = <"Dauer der S-Welle.">
+            >
+            ["at0055"] = <
+                text = <"R'-Amplitude">
+                description = <"Amplitude der R'-Welle.">
+            >
+            ["at0056"] = <
+                text = <"R'-Dauer">
+                description = <"Dauer der R'-Welle.">
+            >
+            ["at0057"] = <
+                text = <"S'-Amplitude">
+                description = <"Amplitude der S'-Welle.">
+            >
+            ["at0058"] = <
+                text = <"S'-Dauer">
+                description = <"Dauer der S'-Welle.">
+            >
+            ["at0059"] = <
+                text = <"Ventrikuläre Aktivierungszeit">
+                description = <"Interval vom Anfang des QRS Komplex bis zum letzten positiven Peak im Komplex oder der letzten wesentlichen Kerbe des letzten Peaks (Je nachdem was später kommt).">
+            >
+            ["at0060"] = <
+                text = <"QRS p-p">
+                description = <"Amplitude von Peak zu Peak der QRS-Dauer.">
+            >
+            ["at0061"] = <
+                text = <"QRS-Dauer">
+                description = <"Dauer des QRS-Komplexes.">
+                comment = <"Gemessen vom dessen Anfang bis zum Anfang des ST-Segments (J-Punkt).">
+            >
+            ["at0062"] = <
+                text = <"QRS-Fläche">
+                description = <"Fläche des QRS-Komplexes.">
+            >
+            ["at0063"] = <
+                text = <"ST-Amplitude am J-Punkt.">
+                description = <"Erhebung oder Vertiefung am Beginn (J-Punkt) des ST-Segments.">
+            >
+            ["at0064"] = <
+                text = <"ST-Mittelpunkt">
+                description = <"Erhebung oder Vertiefung in der Mitte des ST-Segments.">
+            >
+            ["at0065"] = <
+                text = <"ST 80ms">
+                description = <"Erhebung oder Vertiefung des ST-Segments 80 ms nach Ende des QRS-Komplexes (J-Punkt).">
+            >
+            ["at0066"] = <
+                text = <"ST-Ende">
+                description = <"Erhebung oder Vertiefung am Ende des ST-Segments.">
+            >
+            ["at0067"] = <
+                text = <"ST-Dauer">
+                description = <"Dauer des ST-Segments.">
+            >
+            ["at0068"] = <
+                text = <"ST-Steigung">
+                description = <"Steigung des ST-Segments.">
+                comment = <"Die Steigung wird in Grad gemessen, bei einer Schreibgeschwindigkeit von 25 mm/sec und einer Skalierung von 1mV/cm.">
+            >
+            ["at0069"] = <
+                text = <"ST-Segment Morphologie">
+                description = <"Form des ST-Segments.">
+                comment = <"Das Valueset stammt von DICOM PS3.16 2018 c - Content Mapping Resource -http://dicom.nema.org/medical/dicom/current/output/html/part16.html#sect_CID_3233">
+            >
+            ["at0070"] = <
+                text = <"ST-Senkung - horizontal">
+                description = <"Die ST-Strecke weist eine Absenkung auf, jedoch keine fallende Steigung. Dies ist eine spezifischere Form der \"ST-Senkung\".">
+            >
+            ["at0071"] = <
+                text = <"ST-Senkung - aszendierend">
+                description = <"Die ST-Strecke weist eine aszendierende (aufsteigende) Absenkung auf. Dies ist eine spezifischere Form der \"ST-Senkung\".">
+            >
+            ["at0072"] = <
+                text = <"ST-Senkung - deszendierend">
+                description = <"Die ST-Strecke weist eine deszendierende (absteigende) Absenkung auf. Dies ist eine spezifischere Form der \"ST-Senkung\".">
+            >
+            ["at0073"] = <
+                text = <"T-Amplitude">
+                description = <"Amplitude der T-Welle.">
+            >
+            ["at0074"] = <
+                text = <"T-Dauer">
+                description = <"Dauer der T-Welle.">
+            >
+            ["at0075"] = <
+                text = <"T-Fläche">
+                description = <"Fläche der T-Welle.">
+            >
+            ["at0076"] = <
+                text = <"Aufnahmegerät">
+                description = <"Details über das Elektrokardiografiegerät, welches zur Aufnahme des EKG verwendet wurde.">
+            >
+            ["at0078"] = <
+                text = <"Neigung">
+                description = <"Die kraniokaudale Neigung der Oberfläche auf der die Person während des EKGs liegt.">
+            >
+            ["at0079"] = <
+                text = <"Störfaktoren">
+                description = <"Kommentar und Aufzeichnung zu anderen Faktoren, welche die Messung beeinflussen können.">
+                comment = <"Zum Beispiel: Unkooperativer Patient; Schwierigkeiten bei der Platzierung der Elektrode; oder feuchte Haut.">
+            >
+            ["at0080"] = <
+                text = <"Grad der Anstrengung">
+                description = <"Details über die körperliche Aktivität während der EKG-Aufzeichnung.">
+            >
+            ["at0081"] = <
+                text = <"EKG Diagnose">
+                description = <"Einzelnes Wort, Satz oder kurze Beschreibung, welche die übergreifende klinische Bedeutung und Signifikanz des EKG Ergebnisses darstellt.">
+                comment = <"Zum Beispiel: 'Posteriorer Myokardinfarkt' oder 'supraventrikuläre Tachykardie'. Die Kodierung der Diagnose mit einer Terminologie ist, falls möglich, bevorzugt. Die Diagnose sollte mit dem Text des Datenpunkt 'Schlussfolgerung' abgestimmt sein.">
+            >
+            ["at0082"] = <
+                text = <"Anzeigegerät">
+                description = <"Details des Gerätes, welches zur Anzeige der EKG Ausgabe verwendet wurde.">
+            >
+            ["at0083"] = <
+                text = <"Multimedia Repräsentation">
+                description = <"Digitale Darstellung des Ergebnisses.">
+                comment = <"Das EKG kann als Bilddaten oder anderen multimedia/binären Formaten repräsentiert werden. Mehrere Formate sind zulässig, sollten aber gleichwertige klinische Inhalte darstellen.">
+            >
+            ["at0084"] = <
+                text = <"Ableitung V7">
+                description = <"Ableitung V7 ist eine posteriore Ableitung, die in der posterioren Axillarlinie platziert wird.">
+            >
+            ["at0085"] = <
+                text = <"Ableitung V8">
+                description = <"Ableitung V8 ist eine posteriore Ableitung, die in der Midskapularregion platziert wird.">
+            >
+            ["at0086"] = <
+                text = <"Ableitung V9">
+                description = <"Ableitung V9 ist eine posteriore Ableitung, die in der Paraspinalregion platziert wird.">
+            >
+            ["at0087"] = <
+                text = <"Ableitung V4R">
+                description = <"Eine präkordiale Ableitung, die im rechten fünften Interkostalraum an der Mittelklavikularlinie platziert wird.">
+            >
+            ["at0088"] = <
+                text = <"Erweiterung">
+                description = <"Weitere Informationen, die benötigt werden um lokale Inhalte abzubilden oder zur Anpassung an andere Referenzmodelle.">
+                comment = <"Zum Beispiel: Lokale Informationsanforderungen oder weitere Metadaten zur Anpassung an FHIR oder CIMI Äquivalente.">
+            >
+            ["at0089"] = <
+                text = <"Schlussfolgerung">
+                description = <"Schlussfolgernder Text über alle wichtigen Befunde im EKG Ergebnis.">
+                comment = <"Die Schlussfolgerung soll eine erweiterte Version des Datenfeldes 'EKG Diagnose' sein. Zum Beispiel: 'Normaler Sinusrhythmus mit ischämischen ST-T-Strecken Veränderungen in der anterioren Ableitung und schlechte R-Progression in den rechten präkordialen Ableitungen'; oder Vergleich mit früheren EKG Ergebnissen.">
+            >
+            ["at0090"] = <
+                text = <"Kommentar">
+                description = <"Zusätzlicher Text über das EKG Ergebnis, der Sachverhalte beschreibt, die noch nicht durch andere Datenfelder abgedeckt wurden.">
+            >
+            ["at0091"] = <
+                text = <"Ableitung V5R">
+                description = <"Eine präkordiale Ableitung, die auf gleicher Höhe mit der Ableitung V4R an der rechten vorderen Axillarlinie platziert wird.">
+            >
+            ["at0092"] = <
+                text = <"Ableitung V6R">
+                description = <"Eine präkordiale Ableitung, die auf gleicher Höhe mit der Ableitung V5R in der rechten Midaxillarlinie platziert wird.">
+            >
+            ["at0093"] = <
+                text = <"Ableitung V3R">
+                description = <"Eine präkordiale Ableitung, die direkt auf der rechten Seite der Brust zwischen den Ableitungen V1 und V4R angebracht wird.">
+            >
+            ["at0094"] = <
+                text = <"Atriale Frequenz">
+                description = <"Die Frequenz der elektrischen atrialen Kontraktionen im EKG als Ganzes (mehrere Ableitungen).">
+                comment = <"Auch bekannt als Vorhoffrequenz oder PP-Intervall. Sie wird von P-Welle zu P-Welle gemessen.">
+            >
+            ["at0095"] = <
+                text = <"Kommentar zur Geräteinterpretation">
+                description = <"Kommentar zur Geräteinterpretation">
+                comment = <"Zum Beispiel: Identifikation des verwendeten Algorithmus; oder Beschreibung der technischen Einschränkungen">
+            >
+            ["at0096"] = <
+                text = <"Bereitgestellte klinische Informationen">
+                description = <"Beschreibung der klinischen Informationen, die zum Zeitpunkt der Interpretation des Ergebnisses zur Verfügung stehen.">
+                comment = <"Dieses Datenelement kann einen Link zu den ursprünglichen klinischen Informationen, die in der ECG Anfrage zur Verfügung gestellt wurden, beinhalten.">
+            >
+            ["at0097"] = <
+                text = <"EKG Elektrodenplatzierung">
+                description = <"Elektrodenplatzierung zur EKG Aufnahme.">
+                comment = <"Die Kodierung der Elektrodenplatzierung mit einer Terminologie ist, falls möglich, bevorzugt. Zum Beispiel: ISO/IEEE 11073 MDC codes.">
+            >
+            ["at0098"] = <
+                text = <"Beschreibung">
+                description = <"Beschreibender Text über die Befunde der angegebenen Ableitung.">
+                comment = <"Zum Beispiel: ST-Segment Befunde.">
+            >
+            ["at0100"] = <
+                text = <"EKG-Typ">
+                description = <"Art des durchgeführten EKGs.">
+                comment = <"Kodierung des EKG-Typs mit einer Terminologie ist, falls möglich, bevorzugt. Zum Beispiel: 'Standard EKG' oder '15-Kanal EKG'.">
+            >
+            ["at0101"] = <
+                text = <"Befund">
+                description = <"Einzelnes Wort, Satz oder kurze Beschreibung die einen signifikanten Befund des EKG Ergebnisses darstellt.">
+                comment = <"Zum Beispiel: 'Normales EKG', 'Mehrdeutiges EKG' oder 'Abnormes EKG'; 'Spikes von Schrittmacher Signal'; 'ST-Senkung'; oder 'Vorhofflimmern'. Die Kodierung des Befundes mit einer Terminologie ist, falls möglich, bevorzugt.">
+            >
+            ["at0102"] = <
+                text = <"Technische Qualität">
+                description = <"Einzelnes Wort, Satz oder kurze Beschreibung, die ein signifikantes technisches Qualitätsproblem darstellt, welches das EKG Ergebnis beeinträchtigt.">
+                comment = <"Zum Beispiel: Kodierung aus der IHE EKG Codetabelle, wie 'Unvollständiges EKG'; 'Gliedmaßenelektroden vertauscht'; oder 'Muskeltremor'">
+            >
+            ["at0103"] = <
+                text = <"ST-Hebung">
+                description = <"Die ST-Strecke weist eine Anhebung auf.">
+            >
+            ["at0104"] = <
+                text = <"ST-Senkung">
+                description = <"Die ST-Strecke weist eine Absenkung auf.">
+            >
+            ["at0105"] = <
+                text = <"Globaler RR-Abstand">
+                description = <"Der RR-Abstand ist der Abstand zwischen aufeinanderfolgenden R-Wellen im EKG as Ganzes (mehrere Ableitungen).">
+                comment = <"Der RR-Abstand wird als der zeitliche Abstand zwischen aufeinanderfolgenden R-Wellen gemessen.">
+            >
+            ["at0106"] = <
+                text = <"ST 60ms">
+                description = <"Erhebung oder Vertiefung des ST-Segments 80 ms nach Ende des QRS-Komplexes (J-Punkt).">
+            >
+            ["at0107"] = <
+                text = <"Position">
+                description = <"Die Position des Patienten zum Zeitpunkt der Messung.">
+            >
+            ["at0108"] = <
+                text = <"Stehend">
+                description = <"Stehend zum Zeitpunkt der EKG Messung.">
+            >
+            ["at0109"] = <
+                text = <"Sitzend">
+                description = <"Sitzend (zum Beispiel auf einem Stuhl oder Bett) zum Zeitpunkt der EKG Messung.">
+            >
+            ["at0110"] = <
+                text = <"Angelehnt">
+                description = <"Angelehnte Position zum Zeitpunkt der EKG Messung.">
+            >
+            ["at0111"] = <
+                text = <"Liegend">
+                description = <"Flach liegend zum Zeitpunkt der EKG Messung.">
+            >
+            ["at0112"] = <
+                text = <"Liegend mit Neigung nach links">
+                description = <"Flach liegend mit einer bestimmten Neigung, meist in Richtung der linken Körperseite.">
+            >
+            ["at0113"] = <
+                text = <"Weitere Details">
+                description = <"Weitere struktukturierte Details über das EKG Ergebnis.">
+            >
+            ["at0114"] = <
+                text = <"Ableitungsdetails">
+                description = <"Weitere strukturierte Details über die jeweilige Ableitung.">
+            >
+            ["at0115"] = <
+                text = <"Kommentar zur Ableitung">
+                description = <"Weitere Informationen über die Ergebnisse der Ableitung, die noch nicht in anderen Feldern erfasst wurden.">
+            >
+            ["at0116"] = <
+                text = <"Schrittmacher Stimulation">
+                description = <"Beschreibung der Schrittmacher Aktivität.">
+                comment = <"Dieser Freitext kann im Template weiter kodiert werden um einen Vorhandensein/Nicht-Vorhandensein Wert zu ermöglichen, wenn dies für Reporting Zwecke notwendig ist.">
+            >
+            ["at9001"] = <
+                text = <"* Time (en)">
+                description = <"* Time (en)">
+            >
+            ["at9004"] = <
+                text = <"* Voltage, electrical (en)">
+                description = <"* Voltage, electrical (en)">
+            >
+            ["at9000"] = <
+                text = <"* Frequency (en)">
+                description = <"* Frequency (en)">
+            >
+            ["at9002"] = <
+                text = <"* Angle, plane (en)">
+                description = <"* Angle, plane (en)">
+            >
+            ["at9005"] = <
+                text = <"* Electric potential (en)">
+                description = <"* Electric potential (en)">
+            >
+            ["ac9003"] = <
+                text = <"Pro Ableitung (synthesised)">
+                description = <"Details zu den gemessenen Parametern für jede genannte Ableitung (angegeben in der Einschränkung des Laufzeitnamens). (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"ST-Segment Morphologie (synthesised)">
+                description = <"Form des ST-Segments. (synthesised)">
+            >
+            ["ac9063"] = <
+                text = <"Position (synthesised)">
+                description = <"Die Position des Patienten zum Zeitpunkt der Messung. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"EKG-resultat">
+                description = <"Måling av den elektriske aktiviteten generert av hjertet.">
+                comment = <"Også kjent som elektrokardiogram.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i en templat eller i en applikasjon.">
+            >
+            ["at0007"] = <
+                text = <"Overordnet QT-intervall">
+                description = <"Måling av intervallet fra starten av QRS-komplekset til slutten av T-bølgen, over flere avledninger.">
+            >
+            ["at0008"] = <
+                text = <"Overordnet QTc-intervall">
+                description = <"Korrigert overordnet QT-intervall.">
+            >
+            ["at0009"] = <
+                text = <"Automatisk tolking">
+                description = <"Automatisk tolkning av EKG-undersøkelsen fra en maskin.">
+                comment = <"Elementet kan gjentas. Koding av tolkningen med en terminologi foretrekkes der det er mulig. For eksempel \"normal sinusrytme\", \"iskemiske ST-T endringer i fremre avledninger, \"dårlig R-progresjon i høyre prekordiale avledninger\".">
+            >
+            ["at0012"] = <
+                text = <"Overordnet PR-intervall">
+                description = <"Måling av PR-intervallet over flere avledninger.">
+                comment = <"Også kalt PQ-tid. PR-intervallet måles fra starten av P-bølgen til starten av QRS-komplekset.">
+            >
+            ["at0013"] = <
+                text = <"Ventrikkelfrekvens">
+                description = <"Måling av frekvens av elektriske ventrikkelsammentrekninger over flere avledninger.">
+                comment = <"Også kalt RR-frekvens, QRS-frekvens eller elektrisk hjertefrekvens. Ventrikkelfrekvensen måles fra R-bølge til R-bølge.">
+            >
+            ["at0014"] = <
+                text = <"Overordnet QRS-varighet">
+                description = <"Varighet av QRS-komplekset over flere avledninger.">
+                comment = <"QRS-komplekset måles fra begynnelsen av QRS-komplekset til begynnelsen av ST-segmentet (J-punktet).">
+            >
+            ["at0020"] = <
+                text = <"P-akse">
+                description = <"Gjennomsnittlig retning av elektrisk aktivitet når atriet depolariseres.">
+                comment = <"For eksempel \"normal akse\", \"avvik mot venstre\" eller antall grader.">
+            >
+            ["at0021"] = <
+                text = <"QRS-akse">
+                description = <"Gjennomsnittlig retning av elektrisk aktivitet når ventrikkelen depolariseres.">
+                comment = <"For eksempel \"normal akse\", \"avvik mot venstre\" eller antall grader.">
+            >
+            ["at0022"] = <
+                text = <"T-akse">
+                description = <"Gjennomsnittlig retning av elektrisk aktivitet når ventrikkelen repolariseres.">
+                comment = <"For eksempel \"normal akse\", \"avvik mot venstre\" eller antall grader.">
+            >
+            ["at0025"] = <
+                text = <"QTc-algoritme">
+                description = <"Algoritme som ble brukt for å korrigere QT-intervallet.">
+            >
+            ["at0027"] = <
+                text = <"Per avledning">
+                description = <"Detaljer om måleparametre for hver navngitte avledning, spesifisert i run-time name constraint.">
+            >
+            ["at0028"] = <
+                text = <"P-varighet">
+                description = <"Varighet av P-bølgen.">
+            >
+            ["at0029"] = <
+                text = <"Avledning I">
+                description = <"Avledning I er spenningsforskjellen mellom elektrodene på venstre arm og på høyre arm, i retning mot venstre arm ved 0 grader.">
+            >
+            ["at0030"] = <
+                text = <"Avledning II">
+                description = <"Avledning II er spenningsforskjellen mellom elektrodene på venstre bein og på høyre arm, i retning mot venstre bein ved +60 grader.">
+            >
+            ["at0031"] = <
+                text = <"Avledning III">
+                description = <"Avledning III er spenningsforskjellen mellom elektrodene på venstre bein og på venstre arm, i retning mot venstre bein ved +120 grader.">
+            >
+            ["at0032"] = <
+                text = <"Avledning aVR">
+                description = <"\"Lead augmented vector right\" (aVR) har den positive elektroden på høyre arm og den negative polen er en kombinasjon av elektrodene på venstre arm og venstre bein. Den har retning mot høyre arm ved -150 grader.">
+            >
+            ["at0033"] = <
+                text = <"Avledning aVL">
+                description = <"\"Lead augmented vector left\" (aVL) har den positive elektroden på venstre arm og den negative polen er en kombinasjon av elektrodene på høyre arm og venstre bein. Den har retning mot venstre arm ved -30 grader.">
+            >
+            ["at0034"] = <
+                text = <"Avledning aVF">
+                description = <"\"Lead augmented vector foot\" (aVF) har den positive elektroden på venstre bein og den negative polen er en kombinasjon av elektrodene på høyre arm og venstre arm. Den har retning mot venstre bein ved +90 grader.">
+            >
+            ["at0035"] = <
+                text = <"Avledning V1">
+                description = <"En prekordial avledning, plassert til høyre for sternum i det fjerde interkostalrommet. Kalles også avledning V2R.">
+            >
+            ["at0036"] = <
+                text = <"Avledning V2">
+                description = <"En prekordial avledning, plassert til venstre for sternum i det fjerde interkostalrommet. Kalles også avledning V1R.">
+            >
+            ["at0037"] = <
+                text = <"Avledning V3">
+                description = <"En prekordial avledning, plassert til midt mellom avledning V2 og V4.">
+            >
+            ["at0038"] = <
+                text = <"Avledning V4">
+                description = <"En prekordial avledning, plassert i det venstre femte interkostalrommet på den midtklavikulære linjen.">
+            >
+            ["at0039"] = <
+                text = <"Avledning V5">
+                description = <"En prekordial avledning, plassert på nivå med avledning V4, på den venstre fremre aksillærlinjen.">
+            >
+            ["at0040"] = <
+                text = <"Avledning V6">
+                description = <"En prekordial avledning, plassert på nivå med avledning V5, på den venstre midtaksillære linjen.">
+            >
+            ["at0041"] = <
+                text = <"P-amplitude">
+                description = <"Amplituden av P-bølgen.">
+            >
+            ["at0042"] = <
+                text = <"P-areal">
+                description = <"Areal av P-bølgen for monofasiske P-bolger, eller areal av første del av P-bølgen ved bifasisk P-bølge.">
+            >
+            ["at0043"] = <
+                text = <"P'-amplitude">
+                description = <"Amplituden av P'-bølgen.">
+            >
+            ["at0044"] = <
+                text = <"P'-varighet">
+                description = <"Varighet av P'-bølgen.">
+            >
+            ["at0046"] = <
+                text = <"P'-areal">
+                description = <"Areal av den siste delen av en bifasisk P-bølge.">
+            >
+            ["at0048"] = <
+                text = <"Q-amplitude">
+                description = <"Amplitude av Q-bølgen.">
+            >
+            ["at0049"] = <
+                text = <"Q-varighet">
+                description = <"Varighet av Q-bølgen.">
+            >
+            ["at0050"] = <
+                text = <"R-amplitude">
+                description = <"Amplitude av R-bølgen.">
+            >
+            ["at0051"] = <
+                text = <"R-varighet">
+                description = <"Varighet av R-bølgen.">
+            >
+            ["at0053"] = <
+                text = <"S-amplitude">
+                description = <"Amplitude av S-bølgen.">
+            >
+            ["at0054"] = <
+                text = <"S-varighet">
+                description = <"Varighet av S-bølgen.">
+            >
+            ["at0055"] = <
+                text = <"R'-amplitude">
+                description = <"Amplitude av R'-bølgen.">
+            >
+            ["at0056"] = <
+                text = <"R'-varighet">
+                description = <"Varighet av R'-bølgen.">
+            >
+            ["at0057"] = <
+                text = <"S'-amplitude">
+                description = <"Amplitude av S'-bølgen.">
+            >
+            ["at0058"] = <
+                text = <"S'-varighet">
+                description = <"Varighet av S'-bølgen.">
+            >
+            ["at0059"] = <
+                text = <"Ventrikulær aktiveringstid (VAT)">
+                description = <"Intervallet fra starten på QRS-komplekset til det som kommer sist av enten den siste positive takken i komplekset, eller det siste vesentlige hakket på den siste toppen.">
+            >
+            ["at0060"] = <
+                text = <"QRS p-p">
+                description = <"Amplituden av QRS-komplekset fra takk til takk (peak-to-peak).">
+            >
+            ["at0061"] = <
+                text = <"QRS-varighet">
+                description = <"Varighet av QRS-komplekset.">
+                comment = <"Måles fra starten av QRS-komplekset til starten på ST-segmentet (J-punktet).">
+            >
+            ["at0062"] = <
+                text = <"QRS-areal">
+                description = <"Arealet av QRS-komplekset.">
+            >
+            ["at0063"] = <
+                text = <"ST start">
+                description = <"Elevasjon eller depresjon av starten på ST-segmentet (J-punktet).">
+            >
+            ["at0064"] = <
+                text = <"ST midtpunkt">
+                description = <"Elevasjon eller depresjon av midtpunktet på ST-segmentet.">
+            >
+            ["at0065"] = <
+                text = <"ST 80 ms">
+                description = <"Elevasjon eller depresjon av ST-segmentet 80 ms etter slutten på QRS-komplekset (J-punktet).">
+            >
+            ["at0066"] = <
+                text = <"ST slutt">
+                description = <"Elevasjon eller depresjon av slutten av ST-segmentet.">
+            >
+            ["at0067"] = <
+                text = <"ST-varighet">
+                description = <"Varighet av ST-segmentet.">
+            >
+            ["at0068"] = <
+                text = <"ST-stigningsgrad">
+                description = <"Stigningsgrad for ST-segmentet.">
+                comment = <"Stigningsgrad måles i grader, for 25 mm/s, 1 mV/cm skalering.">
+            >
+            ["at0069"] = <
+                text = <"ST-form">
+                description = <"Formen av ST-segmentet.">
+                comment = <"Verdisettet hentet fra DICOM PS3.16 2018 c - Content Mapping Resource -http://dicom.nema.org/medical/dicom/current/output/html/part16.html#sect_CID_3233">
+            >
+            ["at0070"] = <
+                text = <"ST-depresjon - horisontal">
+                description = <"ST-segmentet er depressert men ikke stigende eller synkende. Dette er en mer spesifikk form av \"ST-depresjon\".">
+            >
+            ["at0071"] = <
+                text = <"ST-depresjon - oppadstigende">
+                description = <"ST-segmentet er depressert og oppadstigende. Dette er en mer spesifikk form av \"ST-depresjon\".">
+            >
+            ["at0072"] = <
+                text = <"ST-depresjon - nedadstigende">
+                description = <"ST-segmentet er depressert og nedadstigende. Dette er en mer spesifikk form av \"ST-depresjon\".">
+            >
+            ["at0073"] = <
+                text = <"T-amplitude">
+                description = <"Amplitude av T-bølgen.">
+            >
+            ["at0074"] = <
+                text = <"T-varighet">
+                description = <"Varighet av T-bølgen.">
+            >
+            ["at0075"] = <
+                text = <"T-areal">
+                description = <"Arealet av T-bølgen.">
+            >
+            ["at0076"] = <
+                text = <"EKG-apparat">
+                description = <"Detaljer om EKG-apparat som ble brukt.">
+            >
+            ["at0078"] = <
+                text = <"Tilt">
+                description = <"Kranio-caudal tilt av overflaten individet ligger på under EKG-målingen.">
+            >
+            ["at0079"] = <
+                text = <"Konfunderende faktorer">
+                description = <"Fritekstbeskrivelse av problemer eller faktorer som kan ha påvirkning på EKG-målingen.">
+                comment = <"For eksempel \"ikke samarbeidende pasient\", \"vanskeligheter med plassering av avledninger\", \"fuktig hud\", \"muskeltremor\", eller \"avvikende plassering av elektroder på grunn av amputert bein\".">
+            >
+            ["at0080"] = <
+                text = <"Fysisk anstrengelse">
+                description = <"Detaljer om anstrengelse/aktivitet hos individet da EKG-undersøkelsen ble utført.">
+            >
+            ["at0081"] = <
+                text = <"EKG-diagnose">
+                description = <"Enkeltord, frase eller kort beskrivelse som representerer den overordnede kliniske betydningen og signifikansen av resultatet fra EKG-undersøkelsen.">
+                comment = <"For eksempel \"infarkt i bakre vegg\" eller \"supraventrikulær tachykardi\". Koding av diagnosen med en terminologi foretrekkes, der det er mulig. Diagnosen bør være i overensstemmelse med friteksten i elementet \"Konklusjon\".">
+            >
+            ["at0082"] = <
+                text = <"Avlesningsenhet">
+                description = <"Detaljer om enheten som ble brukt for å vise den grafiske framstillingen av dataene generert av EKG-apparatet.">
+            >
+            ["at0083"] = <
+                text = <"Multimediarepresentasjon">
+                description = <"Digital representasjon av EKG-resultatet.">
+                comment = <"Flere formater er tillatt, men de bør representere det samme kliniske innholdet.">
+            >
+            ["at0084"] = <
+                text = <"Avledning V7">
+                description = <"Avledning V7 er en bakre avledning, plassert i den bakre aksillærlinjen.">
+            >
+            ["at0085"] = <
+                text = <"Avledning V8">
+                description = <"Avledning V8 er en bakre avledning, plassert i den midtskapulære regionen.">
+            >
+            ["at0086"] = <
+                text = <"Avledning V9">
+                description = <"Avledning V9 er en bakre avledning, plassert i den paraspinale regionen.">
+            >
+            ["at0087"] = <
+                text = <"Avledning V4R">
+                description = <"En prekordial avledning, plassert i det høyre femte interkostalrommet på den midtklavikulære linjen.">
+            >
+            ["at0088"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at0089"] = <
+                text = <"Konklusjon">
+                description = <"Fritekstsammendrag om alle de viktige funnene ved EKG-undersøkelsen.">
+                comment = <"Konklusjonen er tenkt å være en fritekstbasert og utvidet versjon av \"EKG-diagnose\". For eksempel \"Normal sinusrytme med iskemiske ST-T endringer i fremre avledninger og dårlig R-progresjon i høyre prekordiale avledninger\", eller sammenligninger med tidligere EKG-resultater.">
+            >
+            ["at0090"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om EKG-resultatet, som ikke er omfattet av andre elementer.">
+            >
+            ["at0091"] = <
+                text = <"Avledning V5R">
+                description = <"En prekordial avledning, plassert på nivå med avledning V4R, på den høyre fremre aksillærlinjen.">
+            >
+            ["at0092"] = <
+                text = <"Avledning V6R">
+                description = <"En prekordial avledning, plassert på nivå med avledning V5R, på den høyre midtaksillære linjen.">
+            >
+            ["at0093"] = <
+                text = <"Avledning V3R">
+                description = <"En prekordial avledning, plassert på høyre side av brystkassen midt mellom avledning V1 og V4R.">
+            >
+            ["at0094"] = <
+                text = <"Atriefrekvens">
+                description = <"Måling av frekvens av elektriske atriesammentrekninger over flere avledninger.">
+                comment = <"Også kalt PP-frekvens. Atriefrekvensen måles fra P-bølge til P-bølge.">
+            >
+            ["at0095"] = <
+                text = <"Kommentar om EKG-apparatets tolking">
+                description = <"Kommentarer om EKG-instrumentets eventuelle tolkning.">
+                comment = <"For eksempel angivelse av algoritmen som ble brukt, eller en beskrivelse av tekniske begrensninger.">
+            >
+            ["at0096"] = <
+                text = <"Angitt klinisk informasjon">
+                description = <"Beskrivelse av klinisk informasjon som var tilgjengelig ved tidspunktet da resultatet ble tolket.">
+                comment = <"Dette dataelementet kan inneholde en lenke til den opprinnelige kliniske informasjonen fra forespørselen om å utføre EKG.">
+            >
+            ["at0097"] = <
+                text = <"Plassering av avledninger">
+                description = <"Beskrivelse av plassering av avledninger for EKG-undersøkelsen.">
+                comment = <"For eksempel \"Standard 12-avledning utvidet mot høyre ved V5R, V4R, V3R\". Koding av plasseringen med en terminologi, som DICOM CID 3263/ISO 11073 MDC-koder, er foretrukket der det er mulig.">
+            >
+            ["at0098"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse av funnene for den spesifiserte avledningen.">
+                comment = <"For eksempel funn i ST-segmentet.">
+            >
+            ["at0100"] = <
+                text = <"EKG-type">
+                description = <"Type EKG som er utført.">
+                comment = <"Koding av undersøkelsesnavnet med en terminologi er foretrukket, hvis mulig. For eksempel \"Standard EKG\" eller \"15-avlednings EKG\".">
+            >
+            ["at0101"] = <
+                text = <"Funn">
+                description = <"Enkeltord, frase eller kort beskrivelse som representerer et viktig funn i EKG-undersøkelsen.">
+                comment = <"For eksempel \"ST-depresjon\" eller \"atriefibrillering\". Koding av funn med en terminologi foretrekkes, der det er mulig.">
+            >
+            ["at0102"] = <
+                text = <"Teknisk kvalitet">
+                description = <"Enkeltord, frase eller kort beskrivelse som representerer et signifikant problem med teknisk kvalitet, som påvirker EKG-resultatet.">
+                comment = <"For eksempel koder fra IHE EKG kodetabellen, som \"ikke komplett EKG\", \"ombytting av elektroder på lemmer\", eller \"muskeltremor\".">
+            >
+            ["at0103"] = <
+                text = <"ST-elevasjon">
+                description = <"ST-segmentet er elevert.">
+            >
+            ["at0104"] = <
+                text = <"ST-depresjon">
+                description = <"ST-segmentet er depressert.">
+            >
+            ["at0105"] = <
+                text = <"Overordnet RR-intervall">
+                description = <"Intervallet mellom etterfølgende R-bølger over flere avledninger.">
+                comment = <"RR-intervallet måles som tidsintervallet mellom etterfølgende R-bølger.">
+            >
+            ["at0106"] = <
+                text = <"ST 60ms">
+                description = <"Elevasjon eller depresjon av ST-segmentet 60 ms etter slutten på QRS-komplekset (J-punktet).">
+            >
+            ["at0107"] = <
+                text = <"Kroppsstilling">
+                description = <"Individets kroppsstilling ved måletidspunktet.">
+            >
+            ["at0108"] = <
+                text = <"Stående">
+                description = <"Stående ved tidspunktet for EKG-målingen.">
+            >
+            ["at0109"] = <
+                text = <"Sittende">
+                description = <"Sittende, for eksempel på en seng eller stol, ved tidspunktet for EKG-målingen.">
+            >
+            ["at0110"] = <
+                text = <"Tilbakelent">
+                description = <"Tilbakelent ved tidspunktet for EKG-målingen.">
+            >
+            ["at0111"] = <
+                text = <"Liggende">
+                description = <"Liggende flatt ved tidspunktet for EKG-målingen.">
+            >
+            ["at0112"] = <
+                text = <"Liggende lent mot venstre">
+                description = <"Liggende flatt med noe lateral tilt, som regel vinklet mot venstre side, ved tidspunktet for EKG-målingen.">
+            >
+            ["at0113"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere strukturerte detaljer om EKG-resultatet.">
+            >
+            ["at0114"] = <
+                text = <"Avledningsdetaljer">
+                description = <"Ytterligere strukturerte detaljer om den spesifikke avledningen.">
+            >
+            ["at0115"] = <
+                text = <"Avledningskommentar">
+                description = <"Ytterligere fritekst om avledningsresultatene, som ikke omfattes av andre felt.">
+            >
+            ["at0116"] = <
+                text = <"Pacemakerstimuli">
+                description = <"Fritekstbeskrivelse om pacemakeraktivitet.">
+                comment = <"Dette fritekstfeltet kan kodes i et templat for å tillate et verdisett med \"tilstede/fraværende\" dersom dette kreves for rapportering.">
+            >
+            ["at9001"] = <
+                text = <"* Time (en)">
+                description = <"* Time (en)">
+            >
+            ["at9004"] = <
+                text = <"* Voltage, electrical (en)">
+                description = <"* Voltage, electrical (en)">
+            >
+            ["at9000"] = <
+                text = <"* Frequency (en)">
+                description = <"* Frequency (en)">
+            >
+            ["at9002"] = <
+                text = <"* Angle, plane (en)">
+                description = <"* Angle, plane (en)">
+            >
+            ["at9005"] = <
+                text = <"* Electric potential (en)">
+                description = <"* Electric potential (en)">
+            >
+            ["ac9003"] = <
+                text = <"Per avledning (synthesised)">
+                description = <"Detaljer om måleparametre for hver navngitte avledning, spesifisert i run-time name constraint. (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"ST-form (synthesised)">
+                description = <"Formen av ST-segmentet. (synthesised)">
+            >
+            ["ac9063"] = <
+                text = <"Kroppsstilling (synthesised)">
+                description = <"Individets kroppsstilling ved måletidspunktet. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"ECG result">
+                description = <"Measurement of the electrical activity generated by the heart.">
+                comment = <"Also known as an electrocardiograph or EKG.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0007"] = <
+                text = <"QT interval global">
+                description = <"Interval measurement from the onset of the QRS complex to the end of the T wave aacross the ECG as a whole (multiple leads).">
+            >
+            ["at0008"] = <
+                text = <"QTc interval global">
+                description = <"Correction applied to the 'QT interval global'.">
+            >
+            ["at0009"] = <
+                text = <"Device interpretation">
+                description = <"Interpretative comment on this ECG result, originating from a device.">
+                comment = <"May be multiple. Coding of the interpretation with a terminology is preferred, where possible. For example: normal sinus rhythm; ischaemic ST-T changes in anterior leads; and/or poor R progression in right precordial leads.">
+            >
+            ["at0012"] = <
+                text = <"PR interval global">
+                description = <"PR interval measurement across the ECG as a whole (multiple leads).">
+                comment = <"The PR interval is measured from onset of P wave to the onset of QRS complex.">
+            >
+            ["at0013"] = <
+                text = <"Ventricular heart rate">
+                description = <"The frequency of ventricular electrical contractions across the ECG as a whole (multiple leads).">
+                comment = <"Also known as the RR rate, QRS rate or electrical heart rate. The ventricular heart rate is measured from R wave to R wave and calculated across the ECG as a whole (multiple leads).">
+            >
+            ["at0014"] = <
+                text = <"QRS duration global">
+                description = <"Duration of QRS complex across the ECG as a whole (multiple leads).">
+                comment = <"The QRS complex is measured from its onset to 
+the ST segment onset (J point).">
+            >
+            ["at0020"] = <
+                text = <"P axis">
+                description = <"Average direction of electrical activity during atrial depolarization.">
+                comment = <"For example: normal axis or left deviation; or number of degrees.">
+            >
+            ["at0021"] = <
+                text = <"QRS axis">
+                description = <"Average direction of electrical activity during ventricular depolarization.">
+                comment = <"For example: normal axis or left deviation; or number of degrees.">
+            >
+            ["at0022"] = <
+                text = <"T axis">
+                description = <"Average direction of electrical activity during ventricular repolarization.">
+                comment = <"For example: normal axis or left deviation; or number of degrees.">
+            >
+            ["at0025"] = <
+                text = <"QTc algorithm">
+                description = <"Algorithm used to correct QT interval.">
+            >
+            ["at0027"] = <
+                text = <"Per-lead">
+                description = <"Details about measured parameters for each named lead (specified in the run-time name constraint).">
+            >
+            ["at0028"] = <
+                text = <"P duration">
+                description = <"Duration of P wave.">
+            >
+            ["at0029"] = <
+                text = <"Lead I">
+                description = <"Lead I is the voltage difference between the left arm electrode and right arm electrode, directed towards the left arm at zero degrees.">
+            >
+            ["at0030"] = <
+                text = <"Lead II">
+                description = <"Lead II is the voltage difference between the left leg electrode and the right arm electrode, directed towards the left leg at +60 degrees.">
+            >
+            ["at0031"] = <
+                text = <"Lead III">
+                description = <"Lead III is the voltage difference between the left leg electrode and the left arm electrode, directed towards the left leg at +120 degrees.">
+            >
+            ["at0032"] = <
+                text = <"Lead aVR">
+                description = <"Lead augmented vector right (aVR) has the positive electrode on the right arm and the negative pole is a combination of the left arm electrode and the left leg electrode. It is directed towards the right arm at -150 degrees.">
+            >
+            ["at0033"] = <
+                text = <"Lead aVL">
+                description = <"Lead augmented vector left (aVL) has the positive electrode on the left arm and the negative pole is a combination of the right arm electrode and the left leg electrode. It is directed towards the left arm electrode at -30 degrees.">
+            >
+            ["at0034"] = <
+                text = <"Lead aVF">
+                description = <"Lead augmented vector foot (aVF) has the positive electrode on the left leg and the negative pole is a combination of the right arm electrode and the left arm electrode. It is directed towards the left leg electrode at +90 degrees.">
+            >
+            ["at0035"] = <
+                text = <"Lead V1">
+                description = <"A precordial lead, placed to the right of the sternum in the fourth intercostal space. Also known as lead V2R.">
+            >
+            ["at0036"] = <
+                text = <"Lead V2">
+                description = <"A precordial lead, placed to the left of the sternum in the fourth intercostal space. Also known as lead V1R.">
+            >
+            ["at0037"] = <
+                text = <"Lead V3">
+                description = <"A precordial lead, placed directly between leads V2 and V4.">
+            >
+            ["at0038"] = <
+                text = <"Lead V4">
+                description = <"A precordial lead, placed in the left fifth intercostal space at the midclavicular line.">
+            >
+            ["at0039"] = <
+                text = <"Lead V5">
+                description = <"A precordial lead, placed level with lead V4 at the left anterior axillary line.">
+            >
+            ["at0040"] = <
+                text = <"Lead V6">
+                description = <"A precordial lead, placed level with lead V5 at the left midaxillary line.">
+            >
+            ["at0041"] = <
+                text = <"P amplitude">
+                description = <"Amplitude of the P wave.">
+            >
+            ["at0042"] = <
+                text = <"P area">
+                description = <"Area of a monophasic P wave or the area of the initial portion of a biphasic P wave.">
+            >
+            ["at0043"] = <
+                text = <"P' amplitude">
+                description = <"Amplitude of P' wave.">
+            >
+            ["at0044"] = <
+                text = <"P' duration">
+                description = <"Duration of P' wave.">
+            >
+            ["at0046"] = <
+                text = <"P' area">
+                description = <"Area of the terminal portion of a biphasic P wave.">
+            >
+            ["at0048"] = <
+                text = <"Q amplitude">
+                description = <"Amplitude of the Q wave.">
+            >
+            ["at0049"] = <
+                text = <"Q duration">
+                description = <"Duration of the Q wave.">
+            >
+            ["at0050"] = <
+                text = <"R amplitude">
+                description = <"Amplitude of the R wave.">
+            >
+            ["at0051"] = <
+                text = <"R duration">
+                description = <"Duration of the R wave.">
+            >
+            ["at0053"] = <
+                text = <"S amplitude">
+                description = <"Amplitude of the S wave.">
+            >
+            ["at0054"] = <
+                text = <"S duration">
+                description = <"Duration of the S wave.">
+            >
+            ["at0055"] = <
+                text = <"R' amplitude">
+                description = <"Amplitude of the R' wave.">
+            >
+            ["at0056"] = <
+                text = <"R' duration">
+                description = <"Duration of the R' wave.">
+            >
+            ["at0057"] = <
+                text = <"S' amplitude">
+                description = <"Amplitude of the S' wave.">
+            >
+            ["at0058"] = <
+                text = <"S' duration">
+                description = <"Duration of the S' wave.">
+            >
+            ["at0059"] = <
+                text = <"Ventricular Activation Time (VAT)">
+                description = <"Interval from the onset of the QRS complex to the latest positive peak in the complex, or the latest substantial notch on the latest peak (whichever is later).">
+            >
+            ["at0060"] = <
+                text = <"QRS p-p">
+                description = <"Amplitude of the peak-to-peak QRS complex.">
+            >
+            ["at0061"] = <
+                text = <"QRS duration">
+                description = <"Duration of the QRS complex.">
+                comment = <"Measured from its onset to the ST segment onset (J point).">
+            >
+            ["at0062"] = <
+                text = <"QRS area">
+                description = <"Area of the QRS complex.">
+            >
+            ["at0063"] = <
+                text = <"ST onset">
+                description = <"Elevation or depression at the onset (J point) of the ST segment.">
+            >
+            ["at0064"] = <
+                text = <"ST midpoint">
+                description = <"Elevation or depression at the midpoint of the ST segment.">
+            >
+            ["at0065"] = <
+                text = <"ST 80ms">
+                description = <"Elevation or depression of the ST segment 80 ms after the end of the QRS complex (J point).">
+            >
+            ["at0066"] = <
+                text = <"ST end">
+                description = <"Elevation or depression at the end of the ST segment.">
+            >
+            ["at0067"] = <
+                text = <"ST duration">
+                description = <"Duration of the ST segment.">
+            >
+            ["at0068"] = <
+                text = <"ST slope">
+                description = <"Slope of the ST segment.">
+                comment = <"Slope is measured in degrees for 25 mm/sec, 1mV/cm scaling.">
+            >
+            ["at0069"] = <
+                text = <"ST segment morphology">
+                description = <"Shape of the ST segment.">
+                comment = <"Value set sourced from DICOM PS3.16 2018 c - Content Mapping Resource -http://dicom.nema.org/medical/dicom/current/output/html/part16.html#sect_CID_3233">
+            >
+            ["at0070"] = <
+                text = <"ST depression - horizontal">
+                description = <"The ST segment is depressed but not sloping. This is a more specific form of 'ST depression'.">
+            >
+            ["at0071"] = <
+                text = <"ST depression - upsloping">
+                description = <"The ST segment is depressed and sloping upward. This is a more specific form of 'ST depression'.">
+            >
+            ["at0072"] = <
+                text = <"ST depression - downsloping">
+                description = <"The ST segment is depressed and downsloping. This is a more specific form of 'ST depression'.">
+            >
+            ["at0073"] = <
+                text = <"T amplitude">
+                description = <"Amplitude of the T wave.">
+            >
+            ["at0074"] = <
+                text = <"T duration">
+                description = <"Duration of the T wave.">
+            >
+            ["at0075"] = <
+                text = <"T area">
+                description = <"Area of the T wave.">
+            >
+            ["at0076"] = <
+                text = <"Recording device">
+                description = <"Details about the electrocardiograph device used to record the ECG.">
+            >
+            ["at0078"] = <
+                text = <"Tilt">
+                description = <"The craniocaudal tilt of the surface on which the person is lying during the ECG. Lying horizontally is considered the 0 degrees position.">
+            >
+            ["at0079"] = <
+                text = <"Confounding factors">
+                description = <"Comment on and record other incidental factors that may be contributing to ECG result.">
+                comment = <"For example: Uncooperative patient; difficulty with lead placement; or moist skin.">
+            >
+            ["at0080"] = <
+                text = <"Level of exertion">
+                description = <"Details about physical activity undertaken at the time of ECG recording.">
+            >
+            ["at0081"] = <
+                text = <"ECG diagnosis">
+                description = <"Single word, phrase or brief description that represents the overall clinical meaning and significance of the ECG result.">
+                comment = <"For example: 'posterior AMI' or 'supraventricular tachycardia'. Coding of the diagnosis with a terminology is preferred, where possible. This diagnosis should be aligned with the narrative in the 'Conclusion'.">
+            >
+            ["at0082"] = <
+                text = <"Viewing device">
+                description = <"Details of device used to view the ECG output.">
+            >
+            ["at0083"] = <
+                text = <"Multimedia representation">
+                description = <"Digital representation of the ECG result.">
+                comment = <"The ECG may be represented as an image or another multimedia/binary type. Multiple formats are allowed but they should represent equivalent clinical content.">
+            >
+            ["at0084"] = <
+                text = <"Lead V7">
+                description = <"Lead V7 is a posterior lead, placed in the posterior axillary line.">
+            >
+            ["at0085"] = <
+                text = <"Lead V8">
+                description = <"Lead V8 is a posterior lead, placed in the midscapular region.">
+            >
+            ["at0086"] = <
+                text = <"Lead V9">
+                description = <"Lead V9 is a posterior lead, placed in the paraspinal region.">
+            >
+            ["at0087"] = <
+                text = <"Lead V4R">
+                description = <"A precordial lead, placed in the right fifth intercostal space at the midclavicular line.">
+            >
+            ["at0088"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0089"] = <
+                text = <"Conclusion">
+                description = <"Narrative synthesis about all of the key findings in the ECG result.">
+                comment = <"The conclusion is intended to be a narrative and expanded version of the 'ECG diagnosis'. For example: 'Normal sinus rhythm with ischaemic ST-T changes in anterior leads and poor R progression in right precordial leads; or comparison with previous ECG results.">
+            >
+            ["at0090"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the ECG result, not captured in other fields.">
+            >
+            ["at0091"] = <
+                text = <"Lead V5R">
+                description = <"A precordial lead, placed level with lead V4R at the right anterior axillary line.">
+            >
+            ["at0092"] = <
+                text = <"Lead V6R">
+                description = <"A precordial lead, placed level with lead V5R at the right midaxillary line.">
+            >
+            ["at0093"] = <
+                text = <"Lead V3R">
+                description = <"A precordial lead, placed directly on the right side of the chest between leads V1 and V4R.">
+            >
+            ["at0094"] = <
+                text = <"Atrial heart rate">
+                description = <"The frequency of atrial electrical contractions across the ECG as a whole (multiple leads).">
+                comment = <"Also known as the PP rate. The atrial heart rate is measured from P wave to P wave.">
+            >
+            ["at0095"] = <
+                text = <"Device interpretation comment">
+                description = <"Comment about the interpretation by the device.">
+                comment = <"For example: identification of the algorithm used; or description of technical limitations.">
+            >
+            ["at0096"] = <
+                text = <"Clinical information provided">
+                description = <"Narrative description of clinical information available at the time of interpretation of results.">
+                comment = <"This data element may include a link to the original clinical information provided in the ECG request.">
+            >
+            ["at0097"] = <
+                text = <"ECG lead placement">
+                description = <"Lead placement for the ECG recording.">
+                comment = <"For example: 'Standard 12-lead extended to the right by V5R, V4R, V3R'. Coding of the lead placement with a terminology, such as DICOM CID 3263/ISO 11073 MDC codes, is desirable where possible.">
+            >
+            ["at0098"] = <
+                text = <"Description">
+                description = <"Narrative description about the findings for the specified lead.">
+                comment = <"For example: ST segment findings.">
+            >
+            ["at0100"] = <
+                text = <"ECG type">
+                description = <"Type of ECG performed.">
+                comment = <"Coding of the ECG type with a terminology is preferred, where possible. For example: 'Standard ECG'; or '15-lead ECG'.">
+            >
+            ["at0101"] = <
+                text = <"Finding">
+                description = <"Single word, phrase or brief description that represents a significant finding in the ECG result.">
+                comment = <"For example: 'Normal ECG', 'Equivocal ECG' or 'Abnormal ECG'; 'Spikes from pacemaker signal'; 'ST depression'; or 'Atrial fibrillation'. Coding of the finding with a terminology is preferred, where possible.">
+            >
+            ["at0102"] = <
+                text = <"Technical quality">
+                description = <"Single word, phrase or brief description that represents a significant technical quality issue that impacts the ECG result.">
+                comment = <"For example: codes from IHE ECG codetable, such as 'Incomplete ECG'; 'Limb electrodes interchanged'; or 'Muscle tremor'.">
+            >
+            ["at0103"] = <
+                text = <"ST elevation">
+                description = <"The ST segment is elevated.">
+            >
+            ["at0104"] = <
+                text = <"ST depression">
+                description = <"The ST segment is depressed.">
+            >
+            ["at0105"] = <
+                text = <"RR interval global">
+                description = <"The interval between successive R waves across the ECG as a whole (multiple leads).">
+                comment = <"The RR interval is measured as the time interval between successive R waves.">
+            >
+            ["at0106"] = <
+                text = <"ST 60ms">
+                description = <"Elevation or depression of the ST segment 60 ms after the end of the QRS complex (J point).">
+            >
+            ["at0107"] = <
+                text = <"Position">
+                description = <"The position of the subject at the time of measurement.">
+            >
+            ["at0108"] = <
+                text = <"Standing">
+                description = <"Standing at the time of ECG testing.">
+            >
+            ["at0109"] = <
+                text = <"Sitting">
+                description = <"Sitting (for example on bed or chair) at the time of ECG testing.">
+            >
+            ["at0110"] = <
+                text = <"Reclining">
+                description = <"Reclining at the time of ECG testing.">
+            >
+            ["at0111"] = <
+                text = <"Lying">
+                description = <"Lying flat at the time of ECG testing.">
+            >
+            ["at0112"] = <
+                text = <"Lying with tilt to left">
+                description = <"Lying flat with some lateral tilt, usually angled towards the left side at the time of ECG testing.">
+            >
+            ["at0113"] = <
+                text = <"Additional details">
+                description = <"Additional structured details about the ECG result.">
+            >
+            ["at0114"] = <
+                text = <"Lead details">
+                description = <"Additional structured details about the specified lead.">
+            >
+            ["at0115"] = <
+                text = <"Lead comment">
+                description = <"Additional narrative about the lead results, not captured in other fields.">
+            >
+            ["at0116"] = <
+                text = <"Pacemaker stimulation">
+                description = <"Narrative description about pacemaker activity.">
+                comment = <"This free text field could be further coded in a template to enable a Present/Absent value set if required for reporting purposes.">
+            >
+            ["at9001"] = <
+                text = <"Time">
+                description = <"Time">
+            >
+            ["at9004"] = <
+                text = <"Voltage, electrical">
+                description = <"Voltage, electrical">
+            >
+            ["at9000"] = <
+                text = <"Frequency">
+                description = <"Frequency">
+            >
+            ["at9002"] = <
+                text = <"Angle, plane">
+                description = <"Angle, plane">
+            >
+            ["at9005"] = <
+                text = <"Electric potential">
+                description = <"Electric potential">
+            >
+            ["ac9003"] = <
+                text = <"Per-lead (synthesised)">
+                description = <"Details about measured parameters for each named lead (specified in the run-time name constraint). (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"ST segment morphology (synthesised)">
+                description = <"Shape of the ST segment. (synthesised)">
+            >
+            ["ac9063"] = <
+                text = <"Position (synthesised)">
+                description = <"The position of the subject at the time of measurement. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"*ECG result(en)">
+                description = <"*Measurement of the electrical activity generated by the heart.(en)">
+                comment = <"*Also known as an electrocardiograph or EKG.(en)">
+            >
+            ["at0002"] = <
+                text = <"إحدى الوقائع">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"*QT interval global(en)">
+                description = <"*Interval measurement from the onset of the QRS complex to the end of the T wave aacross the ECG as a whole (multiple leads).(en)">
+            >
+            ["at0008"] = <
+                text = <"*QTc interval global(en)">
+                description = <"*Correction applied to the 'QT interval global'.(en)">
+            >
+            ["at0009"] = <
+                text = <"*Device interpretation(en)">
+                description = <"*Interpretative comment on this ECG result, originating from a device.(en)">
+                comment = <"*May be multiple. Coding of the interpretation with a terminology is preferred, where possible. For example: normal sinus rhythm; ischaemic  ST-T changes in anterior leads; and/or poor R progression in right precordial leads.(en)">
+            >
+            ["at0012"] = <
+                text = <"*PR interval global(en)">
+                description = <"*PR interval measurement across the ECG as a whole (multiple leads).(en)">
+                comment = <"*The PR interval is measured from onset of P wave to the onset of QRS complex.(en)">
+            >
+            ["at0013"] = <
+                text = <"*Ventricular heart rate(en)">
+                description = <"*The frequency of ventricular electrical contractions across the ECG as a whole (multiple leads).(en)">
+                comment = <"*Also known as the RR rate, QRS rate or electrical heart rate. The ventricular heart rate is measured from R wave to R wave and calculated across the ECG as a whole (multiple leads).(en)">
+            >
+            ["at0014"] = <
+                text = <"*QRS duration global(en)">
+                description = <"*Duration of QRS complex across the ECG as a whole (multiple leads).(en)">
+                comment = <"*The QRS complex is measured from its onset to 
+the ST segment onset (J point).(en)">
+            >
+            ["at0020"] = <
+                text = <"*P axis(en)">
+                description = <"*Average direction of electrical activity during atrial depolarization.(en)">
+                comment = <"*For example: normal axis or left deviation; or number of degrees.(en)">
+            >
+            ["at0021"] = <
+                text = <"*QRS axis(en)">
+                description = <"*Average direction of electrical activity during ventricular depolarization.(en)">
+                comment = <"*For example: normal axis or left deviation; or number of degrees.(en)">
+            >
+            ["at0022"] = <
+                text = <"*T axis(en)">
+                description = <"*Average direction of electrical activity during ventricular repolarization.(en)">
+                comment = <"*For example: normal axis or left deviation; or number of degrees.(en)">
+            >
+            ["at0025"] = <
+                text = <"*QTc algorithm(en)">
+                description = <"*Algorithm used to correct QT interval.(en)">
+            >
+            ["at0027"] = <
+                text = <"*Per-lead(en)">
+                description = <"*Details about measured parameters for each named lead (specified in the run-time name constraint).(en)">
+            >
+            ["at0028"] = <
+                text = <"مدة الموجة P">
+                description = <"مدة الموجة
+P">
+            >
+            ["at0029"] = <
+                text = <"*Lead I(en)">
+                description = <"*Lead I is the voltage difference between the left arm electrode and right arm electrode, directed towards the left arm at zero degrees.(en)">
+            >
+            ["at0030"] = <
+                text = <"*Lead II(en)">
+                description = <"*Lead II is the voltage difference between the left leg electrode and the right arm electrode, directed towards the left leg at +60 degrees.(en)">
+            >
+            ["at0031"] = <
+                text = <"*Lead III(en)">
+                description = <"*Lead III is the voltage difference between the left leg electrode and the left arm electrode, directed towards the left leg at +120 degrees.(en)">
+            >
+            ["at0032"] = <
+                text = <"*Lead aVR(en)">
+                description = <"*Lead augmented vector right (aVR) has the positive electrode on the right arm and the negative pole is a combination of the left arm electrode and the left leg electrode. It is directed towards the right arm at -150 degrees.(en)">
+            >
+            ["at0033"] = <
+                text = <"*Lead aVL(en)">
+                description = <"*Lead augmented vector left (aVL) has the positive electrode on the left arm and the negative pole is a combination of the right arm electrode and the left leg electrode. It is directed towards the left arm electrode at -30 degrees.(en)">
+            >
+            ["at0034"] = <
+                text = <"*Lead aVF(en)">
+                description = <"*Lead augmented vector foot (aVF) has the positive electrode on the left leg and the negative pole is a combination of the right arm electrode and the left arm electrode. It is directed towards the left leg electrode at +90 degrees.(en)">
+            >
+            ["at0035"] = <
+                text = <"*Lead V1(en)">
+                description = <"*A precordial lead, placed to the right of the sternum in the fourth intercostal space. Also known as lead V2R.(en)">
+            >
+            ["at0036"] = <
+                text = <"*Lead V2(en)">
+                description = <"*A precordial lead, placed to the left of the sternum in the fourth intercostal space. Also known as lead V1R.(en)">
+            >
+            ["at0037"] = <
+                text = <"*Lead V3(en)">
+                description = <"*A precordial lead, placed directly between leads V2 and V4.(en)">
+            >
+            ["at0038"] = <
+                text = <"*Lead V4(en)">
+                description = <"*A precordial lead, placed in the left fifth intercostal space at the midclavicular line.(en)">
+            >
+            ["at0039"] = <
+                text = <"*Lead V5(en)">
+                description = <"*A precordial lead, placed level with lead V4 at the left anterior axillary line.(en)">
+            >
+            ["at0040"] = <
+                text = <"*Lead V6(en)">
+                description = <"*A precordial lead, placed level with lead V5 at the left midaxillary line.(en)">
+            >
+            ["at0041"] = <
+                text = <"*P amplitude(en)">
+                description = <"*Amplitude of the P wave.(en)">
+            >
+            ["at0042"] = <
+                text = <"*P area(en)">
+                description = <"*Area of a monophasic P wave or the area of the initial portion of a biphasic P wave.(en)">
+            >
+            ["at0043"] = <
+                text = <"P' مدى الموجة">
+                description = <" P' مدى الموجة ">
+            >
+            ["at0044"] = <
+                text = <"P' مدة الموجة">
+                description = <" P' مدة الموجة ">
+            >
+            ["at0046"] = <
+                text = <"P' باحة">
+                description = <"الباحة من الجزء النهائي لموجة 
+P
+ثنائية الأطوار.">
+            >
+            ["at0048"] = <
+                text = <"*Q amplitude(en)">
+                description = <"*Amplitude of the Q wave.(en)">
+            >
+            ["at0049"] = <
+                text = <"*Q duration(en)">
+                description = <"*Duration of the Q wave.(en)">
+            >
+            ["at0050"] = <
+                text = <"*R amplitude(en)">
+                description = <"*Amplitude of the R wave.(en)">
+            >
+            ["at0051"] = <
+                text = <"*R duration(en)">
+                description = <"*Duration of the R wave.(en)">
+            >
+            ["at0053"] = <
+                text = <"*S amplitude(en)">
+                description = <"*Amplitude of the S wave.(en)">
+            >
+            ["at0054"] = <
+                text = <"*S duration(en)">
+                description = <"*Duration of the S wave.(en)">
+            >
+            ["at0055"] = <
+                text = <"*R' amplitude(en)">
+                description = <"*Amplitude of the R' wave.(en)">
+            >
+            ["at0056"] = <
+                text = <"*R' duration(en)">
+                description = <"*Duration of the R' wave.(en)">
+            >
+            ["at0057"] = <
+                text = <"*S' amplitude(en)">
+                description = <"*Amplitude of the S' wave.(en)">
+            >
+            ["at0058"] = <
+                text = <"*S' duration(en)">
+                description = <"*Duration of the S' wave.(en)">
+            >
+            ["at0059"] = <
+                text = <"*Ventricular Activation Time (VAT)(en)">
+                description = <"*Interval from the onset of the QRS complex to the latest positive peak in the complex, or the latest substantial notch on the latest peak (whichever is later).(en)">
+            >
+            ["at0060"] = <
+                text = <"*QRS p-p(en)">
+                description = <"*Amplitude of the peak-to-peak QRS complex.(en)">
+            >
+            ["at0061"] = <
+                text = <"*QRS duration(en)">
+                description = <"*Duration of the QRS complex.(en)">
+                comment = <"*Measured from its onset to the ST segment onset (J point).(en)">
+            >
+            ["at0062"] = <
+                text = <"*QRS area(en)">
+                description = <"*Area of the QRS complex.(en)">
+            >
+            ["at0063"] = <
+                text = <"ST بداية">
+                description = <"الارتفاع أو الانخفاض في بداية القطعة 
+ST
+- النقطة
+J">
+            >
+            ["at0064"] = <
+                text = <"النقطة المتوسطة في ST">
+                description = <"الارتفاع أو الانخفاض في النقطة المتوسطة من القطعة 
+ST">
+            >
+            ["at0065"] = <
+                text = <"ST 80 ميللي ثانية">
+                description = <"الارتفاع أو الانخفاض في قطعة 
+ST
+بعد انتهاء المركب 
+QRS
+أو النقطة 
+J
+بفترة 
+80 ميللي ثانية">
+            >
+            ["at0066"] = <
+                text = <"ST نهاية">
+                description = <"الارتفاع أو الانخفاض عند نهاية القطعة 
+ST">
+            >
+            ["at0067"] = <
+                text = <"*ST duration(en)">
+                description = <"*Duration of the ST segment.(en)">
+            >
+            ["at0068"] = <
+                text = <"*ST slope(en)">
+                description = <"*Slope of the ST segment.(en)">
+                comment = <"*Slope is measured in degrees for 25 mm/sec, 1mV/cm scaling.(en)">
+            >
+            ["at0069"] = <
+                text = <"*ST segment morphology(en)">
+                description = <"*Shape of the ST segment.(en)">
+            >
+            ["at0070"] = <
+                text = <"*ST depression - horizontal(en)">
+                description = <"*The ST segment is depressed but not sloping. This is a more specific form of 'ST depression'.(en)">
+            >
+            ["at0071"] = <
+                text = <"*ST depression - upsloping(en)">
+                description = <"*The ST segment is depressed and sloping upward. This is a more specific form of 'ST depression'.(en)">
+            >
+            ["at0072"] = <
+                text = <"*ST depression - downsloping(en)">
+                description = <"*The ST segment is depressed and downsloping. This is a more specific form of 'ST depression'.(en)">
+            >
+            ["at0073"] = <
+                text = <"*T amplitude(en)">
+                description = <"*Amplitude of the T wave.(en)">
+            >
+            ["at0074"] = <
+                text = <"*T duration(en)">
+                description = <"*Duration of the T wave.(en)">
+            >
+            ["at0075"] = <
+                text = <"*T area(en)">
+                description = <"*Area of the T wave.(en)">
+            >
+            ["at0076"] = <
+                text = <"*Recording device(en)">
+                description = <"*Details about the electrocardiograph device used to record the ECG.(en)">
+            >
+            ["at0078"] = <
+                text = <"*Tilt(en)">
+                description = <"*The craniocaudal tilt of the surface on which the person is lying during the ECG.(en)">
+            >
+            ["at0079"] = <
+                text = <"*Confounding factors(en)">
+                description = <"*Comment on and record other incidental factors that may be contributing to ECG result.(en)">
+                comment = <"*For example: Uncooperative patient; or moist skin.(en)">
+            >
+            ["at0080"] = <
+                text = <"*Level of exertion(en)">
+                description = <"*Details about physical activity undertaken at the time of ECG recording.(en)">
+            >
+            ["at0081"] = <
+                text = <"*ECG diagnosis(en)">
+                description = <"*Single word, phrase or brief description that represents the overall clinical meaning and significance of the ECG result.(en)">
+                comment = <"*For example: 'posterior AMI' or 'supraventricular tachycardia'. Coding of the diagnosis with a terminology is preferred, where possible. This diagnosis should be aligned with the narrative in the 'Conclusion'.(en)">
+            >
+            ["at0082"] = <
+                text = <"*Viewing device(en)">
+                description = <"*Details of device used to view the ECG output.(en)">
+            >
+            ["at0083"] = <
+                text = <"*Multimedia representation(en)">
+                description = <"*Digital representation of the ECG result.(en)">
+                comment = <"*Multiple formats are allowed but they should represent equivalent clinical content.(en)">
+            >
+            ["at0084"] = <
+                text = <"*Lead V7(en)">
+                description = <"*Lead V7 is a posterior lead, placed in the posterior axillary line.(en)">
+            >
+            ["at0085"] = <
+                text = <"*Lead V8(en)">
+                description = <"*Lead V8 is a posterior lead, placed in the midscapular region.(en)">
+            >
+            ["at0086"] = <
+                text = <"*Lead V9(en)">
+                description = <"*Lead V9 is a posterior lead, placed in the paraspinal region.(en)">
+            >
+            ["at0087"] = <
+                text = <"*Lead V4R(en)">
+                description = <"*A precordial lead, placed in the right fifth intercostal space at the midclavicular line.(en)">
+            >
+            ["at0088"] = <
+                text = <"*Cluster(en)">
+                description = <"**(en)">
+            >
+            ["at0089"] = <
+                text = <"*Conclusion(en)">
+                description = <"*Narrative synthesis about all of the key findings in the ECG result.(en)">
+                comment = <"*The conclusion is intended to be a narrative and expanded version of the 'ECG diagnosis'. For example: 'Normal sinus rhythm with ischaemic ST-T changes in anterior leads and poor R progression in right precordial leads; or comparison with previous ECG results.(en)">
+            >
+            ["at0090"] = <
+                text = <"*Comment(en)">
+                description = <"*Additional narrative about the ECG result, not captured in other fields.(en)">
+            >
+            ["at0091"] = <
+                text = <"*Lead V5R(en)">
+                description = <"*A precordial lead, placed level with lead V4R at the right anterior axillary line.(en)">
+            >
+            ["at0092"] = <
+                text = <"*Lead V6R(en)">
+                description = <"*A precordial lead, placed level with lead V5R at the right midaxillary line.(en)">
+            >
+            ["at0093"] = <
+                text = <"*Lead V3R(en)">
+                description = <"*A precordial lead, placed directly on the right side of the chest between leads V1 and V4R.(en)">
+            >
+            ["at0094"] = <
+                text = <"*Atrial heart rate(en)">
+                description = <"*The frequency of atrial electrical contractions across the ECG as a whole (multiple leads).(en)">
+                comment = <"*Also known as the PP rate. The atrial heart rate is measured from P wave to P wave.(en)">
+            >
+            ["at0095"] = <
+                text = <"*Device interpretation comment(en)">
+                description = <"*Comment about the interpretation by the device.(en)">
+                comment = <"*For example: identification of the algorithm used; or description of technical limitations.(en)">
+            >
+            ["at0096"] = <
+                text = <"*Clinical information provided(en)">
+                description = <"*Narrative description of clinical information available at the time of interpretation of results.(en)">
+                comment = <"*This data element may include a link to the original clinical information provided in the ECG request.(en)">
+            >
+            ["at0097"] = <
+                text = <"*ECG lead placement(en)">
+                description = <"*Description of the placement of the leads for the ECG recording.(en)">
+                comment = <"*Coding of the lead placement with a terminology, is desirable, where possible. For example: ISO/IEEE 11073 MDC codes.(en)">
+            >
+            ["at0098"] = <
+                text = <"*Description(en)">
+                description = <"*Narrative description about the findings for the specified lead.(en)">
+                comment = <"*For example: ST segment findings.(en)">
+            >
+            ["at0100"] = <
+                text = <"*ECG type(en)">
+                description = <"*Type of ECG performed.(en)">
+                comment = <"*Coding of the ECG type with a terminology is preferred, where possible. For example: 'Standard ECG'; or '15-lead ECG'.(en)">
+            >
+            ["at0101"] = <
+                text = <"*Finding(en)">
+                description = <"*Single word, phrase or brief description that represents a significant finding in the ECG result.(en)">
+                comment = <"*For example: 'ST depression'; or 'Atrial fibrillation'. Coding of the finding with a terminology is preferred, where possible.(en)">
+            >
+            ["at0102"] = <
+                text = <"*Technical quality(en)">
+                description = <"*Single word, phrase or brief description that represents a significant technical quality issue  that impacts the ECG result.(en)">
+                comment = <"*For example: codes from IHE ECG codetable, such as 'Incomplete ECG'; 'Limb electrodes interchanged'; or 'Muscle tremor'.(en)">
+            >
+            ["at0103"] = <
+                text = <"*ST elevation(en)">
+                description = <"*The ST segment is elevated.(en)">
+            >
+            ["at0104"] = <
+                text = <"*ST depression(en)">
+                description = <"*The ST segment is depressed.(en)">
+            >
+            ["at0105"] = <
+                text = <"*RR interval global(en)">
+                description = <"*The interval between successive R waves across the ECG as a whole (multiple leads).(en)">
+                comment = <"*The RR interval is measured as the time interval between successive R waves.(en)">
+            >
+            ["at0106"] = <
+                text = <"*DV_QUANTITY (en)">
+                description = <"*">
+            >
+            ["at0107"] = <
+                text = <"*DV_CODED_TEXT (en)">
+                description = <"*">
+            >
+            ["at0108"] = <
+                text = <"*Standing (en)">
+                description = <"*Standing at the time of ECG testing. (en)">
+            >
+            ["at0109"] = <
+                text = <"*Sitting (en)">
+                description = <"*Sitting (for example on bed or chair) at the time of ECG testing. (en)">
+            >
+            ["at0110"] = <
+                text = <"*Reclining (en)">
+                description = <"*Reclining at the time of ECG testing. (en)">
+            >
+            ["at0111"] = <
+                text = <"*Lying (en)">
+                description = <"*Lying flat at the time of ECG testing. (en)">
+            >
+            ["at0112"] = <
+                text = <"*Lying with tilt to left (en)">
+                description = <"*Lying flat with some lateral tilt, usually angled towards the left side at the time of ECG testing. (en)">
+            >
+            ["at0113"] = <
+                text = <"*CLUSTER_SLOT (en)">
+                description = <"*">
+            >
+            ["at0114"] = <
+                text = <"*CLUSTER_SLOT (en)">
+                description = <"*">
+            >
+            ["at0115"] = <
+                text = <"*DV_TEXT (en)">
+                description = <"*">
+            >
+            ["at0116"] = <
+                text = <"*DV_TEXT (en)">
+                description = <"*">
+            >
+            ["at9001"] = <
+                text = <"* Time (en)">
+                description = <"* Time (en)">
+            >
+            ["at9004"] = <
+                text = <"* Voltage, electrical (en)">
+                description = <"* Voltage, electrical (en)">
+            >
+            ["at9000"] = <
+                text = <"* Frequency (en)">
+                description = <"* Frequency (en)">
+            >
+            ["at9002"] = <
+                text = <"* Angle, plane (en)">
+                description = <"* Angle, plane (en)">
+            >
+            ["at9005"] = <
+                text = <"* Electric potential (en)">
+                description = <"* Electric potential (en)">
+            >
+            ["ac9003"] = <
+                text = <"*Per-lead(en) (synthesised)">
+                description = <"*Details about measured parameters for each named lead (specified in the run-time name constraint).(en) (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"*ST segment morphology(en) (synthesised)">
+                description = <"*Shape of the ST segment.(en) (synthesised)">
+            >
+            ["ac9063"] = <
+                text = <"*DV_CODED_TEXT (en) (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/128>
+            ["at9004"] = <http://openehr.org/id/374>
+            ["at9000"] = <http://openehr.org/id/382>
+            ["at9002"] = <http://openehr.org/id/497>
+            ["at9005"] = <http://openehr.org/id/655>
+        >
+    >
+    value_sets = <
+        ["ac9063"] = <
+            id = <"ac9063">
+            members = <"at0108", "at0109", "at0110", "at0111", "at0112">
+        >
+        ["ac9006"] = <
+            id = <"ac9006">
+            members = <"at0103", "at0104", "at0070", "at0071", "at0072">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0029", "at0030", "at0031", "at0032", "at0033", "at0034", "at0035", "at0036", "at0037", "at0093", "at0038", "at0087", "at0039", "at0091", "at0040", "at0092", "at0084", "at0085", "at0086">
+        >
+    >

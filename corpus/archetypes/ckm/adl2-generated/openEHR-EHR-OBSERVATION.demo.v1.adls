@@ -1,0 +1,1608 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=489ceb2a-8336-406c-9fa5-e01b44643a47; build_uid=b115156b-c2a5-46ab-ad0c-d0d99c0f979d)
+    openEHR-EHR-OBSERVATION.demo.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Bergen Hospital Trust">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Jussara Rötzsch">
+                ["organisation"] = <"openEHR Foundation">
+                ["email"] = <"jussara.macedo@gmail.com">
+            >
+            accreditation = <"MD. MSc., Pschyatrist, Clinical Modeller, Coordinator of  Standards and Semantic Interoperability of Brazil e-Health Initiative ">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2008-12-23">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Individual A, Argentina", "Individual B, Belgium", "Individual C, Canada (Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"openEHR website:  http://www.openehr.org/home.html">
+        ["2"] = <"CKM:  http://www.openehr.org/knowledge/">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"44E350A26FDDA0C9E6E98F4BD527CE70">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å gi en oversikt over visningen av de forskjellige datatypene som er tilgjengelige i en openEHR-arketype. Gir også oversikt over Data, State, Event og Protocol-modellene i forbindelse med HTML-visning og tilknyttet ADL.">
+            keywords = <"demonstrasjon", "test", "prototype", "datatyper", "state", "status", "protocol", "protokoll", "event", "hendelse", "data">
+            use = <"For å gi en visuell oversikt over datatyper og komponenter i arketyper til nåværende og fremtidige deltakere i vurdering av arketyper.">
+            misuse = <"Skal ikke brukes til reelle kliniske data.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Para fornecer uma visão geral da exibição de cada um dos tipos de dados  disponíveis em um arquétipo openEHR, e dos modelos de Dados, Eventos e Protocolos dentro de um contexto de uma tela HTML e ADL associado.">
+            keywords = <"demonstração", "teste", "protótipo(s)", "tipo(s) de dado(s)", "estado", "protocolo(s)", "evento(s)", "dado(s)">
+            use = <"Para fornecer uma visualisação geral dos tipos de dados e componetes dos arquétipos para atuais e potenciais revisores de conteúdo clínico no Gestor de Conhecimento Clínico openEHR, o CKM.">
+            misuse = <"Não apropriado para carregar nenhum dado clínico real.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To provide an overview of the display of each of the datatypes available in an openEHR archetype, and of the Data, State, Event and Protocol models within the context of a HTML display and associated ADL.">
+            keywords = <"demonstration", "test", "prototype", "datatypes", "state", "protocol", "event", "data">
+            use = <"To provide a visual overview of archetype data types and archetype components to potential and current clinical content reviewers in the openEHR Clinical Knowledge Manager.">
+            misuse = <"Not to carry any real clinical data.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Demonstration
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any Event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0032] occurrences matches {0..1}    -- Data - Definition
+                                    CLUSTER[at0004] matches {    -- Heading1
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Free Text or Coded
+                                                value matches {
+                                                    DV_TEXT[at9056]
+                                                }
+                                            }
+                                            ELEMENT[at0006] matches {    -- Text That Uses Internal Codes
+                                                value matches {
+                                                    DV_CODED_TEXT[at9057] matches {
+                                                        defining_code matches {[ac9000]}    -- Text That Uses Internal Codes (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0011] occurrences matches {1} matches {    -- Text That is Sourced From an External Terminology
+                                                value matches {
+                                                    DV_CODED_TEXT[at9058] matches {
+                                                        defining_code matches {[ac2]}    -- SubsetA
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Quantity
+                                                value matches {
+                                                    DV_QUANTITY[at9059] matches {
+                                                        property matches {[at9001]}    -- Length
+                                                        [magnitude, units, precision] matches {
+                                                            [{|0.0..100.0|}, {"cm"}, {1}],
+                                                            [{|>=0.0|}, {"mm"}, {|>=0|}],
+                                                            [{|>=0.0|}, {"[in_i]"}, {|>=0|}],
+                                                            [{|>=0.0|}, {"[ft_i]"}, {|>=0|}]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Interval of Quantity
+                                                value matches {
+                                                    DV_INTERVAL<DV_QUANTITY>[at9060] matches {
+                                                        upper matches {
+                                                            DV_QUANTITY[at9061] matches {
+                                                                property matches {[at9001]}    -- Length
+                                                                [units] matches {
+                                                                    [{"cm"}],
+                                                                    [{"m"}],
+                                                                    [{"[in_i]"}],
+                                                                    [{"[ft_i]"}]
+                                                                }
+                                                            }
+                                                        }
+                                                        lower matches {
+                                                            DV_QUANTITY[at9062] matches {
+                                                                property matches {[at9001]}    -- Length
+                                                                [units] matches {
+                                                                    [{"cm"}],
+                                                                    [{"m"}],
+                                                                    [{"[in_i]"}],
+                                                                    [{"[ft_i]"}]
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Count
+                                                value matches {
+                                                    DV_COUNT[at9063] matches {
+                                                        magnitude matches {|>=0|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Interval of Integer
+                                                value matches {
+                                                    DV_INTERVAL<DV_COUNT>[at9064] matches {
+                                                        upper matches {
+                                                            DV_COUNT[at9065]
+                                                        }
+                                                        lower matches {
+                                                            DV_COUNT[at9066]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0028] occurrences matches {0..1} matches {    -- Proportion
+                                                value matches {
+                                                    DV_PROPORTION[at9067] matches {
+                                                        is_integral matches {True}
+                                                        type matches {0, 2, 3, 4}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Date/Time
+                                                value matches {
+                                                    DV_DATE_TIME[at9068]
+                                                }
+                                            }
+                                            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Interval of Date
+                                                value matches {
+                                                    DV_INTERVAL<DV_DATE_TIME>[at9069] matches {
+                                                        upper matches {
+                                                            DV_DATE_TIME[at9070]
+                                                        }
+                                                        lower matches {
+                                                            DV_DATE_TIME[at9071]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0021] occurrences matches {0..1} matches {    -- Duration
+                                                value matches {
+                                                    DV_DURATION[at9072]
+                                                }
+                                            }
+                                            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Ordinal
+                                                value matches {
+                                                    DV_ORDINAL[at9073] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0038]}],    -- No pain
+                                                            [{1}, {[at0039]}],    -- Slight pain
+                                                            [{2}, {[at0040]}],    -- Mild pain
+                                                            [{5}, {[at0041]}],    -- Moderate pain
+                                                            [{9}, {[at0042]}],    -- Severe pain
+                                                            [{10}, {[at0043]}]    -- Most severe pain imaginable
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Boolean
+                                                value matches {
+                                                    DV_BOOLEAN[at9074] matches {
+                                                        value matches {True, False}
+                                                    }
+                                                }
+                                                null_flavour matches {
+                                                    DV_CODED_TEXT[at9075] matches {
+                                                        defining_code matches {[ac9007]}    -- Boolean (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0017] occurrences matches {0..1}    -- Any
+                                            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Choice
+                                                value matches {
+                                                    DV_QUANTITY[at9076] matches {
+                                                        property matches {[at9008]}    -- Mass
+                                                        [units] matches {
+                                                            [{"g"}],
+                                                            [{"[foz_us]"}]
+                                                        }
+                                                    }
+                                                    DV_CODED_TEXT[at9077] matches {
+                                                        defining_code matches {[ac4]}    -- SubsetB
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0026] occurrences matches {0..1} matches {    -- Multimedia
+                                                value matches {
+                                                    DV_MULTIMEDIA[at9078] matches {
+                                                        media_type matches {[ac9054]}    -- Multimedia (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0027] occurrences matches {0..1} matches {    -- URI - resource identifier
+                                                value matches {
+                                                    DV_URI[at9079]
+                                                }
+                                            }
+                                            ELEMENT[at0044] occurrences matches {0..1} matches {    -- Identifier
+                                                value matches {
+                                                    DV_IDENTIFIER[at9080]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0018] occurrences matches {0..1} matches {    -- Heading 2
+                                        items cardinality matches {1..*; unordered} matches {
+                                            allow_archetype CLUSTER[at0019] matches {    -- Slot To Contain Other Cluster Archetypes
+                                                include
+                                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location\.v1\..*|openEHR-EHR-CLUSTER\.device\.v1\..*/}
+                                            }
+                                            allow_archetype ELEMENT[at0020] matches {    -- Slot To Contain Other Element Archetypes
+                                                include
+                                                    archetype_id/value matches {/openEHR-EHR-ELEMENT\.ctg_codes\.v1\..*/}
+                                                exclude
+                                                    archetype_id/value matches {/.*/}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0030] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0031] occurrences matches {0..1}    -- State - Definition
+                                }
+                            }
+                        }
+                    }
+                    POINT_EVENT[at0033] occurrences matches {0..1} matches {    -- Named Point In Time
+                        data matches {
+                            use_node ITEM_TREE[at9081] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                        state matches {
+                            use_node ITEM_TREE[at9082] /data[at0001]/events[at0002]/state[at0030]
+                        }
+                    }
+                    INTERVAL_EVENT[at0034] occurrences matches {0..1} matches {    -- Named Interval
+                        math_function matches {
+                            DV_CODED_TEXT[at9083] matches {
+                                defining_code matches {[at9055]}    -- change
+                            }
+                        }
+                        data matches {
+                            use_node ITEM_TREE[at9084] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                        state matches {
+                            use_node ITEM_TREE[at9085] /data[at0001]/events[at0002]/state[at0030]
+                        }
+                    }
+                    POINT_EVENT[at0035] occurrences matches {0..1} matches {    -- Offset Point In Time
+                        offset matches {
+                            DV_DURATION[at9086] matches {
+                                value matches {PT5M; PT5M}
+                            }
+                        }
+                        data matches {
+                            use_node ITEM_TREE[at9087] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                        state matches {
+                            use_node ITEM_TREE[at9088] /data[at0001]/events[at0002]/state[at0030]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0036] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0037] occurrences matches {0..1}    -- Protocol - Definition
+                    allow_archetype CLUSTER[at0045] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Demonstrasjon">
+                description = <"Demonstrasjonsarketype med beskrivelser og forklaringer.">
+            >
+            ["at0002"] = <
+                text = <"Tidfestet hendelse">
+                description = <"Alle arketyper av OBSERVATION-klassen inneholder en HISTORY eller EVENT-modell som inneholder informasjon om tidfesting av observasjonen og \"bredden\" av informasjonen, enten et tidspunkt eller et intervall. Standardverdi er \"Tidfestet hendelse\", og det er ikke spesifisert om dette er et tidspunkt eller et intervall.">
+            >
+            ["at0004"] = <
+                text = <"Overskrift1">
+                description = <"Dette er et symbol for et \"cluster\" som kan inneholde andre elementer.">
+            >
+            ["at0005"] = <
+                text = <"Fri eller kodet tekst">
+                description = <"Tekstdatatype som kan inneholde fritekst eller kodet tekst. Kodingen kan legges inn enten i template eller i applikasjonen.">
+            >
+            ["at0006"] = <
+                text = <"Tekst med interne koder">
+                description = <"Tekstdatatype som bruker et internt vokabular. Hver av disse \"interne kodene\" kan bindes til en terminologikode.">
+            >
+            ["at0007"] = <
+                text = <"Liggende">
+                description = <"Pasienten ligger på ryggen.">
+            >
+            ["at0008"] = <
+                text = <"Tilbakelent">
+                description = <"Pasienten ligger tilbakelent, støttet av en mellomstor pute.">
+            >
+            ["at0009"] = <
+                text = <"Sittende">
+                description = <"Pasienten sitter i en stol.">
+            >
+            ["at0010"] = <
+                text = <"Stående">
+                description = <"Pasienten står oppreist.">
+            >
+            ["at0011"] = <
+                text = <"Tekst hentet fra en ekstern terminologi">
+                description = <"Tekstdata som bruker koder fra en ekstern terminologikilde, f.eks. SNOMED CT, LOINC eller ICD.">
+            >
+            ["at0012"] = <
+                text = <"Kvantitet">
+                description = <"En kvantitetsdatatype som brukes til å registrere målinger tilknyttet passende enheter. Disse hentes fra ISO-standarder, og referansemodellen tillater konvertering mellom enhetene. Eksempelet vist er her lengde.">
+            >
+            ["at0013"] = <
+                text = <"Antall">
+                description = <"Antall-datatypen består av et heltall uten enheter, f.eks. for å registrere antall barn. I dette eksempelet er minimum satt til 0 og maksimum er uspesifisert.">
+            >
+            ["at0014"] = <
+                text = <"Dato/tid">
+                description = <"Dato/tidsdatatypen brukes til å registrere en dato og/eller tid, inklusiv deldatoer som f.eks. kun år eller kun måned og år. Standardverdi er at alle former er tillatt.">
+            >
+            ["at0015"] = <
+                text = <"Ordinal">
+                description = <"Ordinaldatatyper setter sammen et tall og en tekststreng. Dette gjør det mulig å regne ut scoringer, eller vurdere progresjon dersom den brukes f.eks. i en smerteskala.">
+            >
+            ["at0016"] = <
+                text = <"Boolsk verdi">
+                description = <"Boolsk verdi-datatypen brukes for å registrere verdier som sann/usann.">
+            >
+            ["at0017"] = <
+                text = <"Hvilken som helst">
+                description = <"Datatypen \"hvilken som helst\" kan spesifiseres eller begrenses i template eller i applikasjonen, men modelleres ikke eksplisitt i arketypen.">
+            >
+            ["at0018"] = <
+                text = <"Overskrift 2">
+                description = <"Dette er et symbol for et \"cluster\" med andre elementer inni seg.">
+            >
+            ["at0019"] = <
+                text = <"Utvidelsesspor som kan inneholde andre Cluster-arketyper">
+                description = <"Listen over CLUSTER-arketyper som kan inkluderes eller ekskluderes i denne OBSERVATION-arketypen.">
+            >
+            ["at0020"] = <
+                text = <"Utvidelsesspor som kan inneholde andre Element-arketyper">
+                description = <"Liste over ELEMENT-arketyper som kan inkluderes eller ekskluderes i denne OBSERVATION-arketypen.">
+            >
+            ["at0021"] = <
+                text = <"Varighet">
+                description = <"Varighet-datatypen brukes til å registrere varigheten til kliniske konsepter. \"Tillat alle tidsenheter\" er standardverdi, selv om spesifikke tidsenheter kan modelleres eksplisitt. Maksimums- og minimumsverdier kan settes for hver tidsenhet.">
+            >
+            ["at0022"] = <
+                text = <"Antallsintervall">
+                description = <"Antallsintervall-datatypen brukes for å registrere et intervall av antall, f.eks. 1-2 tabletter foreskrevet. Maksimums- og minimumsverdier kan settes for laveste og høyeste antall.">
+            >
+            ["at0023"] = <
+                text = <"Kvantitetsintervall">
+                description = <"Kvantitetsintervaller tillater registreing av et intervall av målinger tilknyttet aktuelle enheter, f.eks. 1-2cm (foreskrevet mengde krem mot et utslett).">
+            >
+            ["at0024"] = <
+                text = <"Datointervall">
+                description = <"Datointervall-datatypen brukes til å registrere et intervall av datoer, f.eks. mellom 1. september 2008 og 8. september 2008.">
+            >
+            ["at0025"] = <
+                text = <"Valg">
+                description = <"Valg-datatypen tillater at man gir flere valgmuligheter for hvilken datatype et element kan tilhøre. Dette kan velges eller begrenses i template eller i applikasjonen. I dette eksempelet er valget mellom en tekstdatatype satt til fri eller kodet tekst, eller en som er begrenset til å bruke kodeverdier fra en terminologi.">
+            >
+            ["at0026"] = <
+                text = <"Multimedia">
+                description = <"Multimedia-datatyper brukes for å registrere en av flere mulige typer multimediafiler. I dette eksempelet er alle mulige typer eksplisitt valgte.">
+            >
+            ["at0027"] = <
+                text = <"URI-ressursidentifikator">
+                description = <"URI-datatyper tillater registrering av sammenhenger mellom disse dataene og data som er registrert andre steder. Lenkene kan være innenfor samme system, eller eksterne f.eks. en URL.">
+            >
+            ["at0028"] = <
+                text = <"Forhold">
+                description = <"Forholdsdatatyper brukes til proporsjoner, prosent og brøker.">
+            >
+            ["at0031"] = <
+                text = <"State-definision">
+                description = <"Alle arketyper av OBSERVATION-klassen kan inneholde en STATE-modell som inneholder informasjon om subjektet for datainnsamlingen på tidspunktet informasjonen ble innhentet, og denne informasjonen er nødvendig for trygg klinisk tolkning av kjerneinformasjonen. Et eksempel er stillingen pasienten befinner seg i under en blodtrykksmåling. Mulige datatyper er de samme som i DATA-modellen.">
+            >
+            ["at0032"] = <
+                text = <"Data - definisjon">
+                description = <"Alle arketyper i OBSERVATION-klassen inneholder en DATA-modell som inneholder kjerneinformasjonen, f.eks. systolisk og diastolisk trykk for en blodtrykksmåling.">
+            >
+            ["at0033"] = <
+                text = <"Navngitt tidspunkt">
+                description = <"En hendelse som er både navngitt (f.eks. fødsel) og begrenset til et tidspunkt, og brukes til å registrere dataelementer i sammenheng med et spesifikt tidspunkt, f.eks. fødselsvekt.">
+            >
+            ["at0034"] = <
+                text = <"Navngitt intervall">
+                description = <"En hendelse som er både navngitt og begrenset til et intervall, og brukes til å registrere dataelementer i forbindelse med et tidsintervall, f.eks. vekttap over tid. Intervallet kan være fastsatt eller uspesifisert. I tillegg kan det spesifiseres matematiske funksjoner for å håndtere konsepter som endring, minking, økning, maksimum, minimum, gjennomsnitt, etc.">
+            >
+            ["at0035"] = <
+                text = <"Forskjøvet tidspunkt">
+                description = <"Forskjøvet tidspunkt brukes til å registrere data på et tidspunkt med en fastsatt forskyvning fra en annen spesifisert hendelse, f.eks. 2-minutters Apgar-score ved 2 minutter forskyvning fra fødselen.">
+            >
+            ["at0037"] = <
+                text = <"Protocol-definisjon">
+                description = <"Alle arketyper av OBSERVATION-klassen kan inneholde en PROTOCOL-modell som registrerer informasjon om hvordan informasjonen ble samlet eller målt, og eventuell annen informasjon som ikke er nødvendig for trygg klinisk tolkning av kjernedataene. Datatypene er de samme som for DATA-modellen.">
+            >
+            ["at0038"] = <
+                text = <"Ingen smerte">
+                description = <"Overhodet ingen smerte.">
+            >
+            ["at0039"] = <
+                text = <"Svak smerte">
+                description = <"Smertenivå vurdert som 1 av maksimalt 10.">
+            >
+            ["at0040"] = <
+                text = <"Mild smerte">
+                description = <"Smertenivå vurdert som 2 av maksimalt 10.">
+            >
+            ["at0041"] = <
+                text = <"Moderat smerte">
+                description = <"Smertenivå vurdert som 5 av maksimalt 10.">
+            >
+            ["at0042"] = <
+                text = <"Sterk smerte">
+                description = <"Smertenivå vurdert som 9 av maksimalt 10.">
+            >
+            ["at0043"] = <
+                text = <"Sterkeste mulige smerte">
+                description = <"Smertenivå vurdert som 10 av maksimalt 10.">
+            >
+            ["at0044"] = <
+                text = <"Identifikator">
+                description = <"Identifikator-datatyper tillater registrering av formelle dataidentifikatorer.">
+            >
+            ["at0045"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local context or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+            ["ac2"] = <
+                text = <"Subsett A">
+                description = <"Terminologi-subsett fra XXX">
+            >
+            ["ac4"] = <
+                text = <"Subsett B">
+                description = <"XYZ koder fra Terminologi 123">
+            >
+            ["at9009"] = <
+                text = <"* audio/DVI4 (en)">
+                description = <"* audio/DVI4 (en)">
+            >
+            ["at9010"] = <
+                text = <"* audio/G722 (en)">
+                description = <"* audio/G722 (en)">
+            >
+            ["at9011"] = <
+                text = <"* audio/G723 (en)">
+                description = <"* audio/G723 (en)">
+            >
+            ["at9012"] = <
+                text = <"* audio/G726-16 (en)">
+                description = <"* audio/G726-16 (en)">
+            >
+            ["at9013"] = <
+                text = <"* audio/G726-24 (en)">
+                description = <"* audio/G726-24 (en)">
+            >
+            ["at9014"] = <
+                text = <"* audio/G726-32 (en)">
+                description = <"* audio/G726-32 (en)">
+            >
+            ["at9015"] = <
+                text = <"* audio/G726-40 (en)">
+                description = <"* audio/G726-40 (en)">
+            >
+            ["at9016"] = <
+                text = <"* audio/G728 (en)">
+                description = <"* audio/G728 (en)">
+            >
+            ["at9017"] = <
+                text = <"* audio/L8 (en)">
+                description = <"* audio/L8 (en)">
+            >
+            ["at9018"] = <
+                text = <"* audio/L16 (en)">
+                description = <"* audio/L16 (en)">
+            >
+            ["at9019"] = <
+                text = <"* audio/LPC (en)">
+                description = <"* audio/LPC (en)">
+            >
+            ["at9020"] = <
+                text = <"* audio/G729 (en)">
+                description = <"* audio/G729 (en)">
+            >
+            ["at9021"] = <
+                text = <"* audio/G729D (en)">
+                description = <"* audio/G729D (en)">
+            >
+            ["at9022"] = <
+                text = <"* audio/G729E (en)">
+                description = <"* audio/G729E (en)">
+            >
+            ["at9043"] = <
+                text = <"* video/BT656 (en)">
+                description = <"* video/BT656 (en)">
+            >
+            ["at9044"] = <
+                text = <"* video/CelB (en)">
+                description = <"* video/CelB (en)">
+            >
+            ["at9045"] = <
+                text = <"* video/H261 (en)">
+                description = <"* video/H261 (en)">
+            >
+            ["at9046"] = <
+                text = <"* video/H263 (en)">
+                description = <"* video/H263 (en)">
+            >
+            ["at9047"] = <
+                text = <"* video/H263-1998 (en)">
+                description = <"* video/H263-1998 (en)">
+            >
+            ["at9048"] = <
+                text = <"* video/H263-2000 (en)">
+                description = <"* video/H263-2000 (en)">
+            >
+            ["at9023"] = <
+                text = <"* audio/mpeg (en)">
+                description = <"* audio/mpeg (en)">
+            >
+            ["at9024"] = <
+                text = <"* audio/mpeg4-generic (en)">
+                description = <"* audio/mpeg4-generic (en)">
+            >
+            ["at9025"] = <
+                text = <"* audio/L20 (en)">
+                description = <"* audio/L20 (en)">
+            >
+            ["at9026"] = <
+                text = <"* audio/L24 (en)">
+                description = <"* audio/L24 (en)">
+            >
+            ["at9027"] = <
+                text = <"* audio/telephone-event (en)">
+                description = <"* audio/telephone-event (en)">
+            >
+            ["at9049"] = <
+                text = <"* video/quicktime (en)">
+                description = <"* video/quicktime (en)">
+            >
+            ["at9033"] = <
+                text = <"* text/calendar (en)">
+                description = <"* text/calendar (en)">
+            >
+            ["at9034"] = <
+                text = <"* text/directory (en)">
+                description = <"* text/directory (en)">
+            >
+            ["at9035"] = <
+                text = <"* text/html (en)">
+                description = <"* text/html (en)">
+            >
+            ["at9036"] = <
+                text = <"* text/plain (en)">
+                description = <"* text/plain (en)">
+            >
+            ["at9037"] = <
+                text = <"* text/rtf (en)">
+                description = <"* text/rtf (en)">
+            >
+            ["at9038"] = <
+                text = <"* text/sgml (en)">
+                description = <"* text/sgml (en)">
+            >
+            ["at9039"] = <
+                text = <"* text/tab-separated-values (en)">
+                description = <"* text/tab-separated-values (en)">
+            >
+            ["at9040"] = <
+                text = <"* text/uri-list (en)">
+                description = <"* text/uri-list (en)">
+            >
+            ["at9041"] = <
+                text = <"* text/xml (en)">
+                description = <"* text/xml (en)">
+            >
+            ["at9042"] = <
+                text = <"* text/xml-external-parsed-entity (en)">
+                description = <"* text/xml-external-parsed-entity (en)">
+            >
+            ["at9028"] = <
+                text = <"* image/cgm (en)">
+                description = <"* image/cgm (en)">
+            >
+            ["at9029"] = <
+                text = <"* image/gif (en)">
+                description = <"* image/gif (en)">
+            >
+            ["at9030"] = <
+                text = <"* image/png (en)">
+                description = <"* image/png (en)">
+            >
+            ["at9031"] = <
+                text = <"* image/tiff (en)">
+                description = <"* image/tiff (en)">
+            >
+            ["at9032"] = <
+                text = <"* image/jpeg (en)">
+                description = <"* image/jpeg (en)">
+            >
+            ["at9050"] = <
+                text = <"* application/msword (en)">
+                description = <"* application/msword (en)">
+            >
+            ["at9051"] = <
+                text = <"* application/pdf (en)">
+                description = <"* application/pdf (en)">
+            >
+            ["at9052"] = <
+                text = <"* application/rtf (en)">
+                description = <"* application/rtf (en)">
+            >
+            ["at9053"] = <
+                text = <"* application/dicom (en)">
+                description = <"* application/dicom (en)">
+            >
+            ["at9001"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9008"] = <
+                text = <"* Mass (en)">
+                description = <"* Mass (en)">
+            >
+            ["at9055"] = <
+                text = <"* change (en)">
+                description = <"* change (en)">
+            >
+            ["at9006"] = <
+                text = <"* unknown (en)">
+                description = <"* unknown (en)">
+            >
+            ["at9003"] = <
+                text = <"* no information (en)">
+                description = <"* no information (en)">
+            >
+            ["at9004"] = <
+                text = <"* masked (en)">
+                description = <"* masked (en)">
+            >
+            ["at9005"] = <
+                text = <"* not applicable (en)">
+                description = <"* not applicable (en)">
+            >
+            ["ac9000"] = <
+                text = <"Tekst med interne koder (synthesised)">
+                description = <"Tekstdatatype som bruker et internt vokabular. Hver av disse \"interne kodene\" kan bindes til en terminologikode. (synthesised)">
+            >
+            ["ac9088"] = <
+                text = <"Ordinal (synthesised)">
+                description = <"Ordinaldatatyper setter sammen et tall og en tekststreng. Dette gjør det mulig å regne ut scoringer, eller vurdere progresjon dersom den brukes f.eks. i en smerteskala. (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"Boolsk verdi (synthesised)">
+                description = <"Boolsk verdi-datatypen brukes for å registrere verdier som sann/usann. (synthesised)">
+            >
+            ["ac9054"] = <
+                text = <"Multimedia (synthesised)">
+                description = <"Multimedia-datatyper brukes for å registrere en av flere mulige typer multimediafiler. I dette eksempelet er alle mulige typer eksplisitt valgte. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Demonstração">
+                description = <"Arquétipo de Demonstração com descrições e explicações. ">
+            >
+            ["at0002"] = <
+                text = <"Qualquer evento">
+                description = <"Todos os arquétipos da classe de OBSERVAÇÃO contêm um modelo de HISTÓRIA ou de EVENTO que contém informação sobre o período da observação com a duração  da informação-  seja um ponto no  tempo ou um intervalo temporal. O padrão predeterminado é ' Qualquer evento' e não é especificado, se é um Ponto no tempo ou um Intervalo.">
+            >
+            ["at0004"] = <
+                text = <"Cabeçalho1">
+                description = <"Este é um símbolo para um 'cluster' que pode ter outros elementos 'aninhados' dentro dele.">
+            >
+            ["at0005"] = <
+                text = <"Texto livre ou Codificado">
+                description = <"Tipo de dado Texto no qual se pode entrar ou  texto livre ou códigos podem ser incoprporados seja  no template ou no tempo de execução.">
+            >
+            ["at0006"] = <
+                text = <"Texto Que Usa Códigos Internos">
+                description = <"Tipo de dados  Texto que pode usar um vocabulário interno. Cada um desses ' códigos internos' pode ser vnculado a um código de uma terminologia.">
+            >
+            ["at0007"] = <
+                text = <"Deitado">
+                description = <"Paciente Deitado em posição supina ou decúbito dorsal.">
+            >
+            ["at0008"] = <
+                text = <"Reclinado">
+                description = <"Paciente Reclinado, apoiado em um travesseiro médio.">
+            >
+            ["at0009"] = <
+                text = <"Sentado">
+                description = <"Paciente está Sentado em uma cadeira.">
+            >
+            ["at0010"] = <
+                text = <"Em pé">
+                description = <"Paciente está em Pé.">
+            >
+            ["at0011"] = <
+                text = <"Texto Cuja Origem é uma Terminologia Externa ">
+                description = <"Tipo de dado Texto utilizando códigos originários de uma terminologia externa como, por exemplo, um subset do SNOMED CT, do LOINC ou da CID 10. ">
+            >
+            ["at0012"] = <
+                text = <"Quantidade">
+                description = <"Um tipo de dado de Quantidade usado para registrar uma medida associada com suas uniddades apropriadas. Essas unidades são derivadas de norams ISO e o modelo de  Referência possibilita a conversão entre elas. O exemplo demonstrado aqui é o comprimento.">
+            >
+            ["at0013"] = <
+                text = <"Contagem ">
+                description = <"Tipos de dados de Contagem são compostos de um número inteiro sem casas decimais (integer), por exemplo, para registar o número de filhos- nesse exemplo o mínimo é colocado como 0 e o máximo não é especificado.">
+            >
+            ["at0014"] = <
+                text = <"Data/Horário">
+                description = <"Tipos de dado Data/Horário permite o registro de uma data e /ou um horário, incluindo  datas parciais como somente o mês ou o ano. Permite tudo como padrão de modo que todas as formas de data/horário são permitidas.">
+            >
+            ["at0015"] = <
+                text = <"Ordinal">
+                description = <"Tipos de dados Ordinal pareiam um número e texto- deste modo  pode ser calculada uma pontuação pela  aplicação a progressão ser avaliada, como por exemplo se está se utilizando de uma escala de avaliação de dor.">
+            >
+            ["at0016"] = <
+                text = <"Booleano">
+                description = <"Tipo de dado  Booleano que permite repostas do tipo falso ou verdadeiro.">
+            >
+            ["at0017"] = <
+                text = <"Qualquer">
+                description = <"Este tipo de dado para esse elemento 'Qualquer' pode ser especificado ou 'restrito' num modelo ou no tempo de execução, mas não é especificamente modelado no arquétipo.">
+            >
+            ["at0018"] = <
+                text = <"Cabelaçalho2">
+                description = <"Esse é o símbolo de um 'cluster' que pode ter outros elementos 'aninhados' dentro dele.">
+            >
+            ["at0019"] = <
+                text = <"Slot Para Conter Outros Arquétipos Clusters">
+                description = <"Lista de arquétipos  CLUSTER permitidos de serem incluídos ou excluídos dentro deste arquétipo de  OBSERVAÇÃO.">
+            >
+            ["at0020"] = <
+                text = <"Slot Para Conter Outroa Arququétipos de Elementos">
+                description = <"Lista de arquétipos de ELEMENTOS permitidos de serem incluíos ou excluídos dentro deste arquétipo de OBSERVAÇÃO.">
+            >
+            ["at0021"] = <
+                text = <"Duração">
+                description = <"Tipo de dado Duração permite registrar a duração dos conceitos clínicos. O padrão predeterminado é 'Permitir  todas unidades de tempo', embora unidades específicas de tempo possam ser explicitamente modeladas.   Valores máximos e mínimos podem ser configurados para cada unidade de tempo.">
+            >
+            ["at0022"] = <
+                text = <"Intervalo de Integer">
+                description = <"Tipo de dados de Intervalo de Integer permite o registro de uma faixa de contagem em intervalos, por exemplo, a cada 1 a 2 comprimidos prescritos. Os valores máximo e mínimo podem ser configurados para a contagem inferior ou para a superior.">
+            >
+            ["at0023"] = <
+                text = <"Intervalo de Quantidade">
+                description = <"Tipos de dados de Intervalo de Quantidade permitem registrar uma gama de mediddas  associadas com unidades apropriadas, por exemplo, 1-2cm  (quantidade de creme prescrito para um uma erupção cutânea).">
+            >
+            ["at0024"] = <
+                text = <"Intervalo de Data">
+                description = <"Tipo de dado de Intervalo de Integer permite o registro de uma faixa de datas como, por exemplo, entre 1 de Setembro de 2008 e 8 de Setembro de 2008.">
+            >
+            ["at0025"] = <
+                text = <"Escolha">
+                description = <"Tipo de dado Escolha permite que um número de tipos de elementos sejam simultaneamente especificados, os quais podem ser restringidos num template ou no tempo de execução. Neste exemplo, um tipo de dado Texto é configurado para Texto livre ou Codificado e outro que é configurado restritamente para  registrar códigos de uma determinada terminologia para o mesmo elemento de dado.">
+            >
+            ["at0026"] = <
+                text = <"Multimídia">
+                description = <"Tipos de dado Multimídia permitem o registro de vários tipos de arquivos multimídia. Todos os tipos disponíveis foram explicitamente selecionados neste exemplo.">
+            >
+            ["at0027"] = <
+                text = <"URI - Identificador de Recursos ">
+                description = <"Tipos de dados URI permitem registrar os relacionamentos entre  estes dados e os dados registrados em outros lugares. Esses enlaces (links) podem estar  no mesmo RES ou serem externos, por exemplo, pertencer a  num endereço  na internet, uma URL.">
+            >
+            ["at0028"] = <
+                text = <"Porporção">
+                description = <"Tipos de dados de Proporção permitem modelar taxas, porcentagens, frações e proporções.">
+            >
+            ["at0031"] = <
+                text = <"Estado - Definição">
+                description = <"Todos os arquétipos da classe de OBSERVAÇÃO podem conter um modelo de ESTADO, que contém a informação sobre o sujeito a informação na hora que o dado foi colhido, e essa informação é requisito para uma interpretação segura das informações básicas. Um exemplo disso é a posição que o paciente se encontrava quando sua pressão arterial foi medida. Os tipos de dados são idênticos aos que foram explicados no modelo de DADOS acima.">
+            >
+            ["at0032"] = <
+                text = <"Dados - Definição ">
+                description = <"Todos os arquétipos da classe de OBSERVAÇÃO contêm um modelo de DADOS que contém as informações básicas, por exemplo, as pressões sistólica e diastólica, quando está se medindo a pressão sanguínea.">
+            >
+            ["at0033"] = <
+                text = <"Ponto no tempo Nomeado">
+                description = <"Um evento que é ao mesmo tempo nomeado (p. ex. Nascimento) e restrito como evento em um  Ponto no tempo, registra os elementos de dados relacionados a um ponto específico no tempo, como por exemplo, Peso no Nascimento.">
+            >
+            ["at0034"] = <
+                text = <"Intervalo Nomeado">
+                description = <"Um evento que é ao mesmo tempo nomeado e restrito como um evento Intervalo, registra os mesmos elementos de dados relacionados ao período de tempo, por exemplo, Perda de peso durante o determinado período. O intervalo pode ser fixado, ou deixado inespecificado. Além disso,  pode-se especificar funções matemáticas para capturar conceitos como mudança, diminuição aumento, máximo, mínimo, média,etc.">
+            >
+            ["at0035"] = <
+                text = <"Deslocamento do Ponto no tempo">
+                description = <"Deslocamento  do Ponto no Tempo registra o deslocamento fixo de 5 minutos de outro evento especificado, por exemplo, registrando a leitura de um escore de Apgar de 2 minutos aos 2 minutos após o parto.">
+            >
+            ["at0037"] = <
+                text = <"Protocolo-Definição">
+                description = <"Todos os arquétipos da classe de OBSERVAÇÃO podem conter um modelo de PROTOCOLO, o qual registra informação sobre como a informação foi colhida ou medida e quaisquer outras informações que não sejam necessárias para a interpretação clínica  segura das informações básicas. Os tipos de dados são idênticos àqueles explicados no modelo e DADOS acima.">
+            >
+            ["at0038"] = <
+                text = <"Sem dor">
+                description = <"Nenhuma dor.">
+            >
+            ["at0039"] = <
+                text = <"Dor leve">
+                description = <"Dor classificada como nível 1 numa escala máxima de 10.">
+            >
+            ["at0040"] = <
+                text = <"Dor branda">
+                description = <"Dor classificada como nível 2 numa escala máxima de 10.">
+            >
+            ["at0041"] = <
+                text = <"Dor Moderada">
+                description = <"Dor classificada  como nível 5 numa escala máxima de 10.">
+            >
+            ["at0042"] = <
+                text = <"Dor severa">
+                description = <"Dor classificada nível 9 numa escala de 10.">
+            >
+            ["at0043"] = <
+                text = <"Pior dor possível">
+                description = <"Dor classificada como nível 10 numa escala de 10.">
+            >
+            ["at0044"] = <
+                text = <"Identificador">
+                description = <"Tipos de dados Identificadores possibilitam registrar identificadores formais de dados.">
+            >
+            ["at0045"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local context or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+            ["ac2"] = <
+                text = <"SubconjuntoA">
+                description = <"Subconjunto de terminologia originário de XXX">
+            >
+            ["ac4"] = <
+                text = <"SubconjuntoB">
+                description = <"Códigos XYZ da Terminologia 123">
+            >
+            ["at9009"] = <
+                text = <"* audio/DVI4 (en)">
+                description = <"* audio/DVI4 (en)">
+            >
+            ["at9010"] = <
+                text = <"* audio/G722 (en)">
+                description = <"* audio/G722 (en)">
+            >
+            ["at9011"] = <
+                text = <"* audio/G723 (en)">
+                description = <"* audio/G723 (en)">
+            >
+            ["at9012"] = <
+                text = <"* audio/G726-16 (en)">
+                description = <"* audio/G726-16 (en)">
+            >
+            ["at9013"] = <
+                text = <"* audio/G726-24 (en)">
+                description = <"* audio/G726-24 (en)">
+            >
+            ["at9014"] = <
+                text = <"* audio/G726-32 (en)">
+                description = <"* audio/G726-32 (en)">
+            >
+            ["at9015"] = <
+                text = <"* audio/G726-40 (en)">
+                description = <"* audio/G726-40 (en)">
+            >
+            ["at9016"] = <
+                text = <"* audio/G728 (en)">
+                description = <"* audio/G728 (en)">
+            >
+            ["at9017"] = <
+                text = <"* audio/L8 (en)">
+                description = <"* audio/L8 (en)">
+            >
+            ["at9018"] = <
+                text = <"* audio/L16 (en)">
+                description = <"* audio/L16 (en)">
+            >
+            ["at9019"] = <
+                text = <"* audio/LPC (en)">
+                description = <"* audio/LPC (en)">
+            >
+            ["at9020"] = <
+                text = <"* audio/G729 (en)">
+                description = <"* audio/G729 (en)">
+            >
+            ["at9021"] = <
+                text = <"* audio/G729D (en)">
+                description = <"* audio/G729D (en)">
+            >
+            ["at9022"] = <
+                text = <"* audio/G729E (en)">
+                description = <"* audio/G729E (en)">
+            >
+            ["at9043"] = <
+                text = <"* video/BT656 (en)">
+                description = <"* video/BT656 (en)">
+            >
+            ["at9044"] = <
+                text = <"* video/CelB (en)">
+                description = <"* video/CelB (en)">
+            >
+            ["at9045"] = <
+                text = <"* video/H261 (en)">
+                description = <"* video/H261 (en)">
+            >
+            ["at9046"] = <
+                text = <"* video/H263 (en)">
+                description = <"* video/H263 (en)">
+            >
+            ["at9047"] = <
+                text = <"* video/H263-1998 (en)">
+                description = <"* video/H263-1998 (en)">
+            >
+            ["at9048"] = <
+                text = <"* video/H263-2000 (en)">
+                description = <"* video/H263-2000 (en)">
+            >
+            ["at9023"] = <
+                text = <"* audio/mpeg (en)">
+                description = <"* audio/mpeg (en)">
+            >
+            ["at9024"] = <
+                text = <"* audio/mpeg4-generic (en)">
+                description = <"* audio/mpeg4-generic (en)">
+            >
+            ["at9025"] = <
+                text = <"* audio/L20 (en)">
+                description = <"* audio/L20 (en)">
+            >
+            ["at9026"] = <
+                text = <"* audio/L24 (en)">
+                description = <"* audio/L24 (en)">
+            >
+            ["at9027"] = <
+                text = <"* audio/telephone-event (en)">
+                description = <"* audio/telephone-event (en)">
+            >
+            ["at9049"] = <
+                text = <"* video/quicktime (en)">
+                description = <"* video/quicktime (en)">
+            >
+            ["at9033"] = <
+                text = <"* text/calendar (en)">
+                description = <"* text/calendar (en)">
+            >
+            ["at9034"] = <
+                text = <"* text/directory (en)">
+                description = <"* text/directory (en)">
+            >
+            ["at9035"] = <
+                text = <"* text/html (en)">
+                description = <"* text/html (en)">
+            >
+            ["at9036"] = <
+                text = <"* text/plain (en)">
+                description = <"* text/plain (en)">
+            >
+            ["at9037"] = <
+                text = <"* text/rtf (en)">
+                description = <"* text/rtf (en)">
+            >
+            ["at9038"] = <
+                text = <"* text/sgml (en)">
+                description = <"* text/sgml (en)">
+            >
+            ["at9039"] = <
+                text = <"* text/tab-separated-values (en)">
+                description = <"* text/tab-separated-values (en)">
+            >
+            ["at9040"] = <
+                text = <"* text/uri-list (en)">
+                description = <"* text/uri-list (en)">
+            >
+            ["at9041"] = <
+                text = <"* text/xml (en)">
+                description = <"* text/xml (en)">
+            >
+            ["at9042"] = <
+                text = <"* text/xml-external-parsed-entity (en)">
+                description = <"* text/xml-external-parsed-entity (en)">
+            >
+            ["at9028"] = <
+                text = <"* image/cgm (en)">
+                description = <"* image/cgm (en)">
+            >
+            ["at9029"] = <
+                text = <"* image/gif (en)">
+                description = <"* image/gif (en)">
+            >
+            ["at9030"] = <
+                text = <"* image/png (en)">
+                description = <"* image/png (en)">
+            >
+            ["at9031"] = <
+                text = <"* image/tiff (en)">
+                description = <"* image/tiff (en)">
+            >
+            ["at9032"] = <
+                text = <"* image/jpeg (en)">
+                description = <"* image/jpeg (en)">
+            >
+            ["at9050"] = <
+                text = <"* application/msword (en)">
+                description = <"* application/msword (en)">
+            >
+            ["at9051"] = <
+                text = <"* application/pdf (en)">
+                description = <"* application/pdf (en)">
+            >
+            ["at9052"] = <
+                text = <"* application/rtf (en)">
+                description = <"* application/rtf (en)">
+            >
+            ["at9053"] = <
+                text = <"* application/dicom (en)">
+                description = <"* application/dicom (en)">
+            >
+            ["at9001"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9008"] = <
+                text = <"* Mass (en)">
+                description = <"* Mass (en)">
+            >
+            ["at9055"] = <
+                text = <"* change (en)">
+                description = <"* change (en)">
+            >
+            ["at9006"] = <
+                text = <"* unknown (en)">
+                description = <"* unknown (en)">
+            >
+            ["at9003"] = <
+                text = <"* no information (en)">
+                description = <"* no information (en)">
+            >
+            ["at9004"] = <
+                text = <"* masked (en)">
+                description = <"* masked (en)">
+            >
+            ["at9005"] = <
+                text = <"* not applicable (en)">
+                description = <"* not applicable (en)">
+            >
+            ["ac9000"] = <
+                text = <"Texto Que Usa Códigos Internos (synthesised)">
+                description = <"Tipo de dados  Texto que pode usar um vocabulário interno. Cada um desses ' códigos internos' pode ser vnculado a um código de uma terminologia. (synthesised)">
+            >
+            ["ac9088"] = <
+                text = <"Ordinal (synthesised)">
+                description = <"Tipos de dados Ordinal pareiam um número e texto- deste modo  pode ser calculada uma pontuação pela  aplicação a progressão ser avaliada, como por exemplo se está se utilizando de uma escala de avaliação de dor. (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"Booleano (synthesised)">
+                description = <"Tipo de dado  Booleano que permite repostas do tipo falso ou verdadeiro. (synthesised)">
+            >
+            ["ac9054"] = <
+                text = <"Multimídia (synthesised)">
+                description = <"Tipos de dado Multimídia permitem o registro de vários tipos de arquivos multimídia. Todos os tipos disponíveis foram explicitamente selecionados neste exemplo. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Demonstration">
+                description = <"Demonstration archetype with descriptions and explanations.">
+            >
+            ["at0002"] = <
+                text = <"Any Event">
+                description = <"All archetypes of the OBSERVATION class contain a HISTORY or EVENT model which contains information about the timing of the observation and the 'width' of the information - either a point in time or an interval.  The default is 'Any event' and it is not specified if this is a Point in time or an Interval.">
+            >
+            ["at0004"] = <
+                text = <"Heading1">
+                description = <"This is a symbol for a cluster which can have other elements 'nested' within it.">
+            >
+            ["at0005"] = <
+                text = <"Free Text or Coded">
+                description = <"Text data type in which free text can be entered or coding can be incorporated either in the template or at run time.">
+            >
+            ["at0006"] = <
+                text = <"Text That Uses Internal Codes">
+                description = <"Text data type which can use an internal vocabulary.  Each of these 'internal codes' can be bound to a terminology code.">
+            >
+            ["at0007"] = <
+                text = <"Lying">
+                description = <"Patient is lying supine.">
+            >
+            ["at0008"] = <
+                text = <"Reclining">
+                description = <"Patient is reclining, propped up on one medium pillow.">
+            >
+            ["at0009"] = <
+                text = <"Sitting">
+                description = <"Patient is sitting on a chair.">
+            >
+            ["at0010"] = <
+                text = <"Standing">
+                description = <"Patient is standing.">
+            >
+            ["at0011"] = <
+                text = <"Text That is Sourced From an External Terminology">
+                description = <"Text data type utilising codes derived from an external terminology source eg a SNOMED-CT, LOINC or ICD subset.">
+            >
+            ["at0012"] = <
+                text = <"Quantity">
+                description = <"A quantity data type used to record a measurement associated with its' appropriate units.  These are derived from ISO standards and the Reference model enables conversion between these units. The example shown here is length.">
+            >
+            ["at0013"] = <
+                text = <"Count">
+                description = <"Count data types are composed of an integer with no units eg for recording the number of children - in this example the minimum is set at 0 and the maximum not specified.">
+            >
+            ["at0014"] = <
+                text = <"Date/Time">
+                description = <"Date/Time datatype allows recording of a date and/or time, including partial dates such as year only or month and year only.  Allow all is the default - so all forms of date/time are permitted.">
+            >
+            ["at0015"] = <
+                text = <"Ordinal">
+                description = <"Ordinal datatypes pair a number and text - in this way scores can be calculated in software, or progression can be assessed eg if used in a pain score.">
+            >
+            ["at0016"] = <
+                text = <"Boolean">
+                description = <"Boolean datatype that allows for true or false answers.">
+            >
+            ["at0017"] = <
+                text = <"Any">
+                description = <"The datatype for this 'any' element can be specified or constrained in a template or at run-time, but is not explicitly modelled in the archetype.">
+            >
+            ["at0018"] = <
+                text = <"Heading 2">
+                description = <"This is a symbol for a cluster which can have other elements 'nested' within it.">
+            >
+            ["at0019"] = <
+                text = <"Slot To Contain Other Cluster Archetypes">
+                description = <"List of CLUSTER archetypes allowed to be included or excluded within this OBSERVATION archetype.">
+            >
+            ["at0020"] = <
+                text = <"Slot To Contain Other Element Archetypes">
+                description = <"List of ELEMENT archetypes allowed to be included or excluded within this OBSERVATION archetype.">
+            >
+            ["at0021"] = <
+                text = <"Duration">
+                description = <"Duration datatype allows recording of the duration of clinical concepts.  'Allow all time units' is the default, although specific time units can be explicitly modelled.  Maximum and minum values can be set for each time unit.">
+            >
+            ["at0022"] = <
+                text = <"Interval of Integer">
+                description = <"Interval of integer datatype allows for recording of a range of counts eg 1-2 tablets prescribed.  Maximum and minimum values can be set for the lower count and the upper count.">
+            >
+            ["at0023"] = <
+                text = <"Interval of Quantity">
+                description = <"Interval of quantity datatypes allow for the recording of a range of measurements in association with appropriate units eg 1-2cm (prescribed amount of cream for a rash).">
+            >
+            ["at0024"] = <
+                text = <"Interval of Date">
+                description = <"Interval of integer datatype allows for recording of a range of dates eg between September 1, 2008 and September 8, 2008.">
+            >
+            ["at0025"] = <
+                text = <"Choice">
+                description = <"Choice datatype allows for a number of types of element to be specified simultaneously and which can constrained or selected within a template or at run-time.  In this example, a text datatype set to Free text or Coded and another that is constrained to Terminology record data about the same data element.">
+            >
+            ["at0026"] = <
+                text = <"Multimedia">
+                description = <"Multimedia datatypes allow for the recording of many types of multimedia files to be captured.  All available types have been explicitly selected in this example.">
+            >
+            ["at0027"] = <
+                text = <"URI - resource identifier">
+                description = <"URI datatypes allow for recording of relationships from this data to data recorded elsewhere.  These links can be within the same EHR, or external eg to a  URL.">
+            >
+            ["at0028"] = <
+                text = <"Proportion">
+                description = <"Proportion datatypes allow for ratios, percent, fractions and proportions to be modelled.">
+            >
+            ["at0031"] = <
+                text = <"State - Definition">
+                description = <"All archetypes of the OBSERVATION class can  contain a STATE model which contains information about the subject of data at the time the information was collected, and this information is required for safe clinical interpretation of the core information. An example is the position of the patient at the time of measuring a blood pressure.  Datatypes are identical to those explained in the Data model, above.">
+            >
+            ["at0032"] = <
+                text = <"Data - Definition">
+                description = <"All archetypes of the OBSERVATION class contain a DATA model  which contains the core information e.g. the systolic and diastolic pressures when measuring a blood pressure.">
+            >
+            ["at0033"] = <
+                text = <"Named Point In Time">
+                description = <"An event that is both named (eg Birth) and constrained as a Point in time event records the data elements in relation to a specified point in time eg Weight at Birth.">
+            >
+            ["at0034"] = <
+                text = <"Named Interval">
+                description = <"An event that is both named and constrained as an Interval event records the data elements in relation to a period of time eg Weight Loss over time.  The interval can be fixed or left unspecified.  In addition there are mathematical functions that can be specified to capture concepts such as change, decrease, increase, maximum, minimum, mean etc.">
+            >
+            ["at0035"] = <
+                text = <"Offset Point In Time">
+                description = <"Offset Point in time records data at a point in time with a fixed offset of 5 minutes from another specified event eg recording a 2 minute Apgar reading at 2 minutes offset from Birth.">
+            >
+            ["at0037"] = <
+                text = <"Protocol - Definition">
+                description = <"All archetypes of the OBSERVATION class can contain a PROTOCOL model which records information on how the information was gathered or measured, and any other information that is not required for safe clinical interpretation of the core Data. Datatypes are identical to those explained in the Data model, above.">
+            >
+            ["at0038"] = <
+                text = <"No pain">
+                description = <"No pain at all.">
+            >
+            ["at0039"] = <
+                text = <"Slight pain">
+                description = <"Pain level rated as 1 out of a possible maximum score of 10.">
+            >
+            ["at0040"] = <
+                text = <"Mild pain">
+                description = <"Pain level rated as 2 out of a possible maximum score of 10.">
+            >
+            ["at0041"] = <
+                text = <"Moderate pain">
+                description = <"Pain level rated as 5 out of a possible maximum score of 10.">
+            >
+            ["at0042"] = <
+                text = <"Severe pain">
+                description = <"Pain level rated as 9 out of a possible maximum score of 10.">
+            >
+            ["at0043"] = <
+                text = <"Most severe pain imaginable">
+                description = <"Pain level rated as 10 out of a possible maximum score of 10.">
+            >
+            ["at0044"] = <
+                text = <"Identifier">
+                description = <"Identifier datatypes enable recording of formal data identifiers.">
+            >
+            ["at0045"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac2"] = <
+                text = <"SubsetA">
+                description = <"Terminology subset derived from XXX">
+            >
+            ["ac4"] = <
+                text = <"SubsetB">
+                description = <"XYZ codes from Terminology 123">
+            >
+            ["at9009"] = <
+                text = <"audio/DVI4">
+                description = <"audio/DVI4">
+            >
+            ["at9010"] = <
+                text = <"audio/G722">
+                description = <"audio/G722">
+            >
+            ["at9011"] = <
+                text = <"audio/G723">
+                description = <"audio/G723">
+            >
+            ["at9012"] = <
+                text = <"audio/G726-16">
+                description = <"audio/G726-16">
+            >
+            ["at9013"] = <
+                text = <"audio/G726-24">
+                description = <"audio/G726-24">
+            >
+            ["at9014"] = <
+                text = <"audio/G726-32">
+                description = <"audio/G726-32">
+            >
+            ["at9015"] = <
+                text = <"audio/G726-40">
+                description = <"audio/G726-40">
+            >
+            ["at9016"] = <
+                text = <"audio/G728">
+                description = <"audio/G728">
+            >
+            ["at9017"] = <
+                text = <"audio/L8">
+                description = <"audio/L8">
+            >
+            ["at9018"] = <
+                text = <"audio/L16">
+                description = <"audio/L16">
+            >
+            ["at9019"] = <
+                text = <"audio/LPC">
+                description = <"audio/LPC">
+            >
+            ["at9020"] = <
+                text = <"audio/G729">
+                description = <"audio/G729">
+            >
+            ["at9021"] = <
+                text = <"audio/G729D">
+                description = <"audio/G729D">
+            >
+            ["at9022"] = <
+                text = <"audio/G729E">
+                description = <"audio/G729E">
+            >
+            ["at9043"] = <
+                text = <"video/BT656">
+                description = <"video/BT656">
+            >
+            ["at9044"] = <
+                text = <"video/CelB">
+                description = <"video/CelB">
+            >
+            ["at9045"] = <
+                text = <"video/H261">
+                description = <"video/H261">
+            >
+            ["at9046"] = <
+                text = <"video/H263">
+                description = <"video/H263">
+            >
+            ["at9047"] = <
+                text = <"video/H263-1998">
+                description = <"video/H263-1998">
+            >
+            ["at9048"] = <
+                text = <"video/H263-2000">
+                description = <"video/H263-2000">
+            >
+            ["at9023"] = <
+                text = <"audio/mpeg">
+                description = <"audio/mpeg">
+            >
+            ["at9024"] = <
+                text = <"audio/mpeg4-generic">
+                description = <"audio/mpeg4-generic">
+            >
+            ["at9025"] = <
+                text = <"audio/L20">
+                description = <"audio/L20">
+            >
+            ["at9026"] = <
+                text = <"audio/L24">
+                description = <"audio/L24">
+            >
+            ["at9027"] = <
+                text = <"audio/telephone-event">
+                description = <"audio/telephone-event">
+            >
+            ["at9049"] = <
+                text = <"video/quicktime">
+                description = <"video/quicktime">
+            >
+            ["at9033"] = <
+                text = <"text/calendar">
+                description = <"text/calendar">
+            >
+            ["at9034"] = <
+                text = <"text/directory">
+                description = <"text/directory">
+            >
+            ["at9035"] = <
+                text = <"text/html">
+                description = <"text/html">
+            >
+            ["at9036"] = <
+                text = <"text/plain">
+                description = <"text/plain">
+            >
+            ["at9037"] = <
+                text = <"text/rtf">
+                description = <"text/rtf">
+            >
+            ["at9038"] = <
+                text = <"text/sgml">
+                description = <"text/sgml">
+            >
+            ["at9039"] = <
+                text = <"text/tab-separated-values">
+                description = <"text/tab-separated-values">
+            >
+            ["at9040"] = <
+                text = <"text/uri-list">
+                description = <"text/uri-list">
+            >
+            ["at9041"] = <
+                text = <"text/xml">
+                description = <"text/xml">
+            >
+            ["at9042"] = <
+                text = <"text/xml-external-parsed-entity">
+                description = <"text/xml-external-parsed-entity">
+            >
+            ["at9028"] = <
+                text = <"image/cgm">
+                description = <"image/cgm">
+            >
+            ["at9029"] = <
+                text = <"image/gif">
+                description = <"image/gif">
+            >
+            ["at9030"] = <
+                text = <"image/png">
+                description = <"image/png">
+            >
+            ["at9031"] = <
+                text = <"image/tiff">
+                description = <"image/tiff">
+            >
+            ["at9032"] = <
+                text = <"image/jpeg">
+                description = <"image/jpeg">
+            >
+            ["at9050"] = <
+                text = <"application/msword">
+                description = <"application/msword">
+            >
+            ["at9051"] = <
+                text = <"application/pdf">
+                description = <"application/pdf">
+            >
+            ["at9052"] = <
+                text = <"application/rtf">
+                description = <"application/rtf">
+            >
+            ["at9053"] = <
+                text = <"application/dicom">
+                description = <"application/dicom">
+            >
+            ["at9001"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["at9008"] = <
+                text = <"Mass">
+                description = <"Mass">
+            >
+            ["at9055"] = <
+                text = <"change">
+                description = <"change">
+            >
+            ["at9006"] = <
+                text = <"unknown">
+                description = <"unknown">
+            >
+            ["at9003"] = <
+                text = <"no information">
+                description = <"no information">
+            >
+            ["at9004"] = <
+                text = <"masked">
+                description = <"masked">
+            >
+            ["at9005"] = <
+                text = <"not applicable">
+                description = <"not applicable">
+            >
+            ["ac9000"] = <
+                text = <"Text That Uses Internal Codes (synthesised)">
+                description = <"Text data type which can use an internal vocabulary.  Each of these 'internal codes' can be bound to a terminology code. (synthesised)">
+            >
+            ["ac9088"] = <
+                text = <"Ordinal (synthesised)">
+                description = <"Ordinal datatypes pair a number and text - in this way scores can be calculated in software, or progression can be assessed eg if used in a pain score. (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"Boolean (synthesised)">
+                description = <"Boolean datatype that allows for true or false answers. (synthesised)">
+            >
+            ["ac9054"] = <
+                text = <"Multimedia (synthesised)">
+                description = <"Multimedia datatypes allow for the recording of many types of multimedia files to be captured.  All available types have been explicitly selected in this example. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/122>
+            ["at9008"] = <http://openehr.org/id/124>
+            ["at9055"] = <http://openehr.org/id/147>
+            ["at9006"] = <http://openehr.org/id/253>
+            ["at9003"] = <http://openehr.org/id/271>
+            ["at9004"] = <http://openehr.org/id/272>
+            ["at9005"] = <http://openehr.org/id/273>
+        >
+        ["openEHR"] = <
+            ["at9009"] = <http://openehr.org/id/387>
+            ["at9010"] = <http://openehr.org/id/388>
+            ["at9011"] = <http://openehr.org/id/389>
+            ["at9012"] = <http://openehr.org/id/390>
+            ["at9013"] = <http://openehr.org/id/391>
+            ["at9014"] = <http://openehr.org/id/392>
+            ["at9015"] = <http://openehr.org/id/393>
+            ["at9016"] = <http://openehr.org/id/394>
+            ["at9017"] = <http://openehr.org/id/395>
+            ["at9018"] = <http://openehr.org/id/396>
+            ["at9019"] = <http://openehr.org/id/397>
+            ["at9020"] = <http://openehr.org/id/398>
+            ["at9021"] = <http://openehr.org/id/399>
+            ["at9022"] = <http://openehr.org/id/400>
+            ["at9043"] = <http://openehr.org/id/401>
+            ["at9044"] = <http://openehr.org/id/402>
+            ["at9045"] = <http://openehr.org/id/404>
+            ["at9046"] = <http://openehr.org/id/405>
+            ["at9047"] = <http://openehr.org/id/406>
+            ["at9048"] = <http://openehr.org/id/407>
+            ["at9023"] = <http://openehr.org/id/409>
+            ["at9024"] = <http://openehr.org/id/410>
+            ["at9025"] = <http://openehr.org/id/411>
+            ["at9026"] = <http://openehr.org/id/412>
+            ["at9027"] = <http://openehr.org/id/413>
+            ["at9049"] = <http://openehr.org/id/414>
+            ["at9033"] = <http://openehr.org/id/415>
+            ["at9034"] = <http://openehr.org/id/416>
+            ["at9035"] = <http://openehr.org/id/417>
+            ["at9036"] = <http://openehr.org/id/418>
+            ["at9037"] = <http://openehr.org/id/419>
+            ["at9038"] = <http://openehr.org/id/420>
+            ["at9039"] = <http://openehr.org/id/421>
+            ["at9040"] = <http://openehr.org/id/422>
+            ["at9041"] = <http://openehr.org/id/423>
+            ["at9042"] = <http://openehr.org/id/424>
+            ["at9028"] = <http://openehr.org/id/425>
+            ["at9029"] = <http://openehr.org/id/426>
+            ["at9030"] = <http://openehr.org/id/427>
+            ["at9031"] = <http://openehr.org/id/428>
+            ["at9032"] = <http://openehr.org/id/429>
+            ["at9050"] = <http://openehr.org/id/517>
+            ["at9051"] = <http://openehr.org/id/518>
+            ["at9052"] = <http://openehr.org/id/519>
+            ["at9053"] = <http://openehr.org/id/637>
+        >
+    >
+    value_sets = <
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at9003", "at9004", "at9005", "at9006">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0007", "at0008", "at0009", "at0010">
+        >
+        ["ac9088"] = <
+            id = <"ac9088">
+            members = <"at0038", "at0039", "at0040", "at0041", "at0042", "at0043">
+        >
+        ["ac9054"] = <
+            id = <"ac9054">
+            members = <"at9009", "at9010", "at9011", "at9012", "at9013", "at9014", "at9015", "at9016", "at9017", "at9018", "at9019", "at9020", "at9021", "at9022", "at9023", "at9024", "at9025", "at9026", "at9027", "at9028", "at9029", "at9030", "at9031", "at9032", "at9033", "at9034", "at9035", "at9036", "at9037", "at9038", "at9039", "at9040", "at9041", "at9042", "at9043", "at9044", "at9045", "at9046", "at9047", "at9048", "at9049", "at9050", "at9051", "at9052", "at9053">
+        >
+    >

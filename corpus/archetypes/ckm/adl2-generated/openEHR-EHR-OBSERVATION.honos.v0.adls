@@ -1,0 +1,661 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=0bc353a0-345f-4b4c-8f4e-f39c4e925a53; build_uid=ad71093a-ce36-4661-bf4d-9b3f640499c1)
+    openEHR-EHR-OBSERVATION.honos.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Kate Bryan">
+        ["organisation"] = <"Stalis Ltd">
+        ["email"] = <"kate.b@stalis.com">
+        ["date"] = <"2015-11-13">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"http://www.rcpsych.ac.uk/traininpsychiatry/conferencestraining/resources/honos/whatishonos.aspx.">
+        ["2"] = <"http://www.rcpsych.ac.uk/traininpsychiatry/conferencestraining/resources/honos/generalinformation/faq.aspx.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"1D0C91F9815F9FD99F6C950F9552B828">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Records the Health of the Nation Outcome Scale score as a simple, repeatable method to document the service user's health or social status at a specific point in time, say at the start or end of an episode of care, after a course of treatment or some other intervention.">
+            keywords = <"HoNOS", "assessment", "score", "mental health", "health of the nation", "index">
+            use = <"The use of HoNOS is recommended by the English National Service Framework for Mental Health and by the working group to the Department of Health on outcome indicators for severe mental illnesses.
+HoNOS is the most widely used routine clinical outcome measure used by English mental health services.
+
+The 12 scales that are scored are:
+1. Overactive, aggressive, disruptive or agitated behaviour
+2. Non-accidental self-injury
+3. Problem drinking or drug-taking
+4. Cognitive problems
+5. Physical illness or disability problems
+6. Problems associated with hallucinations and delusions
+7. Problems with depressed mood
+8. Other mental and behavioural problems
+9. Problems with relationships
+10. Problems with activities of daily living
+11. Problems with living conditions
+12. Problems with occupation and activities
+
+All scales follow the format:
+0 = No problem
+1 = Minor problem requiring no action
+2 = Mild problem but definitely present
+3 = Moderately severe problem
+4 = Severe to very severe problem 
+
+Each scale is rated in order from 1 to 12. Do not include information rated in an earlier item except for item 10 which is an overall rating. The rating is made on the basis of all information available to the rater (whatever the source) and is based on the most severe problem that occurred during the period rated (usually the two weeks leading up to the point of rating).
+
+The HoNOS system is not a standardised clinical assessment and cannot be a substitute for one.
+
+The minimum required is that a rating is made at the start of each episode of care and at the end. Most services using HoNOS also require ratings at any regular review (like the English Care Programme Approach review), when there is a major change in the patient's status (for instance, an admission to or discharge from hospital) HoNOS Score is a copyrighted assessment score: Health of the Nation Outcome Scales (HoNOS) © Royal College of Psychiatrists 1996.
+Please note, from RACP copyright guidance: 
+- \"The RCPsych allows without express permission the free use, copy and reproduction of HoNOS scoresheets for use in NHS-funded care. Use, copy or reproduction of HoNOS scoresheets for any other purpose should be with the explicit permission of the RCPsych.\"
+- \"The RCPsych allows without express permission NHS organisations and other providers of NHS funded care to include HoNOS scoresheets in electronic healthcare records and other computerised clinical systems.\"
+ (http://www.rcpsych.ac.uk/traininpsychiatry/conferencestraining/resources/honos/copyright.aspx)and, for long episodes of care, at every 6 months or so.">
+            misuse = <"Users of the HoNOS Score archetype must ensure that they comply with the terms of use of the Royal College of Psychiatrists who own the copyright as per http://www.rcpsych.ac.uk/traininpsychiatry/conferencestraining/resources/honos/copyright.aspx. It should not be used outside the terms of the copyright.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Health of the Nation Outcome Scale
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0076] occurrences matches {0..1} matches {    -- Start of episode of care
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Overactive, aggressive, disruptive or agitated behaviour
+                                        value matches {
+                                            DV_ORDINAL[at9012] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- No problem
+                                                    [{1}, {[at0006]}],    -- Minor problem requiring no action
+                                                    [{2}, {[at0007]}],    -- Mild problem but definitely present
+                                                    [{3}, {[at0008]}],    -- Moderately severe problem.
+                                                    [{4}, {[at0009]}]    -- Severe to very severe problem
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Non-accidental self-injury
+                                        value matches {
+                                            DV_ORDINAL[at9013] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0011]}],    -- No problem
+                                                    [{1}, {[at0012]}],    -- Minor problem requiring no action
+                                                    [{2}, {[at0013]}],    -- Mild problem but definitely present
+                                                    [{3}, {[at0054]}],    -- Moderately severe problem
+                                                    [{4}, {[at0055]}]    -- Severe to very severe problem
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Problem drinking or drug-taking
+                                        value matches {
+                                            DV_ORDINAL[at9014] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0024]}],    -- No problem
+                                                    [{1}, {[at0034]}],    -- Minor problem requiring no action
+                                                    [{2}, {[at0044]}],    -- Mild problem but definitely present
+                                                    [{3}, {[at0056]}],    -- Moderately severe problem.
+                                                    [{4}, {[at0066]}]    -- Severe to very severe problem
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Cognitive problems
+                                        value matches {
+                                            DV_ORDINAL[at9015] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0025]}],    -- No problem
+                                                    [{1}, {[at0035]}],    -- Minor problem requiring no action
+                                                    [{2}, {[at0045]}],    -- Mild problem but definitely present
+                                                    [{3}, {[at0057]}],    -- Moderately severe problem.
+                                                    [{4}, {[at0067]}]    -- Severe to very severe problem
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Physical illness or disability problems
+                                        value matches {
+                                            DV_ORDINAL[at9016] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0026]}],    -- No problem
+                                                    [{1}, {[at0036]}],    -- Minor problem requiring no action
+                                                    [{2}, {[at0046]}],    -- Mild problem but definitely present
+                                                    [{3}, {[at0058]}],    -- Moderately severe problem.
+                                                    [{4}, {[at0068]}]    -- Severe to very severe problem
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Problems associated with hallucinations and delusions
+                                        value matches {
+                                            DV_ORDINAL[at9017] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0027]}],    -- No problem
+                                                    [{1}, {[at0037]}],    -- Minor problem requiring no action
+                                                    [{2}, {[at0047]}],    -- Mild problem but definitely present
+                                                    [{3}, {[at0059]}],    -- Moderately severe problem.
+                                                    [{4}, {[at0069]}]    -- Severe to very severe problem
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Problems with depressed mood
+                                        value matches {
+                                            DV_ORDINAL[at9018] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0028]}],    -- No problem
+                                                    [{1}, {[at0038]}],    -- Minor problem requiring no action
+                                                    [{2}, {[at0048]}],    -- Mild problem but definitely present
+                                                    [{3}, {[at0060]}],    -- Moderately severe problem.
+                                                    [{4}, {[at0070]}]    -- Severe to very severe problem
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Other mental and behavioural problems
+                                        value matches {
+                                            DV_ORDINAL[at9019] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0029]}],    -- No problem
+                                                    [{1}, {[at0039]}],    -- Minor problem requiring no action
+                                                    [{2}, {[at0049]}],    -- Mild problem but definitely present
+                                                    [{3}, {[at0061]}],    -- Moderately severe problem.
+                                                    [{4}, {[at0071]}]    -- Severe to very severe problem
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Problems with relationships
+                                        value matches {
+                                            DV_ORDINAL[at9020] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0030]}],    -- No problem
+                                                    [{1}, {[at0040]}],    -- Minor problem requiring no action
+                                                    [{2}, {[at0050]}],    -- Mild problem but definitely present
+                                                    [{3}, {[at0062]}],    -- Moderately severe problem.
+                                                    [{4}, {[at0072]}]    -- Severe to very severe problem
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Problems with activities of daily living
+                                        value matches {
+                                            DV_ORDINAL[at9021] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0031]}],    -- No problem
+                                                    [{1}, {[at0041]}],    -- Minor problem requiring no action
+                                                    [{2}, {[at0051]}],    -- Mild problem but definitely present
+                                                    [{3}, {[at0063]}],    -- Moderately severe problem.
+                                                    [{4}, {[at0073]}]    -- Severe to very severe problem
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Problems with living conditions
+                                        value matches {
+                                            DV_ORDINAL[at9022] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0032]}],    -- No problem
+                                                    [{1}, {[at0042]}],    -- Minor problem requiring no action
+                                                    [{2}, {[at0052]}],    -- Mild problem but definitely present
+                                                    [{3}, {[at0064]}],    -- Moderately severe problem.
+                                                    [{4}, {[at0074]}]    -- Severe to very severe problem
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Problems with occupation and activities
+                                        value matches {
+                                            DV_ORDINAL[at9023] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0033]}],    -- No problem
+                                                    [{1}, {[at0043]}],    -- Minor problem requiring no action
+                                                    [{2}, {[at0053]}],    -- Mild problem but definitely present
+                                                    [{3}, {[at0065]}],    -- Moderately severe problem.
+                                                    [{4}, {[at0075]}]    -- Severe to very severe problem
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    POINT_EVENT[at0077] occurrences matches {0..1} matches {    -- End of episode of care
+                        data matches {
+                            use_node ITEM_TREE[at9024] /data[at0001]/events[at0076]/data[at0003]
+                        }
+                    }
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            use_node ITEM_TREE[at9025] /data[at0001]/events[at0076]/data[at0003]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Health of the Nation Outcome Scale">
+                description = <"Clinical score based on 12 simple scales on which service users with severe mental illness are rated by clinical staff.">
+                comment = <"Also known as the HoNOS.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Overactive, aggressive, disruptive or agitated behaviour">
+                description = <"Observation of the service user's behaviour.">
+            >
+            ["at0005"] = <
+                text = <"No problem">
+                description = <"No problem.">
+            >
+            ["at0006"] = <
+                text = <"Minor problem requiring no action">
+                description = <"Minor problem requiring no action.">
+            >
+            ["at0007"] = <
+                text = <"Mild problem but definitely present">
+                description = <"Mild problem but definitely present.">
+            >
+            ["at0008"] = <
+                text = <"Moderately severe problem.">
+                description = <"moderately severe problem.">
+            >
+            ["at0009"] = <
+                text = <"Severe to very severe problem">
+                description = <"Severe to very severe problem.">
+            >
+            ["at0010"] = <
+                text = <"Non-accidental self-injury">
+                description = <"Observation of any non-accidental self-injuries.">
+            >
+            ["at0011"] = <
+                text = <"No problem">
+                description = <"No problem.">
+            >
+            ["at0012"] = <
+                text = <"Minor problem requiring no action">
+                description = <"Minor problem requiring no action.">
+            >
+            ["at0013"] = <
+                text = <"Mild problem but definitely present">
+                description = <"Mild problem but definitely present.">
+            >
+            ["at0014"] = <
+                text = <"Problem drinking or drug-taking">
+                description = <"Problem drinking or drug-taking.">
+            >
+            ["at0015"] = <
+                text = <"Cognitive problems">
+                description = <"Cognitive problems.">
+            >
+            ["at0016"] = <
+                text = <"Physical illness or disability problems">
+                description = <"Physical illness or disability problems.">
+            >
+            ["at0017"] = <
+                text = <"Problems associated with hallucinations and delusions">
+                description = <"Problems associated with hallucinations and delusions.">
+            >
+            ["at0018"] = <
+                text = <"Problems with depressed mood">
+                description = <"Problems with depressed mood.">
+            >
+            ["at0019"] = <
+                text = <"Other mental and behavioural problems">
+                description = <"Other mental and behavioural problems.">
+            >
+            ["at0020"] = <
+                text = <"Problems with relationships">
+                description = <"Problems with relationships.">
+            >
+            ["at0021"] = <
+                text = <"Problems with activities of daily living">
+                description = <"Problems with activities of daily living.">
+            >
+            ["at0022"] = <
+                text = <"Problems with living conditions">
+                description = <"Problems with living conditions.">
+            >
+            ["at0023"] = <
+                text = <"Problems with occupation and activities">
+                description = <"Problems with occupation and activities.">
+            >
+            ["at0024"] = <
+                text = <"No problem">
+                description = <"No problem.">
+            >
+            ["at0025"] = <
+                text = <"No problem">
+                description = <"No problem.">
+            >
+            ["at0026"] = <
+                text = <"No problem">
+                description = <"No problem.">
+            >
+            ["at0027"] = <
+                text = <"No problem">
+                description = <"No problem.">
+            >
+            ["at0028"] = <
+                text = <"No problem">
+                description = <"No problem.">
+            >
+            ["at0029"] = <
+                text = <"No problem">
+                description = <"No problem.">
+            >
+            ["at0030"] = <
+                text = <"No problem">
+                description = <"No problem.">
+            >
+            ["at0031"] = <
+                text = <"No problem">
+                description = <"No problem.">
+            >
+            ["at0032"] = <
+                text = <"No problem">
+                description = <"No problem.">
+            >
+            ["at0033"] = <
+                text = <"No problem">
+                description = <"No problem.">
+            >
+            ["at0034"] = <
+                text = <"Minor problem requiring no action">
+                description = <"Minor problem requiring no action.">
+            >
+            ["at0035"] = <
+                text = <"Minor problem requiring no action">
+                description = <"Minor problem requiring no action.">
+            >
+            ["at0036"] = <
+                text = <"Minor problem requiring no action">
+                description = <"Minor problem requiring no action.">
+            >
+            ["at0037"] = <
+                text = <"Minor problem requiring no action">
+                description = <"Minor problem requiring no action.">
+            >
+            ["at0038"] = <
+                text = <"Minor problem requiring no action">
+                description = <"Minor problem requiring no action.">
+            >
+            ["at0039"] = <
+                text = <"Minor problem requiring no action">
+                description = <"Minor problem requiring no action.">
+            >
+            ["at0040"] = <
+                text = <"Minor problem requiring no action">
+                description = <"Minor problem requiring no action.">
+            >
+            ["at0041"] = <
+                text = <"Minor problem requiring no action">
+                description = <"Minor problem requiring no action.">
+            >
+            ["at0042"] = <
+                text = <"Minor problem requiring no action">
+                description = <"Minor problem requiring no action.">
+            >
+            ["at0043"] = <
+                text = <"Minor problem requiring no action">
+                description = <"Minor problem requiring no action.">
+            >
+            ["at0044"] = <
+                text = <"Mild problem but definitely present">
+                description = <"Mild problem but definitely present.">
+            >
+            ["at0045"] = <
+                text = <"Mild problem but definitely present">
+                description = <"Mild problem but definitely present.">
+            >
+            ["at0046"] = <
+                text = <"Mild problem but definitely present">
+                description = <"Mild problem but definitely present.">
+            >
+            ["at0047"] = <
+                text = <"Mild problem but definitely present">
+                description = <"Mild problem but definitely present.">
+            >
+            ["at0048"] = <
+                text = <"Mild problem but definitely present">
+                description = <"Mild problem but definitely present.">
+            >
+            ["at0049"] = <
+                text = <"Mild problem but definitely present">
+                description = <"Mild problem but definitely present.">
+            >
+            ["at0050"] = <
+                text = <"Mild problem but definitely present">
+                description = <"Mild problem but definitely present.">
+            >
+            ["at0051"] = <
+                text = <"Mild problem but definitely present">
+                description = <"Mild problem but definitely present.">
+            >
+            ["at0052"] = <
+                text = <"Mild problem but definitely present">
+                description = <"Mild problem but definitely present.">
+            >
+            ["at0053"] = <
+                text = <"Mild problem but definitely present">
+                description = <"Mild problem but definitely present.">
+            >
+            ["at0054"] = <
+                text = <"Moderately severe problem">
+                description = <"Moderately severe problem.">
+            >
+            ["at0055"] = <
+                text = <"Severe to very severe problem">
+                description = <"Severe to very severe problem.">
+            >
+            ["at0056"] = <
+                text = <"Moderately severe problem.">
+                description = <"Moderately severe problem.">
+            >
+            ["at0057"] = <
+                text = <"Moderately severe problem.">
+                description = <"Moderately severe problem.">
+            >
+            ["at0058"] = <
+                text = <"Moderately severe problem.">
+                description = <"Moderately severe problem.">
+            >
+            ["at0059"] = <
+                text = <"Moderately severe problem.">
+                description = <"Moderately severe problem.">
+            >
+            ["at0060"] = <
+                text = <"Moderately severe problem.">
+                description = <"Moderately severe problem.">
+            >
+            ["at0061"] = <
+                text = <"Moderately severe problem.">
+                description = <"Moderately severe problem.">
+            >
+            ["at0062"] = <
+                text = <"Moderately severe problem.">
+                description = <"Moderately severe problem.">
+            >
+            ["at0063"] = <
+                text = <"Moderately severe problem.">
+                description = <"Moderately severe problem.">
+            >
+            ["at0064"] = <
+                text = <"Moderately severe problem.">
+                description = <"Moderately severe problem.">
+            >
+            ["at0065"] = <
+                text = <"Moderately severe problem.">
+                description = <"Moderately severe problem.">
+            >
+            ["at0066"] = <
+                text = <"Severe to very severe problem">
+                description = <"Severe to very severe problem.">
+            >
+            ["at0067"] = <
+                text = <"Severe to very severe problem">
+                description = <"Severe to very severe problem.">
+            >
+            ["at0068"] = <
+                text = <"Severe to very severe problem">
+                description = <"Severe to very severe problem.">
+            >
+            ["at0069"] = <
+                text = <"Severe to very severe problem">
+                description = <"Severe to very severe problem.">
+            >
+            ["at0070"] = <
+                text = <"Severe to very severe problem">
+                description = <"Severe to very severe problem.">
+            >
+            ["at0071"] = <
+                text = <"Severe to very severe problem">
+                description = <"Severe to very severe problem.">
+            >
+            ["at0072"] = <
+                text = <"Severe to very severe problem">
+                description = <"Severe to very severe problem.">
+            >
+            ["at0073"] = <
+                text = <"Severe to very severe problem">
+                description = <"Severe to very severe problem.">
+            >
+            ["at0074"] = <
+                text = <"Severe to very severe problem">
+                description = <"Severe to very severe problem.">
+            >
+            ["at0075"] = <
+                text = <"Severe to very severe problem">
+                description = <"Severe to very severe problem.">
+            >
+            ["at0076"] = <
+                text = <"Start of episode of care">
+                description = <"HoNOS score at start of episode of care.">
+            >
+            ["at0077"] = <
+                text = <"End of episode of care">
+                description = <"HoNOS score at end of episode of care.">
+            >
+            ["ac9025"] = <
+                text = <"Overactive, aggressive, disruptive or agitated behaviour (synthesised)">
+                description = <"Observation of the service user's behaviour. (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"Non-accidental self-injury (synthesised)">
+                description = <"Observation of any non-accidental self-injuries. (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Problem drinking or drug-taking (synthesised)">
+                description = <"Problem drinking or drug-taking. (synthesised)">
+            >
+            ["ac9028"] = <
+                text = <"Cognitive problems (synthesised)">
+                description = <"Cognitive problems. (synthesised)">
+            >
+            ["ac9029"] = <
+                text = <"Physical illness or disability problems (synthesised)">
+                description = <"Physical illness or disability problems. (synthesised)">
+            >
+            ["ac9030"] = <
+                text = <"Problems associated with hallucinations and delusions (synthesised)">
+                description = <"Problems associated with hallucinations and delusions. (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"Problems with depressed mood (synthesised)">
+                description = <"Problems with depressed mood. (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"Other mental and behavioural problems (synthesised)">
+                description = <"Other mental and behavioural problems. (synthesised)">
+            >
+            ["ac9033"] = <
+                text = <"Problems with relationships (synthesised)">
+                description = <"Problems with relationships. (synthesised)">
+            >
+            ["ac9034"] = <
+                text = <"Problems with activities of daily living (synthesised)">
+                description = <"Problems with activities of daily living. (synthesised)">
+            >
+            ["ac9035"] = <
+                text = <"Problems with living conditions (synthesised)">
+                description = <"Problems with living conditions. (synthesised)">
+            >
+            ["ac9036"] = <
+                text = <"Problems with occupation and activities (synthesised)">
+                description = <"Problems with occupation and activities. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9028"] = <
+            id = <"ac9028">
+            members = <"at0025", "at0035", "at0045", "at0057", "at0067">
+        >
+        ["ac9027"] = <
+            id = <"ac9027">
+            members = <"at0024", "at0034", "at0044", "at0056", "at0066">
+        >
+        ["ac9026"] = <
+            id = <"ac9026">
+            members = <"at0011", "at0012", "at0013", "at0054", "at0055">
+        >
+        ["ac9025"] = <
+            id = <"ac9025">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009">
+        >
+        ["ac9031"] = <
+            id = <"ac9031">
+            members = <"at0028", "at0038", "at0048", "at0060", "at0070">
+        >
+        ["ac9030"] = <
+            id = <"ac9030">
+            members = <"at0027", "at0037", "at0047", "at0059", "at0069">
+        >
+        ["ac9035"] = <
+            id = <"ac9035">
+            members = <"at0032", "at0042", "at0052", "at0064", "at0074">
+        >
+        ["ac9034"] = <
+            id = <"ac9034">
+            members = <"at0031", "at0041", "at0051", "at0063", "at0073">
+        >
+        ["ac9033"] = <
+            id = <"ac9033">
+            members = <"at0030", "at0040", "at0050", "at0062", "at0072">
+        >
+        ["ac9032"] = <
+            id = <"ac9032">
+            members = <"at0029", "at0039", "at0049", "at0061", "at0071">
+        >
+        ["ac9036"] = <
+            id = <"ac9036">
+            members = <"at0033", "at0043", "at0053", "at0065", "at0075">
+        >
+        ["ac9029"] = <
+            id = <"ac9029">
+            members = <"at0026", "at0036", "at0046", "at0058", "at0068">
+        >
+    >

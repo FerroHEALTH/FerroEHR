@@ -1,0 +1,376 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=19517a56-22bc-4420-bb5d-70f97fddd9ef; build_uid=c68f59f0-88e9-4f88-b2d2-933c9c81e734)
+    openEHR-EHR-CLUSTER.findings_glaucoma.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2015-07-06">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"- European Glaucoma Society (EUGS). Terminology and guidelines for glaucoma (4th edition). Savona: Publicomm, 2014.">
+        ["2"] = <"- Hodapp E, Parrish RKI, Anderson DR. Clinical decisions in glaucoma. St Louis: The CV Mosby Co, 1993.">
+    >
+    other_details = <
+        ["current_contact"] = <"Aitor Eguzkitza, Universidad Pública de Navarra - Complejo Hospitalario de Navarra<aitor.eguzkiza@unavarra.es>">
+        ["MD5-CAM-1.0.1"] = <"1FD4D772C01315F0DA726391F877A98B">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Register clinical findings on eye related with the diagnose of glaucoma.">
+            keywords = <"findings", "glaucoma">
+            use = <"Support the archetypes used in the study and diagnose of glaucoma to register clinical findings in a structured manner.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Findings in glaucoma
+        items cardinality matches {1..*; unordered} matches {
+            CLUSTER[at0014] occurrences matches {0..1} matches {    -- Anterior segment
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Iris root
+                        value matches {
+                            DV_CODED_TEXT[at9006] matches {
+                                defining_code matches {[ac9000]}    -- Iris root (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Angle recess
+                        value matches {
+                            DV_QUANTITY[at9007] matches {
+                                property matches {[at9001]}    -- Angle, plane
+                                magnitude matches {|10.0..40.0|}
+                                units matches {"deg"}
+                                precision matches {0}
+                            }
+                        }
+                    }
+                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Peripheral iris
+                        value matches {
+                            DV_CODED_TEXT[at9008] matches {
+                                defining_code matches {[ac9002]}    -- Peripheral iris (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Slit thickness
+                        value matches {
+                            DV_CODED_TEXT[at9009] matches {
+                                defining_code matches {[ac9003]}    -- Slit thickness (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0002] occurrences matches {0..1} matches {    -- Retinal nerve fiber layer
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Parapapillary atrophy
+                        value matches {
+                            DV_TEXT[at9010]
+                        }
+                    }
+                    ELEMENT[at0040] matches {    -- RNFL thinning
+                        value matches {
+                            DV_CODED_TEXT[at9011] matches {
+                                defining_code matches {[ac9004]}    -- RNFL thinning (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0048] occurrences matches {0..1} matches {    -- Hemorrhages RNFL
+                        value matches {
+                            DV_BOOLEAN[at9012] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0004] occurrences matches {0..1} matches {    -- Optic disc
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0032] occurrences matches {0..1} matches {    -- Rim loss pattern
+                        value matches {
+                            DV_TEXT[at9013]
+                        }
+                    }
+                    ELEMENT[at0049] occurrences matches {0..1} matches {    -- Asymmetric rim
+                        value matches {
+                            DV_BOOLEAN[at9014] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                    ELEMENT[at0042] occurrences matches {0..1} matches {    -- Cupping
+                        value matches {
+                            DV_TEXT[at9015]
+                        }
+                    }
+                    ELEMENT[at0043] occurrences matches {0..1} matches {    -- Vessels
+                        value matches {
+                            DV_TEXT[at9016]
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Hemorrhages optic disc
+                        value matches {
+                            DV_BOOLEAN[at9017] matches {
+                                value matches {True, False; False}
+                            }
+                        }
+                    }
+                    ELEMENT[at0047] occurrences matches {0..1} matches {    -- Optic nerve head
+                        value matches {
+                            DV_TEXT[at9018]
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0009] occurrences matches {0..1} matches {    -- Visual field
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Visual field defects
+                        value matches {
+                            DV_CODED_TEXT[at9019] matches {
+                                defining_code matches {[ac9005]}    -- Visual field defects (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Asymmetric loss
+                        value matches {
+                            DV_BOOLEAN[at9020] matches {
+                                value matches {True, False; False}
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0044] occurrences matches {0..1} matches {    -- Comments
+                value matches {
+                    DV_TEXT[at9021]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Findings in glaucoma">
+                description = <"Clinical findings on eye related with the diagnose of glaucoma.">
+            >
+            ["at0002"] = <
+                text = <"Retinal nerve fiber layer">
+                description = <"Findings on RNFL supporting the current study of glaucoma.">
+            >
+            ["at0004"] = <
+                text = <"Optic disc">
+                description = <"Findings on optic disc supporting the current study of glaucoma.">
+            >
+            ["at0005"] = <
+                text = <"Hemorrhages optic disc">
+                description = <"Identification of hemorrhages on or bordering the optic disc.">
+            >
+            ["at0006"] = <
+                text = <"Parapapillary atrophy">
+                description = <"Narrative description of diffuse or localized abnormalities of the peripapillary retinal nerve fiber layer, especially at the inferior or superior poles.">
+            >
+            ["at0008"] = <
+                text = <"Visual field defects">
+                description = <"Staging of the visual field defectsaccording to the Hodapp-Parrish classification (see references).">
+            >
+            ["at0009"] = <
+                text = <"Visual field">
+                description = <"Findings on visual field supporting the current study of glaucoma.">
+            >
+            ["at0010"] = <
+                text = <"Early glaucomatous loss">
+                description = <"Mean defect < -6dB; Fewer than 18 points depressed below the 5% probability level; Fewer than 10 points below the p < 1% level; No point in the central 5 degrees with a sensitivity of less than 15 dB.">
+            >
+            ["at0011"] = <
+                text = <"Moderate glaucomatous loss">
+                description = <"Mean defect < -12dB; Fewer than 37 points depressed below the 5% probability level; Fewer than 20 points below the p < 1% level; Only one hemifield with a sensitivity of less than 15 dB.">
+            >
+            ["at0012"] = <
+                text = <"Advanced glaucomatous loss">
+                description = <"Mean defect > -12dB; More than 37 points depressed below the 5% probability level; More than 20 points below the p < 1% level; Absolute deficit (0dB) in the 5 central degrees; Sensitivity <15dB in the 5 central degrees in both hemifields.">
+            >
+            ["at0013"] = <
+                text = <"Asymmetric loss">
+                description = <"Visual field loss in one hemifield that is different from the other hemifield, i.e., across the horizontal midline (in early/moderate cases).">
+            >
+            ["at0014"] = <
+                text = <"Anterior segment">
+                description = <"Document the insertion level of the iris root before and during compression dynamic gonioscopy.">
+            >
+            ["at0015"] = <
+                text = <"Iris root">
+                description = <"Insertion of iris root.">
+            >
+            ["at0016"] = <
+                text = <"Anterior to Schwalbe">
+                description = <"Anterior to Schwalbe's line.">
+            >
+            ["at0017"] = <
+                text = <"Behind Schwalbe">
+                description = <"Behind Schwalbe's line.">
+            >
+            ["at0018"] = <
+                text = <"Scleral Spur">
+                description = <"On the Scleral Spur.">
+            >
+            ["at0019"] = <
+                text = <"Behind Scleral Spur">
+                description = <"Behind the Scleral Spur.">
+            >
+            ["at0020"] = <
+                text = <"Cillary Band">
+                description = <"On the Cillary Band.">
+            >
+            ["at0021"] = <
+                text = <"Angle recess">
+                description = <"Angular width of angle recess.">
+            >
+            ["at0022"] = <
+                text = <"Peripheral iris">
+                description = <"Configuration of the peripheral iris.">
+            >
+            ["at0023"] = <
+                text = <"Steep">
+                description = <"Steep, anteriorly convex.">
+            >
+            ["at0024"] = <
+                text = <"Regular">
+                description = <"Regular.">
+            >
+            ["at0025"] = <
+                text = <"Queer">
+                description = <"Queer, anteriorly concave.">
+            >
+            ["at0026"] = <
+                text = <"Slit thickness">
+                description = <"Ratio of slit thickness of the cornea to the depth of the anterior chamber.">
+            >
+            ["at0027"] = <
+                text = <"Angle closed">
+                description = <"Ratio of slit thickness = 0.">
+            >
+            ["at0028"] = <
+                text = <"Angle closure likely (angle 10°)">
+                description = <"Ratio of slit thickness < 1/4.">
+            >
+            ["at0029"] = <
+                text = <"Angle clossure possible (angle 20°)">
+                description = <"Ratio of slit thickness 1/4.">
+            >
+            ["at0030"] = <
+                text = <"Angle closure unlikely">
+                description = <"Ratio of slit thickness 1/2.">
+            >
+            ["at0031"] = <
+                text = <"Angle closure very unlikely">
+                description = <"Ratio of slit thickness 1.">
+            >
+            ["at0032"] = <
+                text = <"Rim loss pattern">
+                description = <"Description of the pattern of neuroretinal rim loss. It may take the form of diffuse thinning, focal narrowing, or localized notching of the optic disc rim, especially at the inferior or superior poles.">
+            >
+            ["at0040"] = <
+                text = <"RNFL thinning">
+                description = <"Identification of retinal nerve fiber layer thinning defects.">
+            >
+            ["at0041"] = <
+                text = <"Diffuse thinning">
+                description = <"Diffuse thinning of Retinal nerve fiber layer.">
+            >
+            ["at0042"] = <
+                text = <"Cupping">
+                description = <"Identification of progressive thinning of the neuroretinal rim with an associated increase in cupping of the optic disc.">
+            >
+            ["at0043"] = <
+                text = <"Vessels">
+                description = <"Description of any positional changes of the vessels at the optic disc with bending, bayoneting or baring of circumlinear vessels.">
+            >
+            ["at0044"] = <
+                text = <"Comments">
+                description = <"Narrative description of overall findings, inlcuding those not considered above.">
+            >
+            ["at0047"] = <
+                text = <"Optic nerve head">
+                description = <"Description of features in optic nerve head (ONH).">
+            >
+            ["at0048"] = <
+                text = <"Hemorrhages RNFL">
+                description = <"Identification of hemorrhages on the peripapillary retinal nerve fiber layer.">
+            >
+            ["at0049"] = <
+                text = <"Asymmetric rim">
+                description = <"Optic disc neural rim asymmetry of the two eyes consistent with loss of neural tissue.">
+            >
+            ["at0050"] = <
+                text = <"Localized defects">
+                description = <"Focal (wedge and slit) defects.">
+            >
+            ["at9001"] = <
+                text = <"Angle, plane">
+                description = <"Angle, plane">
+            >
+            ["ac9000"] = <
+                text = <"Iris root (synthesised)">
+                description = <"Insertion of iris root. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Peripheral iris (synthesised)">
+                description = <"Configuration of the peripheral iris. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Slit thickness (synthesised)">
+                description = <"Ratio of slit thickness of the cornea to the depth of the anterior chamber. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"RNFL thinning (synthesised)">
+                description = <"Identification of retinal nerve fiber layer thinning defects. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Visual field defects (synthesised)">
+                description = <"Staging of the visual field defectsaccording to the Hodapp-Parrish classification (see references). (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/497>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0023", "at0024", "at0025">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0016", "at0017", "at0018", "at0019", "at0020">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0010", "at0011", "at0012">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0041", "at0050">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0027", "at0028", "at0029", "at0030", "at0031">
+        >
+    >

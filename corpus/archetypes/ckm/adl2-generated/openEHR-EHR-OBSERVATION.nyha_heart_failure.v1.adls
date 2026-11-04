@@ -1,0 +1,570 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1bc7a1b6-8702-4c35-9f7f-cf4c7b4ba92f; build_uid=d3a6d35d-0259-4638-bd51-70c2f15ddb7b)
+    openEHR-EHR-OBSERVATION.nyha_heart_failure.v1.0.3
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Samer Alkarkoukly">
+                ["organisation"] = <"Uniklinik Köln">
+                ["email"] = <"Mabbouda@uni-koeln.de">
+            >
+        >
+        ["pt-pt"] = <
+            language = <[ISO_639-1::pt-pt]>
+            author = <
+                ["name"] = <"Pedro Sobreiro, Vanessa Pereira">
+                ["organisation"] = <"NTT DATA, Luxembourg Institute of Health (LIH)">
+                ["email"] = <"pedro.geraldes.sobreiro@nttdata.com, vanessapereira@protonmail.com">
+            >
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            author = <
+                ["name"] = <"Vesa Peltola">
+                ["organisation"] = <"Tieto Finland">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Nasjonal IKT HF">
+                ["email"] = <"silje.ljosland.bakke@nasjonalikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"freshEHR Informatics, UK, ">
+        ["email"] = <"ian@freshehr.com">
+        ["date"] = <"2012-04-12">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Tomas Alme, DIPS ASA, Norway", "Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (Nasjonal IKT redaktør)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Lars Bitsch-Larsen, Haukeland University Hospital, Bergen, Norway", "Tom Dahlberg, Helgelandssykehuset HF, Fagstab, Norway", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Are Edvardsen, SKDE, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Morten Grundtvig, Norsk hjertesviktregister, Norway", "Kristian Heldal, Telemark Hospital Trust, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Eugene Igras, IRIS Systems, Inc., Canada", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Kerrie Lee, Australia", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hildegard McNicoll, freshEHR Clinical Informatics Ltd., United Kingdom", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Andrej Orel, Marand d.o.o., Slovenia", "Vladimir Pizzo, Hospital Sírio Libanês, Brazil", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Anoop Shah, University College London, United Kingdom", "Nyree Taylor, Ocean Informatics, Australia", "Anders Thurin, SU, Sweden", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Jon Tysdahl, Furst medlab AS, Norway", "Thomas Wilson, Finnmarkssykehuset HF Klinikk Hammerfest, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"AHA medical/scientific statement. 1994 revisions to classification of functional capacity and objective assessment of patients with diseases of the heart. Circulation. 1994 Jul; 90(1):644-5. PubMed PMID: 12501831.">
+        ["2"] = <"American Heart Association [Internet]. Dallas, Texas: American Heart Association; c 2018. Classification of Functional Capacity and Objective-Assessment [cited 2018 May 08]; [one screen]. Available from: https://professional.heart.org/professional/General/UCM_423811_Classification-of-Functional-Capacity-and-Objective-Assessment.jsp.">
+        ["3"] = <"American Heart Association [Internet]. Dallas, Texas: American Heart Association; c 2018. Classes of Heart Failure; last reviewed 2017 May [cited 2018 May 08]; [one screen]. Available from: http://www.heart.org/HEARTORG/Conditions/HeartFailure/AboutHeartFailure/Classes-of-Heart-Failure_UCM_306328_Article.jsp and https://www.heart.org/HEARTORG/Conditions/HeartFailure/AboutHeartFailure/Classes-of-Heart-Failure_UCM_306328_Article.jsp?appName=MobileApp.">
+    >
+    other_details = <
+        ["current_contact"] = <"Ian McNicoll, freshEHR Informatics, UK, ian@freshehr.com">
+        ["MD5-CAM-1.0.1"] = <"85FB0F8C1DBAFF7AFEFF7791B676CE80">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Dokumentation von einem oder beiden der folgenden Punkten:
+- eine funktionelle Bewertung von Herzinsuffizienz auf der Basis von Symptomen; und
+- eine objektive Bewertung auf der Basis von Anzeichen und Symptomen einer Herz-Kreislauf-Erkrankung.">
+            keywords = <"Herz", "Insuffizienz", "kardial", "Atemnot", "Erschöpfung", "Dysfunktion", "ventrikulär">
+            use = <"Wird für die Dokumentation von einem oder beiden Sachverhalten verwendet:
+- eine funktionelle Bewertung von Herzinsuffizienz auf der Basis von Symptomen; und
+- eine objektive Bewertung auf der Basis von Anzeichen und Symptomen einer Herz-Kreislauf-Erkrankung.">
+            misuse = <"">
+        >
+        ["pt-pt"] = <
+            language = <[ISO_639-1::pt-pt]>
+            purpose = <"Para registar um ou ambos:
+- uma avaliação funcional da insuficiência cardíaca baseada nos sintomas; e
+- uma avaliação objectiva, baseada tanto na evidência de doença cardiovascular, como nos sintomas.">
+            keywords = <"coração", "insuficiência", "cardíaca", "falta de ar", "fadiga", "disfunção", "ventricular">
+            use = <"Usar para registar uma ou ambas:
+- uma avaliação funcional da insuficiência cardíaca baseada nos sintomas; e
+- uma avaliação objectiva, baseada tanto na evidência de doença cardiovascular, como nos sintomas.">
+            misuse = <"">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"Voit tallentaa yhden tai molemmat seuraavista:
+- oireisiin perustuva sydämen vajaatoiminnan toiminnallinen arviointi
+- objektiivinen arviointi, joka perustuu sekä sydän- että verisuonitauteihin että oireisiin.">
+            keywords = <"sydän, vajaatoiminta, hengenahdistus, väsymys, toimintahäiriö, kammio", ...>
+            use = <"Voit tallentaa yhden tai molemmat seuraavista:
+- oireisiin perustuva sydämen vajaatoiminnan toiminnallinen arviointi
+- objektiivinen arviointi, joka perustuu sekä sydän- että verisuonitauteihin että oireisiin.">
+            misuse = <"">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"En funksjonell klassifisering av pasienter med hjertesvikt-relaterte symptomer. Definert av New York Heart Association.">
+            keywords = <"hjertesvikt", "hjerte", "svikt", "pusteproblemer", "dysnpoe", "tretthet", "fatigue", "funksjonsnivå">
+            use = <"*Use to record one or both of:
+- a functional assessment of heart failure based on symptoms; and 
+- an objective assessment based on both evidence of cardiovascular disease and symptoms.(en)">
+            misuse = <"">
+            copyright = <"© Nasjonal IKT HF, openEHR Foundation, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record one or both of:
+- a functional assessment of heart failure based on symptoms; and 
+- an objective assessment based on both evidence of cardiovascular disease and symptoms.">
+            keywords = <"heart", "failure", "cardiac", "breathlessness", "fatigue", "dysfunction", "ventricular">
+            use = <"Use to record one or both of:
+- a functional assessment of heart failure based on symptoms; and 
+- an objective assessment based on both evidence of cardiovascular disease and symptoms.">
+            misuse = <"">
+            copyright = <"© Nasjonal IKT HF, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- New York Heart Association functional classification
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Functional capacity
+                                        value matches {
+                                            DV_CODED_TEXT[at9007] matches {
+                                                defining_code matches {[ac9002]}    -- Functional capacity (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Objective assessment
+                                        value matches {
+                                            DV_CODED_TEXT[at9005] matches {
+                                                defining_code matches {[ac9003]}    -- Objective assessment (synthesised)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0016] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9006]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0018] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0019] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"New York Heart Association functional classification">
+                description = <"Eine von der New York Heart Association definierte, einfache Methode zur Klassifizierung des Ausmaßes einer Herzinsuffizienz.">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardwert, ein undefinierter/s Zeitpunkt oder Intervallereignis, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Funktionale Kapazität">
+                description = <"Beurteilung von Herzinsuffizienz basierend darauf, wie sich ein Patient mit einer Herzerkrankung während einer körperlichen Aktivität fühlt.">
+                comment = <"Klasse III und die Subtypen der Klasse III, IIIa und IIIb, sollen sich gegenseitig ausschließen. Sie sind jedoch zur Vollständigkeit in diesem internen Codesatz enthalten. Innerhalb eines Templates sollte entweder die Klasse III alleine oder beide Subtypen - IIIa und IIIb - auf inaktiv gesetzt werden.">
+            >
+            ["at0005"] = <
+                text = <"Klasse I">
+                description = <"Keine Einschränkung der körperlichen Aktivität. Gewöhnliche körperliche Aktivität verursacht keine übermäßige Ermüdung, Herzrasen, oder Dyspnoe (Atemnot).">
+            >
+            ["at0006"] = <
+                text = <"Klasse II">
+                description = <"Leichte Einschränkung der körperlichen Aktivität. Entspannt im Ruhezustand. Gewöhnliche körperliche Aktivität führt zu Ermüdung, Herzrasen, oder Dyspnoe (Atemnot).
+">
+            >
+            ["at0007"] = <
+                text = <"Klasse III">
+                description = <"Erhebliche Einschränkung der körperlichen Aktivität. Entspannt im Ruhezustand. Eine geringere als die normale Aktivität verursacht Ermüdung, Herzrasen, oder Dyspnoe.">
+            >
+            ["at0008"] = <
+                text = <"Klasse IIIa">
+                description = <"Gemäß Klasse III; keine Dyspnoe im Ruhezustand.">
+            >
+            ["at0009"] = <
+                text = <"Klasse IIIb">
+                description = <"Gemäß Klasse III; kürzliche Dyspnoe im Ruhezustand.">
+            >
+            ["at0010"] = <
+                text = <"Klasse IV">
+                description = <"Unfähigkeit, jeglicher körperlicher Aktivität ohne Beschwerden auszuführen. Symptome einer Herzinsuffizienz im Ruhezustand. Bei jeglicher körperlicher Aktivität nehmen die Beschwerden zu.">
+            >
+            ["at0011"] = <
+                text = <"Objektive Bewertung">
+                description = <"Bewertung der Herzinsuffizienz basierend auf Beweisen einer Herz-Kreislauf-Erkrankung und Symptomen.">
+            >
+            ["at0012"] = <
+                text = <"Klasse A">
+                description = <"Kein objektiver Nachweis einer Herz-Kreislauf-Erkrankung. Keine Symptome und keine Einschränkung der normalen körperlichen Aktivität.">
+            >
+            ["at0013"] = <
+                text = <"Klasse B">
+                description = <"Objektiver Nachweis einer minimalen Herz-Kreislauf-Erkrankung. Milde Symptome und leichte Einschränkung bei normaler Aktivität. Entspannt im Ruhezustand.">
+            >
+            ["at0014"] = <
+                text = <"Klasse C">
+                description = <"Objektiver Nachweis einer mittelschweren Herz-Kreislauf-Erkrankung. Erhebliche Einschränkung der Aktivität aufgrund von Symptomen, auch bei weniger als gewöhnlichen Aktivitäten. Entspannt lediglich im Ruhezustand.">
+            >
+            ["at0015"] = <
+                text = <"Klasse D">
+                description = <"Objektiver Nachweis einer schweren Herz-Kreislauf-Erkrankung. Schwerwiegende Einschränkungen. Symptome treten bereits im Ruhezustand auf.">
+            >
+            ["at0017"] = <
+                text = <"Störfaktoren">
+                description = <"Beschreibung von Problemen oder Faktoren, die sich auf die Bewertung auswirken können.">
+            >
+            ["at0019"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder zur Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Informationen zu örtlichen Krankenhausabteilungen oder zusätzliche Metadaten zur Anpassung an FHIR- oder CIMI-Modelle.
+">
+            >
+            ["ac9002"] = <
+                text = <"Funktionale Kapazität (synthesised)">
+                description = <"Beurteilung von Herzinsuffizienz basierend darauf, wie sich ein Patient mit einer Herzerkrankung während einer körperlichen Aktivität fühlt. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Objektive Bewertung (synthesised)">
+                description = <"Bewertung der Herzinsuffizienz basierend auf Beweisen einer Herz-Kreislauf-Erkrankung und Symptomen. (synthesised)">
+            >
+        >
+        ["pt-pt"] = <
+            ["at0000"] = <
+                text = <"Classificação funcional da New York Heart Association">
+                description = <"Um método simples de classificar o grau de insuficiência cardíaca, tal como definido pela New York Heart Association.">
+            >
+            ["at0002"] = <
+                text = <"Qualquer evento">
+                description = <"Por predefinição, um ponto não especificado no tempo ou um evento de intervalo que pode ser explicitamente definido num template ou em tempo de execução.">
+            >
+            ["at0004"] = <
+                text = <"Capacidade funcional">
+                description = <"Avaliação da insuficiência cardíaca com base na forma como um doente com doença cardíaca se sente durante a atividade física.">
+                comment = <"A classe III e os subtipos da classe III, IIIa e IIIb, destinam-se a ser mutuamente exclusivos, mas são incluídos neste conjunto de códigos internos para serem completos. Num template, apenas a classe III ou ambos os subtipos, IIIa e IIIb, devem ser definidos como inactivos.">
+            >
+            ["at0005"] = <
+                text = <"Classe I">
+                description = <"Sem limitação da atividade física. A atividade física normal não provoca fadiga excessiva, palpitações, dispneia (falta de ar).">
+            >
+            ["at0006"] = <
+                text = <"Classe II">
+                description = <"Ligeira limitação da atividade física. Confortável em repouso. A atividade física normal resulta em fadiga, palpitações, dispneia (falta de ar).">
+            >
+            ["at0007"] = <
+                text = <"Classe III">
+                description = <"Limitação acentuada da atividade física. Confortável em repouso. Uma atividade menor que a atividade normal provoca fadiga, palpitações ou dispneia.">
+            >
+            ["at0008"] = <
+                text = <"Classe IIIa">
+                description = <"De acordo com a Classe III; sem dispneia em repouso.">
+            >
+            ["at0009"] = <
+                text = <"Classe IIIb">
+                description = <"De acordo com a Classe III; dispneia recente em repouso.">
+            >
+            ["at0010"] = <
+                text = <"Classe IV">
+                description = <"Incapaz de realizar qualquer atividade física sem desconforto. Sintomas de insuficiência cardíaca em repouso. Se for realizada qualquer atividade física, o desconforto aumenta.">
+            >
+            ["at0011"] = <
+                text = <"Avaliação objetiva">
+                description = <"Avaliação da insuficiência cardíaca com base na evidência de doença cardiovascular e sintomas.">
+            >
+            ["at0012"] = <
+                text = <"Classe A">
+                description = <"Sem evidência objetiva de doença cardiovascular. Sem sintomas e sem limitação da atividade física normal.">
+            >
+            ["at0013"] = <
+                text = <"Classe B">
+                description = <"Evidência objetiva de doença cardiovascular mínima. Sintomas ligeiros e ligeira limitação durante a atividade normal. Confortável em repouso.">
+            >
+            ["at0014"] = <
+                text = <"Classe C">
+                description = <"Evidência objetiva de doença cardiovascular moderadamente grave. Limitação acentuada da atividade devido aos sintomas, mesmo durante uma atividade menos habitual. Confortável apenas em repouso.">
+            >
+            ["at0015"] = <
+                text = <"Classe D">
+                description = <"Evidência objetiva de doença cardiovascular grave. Limitações graves. Sente sintomas mesmo quando está em repouso.">
+            >
+            ["at0017"] = <
+                text = <"Fatores de confusão">
+                description = <"Descrição narrativa de quaisquer questões ou fatores que possam ter impacto na avaliação.">
+            >
+            ["at0019"] = <
+                text = <"Extensão">
+                description = <"Informações adicionais necessárias para captar o contexto local ou para alinhar com outros modelos de referência/formalismos.">
+                comment = <"Por exemplo: Informação departamental do hospital local ou metadados adicionais para alinhar com os equivalentes FHIR ou CIMI.">
+            >
+            ["ac9002"] = <
+                text = <"Capacidade funcional (synthesised)">
+                description = <"Avaliação da insuficiência cardíaca com base na forma como um doente com doença cardíaca se sente durante a atividade física. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Avaliação objetiva (synthesised)">
+                description = <"Avaliação da insuficiência cardíaca com base na evidência de doença cardiovascular e sintomas. (synthesised)">
+            >
+        >
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"NYHA-luokitus">
+                description = <"New York Heart Association -järjestön kehittämä yksinkertainen tapa luokitella sydämen vajaatoiminnan aste.">
+            >
+            ["at0002"] = <
+                text = <"Mikä tahansa tapahtuma">
+                description = <"Oletusarvoinen, määrittämättömänä ajanhetkenä tai ajanjaksolla ilmenevä tapahtuma, joka voi olla määritetty tarkasti jossakin mallissa tai suorituksen aikana.">
+            >
+            ["at0004"] = <
+                text = <"Toimintakyky">
+                description = <"Sydämen vajaatoiminnan arviointi sen perusteella, miltä sydänpotilaasta tuntuu liikunnan aikana.">
+                comment = <"Luokan III ja luokan III alatyyppien IIIa ja IIIb, on tarkoitus olla toisensa poissulkevia, mutta ne on sisällytetty tähän sisäiseen koodistoon täydellisyyden vuoksi. Mallin sisällä on asetettava ei-aktiivisiksi joko pelkästään Luokka III tai sen molemmat alatyypit IIIa ja IIIb.">
+            >
+            ["at0005"] = <
+                text = <"Luokka I">
+                description = <"Liikkuminen ei ole rajoittunutta. Tavallinen liikkuminen ei aiheuta epätavallista väsymystä, sydämentykytyksiä, hengenahdistusta.">
+            >
+            ["at0006"] = <
+                text = <"Luokka II">
+                description = <"Liikkuminen on hiukan rajoittunutta. Olo on levossa hyvä. Tavallinen liikkuminen aiheuttaa väsymystä, sydämentykytyksiä, hengenahdistusta.">
+            >
+            ["at0007"] = <
+                text = <"Luokka III">
+                description = <"Liikkuminen on selvästi rajoittunutta. Olo on levossa hyvä. Tavallista kevyempi liikkuminen aiheuttaa väsymystä, sydämentykytyksiä tai hengenahdistusta.">
+            >
+            ["at0008"] = <
+                text = <"Luokka IIIa">
+                description = <"Kuten Luokka III; ei hengenahdistusta levossa.">
+            >
+            ["at0009"] = <
+                text = <"Luokka IIIb">
+                description = <"Kuten Luokka III; viime aikoina ilmennyt hengenahdistusta levossa.">
+            >
+            ["at0010"] = <
+                text = <"Luokka IV">
+                description = <"Potilas ei voi liikkua lainkaan ilman että se aiheuttaisi epämukavuutta. Sydämen vajaatoiminnan oireita levossa. Epämukavuus lisääntyy, mikäli potilas liikkuu.">
+            >
+            ["at0011"] = <
+                text = <"Objektiivinen arviointi">
+                description = <"Sydämen vajaatoiminnan arviointi perustuen näyttöön sydän- ja verisuonisairauksista ja oireista.">
+            >
+            ["at0012"] = <
+                text = <"Luokka A">
+                description = <"Ei objektiivista näyttöä sydän- ja verisuonitaudeista. Ei oireita eikä rajoituksia tavallisessa liikkumisessa.">
+            >
+            ["at0013"] = <
+                text = <"Luokka B">
+                description = <"Objektiivista näyttöä lievästä sydän- ja verisuonitaudista. Lieviä oireita ja vähäisiä rajoituksia tavallisen liikkumisen aikana. Olo on levossa hyvä.">
+            >
+            ["at0014"] = <
+                text = <"Luokka C">
+                description = <"Objektiivista näyttöä keskivaikeasta sydän- ja verisuonitaudista. Merkittävää liikkumisen rajoittumista oireiden vuoksi myös tavallista vähäisemmässä liikunnassa. Olo on hyvä ainoastaan levossa.">
+            >
+            ["at0015"] = <
+                text = <"Luokka D">
+                description = <"Objektiivista näyttöä vaikeasta sydän- ja verisuonitaudista. Vakavia rajoituksia. Kokee oireita myös levossa.">
+            >
+            ["at0017"] = <
+                text = <"Sekoittavat tekijät">
+                description = <"Kertomusmuodossa oleva kuvaus ongelmista tai tekijöistä, jotka saattavat vaikuttaa arviointiin.">
+            >
+            ["at0019"] = <
+                text = <"Laajennus">
+                description = <"Lisätiedot, joita tarvitaan paikallisen asiayhteyden kirjaamiseksi tai yhtenäistämiseksi muiden viitemallien tai formalismien kanssa.">
+                comment = <"Esimerkki: Paikallisen sairaalan osastotiedot tai muu metadata, joilla saadaan aikaan vastaavuus vastaavien FHIR- tai CIMI-tietojen kanssa.">
+            >
+            ["ac9002"] = <
+                text = <"Toimintakyky (synthesised)">
+                description = <"Sydämen vajaatoiminnan arviointi sen perusteella, miltä sydänpotilaasta tuntuu liikunnan aikana. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Objektiivinen arviointi (synthesised)">
+                description = <"Sydämen vajaatoiminnan arviointi perustuen näyttöön sydän- ja verisuonisairauksista ja oireista. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"*New York Heart Association functional classification(en)">
+                description = <"*A simple method of classifying the extent of heart failure, as defined by the New York Heart Association.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Functional capacity(en)">
+                description = <"*Assessment of heart failure based on how a patient with cardiac disease feels during physical activity.(en)">
+            >
+            ["at0005"] = <
+                text = <"Klasse I">
+                description = <"Ingen begrensninger i fysisk kapasitet. Vanlig fysisk aktivitet forårsaker ikke uvanlig tretthet, hjertebank eller pustebesvær.">
+            >
+            ["at0006"] = <
+                text = <"Klasse II">
+                description = <"Liten begrensning i fysisk kapasitet. Har det bra i hvile. Vanlig fysisk aktivitet forårsaker tretthet, hjertebank eller pustebesvær.">
+            >
+            ["at0007"] = <
+                text = <"Klasse III">
+                description = <"Merkbar begrensning i fysisk kapasitet. Har det bra i hvile. Mindre enn vanlig fysisk aktivitet forårsaker tretthet, hjertebank eller pustebesvær.">
+            >
+            ["at0008"] = <
+                text = <"*Class IIIa(en)">
+                description = <"*As per Class III; no dyspnoea at rest.(en)">
+            >
+            ["at0009"] = <
+                text = <"*Class IIIb(en)">
+                description = <"*As per Class III; recent dyspnoea at rest.(en)">
+            >
+            ["at0010"] = <
+                text = <"*Class IV(en)">
+                description = <"Ikke i stand til å utføre fysisk aktivitet uten ubehag. Symptomer på hjertesvikt i hvile. Hvis fysisk aktivitet utføres, øker ubehaget.">
+            >
+            ["at0011"] = <
+                text = <"*Objective assessment(en)">
+                description = <"*Assessment of heart failure based on evidence of cardiovascular disease and symptoms.(en)">
+            >
+            ["at0012"] = <
+                text = <"Klasse A">
+                description = <"Ingen objektive tegn på kardiovaskulær sykdom. Ingen symptomer og ingen begrensninger i vanlig fysisk aktivitet.">
+            >
+            ["at0013"] = <
+                text = <"Klasse B">
+                description = <"Objektive tegn på lett kardiovaskulær sykdom. Milde symptomer og liten begrensning ved vanlig fysisk aktivitet. Har det bra i hvile.">
+            >
+            ["at0014"] = <
+                text = <"Klasse C">
+                description = <"Objektive tegn på moderat kardiovaskulær sykdom. Markert begrensning i fysisk kapasitet på grunn av symptomer, også ved mindre enn vanlig aktivitet. Har det bra kun i hvile.">
+            >
+            ["at0015"] = <
+                text = <"Klasse D">
+                description = <"Objektive tegn på alvorlig kardiovaskulær sykdom. Store begrensninger. Opplever symptomer selv i hvile.">
+            >
+            ["at0017"] = <
+                text = <"*Confounding factors(en)">
+                description = <"*Narrative description of any issues or factors that may impact on the assessment.(en)">
+            >
+            ["at0019"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["ac9002"] = <
+                text = <"*Functional capacity(en) (synthesised)">
+                description = <"*Assessment of heart failure based on how a patient with cardiac disease feels during physical activity.(en) (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"*Objective assessment(en) (synthesised)">
+                description = <"*Assessment of heart failure based on evidence of cardiovascular disease and symptoms.(en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"New York Heart Association functional classification">
+                description = <"A simple method of classifying the extent of heart failure, as defined by the New York Heart Association.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Functional capacity">
+                description = <"Assessment of heart failure based on how a patient with cardiac disease feels during physical activity.">
+                comment = <"Class III and the Class III subtypes, IIIa and IIIb, are intended to be mutually exclusive but are included in this internal code set for completeness. Within a template either the Class III alone or both of the subtypes, IIIa and IIIb, should be set to inactive.">
+            >
+            ["at0005"] = <
+                text = <"Class I">
+                description = <"No limitation of physical activity. Ordinary physical activity does not cause undue fatigue, palpitation, dyspnea (shortness of breath).">
+            >
+            ["at0006"] = <
+                text = <"Class II">
+                description = <"Slight limitation of physical activity. Comfortable at rest. Ordinary physical activity results in fatigue, palpitation, dyspnea (shortness of breath).">
+            >
+            ["at0007"] = <
+                text = <"Class III">
+                description = <"Marked limitation of physical activity. Comfortable at rest. Less than ordinary activity causes fatigue, palpitation, or dyspnea.">
+            >
+            ["at0008"] = <
+                text = <"Class IIIa">
+                description = <"As per Class III; no dyspnoea at rest.">
+            >
+            ["at0009"] = <
+                text = <"Class IIIb">
+                description = <"As per Class III; recent dyspnoea at rest.">
+            >
+            ["at0010"] = <
+                text = <"Class IV">
+                description = <"Unable to carry on any physical activity without discomfort. Symptoms of heart failure at rest. If any physical activity is undertaken, discomfort increases.">
+            >
+            ["at0011"] = <
+                text = <"Objective assessment">
+                description = <"Assessment of heart failure based on evidence of cardiovascular disease and symptoms.">
+            >
+            ["at0012"] = <
+                text = <"Class A">
+                description = <"No objective evidence of cardiovascular disease. No symptoms and no limitation in ordinary physical activity.">
+            >
+            ["at0013"] = <
+                text = <"Class B">
+                description = <"Objective evidence of minimal cardiovascular disease. Mild symptoms and slight limitation during ordinary activity. Comfortable at rest.">
+            >
+            ["at0014"] = <
+                text = <"Class C">
+                description = <"Objective evidence of moderately severe cardiovascular disease. Marked limitation in activity due to symptoms, even during less-than-ordinary activity. Comfortable only at rest.">
+            >
+            ["at0015"] = <
+                text = <"Class D">
+                description = <"Objective evidence of severe cardiovascular disease. Severe limitations. Experiences symptoms even while at rest.">
+            >
+            ["at0017"] = <
+                text = <"Confounding factors">
+                description = <"Narrative description of any issues or factors that may impact on the assessment.">
+            >
+            ["at0019"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9002"] = <
+                text = <"Functional capacity (synthesised)">
+                description = <"Assessment of heart failure based on how a patient with cardiac disease feels during physical activity. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Objective assessment (synthesised)">
+                description = <"Assessment of heart failure based on evidence of cardiovascular disease and symptoms. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009", "at0010">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0012", "at0013", "at0014", "at0015">
+        >
+    >

@@ -1,0 +1,979 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=2acdfde3-dedf-4980-ae48-5f52e5e35a6c; build_uid=3b74cc14-65ef-4aad-9ba1-50e825350473)
+    openEHR-EHR-EVALUATION.health_risk-covid.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-EVALUATION.health_risk.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Jasmin Buck, Sebastian Garde">
+                ["organisation"] = <"University of Heidelberg, Cental Queensland University">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Annika Terner">
+                ["organisation"] = <"B3 Healthcare Consulting AB">
+                ["email"] = <"annika.terner@b3.se">
+            >
+            accreditation = <".">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Alan March">
+                ["organisation"] = <"Hospital Universitario Austral, Pilar, Buenos Aires, Argentina">
+                ["email"] = <"alandmarch@gmail.com">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            author = <
+                ["name"] = <"Alessandro Sulis/Francesca Frexia/Cecilia Mascia">
+                ["organisation"] = <"CRS4 - Center for advanced studies, research and development in Sardinia, Pula (Cagliari), Italy">
+                ["email"] = <"alessandro.sulis@crs4.it/francesca.frexia@crs4.it/cecilia.mascia@crs4.it">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2006-04-23">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Tomas Alme, DIPS, Norway", "Nadim Anani, Karolinska Institutet, Sweden", "Vebjørn Arntzen, Oslo University Hospital, Norway", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Rong Chen, Cambio Healthcare Systems, Sweden", "Stephen Chu, Queensland Health, Australia", "Shahla Foozonkhah, Iran ministry of health and education, Iran", "Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway", "Sebastian Garde, Ocean Informatics, Germany", "Heather Grain, Llewelyn Grain Informatics, Australia", "Anca Heyd, DIPS ASA, Norway", "Lars Karlsen, DIPS ASA, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hallvard Lærum, Norwegian Directorate of e-health, Norway", "Luis Marco Ruiz, Norwegian Center for Integrated Care and Telemedicine, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Jussara Rotzsch, UNB, Brazil", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "John Tore Valand, Helse Bergen, Norway">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Health Risk, draft archetype, NEHTA Clinical Knowledge Manager [Internet]. Australia: National eHealth Transition Authority. Authored: 2006 Apr 23. Available at: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.1276 (accessed 2015 Mar 04). Archetype originated from the openEHR CKM.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"C03A2232B36DD2C4EA241000AF34B764">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Dokumentation des Vorhandenseins eines Risikos mit möglichen Auswirkungen jetzt oder in der Zukunft">
+            keywords = <"Einschätzung", ...>
+            use = <"*Use to record known risk factors for an identified disease, condition, or other potentially adverse health issue, and/or an evaluation of the likelihood of the individual experiencing it in the future.
+
+As risk factors may be gradually identified over time and the overall risk reassessed as a result, the 'Date identified' will record the date on which each risk factor has been identified and the 'Last updated' data element will record the last time that the whole assessment was updated.(en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera kända riskfaktorer för en identifierad sjukdom, tillstånd eller annat potentiellt skadligt hälsotillstånd, och / eller en utvärdering av sannolikheten för att personen upplever det i framtiden.
+
+Denna arketyp har medvetet lämnats öppen och omfattande. Risken kan bestämmas av riskfaktorer från någon eller alla följande domäner: medicinska; biomarkör; livsstil; social; yrkesrisk; eller miljödomäner.
+
+Avsikten med denna arketyp är att dokumentera potentiell risk vid en tidpunkt och att stödja beslutsfattande som kan minska den identifierade risken, vare sig av kliniker eller individen själva.">
+            keywords = <"Bedömning", "Risk", "Utvärdering", "Negativ", "Faktor", "Hälsa", "Fråga", "Beräknad", "Förvaltning", "Riskfaktor", "Risklagstiftning", "Hälsorisk">
+            use = <"Används för att registrera kända riskfaktorer för en identifierad sjukdom, tillstånd eller annat potentiellt skadligt hälsotillstånd, och / eller en utvärdering av sannolikheten för att personen drabbas av det i framtiden.
+
+Eftersom riskfaktorer kan identifieras gradvis över tiden och den övergripande risken omvärderas som ett resultat kommer den \"identifierade Datum\" att registrera det datum då varje riskfaktor har identifierats och \"Senast uppdaterad\" dataelement registrerar sista gången att hela utvärderingen uppdaterades.">
+            misuse = <"">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"*To record known risk factors for, and assess the potential risk of Covid-19 infection.
+
+The intent of this archetype is to document potential risk at a point in time, and to support decision-making that may reduce the identified risk, whether by clinicians or the individual themselves.(en)">
+            keywords = <"*assessment(en)", "*risk(en)", "*evaluation(en)", "*adverse(en)", "*factor(en)", "*health(en)", "*issue(en)", "*estimated(en)", "*management(en)", "*risk factor(en)", "*risk stratification(en)">
+            use = <"*To record known risk factors for, and assess the potential risk of Covid-19 infection.
+
+As risk factors may be gradually identified over time and the overall risk reassessed as a result, the 'Date identified' will record the date on which each risk factor has been identified and the 'Last updated' data element will record the last time that the whole assessment was updated.(en)">
+            misuse = <"">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Para el registro de factores de riesgo para una enfermedad, condición u otro problema potencialmente adverso para la salud, y/o para la evaluación de la probabilidad de que el individuo experimente estas situaciones en el futuro.
+Este arquetipo se mantiene deliberadamente abierto y amplio en su alcance. El 'Riesgo para la Salud' puede ser determinado a partir de todos o algunos de los factores de riesgo: médicos, marcadores biológicos, estilo de vidas, sociales, riesgo ocupacional o cuestiones ambientales.
+El propósito de este arquetipo es la documentación de un riesgo potencial en un punto en el tiempo, y para asistir en la toma de decisiones que puedan reducir el mencionado riesgo, ya sea por parte de los médicos o del/de los individuo/s mismo/s.">
+            keywords = <"evaluación", "riesgo", "adverso", "factor", "salud", "problema", "estimado", "manejo", "factor de riesgo", "estratificación de riesgo">
+            use = <"*Use to record known risk factors for an identified disease, condition, or other potentially adverse health issue, and/or an evaluation of the likelihood of the individual experiencing it in the future.
+
+As risk factors may be gradually identified over time and the overall risk reassessed as a result, the 'Date identified' will record the date on which each risk factor has been identified and the 'Last updated' data element will record the last time that the whole assessment was updated.(en)">
+            misuse = <"">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record known risk factors for, and assess the potential risk of Covid-19 infection.
+
+The intent of this archetype is to document potential risk at a point in time, and to support decision-making that may reduce the identified risk, whether by clinicians or the individual themselves.">
+            keywords = <"assessment", "risk", "evaluation", "adverse", "factor", "health", "issue", "estimated", "management", "risk factor", "risk stratification">
+            use = <"To record known risk factors for, and assess the potential risk of Covid-19 infection.
+
+As risk factors may be gradually identified over time and the overall risk reassessed as a result, the 'Date identified' will record the date on which each risk factor has been identified and the 'Last updated' data element will record the last time that the whole assessment was updated.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل التخاطر/احتمالية الخطر لظرف صحي قد يحدث في المستقبل">
+            keywords = <"تقييم", ...>
+            use = <"*Use to record known risk factors for an identified disease, condition, or other potentially adverse health issue, and/or an evaluation of the likelihood of the individual experiencing it in the future.
+
+As risk factors may be gradually identified over time and the overall risk reassessed as a result, the 'Date identified' will record the date on which each risk factor has been identified and the 'Last updated' data element will record the last time that the whole assessment was updated.(en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"Registrare i fattori di rischio noti e valutare il rischio potenziale di infezione da Covid-19.
+
+L'intento di questo archetipo è quello di documentare il rischio potenziale in un determinato momento e di supportare le decisioni che possono ridurre il rischio identificato, sia da parte dei clinici che dell'individuo stesso.">
+            keywords = <"valutazione, rischio, giudizio, valutazione, avverso, fattore, salute, problema, stima, gestione, fattore di rischio, stratificazione del rischio", ...>
+            use = <"Registrare i fattori di rischio noti e valutare il rischio potenziale di infezione da Covid-19.
+
+Poiché i fattori di rischio possono essere identificati gradualmente nel tempo e il rischio complessivo può essere rivalutato di conseguenza, la \"Data identificata\" registrerà la data in cui ciascun fattore di rischio è stato identificato e l'elemento di dati \"Ultimo aggiornamento\" registrerà l'ultima volta che l'intera valutazione è stata aggiornata.">
+            misuse = <"">
+        >
+    >
+
+definition
+    EVALUATION[at0000.1] matches {    -- Covid-19 infection risk assessment
+        /data[at0001]/items matches {
+            ELEMENT[at0002.1] matches {    -- Health risk
+                value matches {
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code matches {[at0.1]}    -- COVID-19 Risk assessment
+                    }
+                }
+            }
+            CLUSTER[at0016] matches {
+                items matches {
+                    ELEMENT[at0013.1] matches {    -- Risk factor
+                        value matches {
+                            DV_CODED_TEXT[at0.9002] matches {
+                                defining_code matches {[ac0.9005]}    -- Risk factor (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0017.1] matches {    -- Presence
+                        value matches {
+                            DV_CODED_TEXT[at0.9004] matches {
+                                defining_code matches {[ac0.9002]}    -- Presence (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0003.1] matches {    -- Risk assessment
+                value matches {
+                    DV_CODED_TEXT[at0.9005] matches {
+                        defining_code matches {[ac0.9003]}    -- Risk assessment (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"*Health risk assessment(en)">
+                description = <"*Assessment of the potential and likelihood of future adverse health effects as determined by identified risk factors.(en)">
+            >
+            ["at0002.1"] = <
+                text = <"*Health risk(en)">
+                description = <"*Identification of the potential future disease, condition or health issue for which the risk is being assessed, by name.(en)">
+                comment = <"*Coding of 'Health risk' with a terminology is preferred, where possible. Free text should be used only if there is no appropriate terminology available. For example: risk of cardiovascular disease, with risk factors of hypertension and hypercholesterolaemia.(en)">
+            >
+            ["at0.1"] = <
+                text = <"*COVID-19 Risk assessment (en)">
+                description = <"*Assessment of risk of COVID-19 infection (en)">
+            >
+            ["at0013.1"] = <
+                text = <"*Risk factor(en)">
+                description = <"*Identification of the risk factor, by name.(en)">
+                comment = <"*For example: hypertension and hypercholesterolaemia, which may be used as part of the overall assessment for cardiovascular disease; or a genetic marker. Coding of 
+'Risk factor' with a terminology, where possible.(en)">
+            >
+            ["at0.9"] = <
+                text = <"*Contact with confirmed Covid-19 case (en)">
+                description = <"*">
+            >
+            ["at0.10"] = <
+                text = <"*Contact with suspected case/ pneumonia case (en)">
+                description = <"*Contact with suspected case/ pneumonia case within 14 days before symptom onset. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Contact with birds in China (en)">
+                description = <"*Contact with birds in China in 10 days before symptom onset. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Contact with confirmed human case of Avian flu in China (en)">
+                description = <"*Contact with confirmed human case of Avian flu in China in 10 days before symptom onset. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Contact with severe, unexplained respiratory disease (en)">
+                description = <"*Contact with severe, unexplained respiratory disease in 10 days before symptom onset. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Potential contact exposure based on location (en)">
+                description = <"*Potential contact exposure based on location (en)">
+            >
+            ["at0027.1"] = <
+                text = <"*Detail(en)">
+                description = <"*Structured detail about other aspects of the risk factor assessment.(en)">
+                comment = <"*For example: Prevalence of the risk factor in family members.(en)">
+            >
+            ["at0017.1"] = <
+                text = <"*Presence(en)">
+                description = <"*Presence of the risk factor.(en)">
+            >
+            ["at0.15"] = <
+                text = <"*Unknown (en)">
+                description = <"*No information is available for this risk factor. (en)">
+            >
+            ["at0003.1"] = <
+                text = <"*Risk assessment(en)">
+                description = <"*Evaluation of the health risk.(en)">
+                comment = <"*There may be multiple variations on the assessment of risk. The Choice data type allows for recording of the assessment as either free text or value sets (such as low, medium or hig). The proportion data type allows recording of a percentage, a ratio or a fraction. The quantity data type allows recording of a decimal number.(en)">
+            >
+            ["at0.16"] = <
+                text = <"*Low risk (en)">
+                description = <"*Covid19 infection is assessed to be low-risk (en)">
+            >
+            ["at0.17"] = <
+                text = <"*High risk (en)">
+                description = <"*The risk of the a patient having a Covid-19 infection is assessed to be high. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Needs admission for respiratory disease (en)">
+                description = <"*Does the patient require hospital admission with either clinical or radiological evidence of pneumonia, adult respiratory distress syndrome, or influenza like illness? (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Other household members are ill (en)">
+                description = <"*The patient is in a house with other household members who are ill (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Household members with travel exposure (en)">
+                description = <"*Members of the patient's household have travel exposure. (en)">
+            >
+            ["ac0.9005"] = <
+                text = <"*Risk factor(en) (synthesised)">
+                description = <"*Identification of the risk factor, by name.(en) (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"*Presence(en) (synthesised)">
+                description = <"*Presence of the risk factor.(en) (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"*Risk assessment(en) (synthesised)">
+                description = <"*Evaluation of the health risk.(en) (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000.1"] = <
+                text = <"Riskbedömning">
+                description = <"Bedömning av potential och sannolikhet för framtida negativa hälsoeffekter som bestäms av identifierade riskfaktorer.">
+            >
+            ["at0002.1"] = <
+                text = <"Risk">
+                description = <"Identifiering med namn av den potentiella framtida sjukdomen, tillståndet eller hälsotillståndet för vilken risken är bedömd.">
+                comment = <"Vid kodning av \"Risk\" med en terminologi är att föredra, om möjligt. Fri text ska endast användas om det inte finns någon lämplig terminologi. Till exempel: risk för kardiovaskulär sjukdom, med riskfaktorer för hypertension och hyperkolesterolemi.">
+            >
+            ["at0.1"] = <
+                text = <"*COVID-19 Risk assessment (en)">
+                description = <"*Assessment of risk of COVID-19 infection (en)">
+            >
+            ["at0013.1"] = <
+                text = <"Riskfaktor">
+                description = <"Identifiering med namn av riskfaktorn.">
+                comment = <"Till exempel: högt blodtryck och hyperkolesterolemi, som kan användas som en del av den övergripande bedömningen för kardiovaskulär sjukdom; eller en genetisk markör. Vid kodning av
+Riskfaktor använd en terminologi om det är möjligt.">
+            >
+            ["at0.9"] = <
+                text = <"*Contact with confirmed Covid-19 case (en)">
+                description = <"*">
+            >
+            ["at0.10"] = <
+                text = <"*Contact with suspected case/ pneumonia case (en)">
+                description = <"*Contact with suspected case/ pneumonia case within 14 days before symptom onset. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Contact with birds in China (en)">
+                description = <"*Contact with birds in China in 10 days before symptom onset. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Contact with confirmed human case of Avian flu in China (en)">
+                description = <"*Contact with confirmed human case of Avian flu in China in 10 days before symptom onset. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Contact with severe, unexplained respiratory disease (en)">
+                description = <"*Contact with severe, unexplained respiratory disease in 10 days before symptom onset. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Potential contact exposure based on location (en)">
+                description = <"*Potential contact exposure based on location (en)">
+            >
+            ["at0027.1"] = <
+                text = <"Detaljer">
+                description = <"Strukturerad detalj om andra aspekter av riskfaktorbedömningen.">
+                comment = <"Till exempel: Förekomst av riskfaktorn hos familjemedlemmar.">
+            >
+            ["at0017.1"] = <
+                text = <"Förekomst">
+                description = <"Förekomst av riskfaktor.">
+            >
+            ["at0.15"] = <
+                text = <"*Unknown (en)">
+                description = <"*No information is available for this risk factor. (en)">
+            >
+            ["at0003.1"] = <
+                text = <"Riskbedömning">
+                description = <"Utvärdering av hälsorisken.">
+                comment = <"Det kan finnas flera variationer i riskbedömningen. Datatypen val (choice) möjliggör registrering av bedömningen som antingen fritext eller vallista (t.ex. låg, medium eller hög). Datatypen andel (proportion) tillåter registrering av en procentandel, ett förhållande eller en fraktion. Datatypen numerisk (quantity) tillåter registrering av ett decimaltal.">
+            >
+            ["at0.16"] = <
+                text = <"*Low risk (en)">
+                description = <"*Covid19 infection is assessed to be low-risk (en)">
+            >
+            ["at0.17"] = <
+                text = <"*High risk (en)">
+                description = <"*The risk of the a patient having a Covid-19 infection is assessed to be high. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Needs admission for respiratory disease (en)">
+                description = <"*Does the patient require hospital admission with either clinical or radiological evidence of pneumonia, adult respiratory distress syndrome, or influenza like illness? (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Other household members are ill (en)">
+                description = <"*The patient is in a house with other household members who are ill (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Household members with travel exposure (en)">
+                description = <"*Members of the patient's household have travel exposure. (en)">
+            >
+            ["ac0.9005"] = <
+                text = <"Riskfaktor (synthesised)">
+                description = <"Identifiering med namn av riskfaktorn. (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"Förekomst (synthesised)">
+                description = <"Förekomst av riskfaktor. (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"Riskbedömning (synthesised)">
+                description = <"Utvärdering av hälsorisken. (synthesised)">
+            >
+        >
+        ["fi"] = <
+            ["at0000.1"] = <
+                text = <"Covid-19 infektioriskin arviointi">
+                description = <"Arvio Covid-19-tartunnan potentiaalista ja todennäköisyydestä tunnistettujen riskitekijöiden perusteella.">
+            >
+            ["at0002.1"] = <
+                text = <"Terveysriski">
+                description = <"* Mahdollisen tulevan sairauden, tilan tai terveysongelman, josta riskiä arvioidaan, yksilöinti nimellä.">
+                comment = <"*Coding of 'Health risk' with a terminology is preferred, where possible. Free text should be used only if there is no appropriate terminology available. For example: risk of cardiovascular disease, with risk factors of hypertension and hypercholesterolaemia.(en)">
+            >
+            ["at0.1"] = <
+                text = <"*COVID-19 riskiarvio">
+                description = <"Riskiarvio COVID-19 infektiolle">
+            >
+            ["at0013.1"] = <
+                text = <"Riskitekijä">
+                description = <"Riskitekijöiden identifiointi nimettyinä">
+                comment = <"*For example: hypertension and hypercholesterolaemia, which may be used as part of the overall assessment for cardiovascular disease; or a genetic marker. Coding of 
+'Risk factor' with a terminology, where possible.(en)">
+            >
+            ["at0.9"] = <
+                text = <"Kontakti todetun Covid-19 tartunnan saaneen kanssa">
+                description = <"Yhteys vahvistettuun Covid-19-tapaukseen 14 päivän kuluessa ennen oireen puhkeamista.">
+            >
+            ["at0.10"] = <
+                text = <"Yhteys epäiltyyn tartunnan saaneeseen / keuhkokuumetapaukseen">
+                description = <"Yhteys epäiltyyn / keuhkokuumetapaukseen 14 päivän kuluessa ennen oireen puhkeamista. ">
+            >
+            ["at0.11"] = <
+                text = <"Yhteys lintuihin Kiinassa">
+                description = <"Kosketus lintuihin Kiinassa 10 päivässä ennen oireiden puhkeamista.">
+            >
+            ["at0.12"] = <
+                text = <"Yhteys vahvistettuun lintuinfluenssatapaukseen Kiinassa">
+                description = <"Yhteys vahvistettuun lintuinfluenssatapaukseen Kiinassa 10 päivän kuluessa ennen oireiden puhkeamista.">
+            >
+            ["at0.13"] = <
+                text = <"Yhteys vakavaan, tunnistamattomaan hengityssairauteen.">
+                description = <"Kosketus vakavaan, selittämättömään hengitystiesairauteen 10 päivässä ennen oireiden puhkeamista.">
+            >
+            ["at0.14"] = <
+                text = <"Potentiaalinen yhteys altistumiseen perustuen paikkaan.">
+                description = <"Mahdollinen kosketusaltistus sijainnin perusteella.">
+            >
+            ["at0027.1"] = <
+                text = <"Yksityskohtaiset tiedot">
+                description = <"Jäsennelty yksityiskohta muista riskitekijöiden arvioinnin näkökohdista. ">
+                comment = <"*For example: Prevalence of the risk factor in family members.(en)">
+            >
+            ["at0017.1"] = <
+                text = <"Esiintyvyys">
+                description = <"Riskitekijän esiintyminen.
+">
+            >
+            ["at0.15"] = <
+                text = <"Tuntematon">
+                description = <"Ei lisätietoja tälle riskitiedolle">
+            >
+            ["at0003.1"] = <
+                text = <"Riskiarvio">
+                description = <"Terveysriskin arviointi">
+                comment = <"*There may be multiple variations on the assessment of risk. The Choice data type allows for recording of the assessment as either free text or value sets (such as low, medium or hig). The proportion data type allows recording of a percentage, a ratio or a fraction. The quantity data type allows recording of a decimal number.(en)">
+            >
+            ["at0.16"] = <
+                text = <"Vähäinen riski">
+                description = <"Potilaan riski saada Covid-19-infektio on vähäinen.">
+            >
+            ["at0.17"] = <
+                text = <"Korkea riski">
+                description = <"Potilaan riski saada Covid-19-infektio on suuri.">
+            >
+            ["at0.18"] = <
+                text = <"*Needs admission for respiratory disease(en)">
+                description = <"*Does the patient require hospital admission with either clinical or radiological evidence of pneumonia, adult respiratory distress syndrome, or influenza like illness?(en)">
+            >
+            ["at0.19"] = <
+                text = <"*Other household members are ill(en)">
+                description = <"*The patient is in a house with other household members who are ill(en)">
+            >
+            ["at0.20"] = <
+                text = <"*Household members with travel exposure(en)">
+                description = <"*Members of the patient's household have travel exposure.(en)">
+            >
+            ["ac0.9005"] = <
+                text = <"Riskitekijä (synthesised)">
+                description = <"Riskitekijöiden identifiointi nimettyinä (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"Esiintyvyys (synthesised)">
+                description = <"Riskitekijän esiintyminen.
+ (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"Riskiarvio (synthesised)">
+                description = <"Terveysriskin arviointi (synthesised)">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000.1"] = <
+                text = <"Evaluacion de riesgo para la salud">
+                description = <"Evaluación del potencial y probabilidad de futuros efectos adversos para la salud determinados por la identificación de factores de riesgo.">
+            >
+            ["at0002.1"] = <
+                text = <"Riesgo para la salud">
+                description = <"Identificación, por nombre, de la enfermedad, condición o problema de salud potenciales para el cual se evalua el riesgo.">
+                comment = <"Se prefiere la codificación del 'Riesgo para la salud' mediante una terminología cuando esto sea posible. El texto libre solo debería ser utilizado cuando no se disponga de una terminología adecuada. Por ejemplo: riesgo de enfermedad cardiovascular con factores de riesgo de hipertensión arterial e hipercolesterolemia.">
+            >
+            ["at0.1"] = <
+                text = <"*COVID-19 Risk assessment (en)">
+                description = <"*Assessment of risk of COVID-19 infection (en)">
+            >
+            ["at0013.1"] = <
+                text = <"Factor de riesgo">
+                description = <"Identificación, por nombre, del factor de riesgo.">
+                comment = <"Por ejemplo: hipertensión arterial e hipercolesterolemia, que pueden ser utilizados como parte de una evaluación general de enfermedad cardiovascular; o un marcador genético. Codificar el factor de riesgo mediante una terminología cuando esto sea posible.">
+            >
+            ["at0.9"] = <
+                text = <"*Contact with confirmed Covid-19 case (en)">
+                description = <"*">
+            >
+            ["at0.10"] = <
+                text = <"*Contact with suspected case/ pneumonia case (en)">
+                description = <"*Contact with suspected case/ pneumonia case within 14 days before symptom onset. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Contact with birds in China (en)">
+                description = <"*Contact with birds in China in 10 days before symptom onset. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Contact with confirmed human case of Avian flu in China (en)">
+                description = <"*Contact with confirmed human case of Avian flu in China in 10 days before symptom onset. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Contact with severe, unexplained respiratory disease (en)">
+                description = <"*Contact with severe, unexplained respiratory disease in 10 days before symptom onset. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Potential contact exposure based on location (en)">
+                description = <"*Potential contact exposure based on location (en)">
+            >
+            ["at0027.1"] = <
+                text = <"Detalle">
+                description = <"Detalle estructurado acerca de otros aspectos de la evaluación del factor de riesgo.">
+                comment = <"Por ejemplo: Prevalencia del factor de riesgo en famililares.">
+            >
+            ["at0017.1"] = <
+                text = <"Presencia">
+                description = <"Presencia del factor de riesgo.">
+            >
+            ["at0.15"] = <
+                text = <"*Unknown (en)">
+                description = <"*No information is available for this risk factor. (en)">
+            >
+            ["at0003.1"] = <
+                text = <"Evaluación de riesgo">
+                description = <"Evaluación del riesgo para la salud.">
+                comment = <"Pueden haber múltiples variaciones en la evaluación de riesgo. La elección del tipo de dato permite el registro de la evaluación tanto mediante texto libre como mediante un conjunto de valores (tales como bajo, medio o alto). El tipo de dato 'proporción' permite el registro como un porcentaje, una tasa o una fracción. El tipo de dato 'cantidad' permite el registro como un número decimal.">
+            >
+            ["at0.16"] = <
+                text = <"*Low risk (en)">
+                description = <"*Covid19 infection is assessed to be low-risk (en)">
+            >
+            ["at0.17"] = <
+                text = <"*High risk (en)">
+                description = <"*The risk of the a patient having a Covid-19 infection is assessed to be high. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Needs admission for respiratory disease (en)">
+                description = <"*Does the patient require hospital admission with either clinical or radiological evidence of pneumonia, adult respiratory distress syndrome, or influenza like illness? (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Other household members are ill (en)">
+                description = <"*The patient is in a house with other household members who are ill (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Household members with travel exposure (en)">
+                description = <"*Members of the patient's household have travel exposure. (en)">
+            >
+            ["ac0.9005"] = <
+                text = <"Factor de riesgo (synthesised)">
+                description = <"Identificación, por nombre, del factor de riesgo. (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"Presencia (synthesised)">
+                description = <"Presencia del factor de riesgo. (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"Evaluación de riesgo (synthesised)">
+                description = <"Evaluación del riesgo para la salud. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000.1"] = <
+                text = <"Helserisiko">
+                description = <"Vurdering av potensiale og sannsynlighet for fremtidige uønskede helseeffekter, bestemt ut fra spesifikke risikofaktorer.">
+            >
+            ["at0002.1"] = <
+                text = <"Helserisiko">
+                description = <"Navnet på den potensielle fremtidige sykdommen, tilstanden eller helseproblemet som risikoen gjelder.">
+                comment = <"*Coding of 'Health risk' with a terminology is preferred, where possible. Free text should be used only if there is no appropriate terminology available. For example: risk of cardiovascular disease, with risk factors of hypertension and hypercholesterolaemia. (en)">
+            >
+            ["at0.1"] = <
+                text = <"COVID-19 Risk assessment">
+                description = <"Assessment of risk of COVID-19 infection">
+            >
+            ["at0013.1"] = <
+                text = <"Risikofaktor">
+                description = <"Navnet på risikofaktoren.">
+                comment = <"*For example: hypertension and hypercholesterolaemia, which may be used as part of the overall assessment for cardiovascular disease; or a genetic marker. Coding of 
+'Risk factor' with a terminology, where possible. (en)">
+            >
+            ["at0.9"] = <
+                text = <"Contact with confirmed Covid-19 case">
+                description = <"Contact with confirmed Covid-19 case within 14 days before symptom onset.">
+            >
+            ["at0.10"] = <
+                text = <"Contact with suspected case/ pneumonia case">
+                description = <"Contact with suspected case/ pneumonia case within 14 days before symptom onset.">
+            >
+            ["at0.11"] = <
+                text = <"Contact with birds in China">
+                description = <"Contact with birds in China in 10 days before symptom onset.">
+            >
+            ["at0.12"] = <
+                text = <"Contact with confirmed human case of Avian flu in China">
+                description = <"Contact with confirmed human case of Avian flu in China in 10 days before symptom onset.">
+            >
+            ["at0.13"] = <
+                text = <"Contact with severe, unexplained respiratory disease">
+                description = <"Contact with severe, unexplained respiratory disease in 10 days before symptom onset.">
+            >
+            ["at0.14"] = <
+                text = <"Potential contact exposure based on location">
+                description = <"Potential contact exposure based on location">
+            >
+            ["at0027.1"] = <
+                text = <"Detail">
+                description = <"Structured detail about other aspects of the risk factor assessment.">
+                comment = <"For example: Prevalence of the risk factor in family members.">
+            >
+            ["at0017.1"] = <
+                text = <"Presence">
+                description = <"Presence of the risk factor.">
+            >
+            ["at0.15"] = <
+                text = <"*Unknown (en)">
+                description = <"*No information is available for this risk factor. (en)">
+            >
+            ["at0003.1"] = <
+                text = <"Risk assessment">
+                description = <"Evaluation of the health risk.">
+                comment = <"There may be multiple variations on the assessment of risk. The Choice data type allows for recording of the assessment as either free text or value sets (such as low, medium or hig). The proportion data type allows recording of a percentage, a ratio or a fraction. The quantity data type allows recording of a decimal number.">
+            >
+            ["at0.16"] = <
+                text = <"*Low risk (en)">
+                description = <"*Covid19 infection is assessed to be low-risk (en)">
+            >
+            ["at0.17"] = <
+                text = <"*High risk (en)">
+                description = <"*The risk of the a patient having a Covid-19 infection is assessed to be high. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Needs admission for respiratory disease (en)">
+                description = <"*Does the patient require hospital admission with either clinical or radiological evidence of pneumonia, adult respiratory distress syndrome, or influenza like illness? (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Other household members are ill (en)">
+                description = <"*The patient is in a house with other household members who are ill (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Household members with travel exposure (en)">
+                description = <"*Members of the patient's household have travel exposure. (en)">
+            >
+            ["ac0.9005"] = <
+                text = <"Risikofaktor (synthesised)">
+                description = <"Navnet på risikofaktoren. (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"Presence (synthesised)">
+                description = <"Presence of the risk factor. (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"Risk assessment (synthesised)">
+                description = <"Evaluation of the health risk. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000.1"] = <
+                text = <"*Health risk assessment(en)">
+                description = <"*Assessment of the potential and likelihood of future adverse health effects as determined by identified risk factors.(en)">
+            >
+            ["at0002.1"] = <
+                text = <"*Health risk(en)">
+                description = <"*Identification of the potential future disease, condition or health issue for which the risk is being assessed, by name.(en)">
+                comment = <"*Coding of 'Health risk' with a terminology is preferred, where possible. Free text should be used only if there is no appropriate terminology available. For example: risk of cardiovascular disease, with risk factors of hypertension and hypercholesterolaemia.(en)">
+            >
+            ["at0.1"] = <
+                text = <"*COVID-19 Risk assessment (en)">
+                description = <"*Assessment of risk of COVID-19 infection (en)">
+            >
+            ["at0013.1"] = <
+                text = <"*Risk factor(en)">
+                description = <"*Identification of the risk factor, by name.(en)">
+                comment = <"*For example: hypertension and hypercholesterolaemia, which may be used as part of the overall assessment for cardiovascular disease; or a genetic marker. Coding of 
+'Risk factor' with a terminology, where possible.(en)">
+            >
+            ["at0.9"] = <
+                text = <"*Contact with confirmed Covid-19 case (en)">
+                description = <"*">
+            >
+            ["at0.10"] = <
+                text = <"*Contact with suspected case/ pneumonia case (en)">
+                description = <"*Contact with suspected case/ pneumonia case within 14 days before symptom onset. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Contact with birds in China (en)">
+                description = <"*Contact with birds in China in 10 days before symptom onset. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Contact with confirmed human case of Avian flu in China (en)">
+                description = <"*Contact with confirmed human case of Avian flu in China in 10 days before symptom onset. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Contact with severe, unexplained respiratory disease (en)">
+                description = <"*Contact with severe, unexplained respiratory disease in 10 days before symptom onset. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Potential contact exposure based on location (en)">
+                description = <"*Potential contact exposure based on location (en)">
+            >
+            ["at0027.1"] = <
+                text = <"*Detail(en)">
+                description = <"*Structured detail about other aspects of the risk factor assessment.(en)">
+                comment = <"*For example: Prevalence of the risk factor in family members.(en)">
+            >
+            ["at0017.1"] = <
+                text = <"*Presence(en)">
+                description = <"*Presence of the risk factor.(en)">
+            >
+            ["at0.15"] = <
+                text = <"*Unknown (en)">
+                description = <"*No information is available for this risk factor. (en)">
+            >
+            ["at0003.1"] = <
+                text = <"*Risk assessment(en)">
+                description = <"*Evaluation of the health risk.(en)">
+                comment = <"*There may be multiple variations on the assessment of risk. The Choice data type allows for recording of the assessment as either free text or value sets (such as low, medium or hig). The proportion data type allows recording of a percentage, a ratio or a fraction. The quantity data type allows recording of a decimal number.(en)">
+            >
+            ["at0.16"] = <
+                text = <"*Low risk (en)">
+                description = <"*Covid19 infection is assessed to be low-risk (en)">
+            >
+            ["at0.17"] = <
+                text = <"*High risk (en)">
+                description = <"*The risk of the a patient having a Covid-19 infection is assessed to be high. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Needs admission for respiratory disease (en)">
+                description = <"*Does the patient require hospital admission with either clinical or radiological evidence of pneumonia, adult respiratory distress syndrome, or influenza like illness? (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Other household members are ill (en)">
+                description = <"*The patient is in a house with other household members who are ill (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Household members with travel exposure (en)">
+                description = <"*Members of the patient's household have travel exposure. (en)">
+            >
+            ["ac0.9005"] = <
+                text = <"*Risk factor(en) (synthesised)">
+                description = <"*Identification of the risk factor, by name.(en) (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"*Presence(en) (synthesised)">
+                description = <"*Presence of the risk factor.(en) (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"*Risk assessment(en) (synthesised)">
+                description = <"*Evaluation of the health risk.(en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Covid-19 infection risk assessment">
+                description = <"Assessment of the potential and likelihood of Covid-19 infection as determined by identified risk factors.">
+            >
+            ["at0002.1"] = <
+                text = <"Health risk">
+                description = <"Identification of the potential future disease, condition or health issue for which the risk is being assessed, by name.">
+                comment = <"Coding of 'Health risk' with a terminology is preferred, where possible. Free text should be used only if there is no appropriate terminology available. For example: risk of cardiovascular disease, with risk factors of hypertension and hypercholesterolaemia.">
+            >
+            ["at0.1"] = <
+                text = <"COVID-19 Risk assessment">
+                description = <"Assessment of risk of COVID-19 infection.">
+            >
+            ["at0013.1"] = <
+                text = <"Risk factor">
+                description = <"Identification of the risk factor, by name.">
+                comment = <"For example: hypertension and hypercholesterolaemia, which may be used as part of the overall assessment for cardiovascular disease; or a genetic marker. Coding of 
+'Risk factor' with a terminology, where possible.">
+            >
+            ["at0.9"] = <
+                text = <"Contact with confirmed Covid-19 case">
+                description = <"Contact with confirmed Covid-19 case within 14 days before symptom onset.">
+            >
+            ["at0.10"] = <
+                text = <"Contact with suspected case/ pneumonia case">
+                description = <"Contact with suspected case/ pneumonia case within 14 days before symptom onset.">
+            >
+            ["at0.11"] = <
+                text = <"Contact with birds in China">
+                description = <"Contact with birds in China in 10 days before symptom onset.">
+            >
+            ["at0.12"] = <
+                text = <"Contact with confirmed human case of Avian flu in China">
+                description = <"Contact with confirmed human case of Avian flu in China in 10 days before symptom onset.">
+            >
+            ["at0.13"] = <
+                text = <"Contact with severe, unexplained respiratory disease">
+                description = <"Contact with severe, unexplained respiratory disease in 10 days before symptom onset.">
+            >
+            ["at0.14"] = <
+                text = <"Potential contact exposure based on location">
+                description = <"Potential contact exposure based on location.">
+            >
+            ["at0027.1"] = <
+                text = <"Detail">
+                description = <"Structured detail about other aspects of the risk factor assessment.">
+                comment = <"For example: Prevalence of the risk factor in family members.">
+            >
+            ["at0017.1"] = <
+                text = <"Presence">
+                description = <"Presence of the risk factor.">
+            >
+            ["at0.15"] = <
+                text = <"Unknown">
+                description = <"No information is available for this risk factor.">
+            >
+            ["at0003.1"] = <
+                text = <"Risk assessment">
+                description = <"Evaluation of the health risk.">
+                comment = <"There may be multiple variations on the assessment of risk. The Choice data type allows for recording of the assessment as either free text or value sets (such as low, medium or hig). The proportion data type allows recording of a percentage, a ratio or a fraction. The quantity data type allows recording of a decimal number.">
+            >
+            ["at0.16"] = <
+                text = <"Low risk">
+                description = <"The risk of the a patient having a Covid-19 infection is assessed to be low.">
+            >
+            ["at0.17"] = <
+                text = <"High risk">
+                description = <"The risk of the a patient having a Covid-19 infection is assessed to be high.">
+            >
+            ["at0.18"] = <
+                text = <"Needs admission for respiratory disease">
+                description = <"Does the patient require hospital admission with either clinical or radiological evidence of pneumonia, adult respiratory distress syndrome, or influenza like illness?">
+            >
+            ["at0.19"] = <
+                text = <"Other household members are ill">
+                description = <"The patient is in a house with other household members who are ill">
+            >
+            ["at0.20"] = <
+                text = <"Household members with travel exposure">
+                description = <"Members of the patient's household have travel exposure.">
+            >
+            ["ac0.9005"] = <
+                text = <"Risk factor (synthesised)">
+                description = <"Identification of the risk factor, by name. (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"Presence (synthesised)">
+                description = <"Presence of the risk factor. (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"Risk assessment (synthesised)">
+                description = <"Evaluation of the health risk. (synthesised)">
+            >
+        >
+        ["it"] = <
+            ["at0000.1"] = <
+                text = <"Valutazione rischio infezione da COVID-19">
+                description = <"Valutazione del rischio potenziale e della probabilità di infezione da COVID-19 e di futuri effetti indesiderati sulla salute, così come determinato dai fattori di rischio identificati ">
+            >
+            ["at0002.1"] = <
+                text = <"Rischio clinico">
+                description = <"Identificazione della potenziale futura malattia, condizione o problema sanitario per il quale si sta valutando il rischio, per nome">
+                comment = <"E' preferibile identificare il \"rischio clinico\" tramite una terminologia, ove possibile. Il testo libero dovrebbe essere utilizzato esclusivamente nei casi in cui non fosse disponibile una terminologia appropriata. Per esempio: rischio di malattie cardiovascolari, con fattori di rischio di ipertensione ed ipercolesterolemia. ">
+            >
+            ["at0.1"] = <
+                text = <"Valutazione rischio COVID-19">
+                description = <"Valutazione rischio infezione da COVID-19">
+            >
+            ["at0013.1"] = <
+                text = <"Fattore di rischio">
+                description = <"Identificazione del fattore di rischio, per nome ">
+                comment = <"Per esempio: ipertensione ed ipercolesterolemia, che possono essere usate come parte della valutazione globale per le malattie cardiovascolari; oppure un marker genetico. Codificare, ove possibile, il \"Fattore di rischio\" tramite l'utilizzo di una terminologia.">
+            >
+            ["at0.9"] = <
+                text = <"Contatto con un caso confermato di COVID-19">
+                description = <"Contatto con un caso confermato di COVID-19 entro i 14 giorni prima dell'insorgenza dei sintomi.">
+            >
+            ["at0.10"] = <
+                text = <"Contatto con un caso sospetto/caso di polmonite">
+                description = <"Contatto con un caso sospetto/caso di polmonite entro i 14 giorni prima dell'insorgenza dei sintomi.">
+            >
+            ["at0.11"] = <
+                text = <"Contatto con volatili in Cina">
+                description = <"Contatto con volatili in Cina entro i 10 giorni prima dell'insorgenza dei sintomi.">
+            >
+            ["at0.12"] = <
+                text = <"Contatto, relativo ad una persona, con un caso confermato di influenza aviaria in Cina">
+                description = <"Contatto, relativo ad una persona, con un caso confermato di influenza aviaria entro i 10 giorni prima dell'insorgenza dei sintomi.">
+            >
+            ["at0.13"] = <
+                text = <"Contatto con gravi ed inspiegabili problemi respiratori">
+                description = <"Contatto con gravi ed inspiegabili problemi respiratori entro i 10 giorni prima dell'insorgenza dei sintomi.">
+            >
+            ["at0.14"] = <
+                text = <"Esposizione ad un potenziale contatto, dovuta al luogo">
+                description = <"Esposizione ad un potenziale contatto, dovuta al luogo ">
+            >
+            ["at0027.1"] = <
+                text = <"Dettaglio">
+                description = <"Dettaglio strutturato su altri aspetti riguardanti la valutazione del rischio ">
+                comment = <"Per esempio: diffusione del fattore di rischio tra i membri della famiglia.">
+            >
+            ["at0017.1"] = <
+                text = <"Presenza">
+                description = <"Presenza del fattore di rischio.">
+            >
+            ["at0.15"] = <
+                text = <"Sconosciuto">
+                description = <"Nessuna informazione sul fattore di rischio è tuttora disponibile.">
+            >
+            ["at0003.1"] = <
+                text = <"Valutazione del rischio">
+                description = <"Valutazione del rischio clinico.">
+                comment = <"Ci possono essere molteplici cambiamenti nella valutazione del rischio. Il data type Choice permette di codificare  la valutazione sia come testo libero sia come set di valori (quali basso, medio o alto). Il data type Proportion permette di indicare una percentuale, un rapporto o una frazione. Il data type Quantity permette di indicare un numero decimale.">
+            >
+            ["at0.16"] = <
+                text = <"Rischio basso">
+                description = <"Il rischio che il paziente sia affetto da COVID-19 è stato valutato basso.">
+            >
+            ["at0.17"] = <
+                text = <"Rischio alto">
+                description = <"Il rischio che il paziente sia affetto da COVID-19 è stato valutato alto.">
+            >
+            ["at0.18"] = <
+                text = <"*Needs admission for respiratory disease(en)">
+                description = <"*Does the patient require hospital admission with either clinical or radiological evidence of pneumonia, adult respiratory distress syndrome, or influenza like illness?(en)">
+            >
+            ["at0.19"] = <
+                text = <"*Other household members are ill(en)">
+                description = <"*The patient is in a house with other household members who are ill(en)">
+            >
+            ["at0.20"] = <
+                text = <"*Household members with travel exposure(en)">
+                description = <"*Members of the patient's household have travel exposure.(en)">
+            >
+            ["ac0.9005"] = <
+                text = <"Fattore di rischio (synthesised)">
+                description = <"Identificazione del fattore di rischio, per nome  (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"Presenza (synthesised)">
+                description = <"Presenza del fattore di rischio. (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"Valutazione del rischio (synthesised)">
+                description = <"Valutazione del rischio clinico. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9005"] = <
+            id = <"ac0.9005">
+            members = <"at0.9", "at0.14", "at0.10", "at0.13", "at0.11", "at0.12", "at0.18", "at0.19", "at0.20">
+        >
+        ["ac0.9003"] = <
+            id = <"ac0.9003">
+            members = <"at0.16", "at0.17">
+        >
+        ["ac0.9002"] = <
+            id = <"ac0.9002">
+            members = <"at0018", "at0019", "at0.15">
+        >
+    >

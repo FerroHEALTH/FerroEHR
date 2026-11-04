@@ -1,0 +1,229 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=bfea7c8d-eb4c-40b5-bd08-dfdd427d2ece; build_uid=9dafa3b8-217c-4cd9-bbef-2fa506d0d026)
+    openEHR-EHR-EVALUATION.obstetric_summary-JM.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-EVALUATION.obstetric_summary.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Marit Alice Venheim">
+                ["organisation"] = <"Helse Vest IKT AS">
+                ["email"] = <"marit.alice.venheim@helse-vest-ikt.no">
+            >
+        >
+        ["pt"] = <
+            language = <[ISO_639-1::pt]>
+            author = <
+                ["name"] = <"Danielle Santos Alves">
+                ["organisation"] = <"Federal University of Pernambuco">
+                ["email"] = <"danielle.salves@ufpe.br">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Marivan Abrahão, Gabriela Alves, Adriana Kitajima e Maria Ângela Scatena / Danielle Santos Alves">
+                ["organisation"] = <"Core Consulting / Federal University of Pernambuco">
+                ["email"] = <"contato@coreconsulting.com.br / danielle.salves@ufpe.com">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+        ["es-co"] = <
+            language = <[ISO_639-1::es-co]>
+            author = <
+                ["name"] = <"Francisco Ramirez ante">
+                ["organisation"] = <"SITIS SAS">
+                ["email"] = <"framirez74@gmail.com">
+            >
+            accreditation = <"Ingeniero de Sistemas">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2011-02-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Sheryl Alexander, NT Department of Health, Australia", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Margaret Cotter, AMSANT, Australia", "Michelle Dowden, Miwatj Health Ngalkanbuy Health, Australia", "Peter Fedorcsak, Oslo universitetssykehus, Norway", "Shahla Foozonkhah, Iran ministry of health and education, Iran", "Tim Garden, NTG Department of Health, Australia", "Heather Grain, Llewelyn Grain Informatics, Australia", "Kristin Grødem, Helse Vest IKT, Norway", "Mikkel Gaup Grønmo, Helse-Nord, FSE, Norway (openEHR Editor)", "Sam Heard, Ocean Informatics, Australia (Editor)", "Anne Hedvig Mellbye Pfeffer, OUS, Norway", "Anca Heyd, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Michelle Kealy, Australia", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Bernadette Lack, Deptartment of Health, NT, Australia", "Liv Laugen, Oslo universitetssykehus, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Anne M Gromsrud, DIPS AS, Norway", "Priscila Maranhão, MEDCIDS-FMUP, Portugal", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Paul Miller, SCIMP NHS Scotland, United Kingdom", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Svenne Naumann, Finnmarkssykehuset, Norway", "Rogerio Neri, Soft & Solutions, Brazil", "Jeremy Oats, NT Health, Australia", "Andrej Orel, Marand d.o.o., Slovenia", "Jayashree Panickar, Karolinska Institute, Sweden", "Danielle Santos Alves, Federal University of Pernambuco, Brazil", "Gro-Hilde Severinsen, Norwegian center for ehealthresearch, Norway", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Gary Sinclair, NT DoH, Australia", "trine stavseth, Oslo universitetsykehus, Norway", "Tove Stenquist, Helseforetak, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Chen Sun, Haukeland universitetssykehus, Norway", "June Susanne Berge, DIPS AS, Norway", "Nyree Taylor, Ocean Informatics, Australia", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Ørjan Vermeer, Haukeland Universitetssjukehus, Kvinneklinikken, Norway", "Cherie Whitbread, Royal Darwin Hospital, Australia", "Jo Wright, NT Dept of Health, Australia", "Krister Åkesson, Region Örebro län, Sweden">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Born Too Soon: The Global Action Report on Preterm Birth [Internet]. Geneva: World Health Organization; 2012. Available from: https://www.who.int/maternal_child_adolescent/documents/born_too_soon/en/.">
+        ["2"] = <"Derived from: Obstetric summary, draft archetype [Internet]. Australian Digital Health Agency (NEHTA), ADHA Clinical Knowledge Manager. No longer available.">
+        ["3"] = <"Fact sheet: Preterm birth [Internet]. Geneva: World Health Organisation. Preterm birth; 2018 Feb 19 [cited 2020 May 07]. Available from: https://www.who.int/news-room/fact-sheets/detail/preterm-birth.">
+        ["4"] = <"Opara EI, Zaidi J. The interpretation and clinical application of the word 'parity': a survey [Internet]. BJOG. 2007 Oct;114(10):1295-7. doi: 10.1111/j.1471-0528.2007.01435.x. PMID: 17877683. Available from: https://obgyn.onlinelibrary.wiley.com/doi/full/10.1111/j.1471-0528.2007.01435.x.">
+        ["5"] = <"reVITALize: Obstetrics Data Definitions V1.0 [Internet]. Washington, American College of Obstetricians and Gynecologists; 2014 [cited 2020 May 07]. Available from: https://www.acog.org/practice-management/health-it-and-clinical-informatics/revitalize-obstetrics-data-definitions.">
+        ["6"] = <"Tidy C, Payne J. Gravidity and Parity Definitions: Implications in Risk Assessment [Internet]. Leeds: Patient Platform Limited; 2019 Jan 21 [cited 2020 May 07]. Available from: https://patient.info/doctor/gravidity-and-parity-definitions-and-their-implications-in-risk-assessment#.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"C45805D748E0A2EBF35D2D15DB5213AD">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere sammendrag eller vedvarende informasjon om antall sentrale obstetriske hendelser som kan påvirke risikovurdering eller beslutningsstøtte.">
+            keywords = <"obstetrikk", "svangerskap", "paritet", "gravida", "para", "svangerskapsavbrudd", "spontanabort", "aborter", "spontan", "levende", "fødsler", "dødfødsler", "keisersnitt", "ekstrauterin graviditet", "neonatal", "død", "levende", "multippel", "missed abortion", "provosert abort", "ektopisk", "extrauterin", "ekstrauterin", "svangerskapshistorikk", "fødsel", "TPAL", "GTPAL">
+            use = <"Brukes for å registrere sammendrag eller vedvarende informasjon om antall sentrale obstetriske hendelser som kan påvirke risikovurdering eller beslutningsstøtte.
+
+Intensjonen med denne arketypen er at den skal gjennomgås og oppdateres etter hvert svangerskap, enten manuelt av helsepersonell eller automatisk oppdatert i et klinisk system. Det er antatt at denne arketypen kun representerer en komponent av en obstetrisk historie. Ved å bruke flere arketyper inn i en templat vil det oppnås en komplett obstetrisk historie. 
+
+For å registrere en TPAL oversikt kan denne arketypen brukes til å registrere Fødsler til termin (T), Premature fødsler (P), Aborter (A). For å registrere Levende barn (L) benyttes arketypen EVALUATION.social_network. Noen varianter bruker også Gravida (G) og antall Flerlingefødsler (M).
+
+Definisjonen for noen av disse dataelementene vil variere mellom myndighetsområder, det er derfor mulig å legge til definisjonen i Protocol-delen av arketypen. Dette er viktig dersom utveksling av data forekommer mellom myndighetsområder.">
+            misuse = <"Brukes ikke for å dokumentere informasjon om ett enkelt svangerskap. Bruk spesifikke arketyper for dette formålet.
+
+Brukes ikke for å dokumentere detaljer rundt et inngrep i svangerskapet, for eksempel svangerskapsavbrudd eller forløsning. Bruk arketypen ACTION.procedure (Prosedyre) for dette formålet.
+
+Brukes ikke for å registrere detaljer om funn under hver enkelt svangerskapskontroll eller under fødsel. Dette registreres i egne arketyper for dette formålet som for eksempel: OBSERVATION.story (Anamnese) sammen med CLUSTER.symptom_sign (Symptom/sykdomstegn), OBSERVATION.blood_pressure (Blodtrykk), OBSERVATION.urinalysis (Urinanalyse) eller EVALUATION.problem_diagnosis (Problem/diagnose).">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt"] = <
+            language = <[ISO_639-1::pt]>
+            purpose = <"*To record summary or persistent information about the numbers of key obstetric events that may impact risk assessment or decision support.(en)">
+            keywords = <"*obstetric(en)", "*pregnancy(en)", "*parity(en)", "*para(en)", "*gravidity(en)", "*gravida(en)", "*termination(en)", "*miscarriage(en)", "*abortions(en)", "*birth(en)", "*stillbirth(en)", "*caesarean(en)", "*cesarean(en)", "*ectopic(en)", "*tubal(en)", "*TPAL(en)", "*GTPAL(en)">
+            use = <"*Use to record summary or persistent information about the numbers of key obstetric events that may impact risk assessment or decision support.
+
+Data recorded using this archetype is intended to be revised and updated after each pregnancy, either manually by a clinician or automatically calculated within a clinical system. It is anticipated that this archetype represents only one component of an obstetric history. A complete obstetric history should be represented using multiple archetypes within a template.
+
+In order to record a TPAL overview, Term Births (T), Preterm Births (P) and Abortions (A) can be recorded using this archetype. Living Children (L) can be recorded using the EVALUATION.social_network archetype, so that it can be used more broadly. Some variants may also use Gravidity (G) and the number of Multiple Births (M). 
+
+In many jurisdictions, the definition of some of these data elements may vary. For this reason, definitions may be included in the Protocol to ensure clarity of intent especially if the data is being exchanged between jurisdictions.(en)">
+            misuse = <"*Not for recording summary information about a single pregnancy. Use specific archetypes for this purpose.
+
+Not to be used to record details about procedures performed during a pregnancy, for example terminations or deliveries. Use the ACTION.procedure archetype for this purpose.
+
+Not to be used to record the details about findings in each antenatal visits or during labour. Detailed data should be recorded using appropriate archetypes for this purpose such as OBSERVATION.story together with CLUSTER.symptom_sign; OBSERVATION.blood pressure; OBSERVATION.urinalysis; or EVALUATION.problem_diagnosis.(en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Para gravar uma visão geral sobre a história obstétrica de uma mulher para fins de: fornecimento de um informações de sua história obstétrica, para reportar a órgãos oficiais ou para apoio à decisão clínica.">
+            keywords = <"Obstétrico", "Gravidez", "Paridade", "Gestante", "Gravida", "Abortamento induzido", "Aborto espontâneo", "Espontâneo", "Vivo", "Nascimentos", "Natimorto", "Cesariana", "Ectópica", "Neonatal", "Morte", "Tubária", "Vivo", "Múltiplo">
+            use = <"Usar para registrar o panorama da história obstétrica de uma mulher, incluindo um resumo de todas as gestações e os resultados ou intervenções associadas.
+
+Utilizar, se adequado, como a base de relatórios legais sobre nascimentos.
+
+Usar para registrar a visão geral de uma história obstétrica, se necessário - o número de nascimentos a termo, nascimento prematuro, abortos e nascidos vivos. Algumas variações adicionam o número de gestações e o número de nascimentos múltiplos.
+
+Alguns dados podem ser calculados ou derivados de registros de gravidez individuais, se disponíveis.
+">
+            misuse = <"Não utilizar para registrar informações de resumo sobre uma única gravidez – neste caso utilize EVALUATION.pregnancy_summary.
+
+Não utilizar para registrar informações detalhadas sobre episódios individuais de gravidez, abortos ou partos. Estas informação deverão ser registradas através de arquétipos específicos, baseados nos dados do evento.
+">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record summary or persistent information about the numbers of key obstetric events that may impact risk assessment or decision support.">
+            keywords = <"obstetric", "pregnancy", "parity", "para", "gravidity", "gravida", "termination", "miscarriage", "abortions", "birth", "stillbirth", "caesarean", "cesarean", "ectopic", "tubal", "TPAL", "GTPAL">
+            use = <"Use to record summary or persistent information about the numbers of key obstetric events that may impact risk assessment or decision support.
+
+Data recorded using this archetype is intended to be revised and updated after each pregnancy, either manually by a clinician or automatically calculated within a clinical system. It is anticipated that this archetype represents only one component of an obstetric history. A complete obstetric history should be represented using multiple archetypes within a template.
+
+In order to record a TPAL overview, Term Births (T), Preterm Births (P) and Abortions (A) can be recorded using this archetype. Living Children (L) can be recorded using the EVALUATION.social_network archetype, so that it can be used more broadly. Some variants may also use Gravidity (G) and the number of Multiple Births (M). 
+
+In many jurisdictions, the definition of some of these data elements may vary. For this reason, definitions may be included in the Protocol to ensure clarity of intent especially if the data is being exchanged between jurisdictions.">
+            misuse = <"Not for recording summary information about a single pregnancy. Use specific archetypes for this purpose.
+
+Not to be used to record details about procedures performed during a pregnancy, for example terminations or deliveries. Use the ACTION.procedure archetype for this purpose.
+
+Not to be used to record the details about findings in each antenatal visits or during labour. Detailed data should be recorded using appropriate archetypes for this purpose such as OBSERVATION.story together with CLUSTER.symptom_sign; OBSERVATION.blood pressure; OBSERVATION.urinalysis; or EVALUATION.problem_diagnosis.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es-co"] = <
+            language = <[ISO_639-1::es-co]>
+            purpose = <"Sirve para registrar una visión general sobre la historia obstétrica de una mujer con fines de: proporcionar un resumen de su historia obstétrica, la presentación de informes a los órganos estatutarios o el apoyo de soporte de decisiones clínicas">
+            keywords = <"Obstétrica", "Eembarazo", "Paridad", "Gesta", "Parto", "terminacion", "abortos involuntarios", "abortos", "Espontánea", "Vivo", "nacimientos", "mortinatos", "Cesárea", "Ectópico", "Neonatal", "muerte", "Múltiple">
+            use = <"Sirve para registrar una visión general sobre la historia obstétrica de una mujer, incluyendo un resumen de todos los embarazos.
+
+Utilice este resmen como base para informes legales con respecto a los nacimientos .
+
+Se utiliza para registrar la información general de una historia obstétrica, si es necesario - el número de nacimientos a termino (T) , los nacimientos prematuros (P) , Abortos (A) y niños que viven (L) . Algunas variaciones añaden Gravidez (G) y el número de nacimientos múltiples (M) .
+
+Algunos datos pueden ser calculados o derivados de los registros individuales de embarazo, si están disponibles.">
+            misuse = <"No es para registrar la información del embarazo actual - utilice el arquetipo EVALUACIÓN. pregnancy_summary para este propósito.
+
+No es para registrar la información detallada sobre cada uno de los individuales embarazos, abortos involuntarios , Embarazos interrumpidos, o nacimientos. Esta información se registra utilizando otros arquetipos específicos como datos basados ​​en eventos .">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000.1] matches {    -- Obstetric summary
+        /data[at0001]/items matches {
+            ELEMENT[at0.1] occurrences matches {0..1} matches {    -- Living children
+                value matches {
+                    DV_COUNT[at0.9000]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000.1"] = <
+                text = <"Obstetrisk sammendrag">
+                description = <"Sammendrag eller vedvarende informasjon om antall sentrale obstetriske hendelser.">
+            >
+            ["at0.1"] = <
+                text = <"*Living children (en)">
+                description = <"*Number of living children. (en)">
+            >
+        >
+        ["pt"] = <
+            ["at0000.1"] = <
+                text = <"Sumário obstétrico">
+                description = <"Uma visão geral da história obstétrica de uma mulher, incluindo um resumo de todas as gestações seus resultados ou as intervenções associadas.
+
+">
+            >
+            ["at0.1"] = <
+                text = <"*Living children (en)">
+                description = <"*Number of living children. (en)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000.1"] = <
+                text = <"*Obstetric summary(en)">
+                description = <"Uma visão geral da história obstétrica de uma mulher, incluindo um resumo de todas as gestações seus resultados ou as intervenções associadas.
+
+">
+            >
+            ["at0.1"] = <
+                text = <"*Living children (en)">
+                description = <"*Number of living children. (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Obstetric summary">
+                description = <"Summary or persistent information about the numbers of key obstetric events.">
+            >
+            ["at0.1"] = <
+                text = <"Living children">
+                description = <"Number of living children.">
+            >
+        >
+        ["es-co"] = <
+            ["at0000.1"] = <
+                text = <"*Obstetric counts (en)">
+                description = <"Una visión general de la historia obstétrica de una mujer, incluyendo un resumen de todos los embarazos.">
+            >
+            ["at0.1"] = <
+                text = <"*Living children (en)">
+                description = <"*Number of living children. (en)">
+            >
+        >
+    >

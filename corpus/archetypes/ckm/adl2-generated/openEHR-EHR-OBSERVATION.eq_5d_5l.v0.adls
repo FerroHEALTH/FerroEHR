@@ -1,0 +1,322 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=509a0464-e323-4205-a3e3-b15efd61d368; build_uid=89b73b94-8b99-419d-be85-977cfc6c824e)
+    openEHR-EHR-OBSERVATION.eq_5d_5l.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2025-12-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"EuroQol Research Foundation. EQ-5D-5L user guide: how to apply, score, and present results from the EQ-5D-5L. Version 4.0. Rotterdam (NL): EuroQol Research Foundation; 2025 Aug. Available from: https://euroqol-domain.ams3.digitaloceanspaces.com/wp-content/uploads/2025/01/12124516/EQ-5D-5L-Userguide-2025-04.pdf">
+        ["2"] = <"MAPI Research Trust. EuroQol 5-dimension 5-level (EQ-5D-5L) [Internet]. Lyon (FR): MAPI Research Trust; [cited 2025 Dec 14]. Available from: https://eprovide.mapi-trust.org/instruments/euroqol-5-dimension-5-level">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"DD995B33A7278469014CF218046D8160">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results of the EQ-5D-5L instrument, used in accordance with EuroQol guidelines.">
+            keywords = <"PROM", "health", "assessment", "EuroQol", "EQ">
+            use = <"Use to record the results of the EQ-5D-5L instrument, used in accordance with EuroQol guidelines.
+
+While openEHR archetypes are all freely available under an open license, the specific content of the EQ-5D-5L instrument is copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners:
+Copyright statement: <to  be supplied by EuroQol>.
+Copyright information: <to  be supplied by EuroQol>.
+
+No translations to be added without guidance from openEHR CKAs and EuroQol.">
+            misuse = <"Not to be used to record the results of any other EuroQol instrument.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- EQ-5D-5L
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Any point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Mobility (MOB)
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0005]}],    -- I have no problems in walking about
+                                                    [{2}, {[at0012]}],    -- I have slight problems in walking about
+                                                    [{3}, {[at0013]}],    -- I have moderate problems in walking about
+                                                    [{4}, {[at0014]}],    -- I have severe problems in walking about
+                                                    [{5}, {[at0015]}]    -- I am unable to walk about
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Self-care (SC)
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0016]}],    -- I have no problems washing or dressing myself
+                                                    [{2}, {[at0017]}],    -- I have slight problems washing or dressing myself
+                                                    [{3}, {[at0018]}],    -- I have moderate problems washing or dressing myself
+                                                    [{4}, {[at0019]}],    -- I have severe problems washing or dressing myself
+                                                    [{5}, {[at0020]}]    -- I am unable to wash or dress myself
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Usual activities (UA)
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0021]}],    -- I have no problems doing my usual activities
+                                                    [{2}, {[at0022]}],    -- I have slight problems doing my usual activities
+                                                    [{3}, {[at0023]}],    -- I have moderate problems doing my usual activities
+                                                    [{4}, {[at0024]}],    -- I have severe problems doing my usual activities
+                                                    [{5}, {[at0025]}]    -- I am unable to do my usual activities
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Pain/discomfort (PD)
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0026]}],    -- I have no pain or discomfort
+                                                    [{2}, {[at0027]}],    -- I have slight pain or discomfort
+                                                    [{3}, {[at0028]}],    -- I have moderate pain or discomfort
+                                                    [{4}, {[at0029]}],    -- I have severe pain or discomfort
+                                                    [{5}, {[at0030]}]    -- I have extreme pain or discomfort
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Anxiety/depression (AD)
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0031]}],    -- I am not anxious or depressed
+                                                    [{2}, {[at0032]}],    -- I am slightly anxious or depressed
+                                                    [{3}, {[at0033]}],    -- I am moderately anxious or depressed
+                                                    [{4}, {[at0034]}],    -- I am severely anxious or depressed
+                                                    [{5}, {[at0035]}]    -- I am extremely anxious or depressed
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Health state
+                                        value matches {
+                                            DV_TEXT[at9010]
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Visual analog scale (EQ VAS)
+                                        value matches {
+                                            DV_COUNT[at9011] matches {
+                                                magnitude matches {|0..100|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"EQ-5D-5L">
+                description = <"A standardised PROM instrument used to assess health outcome from a wide variety of interventions on a common scale, for purposes of evaluation, allocation and monitoring.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time event">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Mobility (MOB)">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"I have no problems in walking about">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Self-care (SC)">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Usual activities (UA)">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Pain/discomfort (PD)">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Anxiety/depression (AD)">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Visual analog scale (EQ VAS)">
+                description = <"The patient’s self-assessed health, usually displayed on a vertical visual analogue scale, where the endpoints are labelled ‘The best health you can imagine’ and ‘The worst health you can imagine’.">
+            >
+            ["at0011"] = <
+                text = <"Health state">
+                description = <"A 5-digit code formed from the scores selected for each of the five dimensions, with a score of 9 indicating a missing value.">
+                comment = <"e.g. '21491'">
+            >
+            ["at0012"] = <
+                text = <"I have slight problems in walking about">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"I have moderate problems in walking about">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"I have severe problems in walking about">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"I am unable to walk about">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"I have no problems washing or dressing myself">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"I have slight problems washing or dressing myself">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"I have moderate problems washing or dressing myself">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"I have severe problems washing or dressing myself">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"I am unable to wash or dress myself">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"I have no problems doing my usual activities">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"I have slight problems doing my usual activities">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"I have moderate problems doing my usual activities">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"I have severe problems doing my usual activities">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"I am unable to do my usual activities">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"I have no pain or discomfort">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"I have slight pain or discomfort">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"I have moderate pain or discomfort">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"I have severe pain or discomfort">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"I have extreme pain or discomfort">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"I am not anxious or depressed">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"I am slightly anxious or depressed">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"I am moderately anxious or depressed">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"I am severely anxious or depressed">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"I am extremely anxious or depressed">
+                description = <"">
+            >
+            ["ac9011"] = <
+                text = <"Mobility (MOB) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Self-care (SC) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Usual activities (UA) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Pain/discomfort (PD) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Anxiety/depression (AD) (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0021", "at0022", "at0023", "at0024", "at0025">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0016", "at0017", "at0018", "at0019", "at0020">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0005", "at0012", "at0013", "at0014", "at0015">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0031", "at0032", "at0033", "at0034", "at0035">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0026", "at0027", "at0028", "at0029", "at0030">
+        >
+    >

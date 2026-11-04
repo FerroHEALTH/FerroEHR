@@ -1,0 +1,322 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=98134942-1ef8-4b1a-89ac-e7e28214f1b4; build_uid=b9ecede7-c7b2-4a46-9715-4e81fffffdc0)
+    openEHR-EHR-CLUSTER.imaging_exam-gestational_sac.v1.0.1
+
+specialize
+    openEHR-EHR-CLUSTER.imaging_exam.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Peter Fedorcsak, Vebjørn Arntzen">
+                ["organisation"] = <"University of Oslo, Oslo University Hospital">
+                ["email"] = <"peterfe@uio.no, varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-11-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Randi Brendberg, Helse Nord RHF, Norway", "Peter Fedorcsak, University of Oslo, Norway (openEHR Editor)", "Heather Grain, Llewelyn Grain Informatics, Australia", "Anca Heyd, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Anjali Kulkarni, Karkinos, India", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Ina Wille, Helse-Vest RHF, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Rodgers SK, Chang C, DeBardeleben JT, Horrow MM. Normal and Abnormal US Findings in Early First-Trimester Pregnancy: Review of the Society of Radiologists in Ultrasound 2012 Consensus Panel Recommendations. Radiographics. 2015 Nov-Dec;35(7):2135-48. doi: 10.1148/rg.2015150092. PMID: 26562242.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"86DC84A0A28F542F44BCB967F5AC62DD">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To record the findings on radiological examination of a gestational sac, and their interpretation. (en)">
+            keywords = <"Befund, Ergebnis, Bildgebung, Körper, Organ, System, Struktur, Region, Beobachtung, Diagnostik, Radiologie, Bild", ...>
+            use = <"*Use to record the findings on radiological examination of a gestational sac, and their interpretation.
+
+Use a separate instance of this archetype for each gestational sac.
+
+The intended scope for this archetype is to eventually record all detailed findings on radiological examination of a gestational sac, using any modality. It is anticipated that further data elements may be added as requirements are identified and confirmed.
+
+This archetype is designed to be nested within the 'Gestational sac findings' SLOT in the CLUSTER.imaging_exam-pregnant_uterus or the CLUSTER.imaging_exam-fallopian_tube, the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or within other relevant CLUSTER.imaging_exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. If this archetype needs to be extended with further levels of structured findings, additional instances of the CLUSTER.imaging_exam or its specialisations can be nested in the 'Additional details' SLOT. (en)">
+            misuse = <"*Not to be used to record imaging examination findings for any body structure or region other than a single gestational sac. Use other archetypes from the CLUSTER.imaging_exam family for this purpose.
+
+Not to be used to record the estimated gestational age. Use OBSERVATION.gestation for this purpose.
+
+Not to be used to record details related to the overall findings, context or technical details related to a complete imaging examination test result. Use the OBERSERVATION.imaging_exam_result for this purpose. For example, comments on the study quality, differential diagnoses, and overall impression. (en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere funn ved radiologisk undersøkelse av én enkel gestasjonssekk og tolkning av funnene.">
+            use = <"Brukes for å registrere for å registrere funn ved radiologisk undersøkelse av én enkel gestasjonssekk og tolkning av funnene.
+
+Hvis flere gestasjonssekker, bruk en separat instans av denne arketypen for hver.
+
+Det tiltenkte omfanget for denne CLUSTER.imaging_exam (Bildediagnostisk undersøkelse) - arketypen er til slutt å kunne registrere alle detaljerte funn ved bildediagnostisk undersøkelse av en gestasjonssekk uavhengig av modalitet. Det er forventet at flere dataelementer kan bli lagt til når krav til slike er identifisert og bekreftet.
+
+Denne arketypen er utformet for å bli nøstet i SLOT'et \"Ytterligere detaljer\" i arketypen CLUSTER.imaging_exam-pregnant_uterus (Bildediagnostisk undersøkelse - gravid livmor) eller i CLUSTER.imaging_exam-fallopian_tube (Bildediagnostisk undersøkelse - eggstokk), i SLOT'et \"Strukturerte funn\" i OBSERVATION.imaging_exam_result (Bildediagnostisk svar) eller i andre relevante Bildediagnostisk svar-arketyper, men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende. Hvis denne arketypen, eller en spesialisering av denne, må utvides med flere nivåer med detaljerte funn eller observasjoner, kan flere forekomster av arketypen eller dens spesialiseringer nøstes i SLOT'et \"Ytterligere detaljer\".">
+            misuse = <"Skal ikke brukes til å registrere funn fra undersøkelser av andre kroppsstrukturer enn en enkel gestasjonssekk. Bruk andre arketyper fra gruppen av CLUSTER.imaging_exam-arketyper for dette.
+
+Skal ikke brukes til å registrere estimert gestasjonsalder. Bruk OBSERVATION.gestation for dette.
+
+Skal ikke brukes til å registrere overordnede undersøkelsesfunn, kontekst eller tekniske detaljer relatert til et fullstendig svar på billedundersøkelsen. Bruk arketypen OBSERVATION.imaging_exam_result (Bildediagnostisk svar) for å registrere dette, for eksempel kommentar om undersøkelseskvalitet, differensialdiagnose og overordnet konklusjon.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the findings on radiological examination of a gestational sac, and their interpretation.">
+            use = <"Use to record the findings on radiological examination of a gestational sac, and their interpretation.
+
+Use a separate instance of this archetype for each gestational sac.
+
+The intended scope for this archetype is to eventually record all detailed findings on radiological examination of a gestational sac, using any modality. It is anticipated that further data elements may be added as requirements are identified and confirmed.
+
+This archetype is designed to be nested within the 'Gestational sac findings' SLOT in the CLUSTER.imaging_exam-pregnant_uterus or the CLUSTER.imaging_exam-fallopian_tube, the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or within other relevant CLUSTER.imaging_exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. If this archetype needs to be extended with further levels of structured findings, additional instances of the CLUSTER.imaging_exam or its specialisations can be nested in the 'Additional details' SLOT.">
+            misuse = <"Not to be used to record imaging examination findings for any body structure or region other than a single gestational sac. Use other archetypes from the CLUSTER.imaging_exam family for this purpose.
+
+Not to be used to record the estimated gestational age. Use OBSERVATION.gestation for this purpose.
+
+Not to be used to record details related to the overall findings, context or technical details related to a complete imaging examination test result. Use the OBERSERVATION.imaging_exam_result for this purpose. For example, comments on the study quality, differential diagnoses, and overall impression.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Imaging examination of a gestational sac
+        items matches {
+            ELEMENT[at0001.1] matches {    -- Body structure
+                value matches {
+                    DV_CODED_TEXT[at0.9003] matches {
+                        defining_code matches {[at0.1]}    -- Gestational sac
+                    }
+                }
+            }
+            ELEMENT[at0.2] occurrences matches {0..1} matches {    -- Mean Sac Diameter (MSD)
+                value matches {
+                    DV_QUANTITY[at0.9004] matches {
+                        property matches {[at0.9000]}    -- Length
+                        units matches {"mm"}
+                    }
+                }
+            }
+            ELEMENT[at0.4] occurrences matches {0..1} matches {    -- Yolk sac description
+                value matches {
+                    DV_TEXT[at0.9006]
+                }
+            }
+            ELEMENT[at0.6] occurrences matches {0..1} matches {    -- Amnion description
+                value matches {
+                    DV_TEXT[at0.9008]
+                }
+            }
+            ELEMENT[at0.15] occurrences matches {0..1} matches {    -- Number of embryos
+                value matches {
+                    DV_COUNT[at0.9009]
+                }
+            }
+            ELEMENT[at0.16] occurrences matches {0..1} matches {    -- Cardiac activity
+                value matches {
+                    DV_CODED_TEXT[at0.9010] matches {
+                        defining_code matches {[ac0.9009]}    -- Cardiac activity (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"*Imaging examination of a gestational sac (en)">
+                description = <"*Findings on radiological examination of a single gestational sac. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"Körperstruktur">
+                description = <"Identifizierung der untersuchten Körperstruktur oder Region.">
+                comment = <"*If the body structure has been fully identified in this 'Body structure' element, then the 'Body site' data element and 'Structured body site' SLOT becomes redundant. (en)">
+            >
+            ["at0.1"] = <
+                text = <"Gestational sac">
+                description = <"">
+            >
+            ["at0.2"] = <
+                text = <"Mean Sac Diameter (MSD)">
+                description = <"*Mean of diameter measurements in perpendicular directions. (en)">
+            >
+            ["at0.4"] = <
+                text = <"Yolk sac description">
+                description = <"Narrative description about the yolk sac.">
+            >
+            ["at0.6"] = <
+                text = <"Amnion description">
+                description = <"Narrative description about the amnion.">
+            >
+            ["at0.15"] = <
+                text = <"*Number of embryos (en)">
+                description = <"*Number of fetal poles or embryos observed in the gestational sac. (en)">
+            >
+            ["at0.16"] = <
+                text = <"Cardiac activity">
+                description = <"*Presence of cardiac activity. (en)">
+            >
+            ["at0.17"] = <
+                text = <"Present">
+                description = <"Cardiac activity is observed.">
+            >
+            ["at0.18"] = <
+                text = <"Absent">
+                description = <"No cardiac activity is observed.">
+            >
+            ["at0.19"] = <
+                text = <"Indeterminate">
+                description = <"It is not possible to determine if cardiac activity is present or absent.">
+            >
+            ["at0.9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac0.9009"] = <
+                text = <"Cardiac activity (synthesised)">
+                description = <"*Presence of cardiac activity. (en) (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0.1"] = <
+                text = <"Gestasjonssekk">
+                description = <"">
+            >
+            ["at0.15"] = <
+                text = <"Antall embryoer">
+                description = <"Antall embryoanlegg eller embryoer som er observert i gestasjonssekken.">
+            >
+            ["at0.16"] = <
+                text = <"Hjerteaktivitet">
+                description = <"Tilstedeværelse av hjerteaktivitet.">
+            >
+            ["at0.17"] = <
+                text = <"Tilstede">
+                description = <"Hjerteaktivitet ble observert.">
+            >
+            ["at0.18"] = <
+                text = <"Fraværende">
+                description = <"Ingen hjerteaktivitet ble observert.">
+            >
+            ["at0.19"] = <
+                text = <"Ubestemmelig">
+                description = <"Det er umulig å bestemme om hjerteaktivitet er tilstede eller ikke.">
+            >
+            ["at0.2"] = <
+                text = <"Gestasjonssekkens gjennomsnittlig diameter (MSD)">
+                description = <"Gjennomsnitt av målinger vinkelrette på hverandre.">
+            >
+            ["at0.4"] = <
+                text = <"Beskrivelse av plommesekk.">
+                description = <"Fritekstbeskrivelse av plommesekk.">
+            >
+            ["at0.6"] = <
+                text = <"Beskrivelse av amnionsekk">
+                description = <"Fritekstbeskrivelse av amnionsekk.">
+            >
+            ["at0000.1"] = <
+                text = <"Bildediagnostisk undersøkelse - gestasjonssekk">
+                description = <"Funn ved radiologisk undersøkelse av én enkel gestasjonssekk.">
+            >
+            ["at0001.1"] = <
+                text = <"Kroppsstruktur">
+                description = <"Identifisering av strukturen i kroppen eller regionen som er undersøkt.">
+                comment = <"Dersom den aktuelle strukturen i kroppen er fullt ut angitt i dette \"Kroppsstruktur\"-elementet er det ikke nødvendig å bruke \"Anatomisk lokalisasjon\" eller \"Strukturert anatomisk lokalisasjon\".">
+            >
+            ["at0.9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac0.9009"] = <
+                text = <"Hjerteaktivitet (synthesised)">
+                description = <"Tilstedeværelse av hjerteaktivitet. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Imaging examination of a gestational sac">
+                description = <"Findings on radiological examination of a single gestational sac.">
+            >
+            ["at0001.1"] = <
+                text = <"Body structure">
+                description = <"Identification of the body structure or region examined.">
+                comment = <"If the body structure has been fully identified in this 'Body structure' element, then the 'Body site' data element and 'Structured body site' SLOT becomes redundant.">
+            >
+            ["at0.1"] = <
+                text = <"Gestational sac">
+                description = <"">
+            >
+            ["at0.2"] = <
+                text = <"Mean Sac Diameter (MSD)">
+                description = <"Mean of diameter measurements in perpendicular directions.">
+            >
+            ["at0.4"] = <
+                text = <"Yolk sac description">
+                description = <"Narrative description about the yolk sac.">
+            >
+            ["at0.6"] = <
+                text = <"Amnion description">
+                description = <"Narrative description about the amnion.">
+            >
+            ["at0.15"] = <
+                text = <"Number of embryos">
+                description = <"Number of fetal poles or embryos observed in the gestational sac.">
+            >
+            ["at0.16"] = <
+                text = <"Cardiac activity">
+                description = <"Presence of cardiac activity.">
+            >
+            ["at0.17"] = <
+                text = <"Present">
+                description = <"Cardiac activity is observed.">
+            >
+            ["at0.18"] = <
+                text = <"Absent">
+                description = <"No cardiac activity is observed.">
+            >
+            ["at0.19"] = <
+                text = <"Indeterminate">
+                description = <"It is not possible to determine if cardiac activity is present or absent.">
+            >
+            ["at0.9000"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac0.9009"] = <
+                text = <"Cardiac activity (synthesised)">
+                description = <"Presence of cardiac activity. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at0.9000"] = <http://openehr.org/id/122>
+        >
+    >
+    value_sets = <
+        ["ac0.9009"] = <
+            id = <"ac0.9009">
+            members = <"at0.17", "at0.18", "at0.19">
+        >
+    >

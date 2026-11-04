@@ -1,0 +1,277 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=735a0845-3cfc-4945-9b97-4f60846afb24; build_uid=939b63ed-17f1-4a7a-b731-ece6e9976d32)
+    openEHR-EHR-OBSERVATION.aofas.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Hildegard Franke">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"hildi@freshehr.com">
+        ["date"] = <"2017-10-02">
+    >
+    original_namespace = <"uk.org.clinicalmodels">
+    original_publisher = <"UK Clinical Models">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"uk.org.clinicalmodels">
+    custodian_organisation = <"UK Clinical Models">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"http://www.aofas.org/about/Pages/about.aspx cited 02-Oct-2017">
+        ["2"] = <"http://www.northlondonfootclinic.co.uk/download.php?download=hindfoot-surgery-assessment-form.pdf cited 02-Oct-2017">
+    >
+    other_details = <
+        ["current_contact"] = <"Hildegard Franke, freshEHR Clinical Informatics Ltd.<hildi@freshehr.com>">
+        ["MD5-CAM-1.0.1"] = <"4786E666CAD62860BEE4B008715D3FF8">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For the recording of subjective assessment for completion by patient of ankle or hindfoot pain and function.">
+            use = <"Use to record patient-reported ankle or hindfoot pain and function assessment.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this archetype may be copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners where a copyright exists. ">
+            misuse = <"Not to be used unless the terms of copyright have been observed (if a copyright exists).">
+            copyright = <"© Clinical Models UK">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- AOFAS
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Point in time
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Q1 Pain
+                                        value matches {
+                                            DV_ORDINAL[at9004] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0032]}],    -- Severe pain
+                                                    [{20}, {[at0031]}],    -- Moderate or daily
+                                                    [{30}, {[at0030]}],    -- Mild or occasional
+                                                    [{40}, {[at0029]}]    -- No pain
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0033] occurrences matches {0..1} matches {    -- Q2 Activity limitations and support requirements
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0037]}],    -- Severe
+                                                    [{4}, {[at0036]}],    -- Moderate or daily
+                                                    [{7}, {[at0035]}],    -- Mild or occasional
+                                                    [{10}, {[at0034]}]    -- None
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0038] occurrences matches {0..1} matches {    -- Q3 Walking
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0042]}],    -- Less than 1
+                                                    [{2}, {[at0041]}],    -- 1 to 3
+                                                    [{4}, {[at0040]}],    -- 4 to 6
+                                                    [{5}, {[at0039]}]    -- Greater than 6
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0043] occurrences matches {0..1} matches {    -- Q4 Walking surfaces
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0046]}],    -- Severe difficulty on uneven surfaces
+                                                    [{3}, {[at0045]}],    -- Some difficulty on uneven surfaces
+                                                    [{5}, {[at0044]}]    -- No difficulty on any walking surface
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9008] matches {
+                                                magnitude matches {|0..60|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9009]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0006] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0007] matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9010]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0004] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0005] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"AOFAS">
+                description = <"American Orthopaedic Foot and Ankle Society Score (AOFAS).">
+            >
+            ["at0002"] = <
+                text = <"Point in time">
+                description = <"A specific date and/or time which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0005"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"e.g. Local hospital departmental infomation or additional metadata to align with HL7 or CDISC equivalents.">
+            >
+            ["at0007"] = <
+                text = <"Confounding factors">
+                description = <"Record any issues or factors that may impact on the overall assessment or score.">
+            >
+            ["at0008"] = <
+                text = <"Total score">
+                description = <"The total score for the four questions.">
+            >
+            ["at0027"] = <
+                text = <"Comment">
+                description = <"Narrative comment.">
+            >
+            ["at0028"] = <
+                text = <"Q1 Pain">
+                description = <"Patient reported pain assessment.">
+            >
+            ["at0029"] = <
+                text = <"No pain">
+                description = <"The patient reports no pain.">
+            >
+            ["at0030"] = <
+                text = <"Mild or occasional">
+                description = <"The patient reports mild or occasional pain.">
+            >
+            ["at0031"] = <
+                text = <"Moderate or daily">
+                description = <"The patient reports moderate or daily pain.">
+            >
+            ["at0032"] = <
+                text = <"Severe pain">
+                description = <"The patient reports severe pain.">
+            >
+            ["at0033"] = <
+                text = <"Q2 Activity limitations and support requirements">
+                description = <"Patient-reported activity limitations and support requirements.">
+            >
+            ["at0034"] = <
+                text = <"None">
+                description = <"The patient reports no activity limitations and support requirements.">
+            >
+            ["at0035"] = <
+                text = <"Mild or occasional">
+                description = <"The patient reports mild or occasional activity limitations and support requirements.">
+            >
+            ["at0036"] = <
+                text = <"Moderate or daily">
+                description = <"The patient reports moderate or daily activity limitations and support requirements.">
+            >
+            ["at0037"] = <
+                text = <"Severe">
+                description = <"The patient reports severe activity limitations and support requirements.">
+            >
+            ["at0038"] = <
+                text = <"Q3 Walking">
+                description = <"Patient-reported maximum walking distance in blocks (1 block = 100-200 yards).">
+            >
+            ["at0039"] = <
+                text = <"Greater than 6">
+                description = <"The patient reports a maximum walking distance of greater than 6 blocks.">
+            >
+            ["at0040"] = <
+                text = <"4 to 6">
+                description = <"The patient reports a maximum walking distance of 4 to 6 blocks.">
+            >
+            ["at0041"] = <
+                text = <"1 to 3">
+                description = <"The patient reports a maximum walking distance of 1 to 3 blocks.">
+            >
+            ["at0042"] = <
+                text = <"Less than 1">
+                description = <"The patient reports a walking distance of less than 1 block.">
+            >
+            ["at0043"] = <
+                text = <"Q4 Walking surfaces">
+                description = <"Patient-reported assessment of difficulty of walking on various surfaces.">
+            >
+            ["at0044"] = <
+                text = <"No difficulty on any walking surface">
+                description = <"The patient reports no difficulty walking on any surface.">
+            >
+            ["at0045"] = <
+                text = <"Some difficulty on uneven surfaces">
+                description = <"The patient reports some difficulty walking on uneven terrains, stairs, inclines or ladders.">
+            >
+            ["at0046"] = <
+                text = <"Severe difficulty on uneven surfaces">
+                description = <"The patient reports severe difficulty walking on uneven terrains, stairs, inclines or ladders.">
+            >
+            ["ac9010"] = <
+                text = <"Q1 Pain (synthesised)">
+                description = <"Patient reported pain assessment. (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Q2 Activity limitations and support requirements (synthesised)">
+                description = <"Patient-reported activity limitations and support requirements. (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Q3 Walking (synthesised)">
+                description = <"Patient-reported maximum walking distance in blocks (1 block = 100-200 yards). (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Q4 Walking surfaces (synthesised)">
+                description = <"Patient-reported assessment of difficulty of walking on various surfaces. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0046", "at0045", "at0044">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0042", "at0041", "at0040", "at0039">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0037", "at0036", "at0035", "at0034">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0032", "at0031", "at0030", "at0029">
+        >
+    >

@@ -1,0 +1,312 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=4f38dcaf-95ab-4406-826a-12767c8c4ce3; build_uid=b3237b45-637f-4464-b3ac-b8120e165fd3)
+    openEHR-EHR-CLUSTER.exam-upper_limb.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-CLUSTER.exam.v2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Nina Schewe">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"schewe.nina@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Erik Sundvall">
+                ["organisation"] = <"Region Östergötland + Linköping University">
+                ["email"] = <"erik.sundvall@regionostergotland.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Nasjonal IKT HF">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Adriana Kitajima">
+                ["organisation"] = <"Hospital Alemão Oswaldo Cruz - HAOC">
+                ["email"] = <"adrianakitajima@gmail.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-03-31">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Shahla Foozonkhah, Iran ministry of health and education, Iran", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom (openEHR Editor)", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)", "Ingrid Heitmann, Oslo universitetssykehus HF, Norway", "Hilde Hollås, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Sabine Leh, Haukeland University Hospital, Department of Pathology, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Lars Morgan Karlsen, DIPS ASA, Norway", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Vladimir Pizzo, Hospital Sírio Libanês, Brazil", "Jussara Rotzsch, UNB, Brazil", "Anoop Shah, University College London, United Kingdom", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia (openEHR Editor)", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "Jon Tysdahl, Furst medlab AS, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"3FA5966748B00C6951F50C123C82CC14">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To record a narrative description, structured details and clinical interpretation of the findings observed during the physical examination of an upper limb. (en)">
+            keywords = <"*arm, upper arm, forearm, elbow, wrist, hand, lower arm, upper limb (en)", ...>
+            use = <"*Use to record a narrative description, structured details and clinical interpretation of the findings observed during the physical examination of an upper limb.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the 'Procedure detail' SLOT within ACTION.procedure archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"Nicht für die Dokumentation der Krankengeschichte zu verwenden - Für diesen Zweck sollten spezifische OBSERVATION- und CLUSTER-Archetypen verwendet werden, z.B. OBSERVATION.story und CLUSTER.symptom_sign.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"*To record a narrative description, structured details and clinical interpretation of the findings observed during the physical examination of an upper limb. (en)">
+            keywords = <"*arm, upper arm, forearm, elbow, wrist, hand, lower arm, upper limb (en)", ...>
+            use = <"*Use to record a narrative description, structured details and clinical interpretation of the findings observed during the physical examination of an upper limb.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the 'Procedure detail' SLOT within ACTION.procedure archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"Ska inte användas för att dokumentera anamnes eller historik, använd då istället specifika OBSERVATION- och CLUSTER-arketyper; exempelvis OBSERVATION.story och CLUSTER.symptom_sign.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"*To record a narrative description, structured details and clinical interpretation of the findings observed during the physical examination of an upper limb. (en)">
+            keywords = <"*arm, upper arm, forearm, elbow, wrist, hand, lower arm, upper limb (en)", ...>
+            use = <"*Use to record a narrative description, structured details and clinical interpretation of the findings observed during the physical examination of an upper limb.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the 'Procedure detail' SLOT within ACTION.procedure archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"Skal ikke brukes til å ta opp frittstående klinisk observasjoner eller testresultater - bruk spesifikke OBSERVATION arketyper, for eksempel OBSERVATION.head_circumference eller OBSERVATION.glasgow_coma_scale.
+
+Skal ikke brukes til å ta opp anamnese - bruk da spesifikke OBSERVATION og CLUSTER arketyper. For eksempel OBSERVATION.story og CLUSTER.symptom_sign.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*To record a narrative description, structured details and clinical interpretation of the findings observed during the physical examination of an upper limb. (en)">
+            keywords = <"*arm, upper arm, forearm, elbow, wrist, hand, lower arm, upper limb (en)", ...>
+            use = <"*Use to record a narrative description, structured details and clinical interpretation of the findings observed during the physical examination of an upper limb.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the 'Procedure detail' SLOT within ACTION.procedure archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"Não deve ser usado para registrar a história clínica - use arquétipos específicos de OBSERVAÇÃO e CLUSTER. Por exemplo, OBSERVATION.story e CLUSTER.symptom_sign.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a narrative description, structured details and clinical interpretation of the findings observed during the physical examination of an upper limb.">
+            keywords = <"arm, upper arm, forearm, elbow, wrist, hand, lower arm, upper limb", ...>
+            use = <"Use to record a narrative description, structured details and clinical interpretation of the findings observed during the physical examination of an upper limb.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the 'Procedure detail' SLOT within ACTION.procedure archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.">
+            misuse = <"Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Examination of an upper limb
+        items matches {
+            ELEMENT[at0001.1] matches {    -- System or structure examined
+                value matches {
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code matches {[ac0.9000]}    -- System or structure examined (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"*Examination of an upper limb (en)">
+                description = <"*Findings observed during the physical examination of an upper limb, including shoulder, upper and lower arm, hand and associated joints. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"Untersuchtes System oder untersuchte Struktur">
+                description = <"Identifizierung des untersuchten Körpersystems oder der anatomischen Struktur.">
+                comment = <"Wenn möglich wird die Kodierung des untersuchten Systems oder der untersuchten Struktur mit einer Terminologie bevorzugt.">
+            >
+            ["at0.1"] = <
+                text = <"*Left upper limb (en)">
+                description = <"*The left upper limb was examined. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Right upper limb (en)">
+                description = <"*The right upper limb was examined. (en)">
+            >
+            ["at0004.1"] = <
+                text = <"Untersuchungsergebnisse">
+                description = <"Strukturierte Angaben zu den Ergebnissen der körperlichen Untersuchung.">
+            >
+            ["ac0.9000"] = <
+                text = <"Untersuchtes System oder untersuchte Struktur (synthesised)">
+                description = <"Identifizierung des untersuchten Körpersystems oder der anatomischen Struktur. (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000.1"] = <
+                text = <"*Examination of an upper limb (en)">
+                description = <"*Findings observed during the physical examination of an upper limb, including shoulder, upper and lower arm, hand and associated joints. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"System eller struktur som undersökts">
+                description = <"Identifiering av systemet eller strukturen som undersökts.">
+                comment = <"Om möjligt, koda systemet eller strukturen med hjälp av ett terminologisystem.">
+            >
+            ["at0.1"] = <
+                text = <"*Left upper limb (en)">
+                description = <"*The left upper limb was examined. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Right upper limb (en)">
+                description = <"*The right upper limb was examined. (en)">
+            >
+            ["at0004.1"] = <
+                text = <"Fynd vid undersökning">
+                description = <"Strukturerade detaljer om fynd vid den fysiska undersökningen.">
+            >
+            ["ac0.9000"] = <
+                text = <"System eller struktur som undersökts (synthesised)">
+                description = <"Identifiering av systemet eller strukturen som undersökts. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000.1"] = <
+                text = <"*Examination of an upper limb (en)">
+                description = <"*Findings observed during the physical examination of an upper limb, including shoulder, upper and lower arm, hand and associated joints. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"Undersøkt organsystem eller struktur">
+                description = <"Identifisering av det undersøkte organsystemet eller anatomiske strukturen.">
+                comment = <"*Coding of the system or structure examined with a terminology is preferred, where possible. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Left upper limb (en)">
+                description = <"*The left upper limb was examined. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Right upper limb (en)">
+                description = <"*The right upper limb was examined. (en)">
+            >
+            ["at0004.1"] = <
+                text = <"Spesifikke funn">
+                description = <"Ytterligere strukturerte detaljer om undersøkelsesfunnene.">
+            >
+            ["ac0.9000"] = <
+                text = <"Undersøkt organsystem eller struktur (synthesised)">
+                description = <"Identifisering av det undersøkte organsystemet eller anatomiske strukturen. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000.1"] = <
+                text = <"*Examination of an upper limb (en)">
+                description = <"*Findings observed during the physical examination of an upper limb, including shoulder, upper and lower arm, hand and associated joints. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"Sistema ou estrutura examinada">
+                description = <"Identificação do sistema do corpo examinado ou da estrutura anatômica.">
+                comment = <"A codificação do sistema ou estrutura examinada com uma terminologia é preferível, sempre que possível.">
+            >
+            ["at0.1"] = <
+                text = <"*Left upper limb (en)">
+                description = <"*The left upper limb was examined. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Right upper limb (en)">
+                description = <"*The right upper limb was examined. (en)">
+            >
+            ["at0004.1"] = <
+                text = <"Resultados do exame">
+                description = <"Detalhes estruturados sobre os resultados do exame físico.">
+            >
+            ["ac0.9000"] = <
+                text = <"Sistema ou estrutura examinada (synthesised)">
+                description = <"Identificação do sistema do corpo examinado ou da estrutura anatômica. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Examination of an upper limb">
+                description = <"Findings observed during the physical examination of an upper limb, including shoulder, upper and lower arm, hand and associated joints.">
+            >
+            ["at0001.1"] = <
+                text = <"System or structure examined">
+                description = <"Identification of the examined body system or anatomical structure.">
+                comment = <"Coding of the system or structure examined with a terminology is preferred, where possible.">
+            >
+            ["at0.1"] = <
+                text = <"Left upper limb">
+                description = <"The left upper limb was examined.">
+            >
+            ["at0.2"] = <
+                text = <"Right upper limb">
+                description = <"The right upper limb was examined.">
+            >
+            ["at0004.1"] = <
+                text = <"Examination findings">
+                description = <"Structured details about the physical examination findings.">
+            >
+            ["ac0.9000"] = <
+                text = <"System or structure examined (synthesised)">
+                description = <"Identification of the examined body system or anatomical structure. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0000.1"] = <http://snomed.info/id/284372008>
+            ["at0.1"] = <http://snomed.info/id/80768000>
+            ["at0.2"] = <http://snomed.info/id/6921000>
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.1", "at0.2">
+        >
+    >

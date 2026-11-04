@@ -1,0 +1,2498 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=12e8fcc3-a17b-45ad-a7dd-6e8ec78d60a4; build_uid=b3dfcd6d-f71b-4347-b4e9-dabfbcc62845)
+    openEHR-EHR-EVALUATION.family_history.v2.0.5-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Sarah Ballout, Natalia Strauch, Alina Rehberg">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"ballout.sarah@mh-hannover.de, Strauch.Natalia@mh-hannover.de, rehberg.alina@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Emma Malm, sofia Lång Janstad">
+                ["organisation"] = <"Karolinska Universitetssjukhuset, Karolinska University Hospital">
+                ["email"] = <"emma.malm@cambio.se, sofia.lang-janstad@regionstockholm.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Micaela Thierley, Einar Fosse, John Tore Valand, Silje Ljosland Bakke, Liv Laugen">
+                ["organisation"] = <"​Oslo University Hospital, Norway">
+                ["email"] = <"liv.laugen@ous-hf.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Vladimir Pizzo">
+                ["organisation"] = <"Hospital Sirio Libanes - Brazil">
+                ["email"] = <"vladimir.pizzo@hsl.org.br">
+            >
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            author = <
+                ["name"] = <"Erasmia Partafylla">
+                ["organisation"] = <"Sigmasoft">
+                ["email"] = <"c.partafylla@sigmasoft.gr">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Vanessa Pereira">
+                ["organisation"] = <"Better - Pathfinder">
+                ["email"] = <"vanessapereira@protonmail.com">
+            >
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+            author = <
+                ["name"] = <"Lin Zhang">
+                ["organisation"] = <"Taikang Insurance Group">
+                ["email"] = <"linforest@163.com">
+            >
+            accreditation = <"TBD">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2010-12-15">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Tomas Alme, DIPS ASA, Norway", "Ole Andreas Bjordal, Webmed, Norway", "Gunn Anita Skjulhaug, Helse-Bergen HF, Norway", "Rita Apelt, Department of Health,NT, Australia", "Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (Nasjonal IKT redaktør)", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "John Bennett, NEHTA, Australia", "Kristian Berg, Universitetssykehuset Nord Norge, Norway", "Lars Bitsch-Larsen, Haukeland University Hospital, Bergen, Norway", "Anita Bjørnnes, Helse Bergen, Norway", "Terje Bless, Helse Nord FIKS, Norway", "Diego Bosca, IBIME group, Spain", "Mauricio Botero, Universidad de Caldas, Colombia", "Rong Chen, Cambio Healthcare Systems, Sweden", "Bjørn Christensen, HUS, Norway", "Stephen Chu, Queensland Health, Australia", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Eva Dybvik, Nasjonal kompetansetjeneste for leddproteser og hoftebrudd, Haukeland Universitetssjukehus, Norway", "David Evans, Queensland Health, Australia", "Shahla Foozonkhah, Ocean Informatics, Australia", "Einar Fosse, UNN HF, Norwegian Centre for Integrated Care and Telemedicine, Norway", "Samuel Frade, Marand, Portugal", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom", "Tim Garden, NTG Department of Health, Australia", "Sebastian Garde, Ocean Informatics, Germany", "Jacquie Garton-Smith, Royal Perth Hospital and DoHWA, Australia", "Andrew Goodchild, NEHTA, Australia", "Gyri Gradek, Senter for medisinsk genetikk og molekylærmedisin, Haukeland Universitetssykehus, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Elisabeth Gudmestad, Helse Bergen HF, Haukeland Universitetssykehus, Dokumentasjonsavdelingen, Norway", "Daniel Habashi, PasientSky AS, Norway", "Dag Hanoa, Oslo universitetssykehus, Norway", "Sam Heard, Ocean Informatics, Australia (Editor)", "Kristian Heldal, Telemark Hospital Trust, Norway", "Anca Heyd, DIPS ASA, Norway", "Nils-Harald Holsen, Nasjonal IKT HF, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Ann Iren Tellnes Moe, Helse Vest IKT, Norway", "Leif Ivar Havelin, Helse Bergen, Norway", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Hans Johan Breidablik, Helse Førde HF, Norway", "Lars Karlsen, DIPS ASA, Norway", "Goran Karlstrom, County Of Värmland, Sweden", "Mary Kelaher, NEHTA, Australia", "Shinji Kobayashi, Kyoto University, Japan", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Robert L'egan, NEHTA, Australia", "Sabine Leh, Helse-Bergen, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hugh Leslie, Ocean Informatics, Australia", "Hallvard Lærum, Oslo Universitetssykehus HF, Norway", "Mike Martyn, The Hobart Anaesthetic Group, Australia", "Shane McKee, Belfast Health & Social Care Trust, United Kingdom", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Chris Mitchell, RACGP, Australia", "Lars Morgan Karlsen, DIPS ASA, Norway", "Stewart Morrison, NEHTA, Australia", "Bengt Nilssen, Sykehuset Innlandet HFq, Norway", "Bjørn Næss, DIPS ASA, Norway", "Jeremy Oats, NT Health, Australia", "Andrej Orel, Marand d.o.o., Slovenia", "Lynne Parsons, Primary and Community Health Services, Australia", "Anne Pauline Anderssen, Helse Nord RHF, Norway", "Vladimir Pizzo, Hospital Sírio Libanês, Brazil", "Jodie Pycroft, Adelaide Northern Division of General Practice Ltd, Australia", "Norwegian Review Summary, National ICT Norway, Norway", "Robyn Richards, NEHTA - Clinical Terminology, Australia", "Tanja Riise, Nasjonal IKT HF, Norway", "Jussara Rotzsch, UNB, Brazil", "Anoop Shah, University College London, United Kingdom", "Elizabeth Stanick, Hobart Anaesthetic Group, Australia", "Kirsten Steen Kyrkjebø, Helse Vest IKT AS, Norway", "Møyfrid Stokke, Helse Vest IKT, Norway", "Line Sæle, Nasjonal IKT HF, Norway", "John Taylor, NEHTA, Australia", "Micaela Thierley, Helse Bergen, Norway", "Gordon Tomes, Australian Institute of Health and Welfare, Australia", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør, Nasjonal IKT oversettelsesredaktør)", "Richard Townley-O'Neill, NEHTA, Australia", "Donna Truran, ACCTI-UoW, Australia", "Jon Tysdahl, Furst medlab AS, Norway", "Ørjan Vermeer, Haukeland Universitetssjukehus, Kvinneklinikken, Norway", "Jo Wright, NT Dept of Health, Australia (Editor)", "Natalia Strauch, Medizinische Hochschule Hannover, Germany">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Family History, draft archetype [Internet]. Australia, National eHealth Transition Authority, NEHTA Clinical Knowledge Manager. Authored: 2010 12 15. Available at: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.927 (last accessed 2015 03 05).">
+        ["2"] = <"Risk of condition based on family history, rejected archetype, openEHR Clinical Knowledge Manager [Internet]. openEHR Foundation. Authored: 2006 04 23. Available at: http://www.openehr.org/ckm/#showArchetype_1013.1.125 (last accessed 2015 03 05).">
+        ["3"] = <"HL7 Version 3 Standard: Clinical Genomics; Pedigree, Release 1. ANSI/HL7 V3 CGPED, R1-2007. Published 2007 05 07. Available at: http://www.hl7.org/implement/standards/product_brief.cfm?product_id=8 (last accessed 2015 03 05).">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"CBE769EBC90814A81D257C9AC1EA1EC2">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Repräsentation von Informationen über das Auftreten bedeutender gesundheitlicher Probleme bei genetisch und nicht-genetisch verwandten Familienmitgliedern - sowohl lebendig, als auch verstorben.">
+            keywords = <"Familie", "Anamnese", "Gesundheit", "Zustand", "Problem", "Diagnose", "genetisch", "Stammbaum", "Genealogie", "Familienanamnese", "Verwandter", "erblich", "vererbt", "familiär", "Vererbung">
+            use = <"Zur Repräsentation von zusammenfassenden Informationen über Probleme oder Diagnosen bei Familienmitgliedern. Diese Informationen können als Beitrag zur Ermittlung aktueller Gesundheitsprobleme, zur Abschätzung der möglichen Risiken aufgrund familiäre Probleme oder Umstände oder zur Einleitung präventiver Gesundheitsmaßnahmen verwendet werden.
+
+Der Anwendungsbereich dieses Archetyps ist bewusst weit gefasst, um ein möglichst breites Spektrum an Problemen und Fragestellungen innerhalb von Familien zu erfassen. Er umfasst insbesondere bekannte Probleme und Diagnosen, identifizierte biologische Marker sowie alle relevanten psychosozialen und Umweltfaktoren. Während sich die Familienanamnese traditionell auf genetische Faktoren oder Biomarker als Indikatoren für Risiken oder potenzielle Risiken konzentrierte, schließt dieser Archetyp sowohl die Erfassung von Problemen und Diagnosen mit erblicher Ursache als auch solche ein, die nicht direkt erblich sind, aber durch das häusliche Umfeld, einschließlich psychosozialer oder Umweltfaktoren, beeinflusst werden. Beispiele hierfür sind die Belastung durch Schadstoffe im familiären Umfeld, häusliche Gewalt, sexueller Missbrauch, Alkoholismus und andere Suchterkrankungen.
+
+Nicht genetische Familienmitglieder sind Adoptivkinder oder Pflegekinder über längere Zeit, durch Eheschließung verwandte Personen, oder andere nicht verwandte Personen, die am regulären Leben der Familie Teil- oder Einfluss haben.
+
+Dieser Archetyp wurde so konzipiert, dass er Folgendes beinhaltet:
+- eine Beschreibung als Freitext. Dadurch können Details der Familienanamnese aus bestehenden Systemen als unstrukturierter Text übernommen werden; und
+- einen detaillierten Bereich, der sich auf relevante gesundheitliche Details über bestimmte Familienmitglieder konzentriert, einschließlich ihrer Anamnese und Biomarker.
+
+Dieser Archetyp kann in vielen Kontexten verwendet werden. Zum Beispiel, zum Aufzeichnen einer Anamneseangabe im Rahmen eines klinischen Beratungsgesprächs; zum Erzeugen einer Liste zur Familienanamnese, oder Bereitstellung einer Zusammenfassung in einem Entlassungsbericht.
+
+Zusätzliche Angaben über spezifische Probleme, Diagnosen oder bisherige Verfahren bei einem Familienmitglied können mit Hilfe des Archetyps EVALUATION.Problem/Diagnose oder des Archetyps ACTION.Prozedur erfasst werden, wobei die Pflegeperson \"Subject of Care\" ein Familienmitglied und nicht den Patienten laut Krankenakten darstellt.
+
+Dieser Archetyp kann als Grundlage für ein Familienstammbaum-Diagramm von Gesundheitsproblemen/Diagnosen oder zur Risikoabschätzung einer Erkrankung basierend auf der Prävalenz in der Familienanamnese oder bei bekannten Biomarkern verwendet werden.
+
+Es kann notwendig sein, jedes Familienmitglied spezifisch zu bezeichnen und nicht nur durch das Verhältnis zum Patienten. Zum Beispiel, während es nur eine Großmutter mütterlicherseits geben wird, kann es mütterlicherseits viele Cousinen geben. Dies kann erforderlich sein, um sicherzustellen, dass eine Stammbaumübersicht korrekt ist. Es wird auch genaue Änderungen an der Aufzeichnung für jedes einzelne ausgewählte Familienmitglied ermöglichen. In einem vertraulichen, nicht zur Weiterleitung bestimmten Datensatz, ist die Erfassung der Verwandten mit realen Namen aus Gründen der Übersichtlichkeit vorzuziehen. Wenn der Datensatz oder ein Teil des Datensatzes geteilt werden soll, kann die Identifikation des Familienmitglieds durch ein eindeutiges Zeichen oder einen Alias sinnvoller sein.">
+            misuse = <"Nicht zur Repräsentation von Informationen über das relative oder absolute Risiko einer Erkrankung aufgrund der Familienanamnese zu entwickeln. Verwenden Sie für diesen Zweck spezifische Archetypen EVALUATION.health_risk, einschließlich CLUSTER.Familäre Prävalenz für die Details über den betroffenen Anteil der Familienmitglieder.
+
+Nicht zur Repräsentation der Rückverfolgbarkeit von Kontakten bei Infektionskrankheiten, die ein sofortiges Handeln erfordern. Verwenden Sie für diesen Zweck spezifische Archetypen.
+
+Nicht zur Repräsentation eines Ausschlusses der Familienanamnese. Verwenden Sie für diesen Zweck den Archetypen EVALUATION.exclusion-family_history.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"*To record information about the occurrence of significant health-related problems in genetic and non-genetic family members - both alive and deceased. (en)">
+            keywords = <"familj", "historia", "hälsa", "tillstånd", "hälsoproblem", "diagnos", "genetisk", "stamtavla", "genealogi", "familjeanamnes", "relativt", "ärftlig", "ärvt", "familjär", "ärftlighet">
+            use = <"*Use to record a summary of information about problems or diagnoses found in family members. This information may be used to contribute to the identification of a current health problem, assessment of future risk from familial problems or conditions, or to initiate preventive health activities.
+
+The intended scope of this archetype is deliberately kept loose to include the broadest range of problems or issues that might be found within families. It specifically includes known problems and diagnoses, identified biological markers, plus any relevant psychosocial factors and environmental factors. While the scope of family history traditionally has been focused on genetic factors or biomarkers as indicators of risk or potential risk, the scope of this archetype includes both recording of problems or diagnoses that have an inheritable origin as well as those that are not directly inheritable but influenced by the domestic setting, including psychosocial or environmental factors. Examples include exposure to toxins in the family environment, domestic violence, sexual abuse, alcoholism and other addictions.
+
+Non-genetic family members can include adopted or long term fostered children, those related by marriage, or other unrelated individuals who participate in the regular life and influence of the family.
+
+This archetype has been designed to include:
+- a narrative overview as free text. This will allow family history details from existing systems to be incorporated as non-structured text; and
+- a detailed area focusing on relevant health details about specific family members, including their medical history and biomarkers.
+
+This archetype can be used within many contexts. For example, recording a family history entry within a clinical consultation; populating a Family History List; or to provide a summary statement within a Discharge Summary document.
+
+Additional detail about a family member's specific problem, diagnosis or past procedures can be captured using the EVALUATION.problem_diagnosis or the ACTION.procedure archetype and specifying the 'Subject of Care' as the family member, rather than the subject of the health record. 
+
+This archetype can be used as the basis for a Family Pedigree chart of health problems/diagnoses or to support estimations of risk of a condition based on prevalence in the family history or known biomarkers.
+
+It may be necessary to identify each family member specifically and not just by the relationship to the patient. For example, while there will be only one maternal grandmother, there may be many female maternal cousins. This may be required to ensure that a pedigree chart is accurate. It will also enable accurate amendments to the record for each identified family member. If the record is private and will not be shared, for reasons of clarity it may be preferable to record the relative's actual name. If the record, or part of the record, is to be shared, it may be more appropriate for the family member to be identified by a unique label or alias. (en)">
+            misuse = <"Ska inte användas för utvärdering av relativ eller absolut risk för att utveckla ett tillstånd baserat på familjeanamnes. Använd i stället EVALUATION.health_risk-arketypen, inklusive CLUSTER.family_prevalence för information om det berörda förhållandet mellan familjemedlemmarna.
+
+Ska inte användas för kontaktspårning av infektionssjukdomar som kräver omedelbar åtgärd. Använd specifika arketyper för detta ändamål.
+
+Ska inte användas för att uteslutande registrera familjeanamnes. Använd i stället arketypen EVALUATION.exclusion-family_history för detta ändamål.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For registrering av informasjon om forekomst av helserelaterte forhold hos både levende og døde, genetiske og ikke-genetiske familiemedlemmer.">
+            keywords = <"familie", "anamnese", "helse", "tilstand", "problem", "diagnose", "genetisk", "slektstre", "genealogi", "familieanamnese", "slektning", "arvelighet", "biologisk", "familietre", "hereditet", "ikke-genetisk", "ikke-biologisk", "familiær", "genetikk", "arvelig", "hereditær", "far", "mor", "foreldre">
+            use = <"Brukes for å registrere et sammendrag av helserelaterte forhold, problemer eller diagnoser hos familiemedlemmer. Informasjonen kan bidra til identifisering av et eksisterende helseproblem, et grunnlag for å vurdere individets fremtidige risiko for familiære sykdommer eller for å iverksette forebyggende helsearbeid.
+
+Den tiltenkte anvendelsesområdet for denne arketypen er bevisst holdt vidt for å inkludere et så bredt spekter som mulig av problemer eller forhold som kan forekomme i familier. Den omfatter spesifikt kjente problemer og diagnoser, identifiserte biologiske markører, samt relevante psykososiale og miljømessige faktorer. Selv om familiehistorie tradisjonelt har hatt fokus på genetiske faktorer eller biomarkører som indikatorer på risiko eller potensiell risiko, inkluderer denne arketypen både registrering av problemer eller diagnoser med arvelig opprinnelse og slike som ikke er direkte arvelige, men påvirkes av hjemmemiljøet, herunder psykososiale eller miljømessige faktorer.
+
+Ikke-genetiske familiemedlemmer kan være adoptivbarn eller langtidsplasserte fosterbarn, ektefeller eller andre personer som deltar i familiehverdagen og har innflytelse på familien.
+
+Arketypen inneholder:
+
+- En fritekstoversikt. Dette tillater at detaljer om familieanamnesen kan importeres fra eksisterende systemer som en ustrukturert tekst.
+- En detaljert del, som fokuserer på relevant helseinformasjon om spesifikke familiemedlemmer, deres medisinske anamnese og biomarkører.
+
+Arketypen kan brukes i mange sammenhenger, for eksempel registrering av familieanamnese i en klinisk konsultasjon, i en persistent oversikt over familieanamnese eller som del av en epikrise.
+
+Ytterligere detaljer om et familiemedlems spesifikke problemer, diagnoser eller gjennomgåtte prosedyrer kan registreres ved å bruke EVALUATION.problem_diagnosis- eller ACTION.procedure-arketypen og spesifisere \"Subject of Care\" til familiemedlemmet, i stedet for individet som journalen omhandler.
+
+Arketypen kan brukes som basis for et slektstre over helseproblemer og diagnoser, eller for å understøtte risikoberegninger basert på forekomst i familieanamnesen eller kjente biomarkører.
+
+Det kan være nødvendig å identifisere hvert enkelt familiemedlem spesifikt og ikke bare relasjonen til pasienten. For eksempel: Det finnes bare én mormor, men det er mulig at det finnes flere kvinnelige søskenbarn på morssiden. En slik registrering kan være nødvendig for å sikre at et slektstre blir nøyaktig, og kan også muliggjøre nøyaktige korreksjoner eller tillegg til journalen for hvert identifiserte familiemedlem.">
+            misuse = <"Skal ikke benyttes for å registrere informasjon om relativ eller absolutt risiko for å utvikle en tilstand ut fra en familieanamnese, bruk EVALUATION.health_risk-arketypen med CLUSTER.family_prevalence-arketypen for å registrere detaljer om andelen familiemedlemmer som er rammet.
+
+Brukes ikke for smittesporing av sykdommer som krever øyeblikkelig handling. Bruk spesifikke arketyper for dette formålet.
+
+Brukes ikke for å registrere fravær av problemer og eller diagnoser i familieanamnesen, bruk EVALUATION.exclusion-family_history-arketypen.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*To record information about the occurrence of significant health-related problems in genetic and non-genetic family members - both alive and deceased. (en)">
+            keywords = <"família", "história", "estória", "saúde", "condição", "problema", "diagnóstico", "genético", "pedigree", "genealogia", "história familiar", "parente", "hereditário">
+            use = <"*Use to record a summary of information about problems or diagnoses found in family members. This information may be used to contribute to the identification of a current health problem, assessment of future risk from familial problems or conditions, or to initiate preventive health activities.
+
+The intended scope of this archetype is deliberately kept loose to include the broadest range of problems or issues that might be found within families. It specifically includes known problems and diagnoses, identified biological markers, plus any relevant psychosocial factors and environmental factors. While the scope of family history traditionally has been focused on genetic factors or biomarkers as indicators of risk or potential risk, the scope of this archetype includes both recording of problems or diagnoses that have an inheritable origin as well as those that are not directly inheritable but influenced by the domestic setting, including psychosocial or environmental factors. Examples include exposure to toxins in the family environment, domestic violence, sexual abuse, alcoholism and other addictions.
+
+Non-genetic family members can include adopted or long term fostered children, those related by marriage, or other unrelated individuals who participate in the regular life and influence of the family.
+
+This archetype has been designed to include:
+- a narrative overview as free text. This will allow family history details from existing systems to be incorporated as non-structured text; and
+- a detailed area focusing on relevant health details about specific family members, including their medical history and biomarkers.
+
+This archetype can be used within many contexts. For example, recording a family history entry within a clinical consultation; populating a Family History List; or to provide a summary statement within a Discharge Summary document.
+
+Additional detail about a family member's specific problem, diagnosis or past procedures can be captured using the EVALUATION.problem_diagnosis or the ACTION.procedure archetype and specifying the 'Subject of Care' as the family member, rather than the subject of the health record. 
+
+This archetype can be used as the basis for a Family Pedigree chart of health problems/diagnoses or to support estimations of risk of a condition based on prevalence in the family history or known biomarkers.
+
+It may be necessary to identify each family member specifically and not just by the relationship to the patient. For example, while there will be only one maternal grandmother, there may be many female maternal cousins. This may be required to ensure that a pedigree chart is accurate. It will also enable accurate amendments to the record for each identified family member. If the record is private and will not be shared, for reasons of clarity it may be preferable to record the relative's actual name. If the record, or part of the record, is to be shared, it may be more appropriate for the family member to be identified by a unique label or alias. (en)">
+            misuse = <"Não deve ser usado para registrar informações sobre o risco relativo ou absoluto de desenvolver uma condição devido à história familiar - usar o arquétipo EVALUATION.health_risk , incluindo o CLUSTER.family_prevalence para detalhes sobre a relação dos membros da família afetada.
+
+Não deve ser usado para busca de contactantes de doenças infecciosas que requeiram ações imediatas.
+
+Não deve ser usado para registrar uma exclusão de História Familiar - utilizar o arquétipo EVALUATION.exclusion-family_history para esta finalidade.">
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            purpose = <"*To record information about the occurrence of significant health-related problems in genetic and non-genetic family members - both alive and deceased. (en)">
+            keywords = <"*family(en)", "*history(en)", "*health(en)", "*condition(en)", "*problem(en)", "*diagnosis(en)", "*genetic(en)", "*pedigree(en)", "*genealogy(en)", "*family history(en)", "*relative(en)", "*hereditary(en)", "*inherited(en)", "*familial(en)", "*heredity(en)">
+            use = <"*Use to record a summary of information about problems or diagnoses found in family members. This information may be used to contribute to the identification of a current health problem, assessment of future risk from familial problems or conditions, or to initiate preventive health activities.
+
+The intended scope of this archetype is deliberately kept loose to include the broadest range of problems or issues that might be found within families. It specifically includes known problems and diagnoses, identified biological markers, plus any relevant psychosocial factors and environmental factors. While the scope of family history traditionally has been focused on genetic factors or biomarkers as indicators of risk or potential risk, the scope of this archetype includes both recording of problems or diagnoses that have an inheritable origin as well as those that are not directly inheritable but influenced by the domestic setting, including psychosocial or environmental factors. Examples include exposure to toxins in the family environment, domestic violence, sexual abuse, alcoholism and other addictions.
+
+Non-genetic family members can include adopted or long term fostered children, those related by marriage, or other unrelated individuals who participate in the regular life and influence of the family.
+
+This archetype has been designed to include:
+- a narrative overview as free text. This will allow family history details from existing systems to be incorporated as non-structured text; and
+- a detailed area focusing on relevant health details about specific family members, including their medical history and biomarkers.
+
+This archetype can be used within many contexts. For example, recording a family history entry within a clinical consultation; populating a Family History List; or to provide a summary statement within a Discharge Summary document.
+
+Additional detail about a family member's specific problem, diagnosis or past procedures can be captured using the EVALUATION.problem_diagnosis or the ACTION.procedure archetype and specifying the 'Subject of Care' as the family member, rather than the subject of the health record. 
+
+This archetype can be used as the basis for a Family Pedigree chart of health problems/diagnoses or to support estimations of risk of a condition based on prevalence in the family history or known biomarkers.
+
+It may be necessary to identify each family member specifically and not just by the relationship to the patient. For example, while there will be only one maternal grandmother, there may be many female maternal cousins. This may be required to ensure that a pedigree chart is accurate. It will also enable accurate amendments to the record for each identified family member. If the record is private and will not be shared, for reasons of clarity it may be preferable to record the relative's actual name. If the record, or part of the record, is to be shared, it may be more appropriate for the family member to be identified by a unique label or alias. (en)">
+            misuse = <"*Not to be used to record information about the relative or absolute risk of developing a condition due to family history - use the EVALUATION.health_risk archetype, including the CLUSTER.family_prevalence for details about the affected ratio of family members.
+
+Not to be used for contact tracing for infectious diseases requiring immediate action. Use specific archetypes for this purpose.
+
+Not to be used to record an exclusion of Family History - use the EVALUATION.exclusion-family_history archetype for this purpose.(en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record information about the occurrence of significant health-related problems in genetic and non-genetic family members - both alive and deceased.">
+            keywords = <"family", "history", "health", "condition", "problem", "diagnosis", "genetic", "pedigree", "genealogy", "family history", "relative", "hereditary", "inherited", "familial", "heredity">
+            use = <"Use to record a summary of information about problems or diagnoses found in family members. This information may be used to contribute to the identification of a current health problem, assessment of future risk from familial problems or conditions, or to initiate preventive health activities.
+
+The intended scope of this archetype is deliberately kept loose to include the broadest range of problems or issues that might be found within families. It specifically includes known problems and diagnoses, identified biological markers, plus any relevant psychosocial factors and environmental factors. While the scope of family history traditionally has been focused on genetic factors or biomarkers as indicators of risk or potential risk, the scope of this archetype includes both recording of problems or diagnoses that have an inheritable origin as well as those that are not directly inheritable but influenced by the domestic setting, including psychosocial or environmental factors. Examples include exposure to toxins in the family environment, domestic violence, sexual abuse, alcoholism and other addictions.
+
+Non-genetic family members can include adopted or long term fostered children, those related by marriage, or other unrelated individuals who participate in the regular life and influence of the family.
+
+This archetype has been designed to include:
+- a narrative overview as free text. This will allow family history details from existing systems to be incorporated as non-structured text; and
+- a detailed area focusing on relevant health details about specific family members, including their medical history and biomarkers.
+
+This archetype can be used within many contexts. For example, recording a family history entry within a clinical consultation; populating a Family History List; or to provide a summary statement within a Discharge Summary document.
+
+Additional detail about a family member's specific problem, diagnosis or past procedures can be captured using the EVALUATION.problem_diagnosis or the ACTION.procedure archetype and specifying the 'Subject of Care' as the family member, rather than the subject of the health record. 
+
+This archetype can be used as the basis for a Family Pedigree chart of health problems/diagnoses or to support estimations of risk of a condition based on prevalence in the family history or known biomarkers.
+
+It may be necessary to identify each family member specifically and not just by the relationship to the patient. For example, while there will be only one maternal grandmother, there may be many female maternal cousins. This may be required to ensure that a pedigree chart is accurate. It will also enable accurate amendments to the record for each identified family member. If the record is private and will not be shared, for reasons of clarity it may be preferable to record the relative's actual name. If the record, or part of the record, is to be shared, it may be more appropriate for the family member to be identified by a unique label or alias.">
+            misuse = <"Not to be used to record information about the relative or absolute risk of developing a condition due to family history - use the EVALUATION.health_risk archetype, including the CLUSTER.family_prevalence for details about the affected ratio of family members.
+
+Not to be used for contact tracing for infectious diseases requiring immediate action. Use specific archetypes for this purpose.
+
+Not to be used to record an exclusion of Family History - use the EVALUATION.exclusion-family_history archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"*To record information about the occurrence of significant health-related problems in genetic and non-genetic family members - both alive and deceased. (en)">
+            keywords = <"famille", "histoire", "santé", "état", "problème", "diagnostic", "génétique", "pedigree", "généalogie", "histoire de famille", "relatif", "héréditaire", "hérité", "familial", "hérédité">
+            use = <"*Use to record a summary of information about problems or diagnoses found in family members. This information may be used to contribute to the identification of a current health problem, assessment of future risk from familial problems or conditions, or to initiate preventive health activities.
+
+The intended scope of this archetype is deliberately kept loose to include the broadest range of problems or issues that might be found within families. It specifically includes known problems and diagnoses, identified biological markers, plus any relevant psychosocial factors and environmental factors. While the scope of family history traditionally has been focused on genetic factors or biomarkers as indicators of risk or potential risk, the scope of this archetype includes both recording of problems or diagnoses that have an inheritable origin as well as those that are not directly inheritable but influenced by the domestic setting, including psychosocial or environmental factors. Examples include exposure to toxins in the family environment, domestic violence, sexual abuse, alcoholism and other addictions.
+
+Non-genetic family members can include adopted or long term fostered children, those related by marriage, or other unrelated individuals who participate in the regular life and influence of the family.
+
+This archetype has been designed to include:
+- a narrative overview as free text. This will allow family history details from existing systems to be incorporated as non-structured text; and
+- a detailed area focusing on relevant health details about specific family members, including their medical history and biomarkers.
+
+This archetype can be used within many contexts. For example, recording a family history entry within a clinical consultation; populating a Family History List; or to provide a summary statement within a Discharge Summary document.
+
+Additional detail about a family member's specific problem, diagnosis or past procedures can be captured using the EVALUATION.problem_diagnosis or the ACTION.procedure archetype and specifying the 'Subject of Care' as the family member, rather than the subject of the health record. 
+
+This archetype can be used as the basis for a Family Pedigree chart of health problems/diagnoses or to support estimations of risk of a condition based on prevalence in the family history or known biomarkers.
+
+It may be necessary to identify each family member specifically and not just by the relationship to the patient. For example, while there will be only one maternal grandmother, there may be many female maternal cousins. This may be required to ensure that a pedigree chart is accurate. It will also enable accurate amendments to the record for each identified family member. If the record is private and will not be shared, for reasons of clarity it may be preferable to record the relative's actual name. If the record, or part of the record, is to be shared, it may be more appropriate for the family member to be identified by a unique label or alias. (en)">
+            misuse = <"*Not to be used to record information about the relative or absolute risk of developing a condition due to family history - use the EVALUATION.health_risk archetype, including the CLUSTER.family_prevalence for details about the affected ratio of family members.
+
+Not to be used for contact tracing for infectious diseases requiring immediate action. Use specific archetypes for this purpose.
+
+Not to be used to record an exclusion of Family History - use the EVALUATION.exclusion-family_history archetype for this purpose.(en)">
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+            purpose = <"*To record information about the occurrence of significant health-related problems in genetic and non-genetic family members - both alive and deceased. (en)">
+            keywords = <"家庭", "家族", "历史", "史", "健康", "疾病", "问题", "健康问题", "诊断", "遗传", "遗传性", "遗传学", "谱系", "系谱", "家谱", "家族史", "家族病史", "相对", "家族性", "亲属", "家属">
+            use = <"*Use to record a summary of information about problems or diagnoses found in family members. This information may be used to contribute to the identification of a current health problem, assessment of future risk from familial problems or conditions, or to initiate preventive health activities.
+
+The intended scope of this archetype is deliberately kept loose to include the broadest range of problems or issues that might be found within families. It specifically includes known problems and diagnoses, identified biological markers, plus any relevant psychosocial factors and environmental factors. While the scope of family history traditionally has been focused on genetic factors or biomarkers as indicators of risk or potential risk, the scope of this archetype includes both recording of problems or diagnoses that have an inheritable origin as well as those that are not directly inheritable but influenced by the domestic setting, including psychosocial or environmental factors. Examples include exposure to toxins in the family environment, domestic violence, sexual abuse, alcoholism and other addictions.
+
+Non-genetic family members can include adopted or long term fostered children, those related by marriage, or other unrelated individuals who participate in the regular life and influence of the family.
+
+This archetype has been designed to include:
+- a narrative overview as free text. This will allow family history details from existing systems to be incorporated as non-structured text; and
+- a detailed area focusing on relevant health details about specific family members, including their medical history and biomarkers.
+
+This archetype can be used within many contexts. For example, recording a family history entry within a clinical consultation; populating a Family History List; or to provide a summary statement within a Discharge Summary document.
+
+Additional detail about a family member's specific problem, diagnosis or past procedures can be captured using the EVALUATION.problem_diagnosis or the ACTION.procedure archetype and specifying the 'Subject of Care' as the family member, rather than the subject of the health record. 
+
+This archetype can be used as the basis for a Family Pedigree chart of health problems/diagnoses or to support estimations of risk of a condition based on prevalence in the family history or known biomarkers.
+
+It may be necessary to identify each family member specifically and not just by the relationship to the patient. For example, while there will be only one maternal grandmother, there may be many female maternal cousins. This may be required to ensure that a pedigree chart is accurate. It will also enable accurate amendments to the record for each identified family member. If the record is private and will not be shared, for reasons of clarity it may be preferable to record the relative's actual name. If the record, or part of the record, is to be shared, it may be more appropriate for the family member to be identified by a unique label or alias. (en)">
+            misuse = <"并非旨在用于记录关于因家族史而发生疾病的相对或绝对风险的信息 – 此时请采用原始型EVALUATION.health_risk（评价类原始型“健康风险”），包括采用原始型CLUSTER.family_prevalence（群簇类原始型“家族患病率”），来记录关于受影响家族成员比例的详情。
+
+并非旨在用于需要立即采取行动的传染病接触者追踪。对于此类目的，请采用专用的原始型。
+
+并非旨在用于记录家族历史排除项对于此类目的，请采用原始型EVALUATION.exclusion-family_history（评价类原始型“家族历史排除项”）。">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Registrar informació sobre l'aparició de problemes significatius relacionats amb la salut en membres de la família, tant vius com difunts, amb antecedents genètics.
+
+L'abast previst d'aquest arquetip es manté deliberadament ampli per incloure la gamma més àmplia de problemes o qüestions que es puguin trobar dins de les famílies. Inclou específicament problemes i diagnòstics coneguts, marcadors biològics identificats, a més de qualsevol factor psicosocial i factor ambiental rellevant.">
+            keywords = <"família, història, salut, condició, problema, diagnòstic, genètica, genealogia, antecedents familiars, parent, hereditari, heretat, familiar, herència", ...>
+            use = <"Utilitzeu-lo per registrar un resum d'informació sobre problemes o diagnòstics trobats en membres de la família. Aquesta informació es pot utilitzar per contribuir a la identificació d'un problema de salut actual, l'avaluació del risc futur derivat de problemes o afeccions familiars o per iniciar activitats de salut preventiva.
+
+Tradicionalment, l'abast dels antecedents familiars s'ha centrat en factors genètics o biomarcadors com a indicadors de risc o risc potencial. L'abast d'aquest arquetip inclou tant el registre de problemes o diagnòstics que tenen un origen hereditari com els que no són directament hereditaris però que estan influenciats per l'entorn domèstic, inclosos els factors psicosocials o ambientals. Els exemples inclouen l'exposició a toxines en l'entorn familiar, la violència domèstica, l'abús sexual, l'alcoholisme i altres addiccions.
+
+Els membres de la família no genètics poden incloure fills adoptats o en acollida a llarg termini, aquells relacionats per matrimoni o altres persones no relacionades que participen en la vida i la influència habituals de la família.
+
+Aquest arquetip s'ha dissenyat per incloure:
+- una descripció narrativa general com a text lliure. Això permetrà incorporar detalls d'antecedents familiars de sistemes existents com a text no estructurat; i
+- una àrea detallada centrada en detalls de salut rellevants sobre membres específics de la família, incloent-hi el seu historial mèdic i biomarcadors.
+
+Aquest arquetip es pot utilitzar en molts contextos. Per exemple, registrar una entrada d'historial familiar dins d'una consulta clínica; omplir una Llista d'Historials Familiars; o proporcionar una declaració resum dins d'un document Resum d'Alta.
+
+Es poden capturar detalls addicionals sobre un problema, diagnòstic o procediments passats específics d'un membre de la família mitjançant l'arquetip EVALUATION.problem_diagnosis o ACTION.procedure i especificant el \"Subjecte de l'atenció\" com el membre de la família, en lloc del subjecte de l'historial mèdic.
+
+Aquest arquetip es pot utilitzar com a base per a un gràfic o arbre genealògic familiar de problemes/diagnòstics de salut o per donar suport a estimacions de risc d'una afecció basades en la prevalença en els antecedents familiars o biomarcadors coneguts.
+
+Pot ser necessari identificar cada membre de la família específicament i no només per la relació amb el pacient. Per exemple, mentre que només hi haurà una àvia materna, hi pot haver moltes cosines maternes. Això pot ser necessari per garantir que un arbre genealògic sigui precís. També permetrà modificacions precises al registre per a cada membre de la família identificat. Si el registre és privat i no es compartirà, per raons de claredat pot ser preferible registrar el nom real del familiar. Si el registre, o part del registre, s'ha de compartir, pot ser més apropiat que el membre de la família sigui identificat amb una etiqueta o àlies únic.">
+            misuse = <"No s'ha d'utilitzar per registrar informació sobre el risc relatiu o absolut de desenvolupar una afecció a causa d'antecedents familiars; utilitzeu l'arquetip EVALUATION.health_risk, inclòs el CLUSTER.family_prevalence per obtenir detalls sobre la proporció de membres de la família afectats.
+
+No s'ha d'utilitzar per al rastreig de contactes per a malalties infeccioses que requereixen acció immediata. Utilitzeu arquetips específics per a aquest propòsit.
+
+No s'ha d'utilitzar per registrar una exclusió d'antecedents familiars; utilitzeu l'arquetip EVALUATION.exclusion-family_history per a aquest propòsit.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar información sobre la aparición de problemas de salud significativos en familiares, tanto genéticos como no genéticos, tanto vivos como fallecidos.
+
+El alcance previsto de este arquetipo se mantiene deliberadamente flexible para abarcar la gama más amplia de problemas o cuestiones que puedan presentarse en las familias. Incluye específicamente problemas y diagnósticos conocidos, marcadores biológicos identificados, además de cualquier factor psicosocial y ambiental relevante.">
+            keywords = <"família, història, salut, condició, problema, diagnòstic, genètica, genealogia, antecedents familiars, parent, hereditari, heretat, familiar, herència", ...>
+            use = <"Se utiliza para registrar un resumen de información sobre problemas o diagnósticos encontrados en familiares. Esta información puede utilizarse para contribuir a la identificación de un problema de salud actual, la evaluación del riesgo futuro derivado de problemas o afecciones familiares o para iniciar actividades de salud preventiva.
+
+Tradicionalmente, el alcance de la historia familiar se ha centrado en factores genéticos o biomarcadores como indicadores de riesgo o riesgo potencial. El alcance de este arquetipo incluye tanto el registro de problemas o diagnósticos de origen hereditario como aquellos que no son directamente hereditarios, pero que están influenciados por el entorno familiar, incluyendo factores psicosociales o ambientales. Algunos ejemplos incluyen la exposición a toxinas en el entorno familiar, la violencia doméstica, el abuso sexual, el alcoholismo y otras adicciones.
+
+Los familiares no genéticos pueden incluir hijos adoptados o acogidos a largo plazo, personas relacionadas por matrimonio u otras personas no emparentadas que participan en la vida cotidiana y tienen influencia en la familia.
+
+Este arquetipo ha sido diseñado para incluir:
+- una descripción general narrativa como texto libre. Esto permitirá incorporar detalles de la historia familiar de los sistemas existentes como texto no estructurado; y
+- un área detallada centrada en detalles de salud relevantes sobre familiares específicos, incluyendo su historial médico y biomarcadores.
+
+Este arquetipo puede utilizarse en diversos contextos. Por ejemplo, para registrar una entrada de antecedentes familiares en una consulta clínica; para completar una Lista de Antecedentes Familiares; o para proporcionar un resumen en un documento de Resumen de Alta.
+
+Se pueden obtener detalles adicionales sobre el problema, diagnóstico o procedimientos previos específicos de un familiar utilizando el arquetipo EVALUATION.problem_diagnosis o ACTION.procedure, especificando como \"Sujeto de Atención\" al familiar, en lugar del sujeto del historial médico.
+
+Este arquetipo puede utilizarse como base para un árbol genealógico familiar de problemas/diagnósticos de salud o para respaldar las estimaciones del riesgo de una afección según la prevalencia en los antecedentes familiares o biomarcadores conocidos.
+
+Puede ser necesario identificar a cada familiar específicamente y no solo por su parentesco con el paciente. Por ejemplo, si bien solo habrá una abuela materna, puede haber muchas primas maternas. Esto puede ser necesario para garantizar la precisión del cuadro genealógico. También permitirá realizar modificaciones precisas en el registro de cada familiar identificado. Si el registro es privado y no se compartirá, para mayor claridad, puede ser preferible registrar el nombre real del familiar. Si el registro, o parte del mismo, se compartirá, puede ser más adecuado identificar al familiar con una etiqueta o alias único.">
+            misuse = <"No debe utilizarse para registrar información sobre el riesgo relativo o absoluto de desarrollar una afección debido a antecedentes familiares. Utilice el arquetipo EVALUATION.health_risk, incluido CLUSTER.family_prevalence, para obtener detalles sobre la proporción de familiares afectados.
+
+No debe utilizarse para el rastreo de contactos de enfermedades infecciosas que requieren atención inmediata. Utilice arquetipos específicos para este fin.
+
+No debe utilizarse para registrar la exclusión de antecedentes familiares. Utilice el arquetipo EVALUATION.exclusion-family_history para este fin.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Family history summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Summary
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                    CLUSTER[at0028] matches {    -- Per problem
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0029] occurrences matches {0..1} matches {    -- Problem/diagnosis name
+                                value matches {
+                                    DV_TEXT[at9003]
+                                }
+                            }
+                            ELEMENT[at0030] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9005]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0059] matches {    -- Problem details
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.family_prevalence(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                            }
+                            ELEMENT[at0071] occurrences matches {0..1} matches {    -- Impact
+                                value matches {
+                                    DV_TEXT[at9034]
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0003] matches {    -- Per family member
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Family member name
+                                value matches {
+                                    DV_TEXT[at9010]
+                                }
+                            }
+                            ELEMENT[at0020] occurrences matches {0..1} matches {    -- Alias
+                                value matches {
+                                    DV_TEXT[at9011]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0048] matches {    -- Family member details
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.person\.v1\..*/}
+                            }
+                            ELEMENT[at0060] occurrences matches {0..1} matches {    -- Biological sex
+                                value matches {
+                                    DV_TEXT[at9028]
+                                }
+                            }
+                            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Relationship
+                                value matches {
+                                    DV_TEXT[at9012]
+                                }
+                            }
+                            ELEMENT[at0064] occurrences matches {0..1} matches {    -- Relationship degree
+                                value matches {
+                                    DV_CODED_TEXT[at9032] matches {
+                                        defining_code matches {[ac9030]}    -- Relationship degree (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0068] occurrences matches {0..1} matches {    -- Family line
+                                value matches {
+                                    DV_CODED_TEXT[at9033] matches {
+                                        defining_code matches {[ac9031]}    -- Family line (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Date of birth
+                                value matches {
+                                    DV_DATE_TIME[at9013]
+                                }
+                            }
+                            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Deceased?
+                                value matches {
+                                    DV_BOOLEAN[at9014] matches {
+                                        value matches {True}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Age at death
+                                value matches {
+                                    DV_DURATION[at9015]
+                                }
+                            }
+                            ELEMENT[at0058] occurrences matches {0..1} matches {    -- Date of death
+                                value matches {
+                                    DV_DATE_TIME[at9027]
+                                }
+                            }
+                            CLUSTER[at0008] matches {    -- Clinical history
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Problem/diagnosis name
+                                        value matches {
+                                            DV_TEXT[at9016]
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Clinical description
+                                        value matches {
+                                            DV_TEXT[at9017]
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Age at onset
+                                        value matches {
+                                            DV_DURATION[at9018]
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Cause of death?
+                                        value matches {
+                                            DV_CODED_TEXT[at9029] matches {
+                                                defining_code matches {[ac9027]}    -- Cause of death? (synthesised)
+                                            }
+                                            DV_TEXT[at9030]
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0046] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_TEXT[at9026]
+                                }
+                            }
+                            CLUSTER[at0024] occurrences matches {0..1} matches {    -- Biomarkers
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Biomarker description
+                                        value matches {
+                                            DV_TEXT[at9020]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0027] matches {    -- Biomarker details
+                                        include
+                                            archetype_id/value matches {/.*/}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0053] matches {    -- Multimedia
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.media_file(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0025] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Last Updated
+                        value matches {
+                            DV_DATE_TIME[at9021]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0045] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Familienanamnese">
+                description = <"Zusammenfassende Angaben zu den klinisch signifikanten, gesundheitlichen Problemen von Familienmitgliedern.">
+            >
+            ["at0002"] = <
+                text = <"Zusammenfassung">
+                description = <"Übersicht der Probleme, Diagnosen, psychosoziale, ökologische und genetische Marker, die bei Familienmitgliedern festgestellt wurden.">
+                comment = <"Dieses Feld kann verwendet werden, um eine Zusammenfassung oder Schlussfolgerung aus allen Befunden zu erfassen. Es ist auch für die klinischen Aufzeichnungen von unstrukturierten Informationen zur Familienanamnese geeignet oder um Textdaten aus bestehenden/älteren klinischen Systemen zu importieren.">
+            >
+            ["at0003"] = <
+                text = <"Pro Familienmitglied">
+                description = <"Angaben zu einem bestimmten Familienmitglied.">
+                comment = <"Die Datenelemente in diesem Cluster beziehen sich auf die Person, die entweder durch ihren Namen oder durch ihren Alias identifiziert wird. Wiederholen Sie die Verwendung des Clusters für andere Familienmitglieder.">
+            >
+            ["at0004"] = <
+                text = <"Name des Familienmitglieds">
+                description = <"Name des Familienmitglieds.">
+                comment = <"Zum Beispiel: \"Tante Susan\" oder \"Susan Smith\". Aus Datenschutzgründen ist dies jedoch möglicherweise nicht für die Aufzeichnung, gemeinsame Nutzung oder öffentliche Darstellung geeignet und in dieser Situation sollte das Item \"Alias\" verwendet werden.">
+            >
+            ["at0005"] = <
+                text = <"Geburtsdatum">
+                description = <"Vollständiges oder unvollständiges Geburtsdatum des Familienmitglieds.">
+            >
+            ["at0008"] = <
+                text = <"Klinische Anamnese">
+                description = <"Angabe über Probleme oder Diagnosen des Familienmitglieds.">
+                comment = <"Wenn mehrere Angaben erforderlich sind, empfiehlt es sich, der Archetyp EVALUATION.Problem/Diagnose oder ACTION.Prozedur zu verwenden. Die Pflegeperson identifziert das \"Subject of Care\" als das Familienmitglied und nicht den Patienten laut Krankenakten.">
+            >
+            ["at0009"] = <
+                text = <"Name des Problems/der Diagnose">
+                description = <"Benennung des Problems oder Diagnose bei einem bestimmten Familienmitglied.">
+                comment = <"Die Kodierung des Problems oder der Diagnose des Familienmitglieds mit einer Terminologie wird nach Möglichkeit bevorzugt. Kann eine Verknüpfung von diesem Datenelement zu einem ausführlichen Datensatz eines Problems/einer Diagnose mit Hilfe des Archetyps EVALUATION.problem_diagnosis herstellen, wobei die Pflegeperson \"Subject of Care\" das Familienmitglied und nicht der Patient ist.">
+            >
+            ["at0010"] = <
+                text = <"Erkrankungsalter">
+                description = <"Geschätztes oder tatsächliches Alter des Familienmitglieds, als das Problem/die Diagnose klinisch erkannt wurde.">
+                comment = <"Bei mehrfach vorkommenden gesundheitlichen Problemen, beschreibt dies das erstmalige Auftreten des Problems.">
+            >
+            ["at0011"] = <
+                text = <"Todesalter">
+                description = <"Genaues oder geschätztes Alter des Familienmitglieds beim Tod.">
+                comment = <"Das erfasste Todesalter kann nützlich sein, wenn das Problem oder die Diagnose, welche den Tod des Familienmietglieds verursachte, als Risikofaktor in der Patientenakte des Patienten angesehen wird. Zum Beispiel: Der Tod der Mutter an Brustkrebs im jungen Alter erhöht das Risiko von Brustkrebs bei einer Tochter erheblich.">
+            >
+            ["at0012"] = <
+                text = <"Klinische Beschreibung">
+                description = <"Beschreibung oder Kommentare zu klinischen Aspekten des Problems/der Diagnose eines Familienmitglieds.">
+            >
+            ["at0014"] = <
+                text = <"Todesursache?">
+                description = <"Zusammenhang des Problems/der Diagnose mit dem Tod dieses Familienmitglieds.">
+            >
+            ["at0016"] = <
+                text = <"Verwandtschaftsverhältnis">
+                description = <"Das Verhältnis des Familienmitglieds zur betreuten Person \"Subject of care\".">
+                comment = <"Zum Beispiel: Mutter, Stiefvater, Großmutter mütterlicherseits oder Onkel väterlicherseits. Wenn es möglich ist, sollte das Verhältnis nach einer Terminologie kodiert werden. Sofern erforderlich sollte die Angabe von mütter-/väterlicherseits miterfasst werden.">
+            >
+            ["at0020"] = <
+                text = <"Alias/Pseudonym">
+                description = <"Ein alternativer Name oder eine alternative Bezeichnung zur eindeutigen Identifizierung eines Familienmitglieds, ohne einen persönlichen Namen zu verwenden, der die Person öffentlich identifizieren könnte.">
+                comment = <"Dient zur Differenzierung einer Person von mehreren Familienmitgliedern mit identischen Beziehungen. So könnte beispielsweise die Bezeichnung zur Abgrenzung einer bestimmten Schwester von drei bekannten Schwestern \"älteste Schwester\", \"Schwester mit den roten Haaren\" oder \"Schwester #1\" sein.">
+            >
+            ["at0022"] = <
+                text = <"Beschreibung des Biomarkers">
+                description = <"Beschreibung der in diesem Familienmitglied ermittelten risikobasierten biologischen Marker.">
+            >
+            ["at0023"] = <
+                text = <"Verstorben?">
+                description = <"Ist das Familienmitglied verstorben?">
+                comment = <"Erfassen sie dies als \"Wahr\", wenn ein Familienmitglied verstorben ist.">
+            >
+            ["at0024"] = <
+                text = <"Biomarker">
+                description = <"Ausführliche Information über messbare Indikatoren für einen gesundheitlichen Zustand oder körperliche Verfassung des Familienmitglieds.">
+                comment = <"Zum Beispiel: Ausführliche Informationen über BRCA-Mutationen bei Familienmitgliedern. 
+Hinweis: Künftig werden weitere Datenelemente benötigt, um detaillierte genetische Markerinformationen zu erheben.">
+            >
+            ["at0026"] = <
+                text = <"Letzte Aktualisierung">
+                description = <"Das Datum, an dem diese Zusammenfassung der Familienanamnese zuletzt aktualisiert wurde.">
+            >
+            ["at0027"] = <
+                text = <"Angaben zum Biomarker">
+                description = <"Strukturierte Angaben zu biologischen Markern.">
+            >
+            ["at0028"] = <
+                text = <"Pro Problem">
+                description = <"Einzelheiten über das Vorliegen eines bestimmten Problems oder einer bestimmten Diagnose bei den Familienmitgliedern.">
+                comment = <"Wenn das Problem eine genetische Veranlagung innerhalb der Familie hat, dann sollten nur genetische Verwandte als Teil dieser Daten berücksichtigt werden. Wenn das Problem psychosoziale oder ökologische Auswirkungen hat, können auch nicht-genetische Familienmitglieder einbezogen werden.">
+            >
+            ["at0029"] = <
+                text = <"Name des Problems/der Diagnose">
+                description = <"Benennung des Problems/der Diagnose (Name) oder Problem-/Diagnosebezeichnung in der Familie allgemein.">
+                comment = <"Das Problem, für welches die Daten zu allen Familienmitglieder zusammengefasst werden. Die Kodierung der Problemliste mit einer Terminologie wird nach Möglichkeit empfohlen.">
+            >
+            ["at0030"] = <
+                text = <"Beschreibung">
+                description = <"Beschreibung des Auftretens des Problems oder einer Diagnose bei Familienmitgliedern.">
+            >
+            ["at0045"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen, die erforderlich sind, um lokale Inhalte zu erfassen oder mit anderen Referenzmodellen/Formalismen abzugleichen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR- oder CIMI-Äquivalente.
+">
+            >
+            ["at0046"] = <
+                text = <"Anmerkung">
+                description = <"Zusätzliche Informationen über das Familienmitglied, welche nicht bereits an anderen Stellen dokumentiert wurden.
+">
+            >
+            ["at0048"] = <
+                text = <"Angaben zum Familienmitglied">
+                description = <"Strukturierte Angaben zum bekannten Familienmitglied.">
+                comment = <"Kann strukturierte Angaben enthalten, die das Familienmitglied genauer identifizieren oder andere Angaben, die für die Familienanamnese des Familienmitglieds relevant sind.">
+            >
+            ["at0053"] = <
+                text = <"Multimedia">
+                description = <"Multimediale Darstellung der Familienanamnese.">
+                comment = <"Zum Beispiel: ein Stammbaum-Diagramm.">
+            >
+            ["at0058"] = <
+                text = <"Todesdatum">
+                description = <"Das vollständige oder unvollständige Todesdatum des Familienmitglieds.">
+                comment = <"Das erfasste Todesdatum kann in Situationen sinnvoll sein, wenn der Monat des Todes einen Hinweis darstellen oder eine Gruppe von Erkrankungen identifizieren kann. Zum Beispiel: Allergene aus der Umwelt, die Atemwegsbeschwerden auslösen; oder Ereignisse wie Weihnachten.">
+            >
+            ["at0059"] = <
+                text = <"Angaben zum Problem">
+                description = <"Strukturierte Angaben zum benannten Problem/zur bekannten Diagnose.">
+                comment = <"Zum Beispiel: Prävalenz des Problems/ der Diagnose in der Familie.">
+            >
+            ["at0060"] = <
+                text = <"Biologisches Geschlecht">
+                description = <"Das biologische Geschlecht des Familienmitglieds.">
+                comment = <"Wenn es möglich ist, sollte das Geschlecht nach einer Terminologie kodiert werden.">
+            >
+            ["at0061"] = <
+                text = <"Direkte Ursache oder enger Zusammenhang">
+                description = <"Das Problem oder die Diagnose war eine unmittelbare Todesursache oder stand in engem Zusammenhang mit dem Tod.">
+            >
+            ["at0062"] = <
+                text = <"Unabhängig">
+                description = <"Das Problem oder die Diagnose stand mit der Todesursache in keinem Zusammenhang.">
+            >
+            ["at0063"] = <
+                text = <"Unbestimmt">
+                description = <"Es ist nicht möglich festzustellen, ob das Problem oder die Diagnose in engem Zusammenhang mit der tatsächlichen Todesursache gestanden hat.">
+            >
+            ["at0064"] = <
+                text = <"Grad der Verwandtschaft">
+                description = <"Der Grad der Verwandtschaft zwischen der betreuten Person \"Subject of care\" und dem Familienmitglied.">
+                comment = <"Wenn das Datenelement \"Verwandtschaftsverhältnis\" vorkoordinierte Begriffe verwendet, die den Grad der Verwandtschaft enthalten, ist dieses Datenelement redundant.">
+            >
+            ["at0065"] = <
+                text = <"Verwandte ersten Grades">
+                description = <"50% genetischer Anteil mit dem Patienten - zum Beispiel Elternteil, Geschwister oder Kind.">
+            >
+            ["at0066"] = <
+                text = <"Verwandte zweiten Grades">
+                description = <"25% genetischer Anteil mit dem Patienten - zum Beispiel Großeltern, Tanten, Onkel, Nichten, Neffen, Enkelkinder und Halbgeschwister.">
+            >
+            ["at0067"] = <
+                text = <"Verwandte dritten Grades">
+                description = <"12,5% genetischer Anteil mit dem Patienten - zum Beispiel Urgroßeltern, Großtante, Großonkel, erster Cousin, Kinder von Nichten und Neffen und Urenkelkinder.">
+            >
+            ["at0068"] = <
+                text = <"Familiäre Linie">
+                description = <"Bestimmung der mütterlichen oder väterlichen Familienlinie in der Verwandtschaft.">
+                comment = <"Wenn das Datenelement \"Verwandtschaftsverhältnis\" vorkoordinierte Begriffe verwendet, die die Familiäre Linie enthalten, ist dieses Datenelement redundant.">
+            >
+            ["at0069"] = <
+                text = <"Mutterlinie">
+                description = <"Verwandt durch die Mutter des Patienten.">
+            >
+            ["at0070"] = <
+                text = <"Vaterlinie">
+                description = <"Verwandt durch den Vater des Patienten.">
+            >
+            ["at0071"] = <
+                text = <"Auswirkungen">
+                description = <"Gesamtbeurteilung der Auswirkungen eines bei Familienmitgliedern vorhandenen Gesundheitsproblems auf die betreffende Person in ihrer Krankenakte.">
+                comment = <"Dasselbe Problem oder dieselbe Diagnose kann bei Familienmitgliedern, selbst bei gleichem Schweregrad, unterschiedliche Auswirkungen auf die einzelnen Personen in deren Krankenakte haben. Dieser Relevanzfaktor bedeutet, dass die Gesamtauswirkungen des Gesundheitsproblems an die Merkmale der jeweiligen Person in der Krankenakte angepasst werden müssen.">
+            >
+            ["ac9030"] = <
+                text = <"Grad der Verwandtschaft (synthesised)">
+                description = <"Der Grad der Verwandtschaft zwischen der betreuten Person \"Subject of care\" und dem Familienmitglied. (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"Familiäre Linie (synthesised)">
+                description = <"Bestimmung der mütterlichen oder väterlichen Familienlinie in der Verwandtschaft. (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Todesursache? (synthesised)">
+                description = <"Zusammenhang des Problems/der Diagnose mit dem Tod dieses Familienmitglieds. (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"*Family history summary (en)">
+                description = <"*Summary information about the significant health-related problems found in genetic and non-genetic family members. (en)">
+            >
+            ["at0002"] = <
+                text = <"Sammanfattning">
+                description = <"Översikt av hälsoproblem, diagnoser, psykosociala, miljömässiga och genetiska markörer som har identifierats hos familjemedlemmar.">
+                comment = <"För att strukturera familjeanamnes registrerad i kliniskjournal, eller för att importera data från befintlig/äldre klinisk journal, kan detta fält användas för att sammanfatta eller tolka alla fynd.">
+            >
+            ["at0003"] = <
+                text = <"Per familjemedlem">
+                description = <"Information om en specifik familjemedlem.">
+                comment = <"Dataelementen i detta kluster kommer att hänvisa till individen med antingen ett namn eller med alias. Upprepa sedan användningen av detta kluster för andra familjemedlemmar.">
+            >
+            ["at0004"] = <
+                text = <"Familjemedlemmens namn">
+                description = <"Familjemedlemmens namn.">
+                comment = <"Till exempel: \"Moster Susan\" eller \"Susan Smith\". Av sekretesskäl kan det dock vara lämpligt att i stället använda ett alias för registrering, delning och offentliggöranden av information.">
+            >
+            ["at0005"] = <
+                text = <"Födelsedatum">
+                description = <"Fullständigt eller delvis fullständigt födelsedatum för familjemedlemmen.">
+            >
+            ["at0008"] = <
+                text = <"Klinisk anamnes">
+                description = <"Information om familjemedlemmens hälsoproblem eller diagnoser.">
+                comment = <"Om mer information krävs kan EVALUATION.problem_diagnosis eller ACTION.procedure-arketypen användas. Specificera ''Vårdtagare'' som familjemedlem.">
+            >
+            ["at0009"] = <
+                text = <"Hälsoproblem/diagnos">
+                description = <"Identifiering av hälsoproblem eller diagnos för familjemedlemmen.">
+                comment = <"Om möjligt, benämn hälsoproblemet eller diagnosen med en terminologi. Detta dataelement kan kopplas till en mer detaljerad beskrivning av hälsoproblemet eller diagnosen i arketypen EVALUATION.problem_diagnosis. Ange då familjemedlemmen som vårdtagare.">
+            >
+            ["at0010"] = <
+                text = <"Ålder vid start">
+                description = <"Uppskattad eller exakt ålder för familjemedlemmen när hälsoproblemet/diagnosen kliniskt påträffades.">
+                comment = <"För hälsoproblem med flera förekomster, beskriver den första av dem.">
+            >
+            ["at0011"] = <
+                text = <"Ålder vid dödsfall">
+                description = <"Familjemedlemmens exakta eller uppskattade ålder vid dödsfallet.">
+                comment = <"Ålder vid dödsfall kan vara till nytta om det bakomliggande hälsoproblemet/diagnosen till bortgången betraktas som en riskfaktor i patientjournalen. Exempelvis ökar risken markant för bröstcancer hos en dotter om dennes moder avled i ung ålder av samma sjukdom.">
+            >
+            ["at0012"] = <
+                text = <"Klinisk beskrivning">
+                description = <"Beskrivning eller kommentarer om kliniska aspekter av familjemedlemmens hälsoproblem/diagnos.">
+            >
+            ["at0014"] = <
+                text = <"Dödsorsak?">
+                description = <"Förhållandet mellan hälsoproblemet och diagnosen till familjemedlems död.">
+            >
+            ["at0016"] = <
+                text = <"Relation">
+                description = <"Familjemedlemmens relation till vårdtagaren.">
+                comment = <"Till exempel: mor, styvfar, mormor eller farbror. Om möjligt, benämn relationen med en terminologi inklusive specifikation av moder och fader efter behov.">
+            >
+            ["at0020"] = <
+                text = <"Alias">
+                description = <"Ett alternativt namn eller beteckning för identifiering av en specifik familjemedlem. Detta alias ersätter det personliga namnet som kan identifiera individen offentligt.">
+                comment = <"Används för att underlätta urskiljning mellan familjemedlemmar med samma släktskapsrelation gentemot vårdtagaren. Exempelvis kan alias användas för att särskilja en specifik syster från 3 systrar genom benämna denne som \"äldsta syster\", \"syster med rött hår\" eller \"syster #1\".">
+            >
+            ["at0022"] = <
+                text = <"Beskrivning av biomarkör">
+                description = <"Beskrivning av riskrelaterade biologiska markörer som identifierats i familjemedlemmen.">
+            >
+            ["at0023"] = <
+                text = <"Avliden?">
+                description = <"Är familjemedlem avliden?">
+                comment = <"Registrera som \"Sant\" om familjemedlemmen är avliden.">
+            >
+            ["at0024"] = <
+                text = <"Biomarkörer">
+                description = <"Information om mätbara indikatorer för familjemedlemmens biologiska tillstånd.">
+                comment = <"Exempelvis detaljerad information om BRCA-mutationer hos familjemedlemmar. Obs! Fler dataelement kommer att behövas i framtiden för att registrera detaljerad genetisk markörinformation.">
+            >
+            ["at0026"] = <
+                text = <"Senast uppdaterat">
+                description = <"Datumet då familjeanamnesen senast uppdaterades.">
+            >
+            ["at0027"] = <
+                text = <"Detaljer om biomarkör">
+                description = <"Strukturerade detaljer om biologiska markörer.">
+            >
+            ["at0028"] = <
+                text = <"Per problem">
+                description = <"Information om ett specifikt hälsoproblem eller en diagnos närvarande hos familjemedlemmarna.">
+                comment = <"Om hälsoproblemet har en genetisk predisposition inom familjen, bör endast genetiska besläktade personer betraktas som en del av denna information. Om hälsoproblemet har psykosociala eller miljömässiga faktorer kan även icke-genetiska familjemedlemmar inkluderas.">
+            >
+            ["at0029"] = <
+                text = <"Hälsoproblem/typ av diagnos">
+                description = <"Identifiering av det hälsoproblem eller diagnos som innehas av familjen.">
+                comment = <"Detta är det hälsoproblem för vilket aggregerad data som involverar alla familjemedlemmar kommer att registreras. Om möjligt, benämn hälsoproblemet med en terminologi.">
+            >
+            ["at0030"] = <
+                text = <"Beskrivning">
+                description = <"Beskrivning om förekomsten av hälsoproblemet eller diagnosen hos familjemedlemmarna.">
+            >
+            ["at0045"] = <
+                text = <"Tilläggsinformation">
+                description = <"Plats för att infoga tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.">
+                comment = <"Exempelvis lokala informationskrav eller metadata för anpassning till FHIR- eller CIMI-motsvarigheter.">
+            >
+            ["at0046"] = <
+                text = <"Kommentar">
+                description = <"Kommentarer avseende familjemedlemmen som inte beskrivs i övriga fält.">
+            >
+            ["at0048"] = <
+                text = <"Uppgifter om familjemedlem">
+                description = <"Information om den identifierade familjemedlemmen.">
+                comment = <"Kan inkludera information som identifierar familjemedlemmen mer specifikt eller andra detaljer som är relevanta för familjemedlemmens familjehistoria.">
+            >
+            ["at0053"] = <
+                text = <"Multimedia">
+                description = <"Multimedial representation av familjeanamnes.">
+                comment = <"Exempelvis en stamtavla.">
+            >
+            ["at0058"] = <
+                text = <"Datum för dödsfall">
+                description = <"Fullständigt eller delvis fullständigt datum för dödsfall för familjemedlemmen.">
+                comment = <"Datum för dödsfall kan vara användbart i vissa situationer där månaden för dödsfallet kan utlösa beslutsstöd eller identifiera sjukdomsgrupper. Exempelvis allergener som utlöser andningsförvärringar; eller tillställningar som jul.">
+            >
+            ["at0059"] = <
+                text = <"Problemedtaljer">
+                description = <"Detaljerad information om det identifierade hälsoproblemet eller diagnos.">
+                comment = <"Exempelvis förekomsten av hälsoproblemet/diagnosen inom familjen.">
+            >
+            ["at0060"] = <
+                text = <"Biologiskt kön">
+                description = <"Familjemedlemmens biologiska kön.">
+                comment = <"Om möjligt, benämn könet med en terminologi.">
+            >
+            ["at0061"] = <
+                text = <"Direkt orsakad">
+                description = <"Hälsoproblemet eller diagnosen var en direkt orsak eller nära relaterat till den direkta dödsorsaken.">
+            >
+            ["at0062"] = <
+                text = <"Orelaterad">
+                description = <"Hälsoproblemet eller diagnosen var orelaterad till dödsorsaken.">
+            >
+            ["at0063"] = <
+                text = <"Obestämbart">
+                description = <"Det är omöjligt att avgöra om hälsoproblemet eller diagnosen var nära relaterad till den direkta dödsorsaken.">
+            >
+            ["at0064"] = <
+                text = <"Grad av släktskap">
+                description = <"Grad av släktskap mellan familjemedlemmen och vårdtagaren.">
+                comment = <"Om dataelementet \"Relation\" redan innehåller termer som inkluderar graden av släktskap, är detta dataelement överflödigt.">
+            >
+            ["at0065"] = <
+                text = <"1:a generation">
+                description = <"50% genetisk anknuten. Exempelvis en förälder, syskon eller barn.">
+            >
+            ["at0066"] = <
+                text = <"2:a generation">
+                description = <"25% genetisk anknuten. Exempelvis en farförälder, moster, farbror, systerdotter, brorson, barnbarn och halvsyskon.">
+            >
+            ["at0067"] = <
+                text = <"3:e generation">
+                description = <"12.5% genetisk anknuten. Exempelvis fars eller mors far- eller morförälder, fars eller mors faster eller moster, fars eller mors farbror eller morbror, kusin, syskonbarn eller barnbarnsbarn.">
+            >
+            ["at0068"] = <
+                text = <"Släktlinje">
+                description = <"Identifiering av moderns eller faderns släktlinje.">
+                comment = <"Om dataelementet \"Relation\" redan innehåller termer som inkluderar släktlinjen, är detta dataelement överflödigt.">
+            >
+            ["at0069"] = <
+                text = <"Släktlinje på moderns sida">
+                description = <"Besläktad genom vårdtagarens mor.">
+            >
+            ["at0070"] = <
+                text = <"Släktlinje på faderns sida">
+                description = <"Besläktad genom vårdtagarens far.">
+            >
+            ["at0071"] = <
+                text = <"*DV_TEXT (en)">
+                description = <"">
+            >
+            ["ac9030"] = <
+                text = <"Grad av släktskap (synthesised)">
+                description = <"Grad av släktskap mellan familjemedlemmen och vårdtagaren. (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"Släktlinje (synthesised)">
+                description = <"Identifiering av moderns eller faderns släktlinje. (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Dödsorsak? (synthesised)">
+                description = <"Förhållandet mellan hälsoproblemet och diagnosen till familjemedlems död. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Familieanamnese">
+                description = <"Sammendragsinformasjon om betydelige helserelaterte problemer hos genetiske og ikke-genetiske familiemedlemmer.">
+            >
+            ["at0002"] = <
+                text = <"Sammendrag">
+                description = <"Fritekstoversikt over problemer, diagnoser og psykososiale, miljømessige eller genetiske markører som er funnet hos familiemedlemmer.">
+                comment = <"Bruk dette feltet for å registrere et sammmendrag eller konklusjon, eller for å importere tekstlige data fra eksisterende/tidligere kliniske system.">
+            >
+            ["at0003"] = <
+                text = <"Per familiemedlem">
+                description = <"Detaljer om ett spesifikt familiemedlem.">
+                comment = <"Dataelementene i dette CLUSTERet vil forholde seg til individet identifisert ved navn eller ved et alias. Gjenta CLUSTERet for registrering av flere familiemedlemmer.">
+            >
+            ["at0004"] = <
+                text = <"Navn på familiemedlem">
+                description = <"Navnet på familiemedlemmet.">
+                comment = <"For eksempel: \"Tante Susan\" eller \"Susan Smith\". Av personvernsårsaker bør feltet \"Alias\" benyttes i tilfeller der registrering eller deling av informasjon er nødvendig.">
+            >
+            ["at0005"] = <
+                text = <"Fødselsdato">
+                description = <"Familiemedlemmets hele eller delvise fødselsdato.">
+            >
+            ["at0008"] = <
+                text = <"Klinisk historie">
+                description = <"Detaljer om problemene eller diagnosene til familiemedlemmet.">
+                comment = <"I tilfeller hvor hvor ytterligere detaljering er påkrevd kan man benytte arketypene EVALUATION.problem_diagnosis eller ACTION.procedure hvor Subject of Care settes til familiemedlemmet, ikke til helsetjenestemottakeren.">
+            >
+            ["at0009"] = <
+                text = <"Problem/diagnosenavn">
+                description = <"Identifisering av et viktig problem eller diagnose identifisert hos familiemedlemmet.">
+                comment = <"Koding av familiemedlemmets problem eller diagnose med en terminologi er ønskelig, der dette er mulig. En kan lenke fra dette datalementet til en detaljert registrering av et problem eller diagnose ved å bruke EVALUATION.problem_diagnosis-arketypen hvor Subject of Care settes til familiemedlemmet, ikke til helsetjenestemottakeren.">
+            >
+            ["at0010"] = <
+                text = <"Debutalder">
+                description = <"Familiemedlemmets estimerte eller faktiske alder da problemet eller diagnosen ble satt.">
+                comment = <"For helseproblemer som har oppstått flere ganger, beskriver dette første kjente forekomst.">
+            >
+            ["at0011"] = <
+                text = <"Alder ved død">
+                description = <"Familiemedlemmets nøyaktige eller anslåtte alder ved død.">
+                comment = <"Alder ved død kan være nyttig om problemet eller diagnosen som forårsaket død anses som en risikofaktor for helsetjenestemottakeren. For eksempel kan mors død av brystkreft i ung alder signifikant øke risikoen for brystkreft hos en datter.">
+            >
+            ["at0012"] = <
+                text = <"Klinisk beskrivelse">
+                description = <"Friktekstbeskrivelse eller kommentarer om kliniske aspekter ved familiemedlemmets problem eller diagnose.">
+            >
+            ["at0014"] = <
+                text = <"Dødsårsak?">
+                description = <"Forholdet mellom problemet/diagnosen og familiemedlemmets død.">
+            >
+            ["at0016"] = <
+                text = <"Slektsforhold">
+                description = <"Slektsforholdet mellom familiemedlemmet og helsetjenestemottakeren.">
+                comment = <"For eksempel: Mor, stefar, farmor, onkel på farsside. Koding av slektsforholdet med en terminologi er foretrukket der dette er mulig og kan inkludere en spesifisering av om slektsforholdet er på mors eller fars side.">
+            >
+            ["at0020"] = <
+                text = <"Alias">
+                description = <"Et alternativt navn eller merkelapp slik at man uten å bruke navn entydig kan identifisere familiemedlemmet.">
+                comment = <"For å kunne finne et spesifikt individ blant flere familiemedlemmer med likt slektsforhold. For eksempel kan et alias skille ut en søster blant tre søstre ved å skrive \"eldste søster\", \"søster med rødt hår\" eller \"søster nr. 1\".">
+            >
+            ["at0022"] = <
+                text = <"Beskrivelse av biomarkør">
+                description = <"Beskrivelse av risikorelaterte biologiske markører som er identifisert hos dette familiemedlemmet.">
+            >
+            ["at0023"] = <
+                text = <"Død?">
+                description = <"Er familiemedlemmet død?">
+                comment = <"Registrer som \"Sann\" dersom familiemedlemmet er død.">
+            >
+            ["at0024"] = <
+                text = <"Biomarkører">
+                description = <"Detaljert informasjon om helsetjenestemottakerens målbare indikatorer for en biologisk tilstand eller lidelse.">
+                comment = <"For eksempel: Detaljert informasjon om BRCA-mutasjoner hos familiemedlemmer. Merk: Flere dataelementer vil bli påkrevd i framtiden for en detaljert registrering av genetiske markører.">
+            >
+            ["at0026"] = <
+                text = <"Sist oppdatert">
+                description = <"Datoen familieanamnesen sist ble oppdatert.">
+            >
+            ["at0027"] = <
+                text = <"Detaljer om biomarkør">
+                description = <"Strukturerte detaljer om biologiske markører.">
+            >
+            ["at0028"] = <
+                text = <"Per problem">
+                description = <"Detaljer om forekomst av et spesifikt problem eller diagnose hos familiemedlemmer.">
+                comment = <"Har problemet en genetisk predisposisjon innen familien, skal bare genetiske slektninger inkluderes i dataene. Har problemet en psykososial eller miljømessig effekt kan ikke-genetiske familiemedlemmer også tas med i registreringen.">
+            >
+            ["at0029"] = <
+                text = <"Problem/diagnosenavn">
+                description = <"Navn på problem eller diagnose.">
+                comment = <"For dette problemet eller diagnosen kan aggregerte data som omhandler alle familiemedlemmer registreres. Koding av problemet eller diagnosen med en terminologi er ønskelig om mulig.">
+            >
+            ["at0030"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse av forekomst av problem eller diagnose hos familiemedlemmer.">
+            >
+            ["at0045"] = <
+                text = <"Utvidelse">
+                description = <"Tilleggsinformasjon for å fange opp lokalt innhold eller for å sammenstille med andre referansemodeller/formalismer.">
+                comment = <"For eksempel: Lokale informasjonsbehov eller ytterligere metadata eller for å sammenstille med FHIR eller CIMI ekvivalenter.">
+            >
+            ["at0046"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekstbeskrivelse om familiemedlemmet som ikke er registrert i andre felt.">
+            >
+            ["at0048"] = <
+                text = <"Detaljer om familiemedlem">
+                description = <"Strukturerte detaljer om det identifiserte familiemedlemmet.">
+                comment = <"Kan inneholde strukturerte detaljer som spesifikt identifiserer familiemedlemmet , eller andre detaljer som er relevant for familiemedlemmets anamnese.">
+            >
+            ["at0053"] = <
+                text = <"Multimedia">
+                description = <"Multimediarepresentasjon av familieanamnesen.">
+                comment = <"For eksempel et slektstre.">
+            >
+            ["at0058"] = <
+                text = <"Dødsdato">
+                description = <"Familiemedlemmets nøyaktige eller anslåtte dødsdato.">
+                comment = <"Dødsdato kan være nyttig i situasjoner hvor måneden dødsfallet skjedde kan utløse beslutningsstøtte eller for å identifisere sykdomsgrupperinger. For eksempel: Allergener i miljøet som utløser respiratoriske forverringer, eller hendelser som julefeiring.">
+            >
+            ["at0059"] = <
+                text = <"Problemdetaljer">
+                description = <"Strukturerte detaljer om det identifiserte problemet eller diagnosen.">
+                comment = <"For eksempel: Familiær forekomst av problemet eller diagnosen.">
+            >
+            ["at0060"] = <
+                text = <"Biologisk kjønn">
+                description = <"Familiemedlemmets biologiske kjønn.">
+                comment = <"Koding av kjønnet med en terminologi er ønskelig om mulig.">
+            >
+            ["at0061"] = <
+                text = <"Relatert">
+                description = <"Problemet eller diagnosen var en umiddelbar, underliggende eller medvirkende dødsårsak.">
+            >
+            ["at0062"] = <
+                text = <"Urelatert">
+                description = <"Problemet eller diagnosen var ikke en umiddelbar, underliggende eller medvirkende dødsårsak.">
+            >
+            ["at0063"] = <
+                text = <"Ukjent">
+                description = <"Det er ikke mulig å fastslå hvorvidt problemet eller diagnosen var en umiddelbar, underliggende eller medvirkende dødsårsak.">
+            >
+            ["at0064"] = <
+                text = <"Type familierelasjon">
+                description = <"Type relasjon mellom omsorgssubjektet og familiemedlemmet.">
+                comment = <"Hvis \"Relasjon\"-dataelementet bruker forhåndskoordinerte termer som inkluderer graden av slektskapet, er dette dataelementet overflødig.">
+            >
+            ["at0065"] = <
+                text = <"Førstegradsslektning">
+                description = <"50 % genetisk andel delt med individet – for eksempel forelder, søsken eller barn.">
+            >
+            ["at0066"] = <
+                text = <"Andregradsslektning">
+                description = <"25 % genetisk andel delt med individet - for eksempel besteforeldre, tante, onkel, niese, nevø, barnebarn og halvsøsken.">
+            >
+            ["at0067"] = <
+                text = <"Tredjegradsslekning">
+                description = <"12,5 % genetisk andel delt med individet - for eksempel oldeforeldre, oldeforeldres søsken, søskenbarn (fetter/kusine), barna til søskenbarn, oldebarn.">
+            >
+            ["at0068"] = <
+                text = <"Slektslinje">
+                description = <"Identifikasjon om slektskapet er på mors (maternal) eller fars (paternal) familieside.">
+                comment = <"Hvis \"Relasjon\"-dataelementet bruker forhåndskoordinerte termer som inkluderer graden av slektskapet, er dette dataelementet overflødig.">
+            >
+            ["at0069"] = <
+                text = <"Maternal familielinje">
+                description = <"Slektskap gjennom individets mor.">
+            >
+            ["at0070"] = <
+                text = <"Paternal familielinje">
+                description = <"Slektskap gjennom individets far.">
+            >
+            ["at0071"] = <
+                text = <"Innvirkning">
+                description = <"Overordnet vurdering av hvilken påvirkning et helseproblem hos familiemedlemmer har på personen som helseopplysningene gjelder.">
+                comment = <"Det samme problemet eller diagnosen hos familiemedlemmer, selv med samme alvorlighetsgrad, kan ha ulik påvirkning på hver enkelt person som helseopplysningene gjelder. Denne relevansfaktoren innebærer at den samlede påvirkningen av helseproblemet må justeres i henhold til egenskapene og forutsetningene til personen som helseopplysningene gjelder.">
+            >
+            ["ac9030"] = <
+                text = <"Type familierelasjon (synthesised)">
+                description = <"Type relasjon mellom omsorgssubjektet og familiemedlemmet. (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"Slektslinje (synthesised)">
+                description = <"Identifikasjon om slektskapet er på mors (maternal) eller fars (paternal) familieside. (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Dødsårsak? (synthesised)">
+                description = <"Forholdet mellom problemet/diagnosen og familiemedlemmets død. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"*Family history summary (en)">
+                description = <"*Summary information about the significant health-related problems found in genetic and non-genetic family members. (en)">
+            >
+            ["at0002"] = <
+                text = <"Resumo">
+                description = <"Relato dos problemas, diagnósticos, marcadores biológicos, ambientais e psicossociais que tenham sido identificados em membros da família">
+                comment = <"Use este campo para capturar informações não-estruturadas de história familiar registrada em relatos clínicos ou para importar dados textuais de sistema clínicos existentes ou legados.">
+            >
+            ["at0003"] = <
+                text = <"Por membro da família">
+                description = <"Detalhes sobre um membro específico da família.">
+                comment = <"Os elementos deste cluster se relacionam com o indivíduo identificado quer pelo seu nome ou alias. Repita o uso do cluster para outros membros da família.">
+            >
+            ["at0004"] = <
+                text = <"Nome do membro da família">
+                description = <"Nome do membro da família.">
+                comment = <"Por exemplo: 'Tia Susan' ou 'Susan Smith'. Entretanto, por questões de privacidade pode não ser apropriado para registro, por exposição pública; nesta situação o 'Alias' deve ser utilizado.">
+            >
+            ["at0005"] = <
+                text = <"Data de nascimento">
+                description = <"Data de nascimento (completa ou parcial) do membro da família.">
+            >
+            ["at0008"] = <
+                text = <"*Clinical history(en)">
+                description = <"*Detail about problems or diagnoses for the family member.(en)">
+                comment = <"*If more detail is required, suggest using EVALUATION.problem_diagnosis or the ACTION.procedure archetype and specifying the 'Subject of Care' as the family member, rather than the subject of the health record.(en)">
+            >
+            ["at0009"] = <
+                text = <"*Problem/diagnosis name(en)">
+                description = <"*Identification of the significant problem or diagnosis in the identified family member.(en)">
+                comment = <"*Coding of the family member's problem or diagnosis with a terminology is preferred, where possible. May link from this data element to a detailed record of a Problem/Diagnosis using the EVALUATION.problem_diagnosis archetype with the Subject of Care set to the family member, not to the patient.(en)">
+            >
+            ["at0010"] = <
+                text = <"Idade da detecção do problema/diagnóstico">
+                description = <"Idade (real ou estimada) do membro da família quando o problema/diagnóstico foi reconhecido clinicamente.">
+                comment = <"Para problemas de saúde com múltiplas ocorrências, este descreve a primeira ocorrência conhecida.">
+            >
+            ["at0011"] = <
+                text = <"*Age at death(en)">
+                description = <"*Exact or estimated age of the family member at death.(en)">
+                comment = <"*Age of death can be useful if the problem/diagnosis which caused their death is being considered as a risk factor for the subject of the health record. For example: death of mother from breast cancer at young age significally increases the risk of breast cancer in a daughter. (en)">
+            >
+            ["at0012"] = <
+                text = <"Descrição clínica">
+                description = <"Descrição narrativa ou comentários sobre aspectos clínicos dos problemas/diagnósticos do membro da família.">
+            >
+            ["at0014"] = <
+                text = <"*Cause of death?(en)">
+                description = <"*Relationship of the problem/diagnosis to the death of this family member.(en)">
+            >
+            ["at0016"] = <
+                text = <"*Relationship(en)">
+                description = <"*The relationship of the family member to the subject of care.(en)">
+                comment = <"*For example: mother, step-father, maternal grandmother, or paternal uncle. Coding of the relationship with a terminology is preferred, where possible and including specification of maternal and paternal as required.(en)">
+            >
+            ["at0020"] = <
+                text = <"Alias">
+                description = <"Um nome ou rótulo alternativo que identifica unicamente um membro da família sem utilizar uma denominação pessoal que possa identificar publicamente o indivíduo.">
+                comment = <"Para seu usado para auxiliar na distinção de um indivíduo de múltiplos membros da família com relacionamentos idênticos. Por exemplo, um rótulo para distinguir uma irmã específica das outras três irmãs pode ser: 'irmã mai velha', 'irmã ruiva' ou 'irmã # 1'.">
+            >
+            ["at0022"] = <
+                text = <"Descrição do marcador biológico">
+                description = <"Descrição de marcadores biológicos relacionados a riscos identificados neste membro da família.">
+            >
+            ["at0023"] = <
+                text = <"*Deceased?(en)">
+                description = <"*Is the family member deceased?(en)">
+                comment = <"*Record as 'True' if family member is deceased.(en)">
+            >
+            ["at0024"] = <
+                text = <"*Biomarkers(en)">
+                description = <"*Detailed information about measurable indicators of a biological state or condition of the family member.(en)">
+                comment = <"*For example: detailed information on BRCA mutations in family members. 
+Note: More data elements will be needed in future to record detailed genetic marker information.(en)">
+            >
+            ["at0026"] = <
+                text = <"Última atualização">
+                description = <"Data da última atualização deste Sumário de história familiar.">
+            >
+            ["at0027"] = <
+                text = <"*Biomarker details(en)">
+                description = <"*Structured details about biological markers.(en)">
+            >
+            ["at0028"] = <
+                text = <"*Per problem(en)">
+                description = <"*Details about the presence of a specific problem or diagnosis in family members.(en)">
+                comment = <"*If the problem has a genetic predisposition within families, then only genetic relatives should be considered as part of this data. If the problem has psychosocial or environmental effects then non-genetic family members may also be included.(en)">
+            >
+            ["at0029"] = <
+                text = <"*Problem/diagnosis name(en)">
+                description = <"*Identification of the significant problem or diagnosis in the family overall.(en)">
+                comment = <"*This is the problem for which aggregated data involving all family members will be collected. Coding of the index problem with a terminology is preferred, where possible.(en)">
+            >
+            ["at0030"] = <
+                text = <"*Description(en)">
+                description = <"*Narrative description about occurrence of the problem or diagnosis in family members.(en)">
+            >
+            ["at0045"] = <
+                text = <"Extensão">
+                description = <"Informações adicionais necessárias para capturar conteúdo local ou para alinhar outros modelos/formalismos de referência.">
+                comment = <"Por exemplo: requerimentos de informações locais ou metadados adicionais para alinhar com equivalentes a FHIR ou CIMI.">
+            >
+            ["at0046"] = <
+                text = <"Comentários">
+                description = <"Narrativa adicional sobre membro da família não contemplado em outro campo.">
+            >
+            ["at0048"] = <
+                text = <"*Family member details(en)">
+                description = <"*Structured detail about the identified family member.(en)">
+                comment = <"*May include structured detail that identifies the family member more specifically or other details relevant to the family history of the family member.(en)">
+            >
+            ["at0053"] = <
+                text = <"*Multimedia(en)">
+                description = <"*Multimedia representation of the family history.(en)">
+                comment = <"*For example: a pedigree chart.(en)">
+            >
+            ["at0058"] = <
+                text = <"Data de falecimento">
+                description = <"Data completa ou parcial do falecimento do membro da família.">
+                comment = <"Data do falecimento pode ser útil em algumas situações em que o mês da morte pode disparar necessidade de decisões ou identificar grupos de doenças. Por exemplo:alérgenos ambientais disparando exacerbações respiratórias; ou eventos como o Natal.">
+            >
+            ["at0059"] = <
+                text = <"*Problem details(en)">
+                description = <"*Structured details about the identified problem or diagnosis.(en)">
+                comment = <"*For example: prevalence of the problem/diagnosis in the family.(en)">
+            >
+            ["at0060"] = <
+                text = <"*Sex(en)">
+                description = <"*The family member's biological sex. (en)">
+                comment = <"*Coding of the sex with a terminology is preferred, where possible.(en)">
+            >
+            ["at0061"] = <
+                text = <"*Direkte eller nært relatert(en)">
+                description = <"*Problemet eller diagnosen var en direkte årsak eller nært relatert til den direkte dødsårsaken.(en)">
+            >
+            ["at0062"] = <
+                text = <"*Urelatert(en)">
+                description = <"*Problemet eller diagnosen var ikke relatert til den direkte dødsårsaken.(en)">
+            >
+            ["at0063"] = <
+                text = <"*Ubestemmelig(en)">
+                description = <"*Det er ikke mulig å fastslå hvorvidt problemet eller diagnosen var nært relatert til den direkte dødsårsaken.(en)">
+            >
+            ["at0064"] = <
+                text = <"*Relationship degree (en)">
+                description = <"*The degree of relationship between the subject of care and the family member. (en)">
+                comment = <"*If the 'Relationship' data element uses pre-coordinated terms that include the degree of relationship, then this data element is redundant. (en)">
+            >
+            ["at0065"] = <
+                text = <"*First degree relative (en)">
+                description = <"*50% genetic share with the subject - for example, parent, sibling or child. (en)">
+            >
+            ["at0066"] = <
+                text = <"*Second degree relative (en)">
+                description = <"*25% genetic share with the subject - for example, grandparent, aunt, uncle, niece, nephew, grandchildren and half siblings. (en)">
+            >
+            ["at0067"] = <
+                text = <"*Third degree relative (en)">
+                description = <"*12.5% genetic share with the subject - for example, great grandparent, great aunt, great uncle, first cousin, children of nieces and nephews, and great grandchildren. (en)">
+            >
+            ["at0068"] = <
+                text = <"*Family line (en)">
+                description = <"*Identification of the maternal or paternal family line in the relationship. (en)">
+                comment = <"*If the 'Relationship' data element uses pre-coordinated terms that include the family line, then this data element is redundant. (en)">
+            >
+            ["at0069"] = <
+                text = <"*Maternal line (en)">
+                description = <"*Related through the subject's mother. (en)">
+            >
+            ["at0070"] = <
+                text = <"*Paternal line (en)">
+                description = <"*Related through the subject's father. (en)">
+            >
+            ["at0071"] = <
+                text = <"*DV_TEXT (en)">
+                description = <"">
+            >
+            ["ac9030"] = <
+                text = <"*Relationship degree (en) (synthesised)">
+                description = <"*The degree of relationship between the subject of care and the family member. (en) (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"*Family line (en) (synthesised)">
+                description = <"*Identification of the maternal or paternal family line in the relationship. (en) (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"*Cause of death?(en) (synthesised)">
+                description = <"*Relationship of the problem/diagnosis to the death of this family member.(en) (synthesised)">
+            >
+        >
+        ["el"] = <
+            ["at0000"] = <
+                text = <"*Family history summary (en)">
+                description = <"*Summary information about the significant health-related problems found in genetic and non-genetic family members. (en)">
+            >
+            ["at0002"] = <
+                text = <"Περίληψη">
+                description = <"Αφηγηματική επισκόπηση προβλημάτων, διαγνώσεων, ψυχοκοινωνικών, περιβαλλοντικών και γενετικών δεικτών που έχουν εντοπιστεί σε μέλη της οικογένειας.">
+                comment = <"Αυτό το πεδίο μπορεί να χρησιμοποιηθεί για την καταγραφή μιας περίληψης ή του συμπεράσματος όλων των ευρημάτων, για μη δομημένες πληροφορίες οικογενειακού ιστορικού που καταγράφονται σε κλινικά αρχεία ή για την εισαγωγή δεδομένων κειμένου από υπάρχοντα / παλαιότερα κλινικά συστήματα.">
+            >
+            ["at0003"] = <
+                text = <"Ανά οικογενειακό μέλος">
+                description = <"Λεπτομέρειες σχετικά με ένα συγκεκριμένο μέλος της οικογένειας.">
+                comment = <"Τα στοιχεία δεδομένων σε αυτό το σύμπλεγμα θα σχετίζονται με το άτομο που προσδιορίζεται είτε με όνομα είτε με ψευδώνυμο. Επαναλάβετε τη χρήση του συμπλέγματος για άλλα μέλη της οικογένειας.">
+            >
+            ["at0004"] = <
+                text = <"Ονομασία Οικογενειακού μέλους">
+                description = <"Όνομα μέλους της οικογένειας.">
+                comment = <"Για παράδειγμα: «Σούζαν Σμιθ». Ωστόσο, για λόγους προστασίας της ιδιωτικής ζωής, αυτό μπορεί να μην είναι κατάλληλο για εγγραφή, κοινή χρήση ή δημόσια προβολή και σε αυτήν την περίπτωση θα πρέπει να χρησιμοποιείται το «ψευδώνυμο».">
+            >
+            ["at0005"] = <
+                text = <"Ημερομηνία γέννησης">
+                description = <"Πλήρης ή μερική ημερομηνία γέννησης του μέλους της οικογένειας.">
+            >
+            ["at0008"] = <
+                text = <"Ιατρικό ιστορικό">
+                description = <"Λεπτομέρειες σχετικά με προβλήματα ή διαγνώσεις για το μέλος της οικογένειας">
+                comment = <"Εάν απαιτούνται περισσότερες λεπτομέρειες, προτείνετε τη χρήση EVALUATION. problem_diagnosis ή του αρχέτυπου ACTION. procedure και τον προσδιορισμό του «Αντικειμένου Φροντίδας» ως μέλους της οικογένειας και όχι ως αντικειμένου του φακέλου υγείας.">
+            >
+            ["at0009"] = <
+                text = <"Ονομασία προβλήματος/διάγνωσης">
+                description = <"Προσδιορισμός του σημαντικού προβλήματος ή διάγνωση στο αναγνωρισμένο μέλος της οικογένειας.">
+                comment = <"Προτιμάται η κωδικοποίηση του προβλήματος ή της διάγνωσης του μέλους της οικογένειας με ορολογία, όπου είναι δυνατόν. Μπορεί να συνδεθεί από αυτό το στοιχείο δεδομένων με μια λεπτομερή καταγραφή ενός προβλήματος / διάγνωσης χρησιμοποιώντας το αρχέτυπο EVALUATION. problem_diagnosis με το αντικείμενο φροντίδας που έχει οριστεί στο μέλος της οικογένειας και όχι στον ασθενή.">
+            >
+            ["at0010"] = <
+                text = <"Ηλικία κατά την έναρξη">
+                description = <"Εκτιμώμενη ή πραγματική ηλικία του μέλους της οικογένειας όταν το πρόβλημα/διάγνωση αναγνωρίστηκε κλινικά.">
+                comment = <"Για προβλήματα υγείας με πολλαπλά περιστατικά, αυτό περιγράφει το πρώτο περιστατικό.">
+            >
+            ["at0011"] = <
+                text = <"Ηλικία θανάτου">
+                description = <"Ακριβής ή εκτιμώμενη ηλικία του μέλους της οικογένειας κατά το θάνατο.">
+                comment = <"Η ηλικία θανάτου μπορεί να είναι χρήσιμη εάν το πρόβλημα/διάγνωση που προκάλεσε το θάνατό τους θεωρείται παράγοντας κινδύνου για το υποκείμενο του ιατρικού φακέλου. Για παράδειγμα: ο θάνατος της μητέρας από καρκίνο του μαστού σε νεαρή ηλικία αυξάνει σημαντικά τον κίνδυνο καρκίνου του μαστού σε μια κόρη">
+            >
+            ["at0012"] = <
+                text = <"Κλινική Περιγραφή">
+                description = <"Αφηγηματική περιγραφή ή σχόλια σχετικά με κλινικές πτυχές του προβλήματος/διάγνωσης του μέλους της οικογένειας">
+            >
+            ["at0014"] = <
+                text = <"Αιτιολογία θανάτου">
+                description = <"Σχέση του προβλήματος/διάγνωσης με το θάνατο αυτού του μέλους της οικογένειας.">
+            >
+            ["at0016"] = <
+                text = <"Οικογενειακή σχέση">
+                description = <"Η σχέση του μέλους της οικογένειας με το αντικείμενο της φροντίδας.">
+                comment = <"Για παράδειγμα: μητέρα, πατριός, γιαγιά από την πλευρά της μητέρας ή θείος από την πλευρά του πατέρα. Προτιμάται η κωδικοποίηση της σχέσης με μια ορολογία, όπου είναι δυνατόν και συμπεριλαμβανομένου του προσδιορισμού της μητέρας και του πατέρα, όπως απαιτείται.">
+            >
+            ["at0020"] = <
+                text = <"Ψευδώνυμο">
+                description = <"Ένα εναλλακτικό όνομα ή ετικέτα για τη μοναδική ταυτοποίηση ενός μέλους της οικογένειας, χωρίς τη χρήση προσωπικού ονόματος που θα μπορούσε να ταυτοποιήσει δημόσια το άτομο.">
+                comment = <"Χρησιμοποιείται για να βοηθήσει στη διάκριση ενός ατόμου από πολλά μέλη της οικογένειας με πανομοιότυπες σχέσεις. Για παράδειγμα, η ετικέτα για τη διάκριση μιας συγκεκριμένης αδελφής από τρεις γνωστές αδελφές μπορεί να είναι «μεγαλύτερη αδελφή», «αδελφή με κόκκινα μαλλιά» ή «αδελφή #1">
+            >
+            ["at0022"] = <
+                text = <"Περιγραφή βιολογικών δεικτών">
+                description = <"Περιγραφή των σχετικών με τον κίνδυνο βιολογικών δεικτών που εντοπίζονται σε αυτό το μέλος της οικογένειας.">
+            >
+            ["at0023"] = <
+                text = <"Αποθανών">
+                description = <"Έχει πεθάνει το μέλος της οικογένειας;">
+                comment = <"Εγγραφή ως \"True\" εάν το μέλος της οικογένειας έχει πεθάνει.">
+            >
+            ["at0024"] = <
+                text = <"Βιοδείκτες">
+                description = <"Λεπτομερείς πληροφορίες σχετικά με μετρήσιμους δείκτες βιολογικής κατάστασης ή κατάστασης του μέλους της οικογένειας.">
+                comment = <"Για παράδειγμα: λεπτομερείς πληροφορίες σχετικά με τις μεταλλάξεις BRCA στα μέλη της οικογένειας.
+Σημείωση: Στο μέλλον θα χρειαστούν περισσότερα στοιχεία δεδομένων για την καταγραφή λεπτομερών πληροφοριών γενετικών δεικτών.">
+            >
+            ["at0026"] = <
+                text = <"Τελευταία ενημέρωση">
+                description = <"Η ημερομηνία τελευταίας ενημέρωσης αυτής της σύνοψης οικογενειακού ιστορικού.">
+            >
+            ["at0027"] = <
+                text = <"Λεπτομέρειες βιολογικών δεικτών">
+                description = <"Δομημένες λεπτομέρειες σχετικά με τους βιολογικούς δείκτες.">
+            >
+            ["at0028"] = <
+                text = <"Ανά Διάγνωση">
+                description = <"Λεπτομέρειες σχετικά με την παρουσία συγκεκριμένου προβλήματος ή διάγνωσης στα μέλη της οικογένειας.">
+                comment = <"Εάν το πρόβλημα έχει γενετική προδιάθεση εντός των οικογενειών, τότε μόνο γενετικοί συγγενείς θα πρέπει να θεωρούνται μέρος αυτών των δεδομένων. Εάν το πρόβλημα έχει ψυχοκοινωνικές ή περιβαλλοντικές επιπτώσεις, τότε μπορούν επίσης να συμπεριληφθούν μη γενετικά μέλη της οικογένειας.">
+            >
+            ["at0029"] = <
+                text = <"Ονομασία Διάγνωσης">
+                description = <"Εντοπισμός του σημαντικού προβλήματος ή διάγνωση στην οικογένεια συνολικά.">
+                comment = <"Αυτό είναι το πρόβλημα για το οποίο θα συλλεχθούν συγκεντρωτικά δεδομένα που αφορούν όλα τα μέλη της οικογένειας. Προτιμάται η κωδικοποίηση του προβλήματος ευρετηρίου με ορολογία, όπου είναι δυνατόν.">
+            >
+            ["at0030"] = <
+                text = <"Περιγραφή">
+                description = <"Αφηγηματική περιγραφή σχετικά με την εμφάνιση του προβλήματος ή τη διάγνωση στα μέλη της οικογένειας.">
+            >
+            ["at0045"] = <
+                text = <"Επέκταση">
+                description = <"Πρόσθετες πληροφορίες που απαιτούνται για την καταγραφή τοπικού περιεχομένου ή για την ευθυγράμμιση με άλλα μοντέλα αναφοράς/φορμαλισμό">
+                comment = <"Για παράδειγμα: απαιτήσεις τοπικών πληροφοριών ή πρόσθετα μεταδεδομένα για ευθυγράμμιση με ισοδύναμα FHIR ή CIMI.">
+            >
+            ["at0046"] = <
+                text = <"Σχόλιο">
+                description = <"Πρόσθετη αφήγηση για το μέλος της οικογένειας που δεν αποτυπώνεται σε άλλα πεδία.">
+            >
+            ["at0048"] = <
+                text = <"Λετπομέρειες οικογενειακού μέλους">
+                description = <"Δομημένη λεπτομέρεια σχετικά με το αναγνωρισμένο μέλος της οικογένειας.">
+                comment = <"Μπορεί να περιλαμβάνει δομημένες λεπτομέρειες που προσδιορίζουν το μέλος της οικογένειας πιο συγκεκριμένα ή άλλες λεπτομέρειες σχετικές με το οικογενειακό ιστορικό του μέλους της οικογένειας.">
+            >
+            ["at0053"] = <
+                text = <"Πολυμέσα">
+                description = <"Πολυμεσική αναπαράσταση της οικογενειακής ιστορίας.">
+                comment = <"Για παράδειγμα: ένα γενεαλογικό γράφημα.">
+            >
+            ["at0058"] = <
+                text = <"Ημερομηνία θανάτου">
+                description = <"Πλήρης ή μερική ημερομηνία θανάτου του μέλους της οικογένειας.">
+                comment = <"Η ημερομηνία θανάτου μπορεί να είναι χρήσιμη σε ορισμένες περιπτώσεις στις οποίες ο μήνας θανάτου μπορεί να προκαλέσει υποστήριξη αποφάσεων ή να εντοπίσει ομάδες ασθενειών. Για παράδειγμα: περιβαλλοντικά αλλεργιογόνα που προκαλούν αναπνευστικές επιδεινώσεις. ή εκδηλώσεις όπως τα Χριστούγεννα.">
+            >
+            ["at0059"] = <
+                text = <"Λεπτομέρειες διάγνωσης">
+                description = <"Δομημένες λεπτομέρειες σχετικά με το πρόβλημα ή τη διάγνωση που εντοπίστηκε.">
+                comment = <"Για παράδειγμα: επιπολασμός του προβλήματος/διάγνωσης στην οικογένεια.">
+            >
+            ["at0060"] = <
+                text = <"Βιολογικό φύλο">
+                description = <"Το βιολογικό φύλο του μέλους της οικογένειας.">
+                comment = <"Προτιμάται η κωδικοποίηση του φύλου με ορολογία, όπου είναι δυνατόν.">
+            >
+            ["at0061"] = <
+                text = <"Άμεση αιτία ή στενά συνδεδεμένη">
+                description = <"Το πρόβλημα ή η διάγνωση ήταν άμεση αιτία ή στενά συνδεδεμένη με την άμεση αιτία θανάτου.">
+            >
+            ["at0062"] = <
+                text = <"Δεν σχετίζεται">
+                description = <"Το πρόβλημα ή η διάγνωση δεν σχετιζόταν με την αιτία θανάτου.">
+            >
+            ["at0063"] = <
+                text = <"Απροσδιόριστο">
+                description = <"Είναι αδύνατο να προσδιοριστεί εάν το πρόβλημα ή η διάγνωση ήταν στενά συνδεδεμένη με την άμεση αιτία θανάτου.">
+            >
+            ["at0064"] = <
+                text = <"Βαθμός συγγένειας">
+                description = <"Ο βαθμός σχέσης μεταξύ του θέματος της φροντίδας και του μέλους της οικογένειας.">
+                comment = <"Εάν το στοιχείο δεδομένων «Σχέση» χρησιμοποιεί προσυντονισμένους όρους που περιλαμβάνουν τον βαθμό σχέσης, τότε αυτό το στοιχείο δεδομένων είναι περιττό.">
+            >
+            ["at0065"] = <
+                text = <"Συγγενής πρώτου βαθμού">
+                description = <"50% γενετικό μερίδιο με το υποκείμενο - για παράδειγμα, γονέας, αδελφός ή παιδί.">
+            >
+            ["at0066"] = <
+                text = <"Συγγενής δευτέρου βαθμού">
+                description = <"25% γενετικό μερίδιο με το θέμα - για παράδειγμα, παππούς, θεία, θείος, ανιψιά, ανιψιός, εγγόνια και ετεροθαλή αδέλφια.">
+            >
+            ["at0067"] = <
+                text = <"Συγγενής τρίτου βαθμού">
+                description = <"12,5% γενετικό μερίδιο με το θέμα - για παράδειγμα, προπάππους, μεγάλη θεία, μεγάλος θείος, πρώτος ξάδερφος, παιδιά ανιψιών και ανιψιών και δισέγγονα.">
+            >
+            ["at0068"] = <
+                text = <"Γενεαλογική σειρά">
+                description = <"Προσδιορισμός της μητρικής ή πατρικής οικογενειακής γραμμής στη σχέση.">
+                comment = <"Εάν το στοιχείο δεδομένων \"Σχέση\" χρησιμοποιεί προσυντονισμένους όρους που περιλαμβάνουν τη γραμμή οικογένειας, τότε αυτό το στοιχείο δεδομένων είναι περιττό.">
+            >
+            ["at0069"] = <
+                text = <"Μητρική γενεαλογική σειρά">
+                description = <"Σχετίζεται μέσω της μητέρας του υποκειμένου.">
+            >
+            ["at0070"] = <
+                text = <"Πατρική γενεαλογική σειρά">
+                description = <"Σχετίζεται μέσω του πατέρα του υποκειμένου.">
+            >
+            ["at0071"] = <
+                text = <"Impact">
+                description = <"Overall assessment of the impact of a health problem for the specific patient. ">
+                comment = <"The same diagnosis, with the same severity, has a different impact on each patient. This relevance qualifier implies adjusting the overall impact of that health problem according to the patient's characteristics.
+For example: Two patients have the same diagnosis. First-degree burn.
+One is a healthy person, the other is a diabetic patient.
+The impact for that problem in a diabetic patient is HIGHER (more risk of infection..., longuer time healing).
+This element is meant to allow for multiple types of impact, including but not limited to: clinical treatment, home functioning, work life.">
+            >
+            ["ac9030"] = <
+                text = <"Βαθμός συγγένειας (synthesised)">
+                description = <"Ο βαθμός σχέσης μεταξύ του θέματος της φροντίδας και του μέλους της οικογένειας. (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"Γενεαλογική σειρά (synthesised)">
+                description = <"Προσδιορισμός της μητρικής ή πατρικής οικογενειακής γραμμής στη σχέση. (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Αιτιολογία θανάτου (synthesised)">
+                description = <"Σχέση του προβλήματος/διάγνωσης με το θάνατο αυτού του μέλους της οικογένειας. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Family history summary">
+                description = <"Summary information about the significant health-related problems found in genetic and non-genetic family members.">
+            >
+            ["at0002"] = <
+                text = <"Summary">
+                description = <"Narrative overview about problems, diagnoses, psychosocial, environmental and genetic markers that have been identified in family members.">
+                comment = <"This field can be used to record a summary or the conclusion of all the findings, for unstructured family history information recorded in clinical records, or to import textual data from existing/legacy clinical systems.">
+            >
+            ["at0003"] = <
+                text = <"Per family member">
+                description = <"Details about a specific family member.">
+                comment = <"The data elements in this cluster will relate to the individual identified either by name or by alias. Repeat the use of the cluster for other family members.">
+            >
+            ["at0004"] = <
+                text = <"Family member name">
+                description = <"Name of family member.">
+                comment = <"For example: 'Aunt Susan' or 'Susan Smith'. However, for privacy reasons this may not be appropriate for recording, sharing or public display and in this situation the 'Alias' should be used.">
+            >
+            ["at0005"] = <
+                text = <"Date of birth">
+                description = <"Full or partial date of birth of the family member.">
+            >
+            ["at0008"] = <
+                text = <"Clinical history">
+                description = <"Detail about problems or diagnoses for the family member.">
+                comment = <"If more detail is required, suggest using EVALUATION.problem_diagnosis or the ACTION.procedure archetype and specifying the 'Subject of Care' as the family member, rather than the subject of the health record.">
+            >
+            ["at0009"] = <
+                text = <"Problem/diagnosis name">
+                description = <"Identification of the significant problem or diagnosis in the identified family member.">
+                comment = <"Coding of the family member's problem or diagnosis with a terminology is preferred, where possible. May link from this data element to a detailed record of a Problem/Diagnosis using the EVALUATION.problem_diagnosis archetype with the Subject of Care set to the family member, not to the patient.">
+            >
+            ["at0010"] = <
+                text = <"Age at onset">
+                description = <"Estimated or actual age of the family member when the problem/diagnosis was clinically recognised.">
+                comment = <"For health problems with multiple occurrences, this describes the first known occurrence.">
+            >
+            ["at0011"] = <
+                text = <"Age at death">
+                description = <"Exact or estimated age of the family member at death.">
+                comment = <"Age of death can be useful if the problem/diagnosis which caused their death is being considered as a risk factor for the subject of the health record. For example: death of mother from breast cancer at young age significally increases the risk of breast cancer in a daughter.">
+            >
+            ["at0012"] = <
+                text = <"Clinical description">
+                description = <"Narrative description or comments about clinical aspects of the family member's problem/diagnosis.">
+            >
+            ["at0014"] = <
+                text = <"Cause of death?">
+                description = <"Relationship of the problem/diagnosis to the death of this family member.">
+            >
+            ["at0016"] = <
+                text = <"Relationship">
+                description = <"The relationship of the family member to the subject of care.">
+                comment = <"For example: mother, step-father, maternal grandmother, or paternal uncle. Coding of the relationship with a terminology is preferred, where possible and including specification of maternal and paternal as required.">
+            >
+            ["at0020"] = <
+                text = <"Alias">
+                description = <"An alternative name or label to uniquely identify a family member, without using a personal name which might publicly identify the individual.">
+                comment = <"To be used to assist in distinguishing one individual from multiple family members with identical relationships. For example, the label to distinguish one specific sister from three known sisters might be 'eldest sister' 'sister with the red hair' or 'sister #1'.">
+            >
+            ["at0022"] = <
+                text = <"Biomarker description">
+                description = <"Description of risk-related biological markers identified in this family member.">
+            >
+            ["at0023"] = <
+                text = <"Deceased?">
+                description = <"Is the family member deceased?">
+                comment = <"Record as 'True' if family member is deceased.">
+            >
+            ["at0024"] = <
+                text = <"Biomarkers">
+                description = <"Detailed information about measurable indicators of a biological state or condition of the family member.">
+                comment = <"For example: detailed information on BRCA mutations in family members. 
+Note: More data elements will be needed in future to record detailed genetic marker information.">
+            >
+            ["at0026"] = <
+                text = <"Last Updated">
+                description = <"The date this family history summary was last updated.">
+            >
+            ["at0027"] = <
+                text = <"Biomarker details">
+                description = <"Structured details about biological markers.">
+            >
+            ["at0028"] = <
+                text = <"Per problem">
+                description = <"Details about the presence of a specific problem or diagnosis in family members.">
+                comment = <"If the problem has a genetic predisposition within families, then only genetic relatives should be considered as part of this data. If the problem has psychosocial or environmental effects then non-genetic family members may also be included.">
+            >
+            ["at0029"] = <
+                text = <"Problem/diagnosis name">
+                description = <"Identification of the significant problem or diagnosis in the family overall.">
+                comment = <"This is the problem for which aggregated data involving all family members will be collected. Coding of the index problem with a terminology is preferred, where possible.">
+            >
+            ["at0030"] = <
+                text = <"Description">
+                description = <"Narrative description about occurrence of the problem or diagnosis in family members.">
+            >
+            ["at0045"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0046"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the family member not captured in other fields.">
+            >
+            ["at0048"] = <
+                text = <"Family member details">
+                description = <"Structured detail about the identified family member.">
+                comment = <"May include structured detail that identifies the family member more specifically or other details relevant to the family history of the family member.">
+            >
+            ["at0053"] = <
+                text = <"Multimedia">
+                description = <"Multimedia representation of the family history.">
+                comment = <"For example: a pedigree chart.">
+            >
+            ["at0058"] = <
+                text = <"Date of death">
+                description = <"Full or partial date of death of the family member.">
+                comment = <"Date of death may be useful in some situations in which the month of death may trigger decision support or identify groupings of disease. For example: environmental allergens triggering respiratory exaccerbations; or events such as Christmas.">
+            >
+            ["at0059"] = <
+                text = <"Problem details">
+                description = <"Structured details about the identified problem or diagnosis.">
+                comment = <"For example: prevalence of the problem/diagnosis in the family.">
+            >
+            ["at0060"] = <
+                text = <"Biological sex">
+                description = <"The family member's biological sex.">
+                comment = <"Coding of the sex with a terminology is preferred, where possible.">
+            >
+            ["at0061"] = <
+                text = <"Direct cause or closely related">
+                description = <"The problem or diagnosis was a direct cause or closely related to the direct cause of death.">
+            >
+            ["at0062"] = <
+                text = <"Unrelated">
+                description = <"The problem or diagnosis was unrelated to the cause of death.">
+            >
+            ["at0063"] = <
+                text = <"Indeterminate">
+                description = <"It is impossible to determine whether the problem or diagnosis was closely related to the direct cause of death.">
+            >
+            ["at0064"] = <
+                text = <"Relationship degree">
+                description = <"The degree of relationship between the subject of care and the family member.">
+                comment = <"If the 'Relationship' data element uses pre-coordinated terms that include the degree of relationship, then this data element is redundant.">
+            >
+            ["at0065"] = <
+                text = <"First degree relative">
+                description = <"50% genetic share with the subject - for example, parent, sibling or child.">
+            >
+            ["at0066"] = <
+                text = <"Second degree relative">
+                description = <"25% genetic share with the subject - for example, grandparent, aunt, uncle, niece, nephew, grandchildren and half siblings.">
+            >
+            ["at0067"] = <
+                text = <"Third degree relative">
+                description = <"12.5% genetic share with the subject - for example, great grandparent, great aunt, great uncle, first cousin, children of nieces and nephews, and great grandchildren.">
+            >
+            ["at0068"] = <
+                text = <"Family line">
+                description = <"Identification of the maternal or paternal family line in the relationship.">
+                comment = <"If the 'Relationship' data element uses pre-coordinated terms that include the family line, then this data element is redundant.">
+            >
+            ["at0069"] = <
+                text = <"Maternal line">
+                description = <"Related through the subject's mother.">
+            >
+            ["at0070"] = <
+                text = <"Paternal line">
+                description = <"Related through the subject's father.">
+            >
+            ["at0071"] = <
+                text = <"Impact">
+                description = <"Overall assessment of the impact on the subject of the health record, of a health problem present in family members. ">
+                comment = <"The same problem or diagnosis in family members, even with the same severity, can have a different impact in each subject of the health record. This relevance factor implies adjusting the overall impact of that health problem according to the characteristics of the subject of the health record.">
+            >
+            ["ac9030"] = <
+                text = <"Relationship degree (synthesised)">
+                description = <"The degree of relationship between the subject of care and the family member. (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"Family line (synthesised)">
+                description = <"Identification of the maternal or paternal family line in the relationship. (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Cause of death? (synthesised)">
+                description = <"Relationship of the problem/diagnosis to the death of this family member. (synthesised)">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"*Family history summary (en)">
+                description = <"*Summary information about the significant health-related problems found in genetic and non-genetic family members. (en)">
+            >
+            ["at0002"] = <
+                text = <"Résumé">
+                description = <"Aperçu narratif des problèmes, des diagnostics, des marqueurs psychosociaux, environnementaux et génétiques qui ont été identifiés chez les membres de la famille.">
+                comment = <"Ce champ peut être utilisé pour enregistrer un résumé ou la conclusion de tous les résultats, pour des informations non structurées sur les antécédents familiaux enregistrées dans les dossiers cliniques, ou pour importer des données textuelles à partir de systèmes cliniques existants/anciens.">
+            >
+            ["at0003"] = <
+                text = <"Par membre de la famille">
+                description = <"Détails sur un membre spécifique de la famille.">
+                comment = <"Les éléments de données de ce clusteur se rapporteront à la personne identifiée soit par son nom, soit par un pseudonyme. Répétez l'utilisation de ce clusteur pour les autres membres de la famille.">
+            >
+            ["at0004"] = <
+                text = <"Nom du membre de la famille">
+                description = <"Nom du membre de la famille.">
+                comment = <"Par exemple : \"Tante Susan\" ou \"Susan Smith\". Toutefois, pour des raisons de confidentialité, il peut ne pas être approprié d'enregistrer, de partager ou d'afficher publiquement ces données et, dans ce cas, le \"pseudonyme\" doit être utilisé.">
+            >
+            ["at0005"] = <
+                text = <"Date de naissance">
+                description = <"Date de naissance complète ou partielle du membre de la famille.">
+            >
+            ["at0008"] = <
+                text = <"Historique clinique">
+                description = <"Détails sur les problèmes ou les diagnostics du membre de la famille.">
+                comment = <"Si plus de détails sont nécessaires, suggérez d'utiliser l'archétype EVALUATION.problem_diagnosis ou l'archétype ACTION.procedure et de spécifier le \"sujet des soins\" en tant que membre de la famille, plutôt que le sujet du dossier de santé.">
+            >
+            ["at0009"] = <
+                text = <"Nom du problème/diagnostic">
+                description = <"Identification du problème ou du diagnostic important chez le membre de la famille identifié.Il est préférable, dans la mesure du possible, de coder le problème ou le diagnostic du membre de la famille avec une terminologie. Cet élément de données peut être lié à un enregistrement détaillé d'un problème/diagnostic en utilisant l'archétype EVALUATION.problem_diagnosis, le sujet des soins étant le membre de la famille et non le patient.">
+                comment = <"Il est préférable, dans la mesure du possible, de coder le problème ou le diagnostic du membre de la famille avec une terminologie. Cet élément de données peut être lié à un enregistrement détaillé d'un problème/diagnostic en utilisant l'archétype EVALUATION.problem_diagnosis, le sujet des soins étant le membre de la famille et non le patient.">
+            >
+            ["at0010"] = <
+                text = <"L'âge au début">
+                description = <"Âge estimé ou réel du membre de la famille au moment où le problème/diagnostic a été cliniquement reconnu.">
+                comment = <"Pour les problèmes de santé à occurrences multiples, cela décrit la première occurrence connue.">
+            >
+            ["at0011"] = <
+                text = <"L'âge au décès">
+                description = <"Âge exact ou estimé du membre de la famille au moment de son décès.">
+                comment = <"L'âge du décès peut être utile si le problème/diagnostic qui a causé leur décès est considéré comme un facteur de risque pour le sujet du dossier de santé. Par exemple : le décès de la mère d'un cancer du sein à un jeune âge augmente de manière significative le risque de cancer du sein chez une fille.">
+            >
+            ["at0012"] = <
+                text = <"Description clinique">
+                description = <"Description narrative ou commentaires sur les aspects cliniques du problème/diagnostic du membre de la famille.">
+            >
+            ["at0014"] = <
+                text = <"Cause du décès ?">
+                description = <"Lien entre le problème/diagnostic et le décès de ce membre de la famille.">
+            >
+            ["at0016"] = <
+                text = <"Relation">
+                description = <"La relation du membre de la famille avec le sujet de soins.">
+                comment = <"Par exemple : la mère, le beau-père, la grand-mère maternelle ou l'oncle paternel. Il est préférable de coder la relation avec une terminologie, dans la mesure du possible et en précisant les termes \"maternelle\" et \"paternelle\", si nécessaire.">
+            >
+            ["at0020"] = <
+                text = <"Alias">
+                description = <"Un autre nom ou étiquette permettant d'identifier de manière unique un membre de la famille, sans utiliser un nom personnel qui pourrait identifier publiquement l'individu.">
+                comment = <"A utiliser pour aider à distinguer une personne de plusieurs membres de la famille ayant des relations identiques. Par exemple, l'étiquette permettant de distinguer une sœur spécifique de trois sœurs connues peut être \"sœur aînée\", \"sœur aux cheveux roux\" ou \"sœur n°1\".">
+            >
+            ["at0022"] = <
+                text = <"Description des biomarqueurs">
+                description = <"Description des marqueurs biologiques liés au risque identifiés chez ce membre de la famille.">
+            >
+            ["at0023"] = <
+                text = <"Décédé ?">
+                description = <"Le membre de la famille est-il décédé ?">
+                comment = <"Inscrivez \"True\" si le membre de la famille est décédé.">
+            >
+            ["at0024"] = <
+                text = <"Biomarqueurs">
+                description = <"Informations détaillées sur les indicateurs mesurables d'un état ou d'une condition biologique du membre de la famille.">
+                comment = <"Par exemple : informations détaillées sur les mutations du gène BRCA chez les membres de la famille. 
+Note : D'autres éléments de données seront nécessaires à l'avenir pour enregistrer des informations détaillées sur les marqueurs génétiques.">
+            >
+            ["at0026"] = <
+                text = <"Dernière mise à jour">
+                description = <"La date de la dernière mise à jour de ce résumé de l'histoire de la famille.">
+            >
+            ["at0027"] = <
+                text = <"Détails sur les biomarqueurs">
+                description = <"Détails structurés sur les marqueurs biologiques.">
+            >
+            ["at0028"] = <
+                text = <"Par problème">
+                description = <"Détails sur la présence d'un problème ou d'un diagnostic spécifique chez les membres de la famille.">
+                comment = <"Si le problème présente une prédisposition génétique au sein des familles, seuls les membres des familles génétiques doivent être pris en compte dans ces données. Si le problème a des effets psychosociaux ou environnementaux, les membres de la famille non génétiques peuvent également être inclus.">
+            >
+            ["at0029"] = <
+                text = <"Nom du problème/diagnostic">
+                description = <"Identification du problème ou du diagnostic important dans l'ensemble de la famille.">
+                comment = <"C'est le problème pour lequel des données agrégées impliquant tous les membres de la famille seront collectées. Il est préférable de coder le problème d'index avec une terminologie, lorsque cela est possible.">
+            >
+            ["at0030"] = <
+                text = <"Description">
+                description = <"Description narrative de l'apparition du problème ou du diagnostic chez les membres de la famille.">
+            >
+            ["at0045"] = <
+                text = <"Extension">
+                description = <"Informations supplémentaires requises pour saisir le contenu local ou pour s'aligner sur d'autres modèles/formalismes de référence.">
+                comment = <"Par exemple : besoins d'information locaux ou métadonnées supplémentaires pour s'aligner sur les équivalents FHIR ou CIMI.">
+            >
+            ["at0046"] = <
+                text = <"Commentaire">
+                description = <"Description supplémentaire du membre de la famille non saisie dans d'autres champs.">
+            >
+            ["at0048"] = <
+                text = <"Informations sur le membre de la famille">
+                description = <"Détails structurés sur le membre de la famille identifié.">
+                comment = <"Peut inclure des détails structurés qui identifient plus spécifiquement le membre de la famille ou d'autres détails pertinents pour l'histoire familiale du membre de la famille.">
+            >
+            ["at0053"] = <
+                text = <"Multimédia">
+                description = <"Représentation multimédia de l'histoire de la famille.">
+                comment = <"Par exemple : un tableau généalogique.">
+            >
+            ["at0058"] = <
+                text = <"Date du décès">
+                description = <"Date complète ou partielle du décès du membre de la famille.">
+                comment = <"La date du décès peut être utile dans certaines situations où le mois du décès peut déclencher une aide à la décision ou identifier des groupes de maladies. Par exemple : les allergènes environnementaux déclenchant des difficultés respiratoires ; ou des événements tels que Noël.">
+            >
+            ["at0059"] = <
+                text = <"Détails du problème">
+                description = <"Détails structurés sur le problème ou le diagnostic identifié.">
+                comment = <"Détails structurés sur le problème ou le diagnostic identifié.">
+            >
+            ["at0060"] = <
+                text = <"Sexe biologique">
+                description = <"Le sexe biologique du membre de la famille.">
+                comment = <"Le codage du sexe avec une terminologie est préférable, lorsque cela est possible.">
+            >
+            ["at0061"] = <
+                text = <"Cause directe ou étroitement liée">
+                description = <"Le problème ou le diagnostic était une cause directe ou étroitement lié à la cause directe du décès.">
+            >
+            ["at0062"] = <
+                text = <"Sans rapport">
+                description = <"Le problème ou le diagnostic n'était pas lié à la cause du décès.">
+            >
+            ["at0063"] = <
+                text = <"Indéterminé">
+                description = <"Il est impossible de déterminer si le problème ou le diagnostic était étroitement lié à la cause directe du décès.">
+            >
+            ["at0064"] = <
+                text = <"*Relationship degree (en)">
+                description = <"*The degree of relationship between the subject of care and the family member. (en)">
+                comment = <"*If the 'Relationship' data element uses pre-coordinated terms that include the degree of relationship, then this data element is redundant. (en)">
+            >
+            ["at0065"] = <
+                text = <"*First degree relative (en)">
+                description = <"*50% genetic share with the subject - for example, parent, sibling or child. (en)">
+            >
+            ["at0066"] = <
+                text = <"*Second degree relative (en)">
+                description = <"*25% genetic share with the subject - for example, grandparent, aunt, uncle, niece, nephew, grandchildren and half siblings. (en)">
+            >
+            ["at0067"] = <
+                text = <"*Third degree relative (en)">
+                description = <"*12.5% genetic share with the subject - for example, great grandparent, great aunt, great uncle, first cousin, children of nieces and nephews, and great grandchildren. (en)">
+            >
+            ["at0068"] = <
+                text = <"*Family line (en)">
+                description = <"*Identification of the maternal or paternal family line in the relationship. (en)">
+                comment = <"*If the 'Relationship' data element uses pre-coordinated terms that include the family line, then this data element is redundant. (en)">
+            >
+            ["at0069"] = <
+                text = <"*Maternal line (en)">
+                description = <"*Related through the subject's mother. (en)">
+            >
+            ["at0070"] = <
+                text = <"*Paternal line (en)">
+                description = <"*Related through the subject's father. (en)">
+            >
+            ["at0071"] = <
+                text = <"Impact">
+                description = <"Overall assessment of the impact of a health problem for the specific patient. ">
+                comment = <"The same diagnosis, with the same severity, has a different impact on each patient. This relevance qualifier implies adjusting the overall impact of that health problem according to the patient's characteristics.
+For example: Two patients have the same diagnosis. First-degree burn.
+One is a healthy person, the other is a diabetic patient.
+The impact for that problem in a diabetic patient is HIGHER (more risk of infection..., longuer time healing).
+This element is meant to allow for multiple types of impact, including but not limited to: clinical treatment, home functioning, work life.">
+            >
+            ["ac9030"] = <
+                text = <"*Relationship degree (en) (synthesised)">
+                description = <"*The degree of relationship between the subject of care and the family member. (en) (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"*Family line (en) (synthesised)">
+                description = <"*Identification of the maternal or paternal family line in the relationship. (en) (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Cause du décès ? (synthesised)">
+                description = <"Lien entre le problème/diagnostic et le décès de ce membre de la famille. (synthesised)">
+            >
+        >
+        ["zh-cn"] = <
+            ["at0000"] = <
+                text = <"*Family history summary (en)">
+                description = <"*Summary information about the significant health-related problems found in genetic and non-genetic family members. (en)">
+            >
+            ["at0002"] = <
+                text = <"摘要">
+                description = <"关于家族成员中发现问题、诊断、社会心理因素/问题、环境因素/问题和遗传标记的叙述性概述。">
+                comment = <"该字段可用于记录关于所有发现/所见的摘要或结论，关于临床记录/病历之中所记录的非结构化家族史信息的的摘要或结论，或者是从现有/遗留的临床系统之中导入文本型数据。">
+            >
+            ["at0003"] = <
+                text = <"按家族成员">
+                description = <"关于具体家族成员的详情。">
+                comment = <"此群簇之中的数据元将与按姓名或别名所标识的相应个人关联起来。对于其他的家族成员，请重复使用这一群簇。">
+            >
+            ["at0004"] = <
+                text = <"家族成员姓名">
+                description = <"家族成员的姓名">
+                comment = <"例如：“苏珊姨妈”或“苏珊•史密斯”。不过，出于隐私方面的原因，可能并不适合记录，共享或公开显示此项信息；在这种情况下，则应当采用“别名”（化名/假名）。">
+            >
+            ["at0005"] = <
+                text = <"出生日期">
+                description = <"当前家族成员完整型或部分型的出生日期。">
+            >
+            ["at0008"] = <
+                text = <"临床病史">
+                description = <"关于当前家族成员各种问题或诊断的详情。">
+                comment = <"如果需要更多的详情，建议采用原始型EVALUATION.problem_diagnosis（评价类原始型“问题诊断”）或ACTION.procedure（行动类原始型“操作项目”），并将该家族成员指定为“照护服务对象”，而不是当前健康档案的记录对象。">
+            >
+            ["at0009"] = <
+                text = <"问题/诊断名称">
+                description = <"对于当前所标识家族成员的这一重要问题或诊断的标识。">
+                comment = <"最好尽可能采用术语集对当前家族成员的问题或诊断加以编码。可以采用原始型EVALUATION.problem_diagnosis（评价类原始型“问题诊断”）将此数据元链接到问题/诊断的详细记录之上，并将照护服务对象设置为该家族成员，而不是当前患者。">
+            >
+            ["at0010"] = <
+                text = <"发病年龄">
+                description = <"临床确认当前家族成员存在这一问题或诊断时的估计年龄或实际年龄。">
+                comment = <"对于多次出现的健康问题，此数据元描述的是已知的首次出现。">
+            >
+            ["at0011"] = <
+                text = <"死亡年龄">
+                description = <"当前家族成员死亡时的确切年龄或估计年龄。">
+                comment = <"如果当前将导致死亡的问题/诊断视为健康档案记录对象的风险因素，则死亡年龄可能有用。例如：母亲在年轻时死于乳腺癌，会显著增加其女儿罹患乳腺癌的风险。">
+            >
+            ["at0012"] = <
+                text = <"临床描述">
+                description = <"对于当前家族成员的这一问题或诊断的临床方面/特点的叙述型描述或注释。">
+            >
+            ["at0014"] = <
+                text = <"死亡原因">
+                description = <"这一问题/诊断与该家族成员死亡的关系。">
+            >
+            ["at0016"] = <
+                text = <"关系">
+                description = <"当前家族成员相对于当前照护服务对象的关系。">
+                comment = <"例如：母亲、继父、外祖母或叔父。最好尽可能采用术语集对这种关系加以编码，且包括必要时对于母系和父系的明确。">
+            >
+            ["at0020"] = <
+                text = <"别名">
+                description = <"用于对家族成员加以唯一身份标识的别名或标签，而不是采用可能会公开标识个人身份的人员姓名。">
+                comment = <"用于帮助区分与多个家族成员具有相同关系的个人。例如，用于将特定姐/妹区别于三位已知姐/妹的标签可能会是“大姐”、“红头发姐/妹”或“1号姐妹”。">
+            >
+            ["at0022"] = <
+                text = <"生物标记物描述">
+                description = <"对于在当前家族成员身上所确定出的风险相关生物标记物的描述。">
+            >
+            ["at0023"] = <
+                text = <"是否已故？">
+                description = <"当前家族成员是否已故（去世）？">
+                comment = <"如果当前家族成员已故（去世），则记录为“True”。">
+            >
+            ["at0024"] = <
+                text = <"生物标志物">
+                description = <"关于当前家族成员生物学状态或状况的可测量指标的详情。">
+                comment = <"例如：关于家族成员之中BRCA突变的详情。
+注：将来需要更多的数据元来记录详细的遗传标记信息。
+">
+            >
+            ["at0026"] = <
+                text = <"最后更新日期">
+                description = <"当前家族史的最后更新日期。">
+            >
+            ["at0027"] = <
+                text = <"生物标记物详情">
+                description = <"关于生物标记物的结构化详情。">
+            >
+            ["at0028"] = <
+                text = <"按问题">
+                description = <"关于特定问题或诊断在家族成员之中存在情况的详情。">
+                comment = <"如果问题在家族之中具有遗传倾向，那么，仅仅应当将具有遗传学血缘关系的亲属视为这些数据的组成部分。如果问题具有社会心理或环境方面的影响，则可能还包括那些没有遗传学血缘关系的家庭成员。">
+            >
+            ["at0029"] = <
+                text = <"问题/诊断名称">
+                description = <"对于整个家族之中的重要问题或诊断的标识。">
+                comment = <"这是在收集涉及所有家族成员的汇总数据时所针对的问题。最好尽可能采用术语集对标志性问题（index problem）加以编码。">
+            >
+            ["at0030"] = <
+                text = <"描述">
+                description = <"关于家族成员之中问题或诊断出现情况的叙述性描述。">
+            >
+            ["at0045"] = <
+                text = <"扩展">
+                description = <"反映本地内容对或者与其他的参考模型/形式化体系进行对照时所需的其他信息。">
+                comment = <"例如：本地信息需求或者是用于与FHIR或CIMI等价工件进行对照时的其他元数据。">
+            >
+            ["at0046"] = <
+                text = <"注释">
+                description = <"其他字段之中并未体现的，额外关于当前家族成员的叙述型信息。">
+            >
+            ["at0048"] = <
+                text = <"家族成员详情">
+                description = <"关于当前所标识家族成员的结构化详情。">
+                comment = <"其中可以包括用于更为具体地标识当前家族成员的结构化详情，或者是与当前家族成员家族史相关的其他详情。">
+            >
+            ["at0053"] = <
+                text = <"多媒体">
+                description = <"当前家族史的多媒体表达形式。">
+                comment = <"例如：家族系谱图。">
+            >
+            ["at0058"] = <
+                text = <"死亡日期">
+                description = <"当前家族成员完整型或部分型的死亡日期。">
+                comment = <"在死亡月份可能会触发决策支持[规则]或可用于明确疾病分组的某些情况下，死亡日期可能有用。例如：引起呼吸道疾病病情加重的环境变应原，或者是圣诞节之类的事件/活动。">
+            >
+            ["at0059"] = <
+                text = <"问题详情">
+                description = <"关于所标识/明确问题或诊断的结构化详情。">
+                comment = <"例如：相应问题/诊断在家族当中的患病率。">
+            >
+            ["at0060"] = <
+                text = <"生物性别">
+                description = <"当前家族成员的生物性别。">
+                comment = <"最好尽可能采用术语集对生物性别加以编码。">
+            >
+            ["at0061"] = <
+                text = <"直接原因或密切相关">
+                description = <"这一问题或诊断是死亡的直接原因或者是与直接死亡原因密切相关。">
+            >
+            ["at0062"] = <
+                text = <"无关">
+                description = <"这一问题或诊断是死亡原因无关。">
+            >
+            ["at0063"] = <
+                text = <"不确定">
+                description = <"不可能确定出这一问题或诊断是否与直接死亡原因密切相关。">
+            >
+            ["at0064"] = <
+                text = <"*Relationship degree (en)">
+                description = <"*The degree of relationship between the subject of care and the family member. (en)">
+                comment = <"*If the 'Relationship' data element uses pre-coordinated terms that include the degree of relationship, then this data element is redundant. (en)">
+            >
+            ["at0065"] = <
+                text = <"*First degree relative (en)">
+                description = <"*50% genetic share with the subject - for example, parent, sibling or child. (en)">
+            >
+            ["at0066"] = <
+                text = <"*Second degree relative (en)">
+                description = <"*25% genetic share with the subject - for example, grandparent, aunt, uncle, niece, nephew, grandchildren and half siblings. (en)">
+            >
+            ["at0067"] = <
+                text = <"*Third degree relative (en)">
+                description = <"*12.5% genetic share with the subject - for example, great grandparent, great aunt, great uncle, first cousin, children of nieces and nephews, and great grandchildren. (en)">
+            >
+            ["at0068"] = <
+                text = <"*Family line (en)">
+                description = <"*Identification of the maternal or paternal family line in the relationship. (en)">
+                comment = <"*If the 'Relationship' data element uses pre-coordinated terms that include the family line, then this data element is redundant. (en)">
+            >
+            ["at0069"] = <
+                text = <"*Maternal line (en)">
+                description = <"*Related through the subject's mother. (en)">
+            >
+            ["at0070"] = <
+                text = <"*Paternal line (en)">
+                description = <"*Related through the subject's father. (en)">
+            >
+            ["at0071"] = <
+                text = <"*DV_TEXT (en)">
+                description = <"">
+            >
+            ["ac9030"] = <
+                text = <"*Relationship degree (en) (synthesised)">
+                description = <"*The degree of relationship between the subject of care and the family member. (en) (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"*Family line (en) (synthesised)">
+                description = <"*Identification of the maternal or paternal family line in the relationship. (en) (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"死亡原因 (synthesised)">
+                description = <"这一问题/诊断与该家族成员死亡的关系。 (synthesised)">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Resum dels antecedents familiars">
+                description = <"Informació resumida sobre els problemes de salut significatius trobats en membres de la família.">
+            >
+            ["at0002"] = <
+                text = <"Resum">
+                description = <"Resum amb visió general sobre problemes, diagnòstics, marcadors psicosocials, ambientals i genètics que s'han identificat en membres de la família.">
+                comment = <"Aquest camp es pot utilitzar per registrar un resum o la conclusió de totes les troballes, per a informació d'antecedents familiars no estructurada registrada en registres clínics o per importar dades textuals de sistemes clínics existents o heretats.">
+            >
+            ["at0003"] = <
+                text = <"Per membre de familia">
+                description = <"Detalls sobre un membre específic de la família">
+                comment = <"Els elements de dades d'aquest clúster es relacionaran amb la persona identificada pel seu nom o per un àlies. Repetiu l'ús del clúster per a altres membres de la família. ">
+            >
+            ["at0004"] = <
+                text = <"Nom membre de la familia">
+                description = <"Nom del membre de la família.">
+                comment = <"Per exemple: «Tia Susan» o «Susan Smith». Tanmateix, per motius de privadesa, pot ser que això no sigui apropiat per a la gravació, la compartició o la visualització pública i, en aquesta situació, s'hauria d'utilitzar l'«Àlies».">
+            >
+            ["at0005"] = <
+                text = <"Data de naixement">
+                description = <"Data de naixement completa o parcial del membre de la família.">
+            >
+            ["at0008"] = <
+                text = <"Historia clínica">
+                description = <"Detalls sobre problemes o diagnòstics del membre de la família.">
+                comment = <"Si cal més detall, suggeriu utilitzar EVALUATION.problem_diagnosis o l'arquetip ACTION.procedure i especificar el \"Subjecte de l'atenció\" com a membre de la família, en lloc del subjecte de l'historial mèdic.">
+            >
+            ["at0009"] = <
+                text = <"Nom del Problema/Diagnòstic">
+                description = <"Identificació del problema o diagnòstic significatiu en el membre de la família identificat.">
+                comment = <"Es prefereix, sempre que sigui possible, la codificació del problema o diagnòstic del membre de la família amb una terminologia. Es pot enllaçar des d'aquest element de dades a un registre detallat d'un problema/diagnòstic utilitzant l'arquetip EVALUATION.problem_diagnosis amb el subjecte de l'atenció establert en el membre de la família, no en el pacient.">
+            >
+            ["at0010"] = <
+                text = <"Edat al diagnòstic clínic">
+                description = <"Edat estimada o real del membre de la família quan es va reconèixer clínicament el problema/diagnòstic.">
+                comment = <"Per a problemes de salut amb múltiples ocurrències, això descriu la primera ocurrència coneguda.">
+            >
+            ["at0011"] = <
+                text = <"Edat en el moment de la mort">
+                description = <"Edat exacta o estimada del membre de la família en el moment de la mort.">
+                comment = <"L'edat de la mort pot ser útil si el problema/diagnòstic que va causar la mort es considera com un factor de risc per al subjecte de l'historial mèdic. Per exemple: la mort de la mare per càncer de mama a una edat primerenca augmenta significativament el risc de càncer de mama en una filla..">
+            >
+            ["at0012"] = <
+                text = <"Descripció clínica">
+                description = <"Descripció narrativa o comentaris sobre aspectes clínics del problema/diagnòstic del membre de la família.">
+            >
+            ["at0014"] = <
+                text = <"Relació amb la mort">
+                description = <"Relació del problema/diagnòstic amb la mort d'aquest membre de la família.">
+            >
+            ["at0016"] = <
+                text = <"Parentesc">
+                description = <"La relació del membre de la família amb el pacient objecte de l'atenció. ">
+                comment = <"Per exemple: mare, padrastre, àvia materna o oncle patern. Es prefereix la codificació de la relació amb una terminologia, sempre que sigui possible i incloent-hi l'especificació de matern i patern segons calgui.">
+            >
+            ["at0020"] = <
+                text = <"Alias">
+                description = <"Un nom o etiqueta alternativa per identificar de manera única un membre de la família, sense utilitzar un nom personal que pugui identificar públicament l'individu.">
+                comment = <"Per ajudar a distingir una persona de diversos membres de la família amb relacions idèntiques. Per exemple, l'etiqueta per distingir una germana específica de tres germanes conegudes podria ser \"germana gran\", \"germana amb els cabells vermells\" o \"germana número 1\".">
+            >
+            ["at0022"] = <
+                text = <"Descripció biomarcadors">
+                description = <"Descripció dels marcadors biològics relacionats amb el risc identificats en aquest membre de la família.">
+            >
+            ["at0023"] = <
+                text = <"Difunt">
+                description = <"El membre de la família ha mort?">
+                comment = <"Registreu com a 'Cert' si un membre de la família ha mort.">
+            >
+            ["at0024"] = <
+                text = <"Biomarcadors">
+                description = <"Informació detallada sobre indicadors mesurables d'un estat o condició biològica del membre de la família.">
+                comment = <"Per exemple: informació detallada sobre les mutacions BRCA en membres de la família.
+Nota: En el futur es necessitaran més elements de dades per registrar informació detallada dels marcadors genètics.">
+            >
+            ["at0026"] = <
+                text = <"Darrera actualització">
+                description = <"La data en què es va actualitzar per última vegada aquest resum d'història familiar.">
+            >
+            ["at0027"] = <
+                text = <"Detalls dels biomarcadors">
+                description = <"Detalls estructurats sobre marcadors biològics.">
+            >
+            ["at0028"] = <
+                text = <"Per problema">
+                description = <"Detalls sobre la presència d'un problema o diagnòstic específic en membres de la família.">
+                comment = <"Si el problema té una predisposició genètica dins de les famílies, només s'han de considerar els parents genètics com a part d'aquestes dades. Si el problema té efectes psicosocials o ambientals, també es poden incloure membres de la família no genètics.">
+            >
+            ["at0029"] = <
+                text = <"Nom del Problema/Diagnòstic">
+                description = <"Identificació del problema o diagnòstic significatiu en la família en general.">
+                comment = <"Aquest és el problema per al qual es recopilaran dades agregades que impliquin als membres de la família. Es prefereix, sempre que sigui possible, la codificació del problema d'índex amb una terminologia.">
+            >
+            ["at0030"] = <
+                text = <"Descripció">
+                description = <"Descripció narrativa sobre la ocurrència del problema o diagnòstic en membres de la família.">
+            >
+            ["at0045"] = <
+                text = <"Extensió">
+                description = <"Informació addicional que es pugui necessitar per a recollir el contingut local o per alinear-se amb altres models/formalismes de referència.">
+                comment = <"Per exemple: requisits locals d'informació o metadades addicionals per alinear-se amb equivalents de FHIR o CIMI.">
+            >
+            ["at0046"] = <
+                text = <"Comentari">
+                description = <"Informació addicional sobre el membre de la família no recollida en altres camps">
+            >
+            ["at0048"] = <
+                text = <"Detalls del membre de la familia">
+                description = <"Detall estructurat sobre el membre de la família identificat.">
+                comment = <"Pot incloure detalls estructurats que identifiquen el membre de la família més específicament o altres detalls rellevants per als antecedents familiars del membre de la família.">
+            >
+            ["at0053"] = <
+                text = <"Multimedia">
+                description = <"Representació multimèdia de la història familiar.">
+                comment = <"Per exemple: un gràfic o arbre genealògic.">
+            >
+            ["at0058"] = <
+                text = <"Data de la mort">
+                description = <"Data completa o parcial de la defunció del membre de la família.">
+                comment = <"La data de la mort pot ser útil en algunes situacions en què el mes de la mort pot activar el suport a la decisió o identificar grups de malalties. Per exemple: al·lèrgens ambientals que desencadenen exacerbacions respiratòries; o esdeveniments com el Nadal.">
+            >
+            ["at0059"] = <
+                text = <"Detalls del problema">
+                description = <"Detalls estructurats sobre el problema o diagnòstic identificat.">
+                comment = <"Per exemple: prevalença del problema/diagnòstic a la família.">
+            >
+            ["at0060"] = <
+                text = <"Sexe biològic">
+                description = <"El sexe biológic del membre de la família.">
+                comment = <"Es prefereix, sempre que sigui possible, la codificació del sexe amb una terminologia.">
+            >
+            ["at0061"] = <
+                text = <"Causa directa o estretament relacionada">
+                description = <"El problema o diagnòstic va ser una causa directa o estretament relacionada amb la causa directa de la mort.">
+            >
+            ["at0062"] = <
+                text = <"Sense relació">
+                description = <"El problema o diagnòstic no estava relacionat amb la causa de la mort.">
+            >
+            ["at0063"] = <
+                text = <"Indeterminat">
+                description = <"És impossible determinar si el problema o diagnòstic estava estretament relacionat amb la causa directa de la mort.">
+            >
+            ["at0064"] = <
+                text = <"Grau de parentesc">
+                description = <"El grau de relació entre el pacient objecte de l'atenció i el membre de la família.">
+                comment = <"Si l'element de dades 'Parentesc' utilitza termes pre-coordinats que inclouen el grau de relació, aleshores aquest element de dades és redundant.">
+            >
+            ["at0065"] = <
+                text = <"Familiar de primer grau">
+                description = <"50% de compartició genètica amb el subjecte; per exemple, pare, germà o fill.">
+            >
+            ["at0066"] = <
+                text = <"Familiar de segon grau">
+                description = <"25% de compartició genètica amb el subjecte; per exemple, avi, tia, oncle, neboda, nebot, néts i germanastres.">
+            >
+            ["at0067"] = <
+                text = <"Familiar de tercer grau">
+                description = <"12,5% de compartició genètica amb el subjecte; per exemple, besavi, tia besòs, oncle besòs, cosí germà, fills de nebodes i nebots i besnéts.">
+            >
+            ["at0068"] = <
+                text = <"Línia familiar">
+                description = <"Identificació de la línia familiar materna o paterna en la relació.">
+                comment = <"Si l'element de dades 'Parentesc' utilitza termes precoordinats que inclouen la línia familiar, aquest element de dades és redundant.">
+            >
+            ["at0069"] = <
+                text = <"Línia materna">
+                description = <"Emparentat a través de la mare del subjecte">
+            >
+            ["at0070"] = <
+                text = <"Línia paterna">
+                description = <"Emparentat a través del pare del subjecte">
+            >
+            ["at0071"] = <
+                text = <"Impacte">
+                description = <"Avaluació global de l'impacte o rellevància, per al subjecte de la història clínica, d'un problema de salut present a membres de la família.">
+                comment = <"El mateix problema o diagnòstic en membres de la família, encara amb la mateixa gravetat, pot tenir un impacte diferent a cada subjecte de la història clínica. Aquest factor de rellevància implica ajustar l'impacte general d'aquest problema de salut segons les característiques del subjecte de la història clínica.">
+            >
+            ["ac9030"] = <
+                text = <"Grau de parentesc (synthesised)">
+                description = <"El grau de relació entre el pacient objecte de l'atenció i el membre de la família. (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"Línia familiar (synthesised)">
+                description = <"Identificació de la línia familiar materna o paterna en la relació. (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Relació amb la mort (synthesised)">
+                description = <"Relació del problema/diagnòstic amb la mort d'aquest membre de la família. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Resumen de antecedentes familiares">
+                description = <"Información resumida sobre los problemas de salud significativos encontrados en los miembros de la familia.">
+            >
+            ["at0002"] = <
+                text = <"Resumen">
+                description = <"Resumen con vision general sobre problemas, diagnósticos, marcadores psicosociales, ambientales y genéticos que se han identificado en los miembros de la familia.">
+                comment = <"Este campo se puede utilizar para registrar un resumen o la conclusión de todos los hallazgos, para información de antecedentes familiares no estructurada registrada en registros clínicos o para importar datos textuales de sistemas clínicos existentes o heredados.">
+            >
+            ["at0003"] = <
+                text = <"Por miembro de familia">
+                description = <"Detalles sobre un miembro específico de la familia">
+                comment = <"Los elementos de datos de este cluster se relacionarán con la persona identificada por su nombre o alias. Repita el uso del cluster para otros miembros de la familia.">
+            >
+            ["at0004"] = <
+                text = <"Nombre del miembro de familia">
+                description = <"Nombre del miembro de la familia.">
+                comment = <"Por ejemplo: «Tía Susan» o «Susan Smith». Sin embargo, por motivos de privacidad, podría no ser apropiado grabar, compartir ni mostrar públicamente, por lo que en este caso se debe usar el alias.">
+            >
+            ["at0005"] = <
+                text = <"Fecha de nacimiento">
+                description = <"Fecha de nacimiento completa o parcial del miembro de la familia.">
+            >
+            ["at0008"] = <
+                text = <"Historia clínica">
+                description = <"Detalle sobre problemas o diagnósticos del familiar.">
+                comment = <"Si se requieren más detalles, sugiera utilizar EVALUATION.problem_diagnosis o el arquetipo ACTION.procedure y especificar el 'Sujeto de atención' como el miembro de la familia, en lugar del sujeto del registro de salud.">
+            >
+            ["at0009"] = <
+                text = <"Nombre del problema/diagnóstico">
+                description = <"Identificación del problema o diagnóstico significativo en el miembro familiar identificado.">
+                comment = <"Siempre que sea posible, es preferible codificar el nombre del problema o diagnóstico con una terminología. Este elemento de datos puede vincularse a un registro detallado de un problema o diagnóstico mediante el arquetipo EVALUATION.problem_diagnosis, con el sujeto de atención asignado al familiar, no al paciente.">
+            >
+            ["at0010"] = <
+                text = <"Edad en el momento del diagnóstico clínico">
+                description = <"Edad estimada o real del miembro de la familia cuando se reconoció clínicamente el problema/diagnóstico.">
+                comment = <"Para problemas de salud con ocurrencias múltiples, esto describe la primera ocurrencia conocida.">
+            >
+            ["at0011"] = <
+                text = <"Edad en el momento de la muerte">
+                description = <"Edad exacta o estimada del miembro de la familia en el momento de la muerte.">
+                comment = <"La edad de fallecimiento puede ser útil si el problema o diagnóstico que causó el fallecimiento se considera un factor de riesgo para el sujeto del historial médico. Por ejemplo: la muerte de la madre por cáncer de mama a una edad temprana aumenta significativamente el riesgo de cáncer de mama en una hija.">
+            >
+            ["at0012"] = <
+                text = <"Descripción clínica">
+                description = <"Descripción narrativa o comentarios sobre aspectos clínicos del problema/diagnóstico del familiar.">
+            >
+            ["at0014"] = <
+                text = <"Relación con la muerte">
+                description = <"Relación del problema/diagnóstico con la muerte de este familiar.">
+            >
+            ["at0016"] = <
+                text = <"Parentesco">
+                description = <"La relación del familiar con el sujeto que recibe la atención.">
+                comment = <"Por ejemplo: madre, padrastro, abuela materna o tío paterno. Se prefiere codificar el parentesco con una terminología, siempre que sea posible, incluyendo la especificación de los apellidos materno y paterno según sea necesario.">
+            >
+            ["at0020"] = <
+                text = <"Alias">
+                description = <"Un nombre o etiqueta alternativa para identificar de forma única a un miembro de la familia, sin utilizar un nombre personal que pueda identificar públicamente al individuo.">
+                comment = <"Para ayudar a distinguir a una persona de varios miembros de la familia con parentescos idénticos. Por ejemplo, la etiqueta para distinguir a una hermana específica de tres hermanas conocidas podría ser «hermana mayor», «hermana pelirroja» o «hermana n.º 1».">
+            >
+            ["at0022"] = <
+                text = <"Descripción biomarcadores">
+                description = <"Descripción de los marcadores biológicos de riesgo identificados en este miembro de la familia.">
+            >
+            ["at0023"] = <
+                text = <"Fallecido">
+                description = <"¿Ha fallecido el miembro de la familia?">
+                comment = <"Registrar como 'Verdadero' si el miembro de la familia ha fallecido.">
+            >
+            ["at0024"] = <
+                text = <"Biomarcadores">
+                description = <"Información detallada sobre indicadores mensurables de un estado o condición biológica del miembro de la familia.">
+                comment = <"Por ejemplo: información detallada sobre mutaciones del gen BRCA en familiares.
+Nota: Se necesitarán más datos en el futuro para registrar información detallada sobre marcadores genéticos.">
+            >
+            ["at0026"] = <
+                text = <"Última actualización">
+                description = <"La fecha en que se actualizó por última vez este resumen de historia familiar.">
+            >
+            ["at0027"] = <
+                text = <"Detalles de los biomarcadores">
+                description = <"Detalles estructurados sobre marcadores biológicos.">
+            >
+            ["at0028"] = <
+                text = <"Por problema">
+                description = <"Detalles sobre la presencia de un problema o diagnóstico específico en miembros de la familia.">
+                comment = <"Si el problema tiene una predisposición genética dentro de las familias, solo los familiares genéticos deben considerarse en estos datos. Si el problema tiene efectos psicosociales o ambientales, también pueden incluirse familiares no genéticos.">
+            >
+            ["at0029"] = <
+                text = <"Nombre del problema/diagnóstico">
+                description = <"Identificación del problema o diagnóstico significativo en la familia en general.">
+                comment = <"Éste es el problema para el que se recopilarán datos agregados que impliquen a los miembros de la familia. Se prefiere, siempre que sea posible, la codificación del problema de índice con una terminología.">
+            >
+            ["at0030"] = <
+                text = <"Descripcion">
+                description = <"Descripción narrativa sobre la ocurrencia del problema o diagnóstico en miembros de la familia.">
+            >
+            ["at0045"] = <
+                text = <"Extensión">
+                description = <"Información adicional, que se pueda necesitar, para capturar contenido local o para alinearse con otros modelos/formalismos de referencia.">
+                comment = <"Por ejemplo: requisitos locales de información o metadatos adicionales para alinearse con los equivalentes de FHIR o CIMI.">
+            >
+            ["at0046"] = <
+                text = <"Comentario">
+                description = <"Información adicional sobre el miembro de la familia no capturada en otros campos.">
+            >
+            ["at0048"] = <
+                text = <"Detalles de los miembros de familia">
+                description = <"Detalles estructurados sobre el familiar identificado.">
+                comment = <"Puede incluir detalles estructurados que identifiquen al miembro de la familia de manera más específica u otros detalles relevantes a la historia familiar del miembro de la familia.">
+            >
+            ["at0053"] = <
+                text = <"Multimedia">
+                description = <"Representación multimedia de la historia familiar.">
+                comment = <"Por ejemplo: un árbol genealógico.">
+            >
+            ["at0058"] = <
+                text = <"Fecha de la muerte">
+                description = <"Fecha total o parcial de fallecimiento del familiar.">
+                comment = <"La fecha de fallecimiento puede ser útil en algunas situaciones en las que el mes de fallecimiento puede facilitar la toma de decisiones o identificar grupos de enfermedades. Por ejemplo: alérgenos ambientales que desencadenan exacerbaciones respiratorias; o eventos como la Navidad.">
+            >
+            ["at0059"] = <
+                text = <"Detalles del problema">
+                description = <"Detalles estructurados sobre el problema identificado o diagnóstico.">
+                comment = <"Por ejemplo: prevalencia del problema/diagnóstico en la familia.">
+            >
+            ["at0060"] = <
+                text = <"Sexo biológico">
+                description = <"El sexo biológico del miembro de la familia">
+                comment = <"Se prefiere codificar el sexo con una terminología, siempre que sea posible.">
+            >
+            ["at0061"] = <
+                text = <"Causa directa o estrechamente relacionada">
+                description = <"El problema o diagnóstico fue una causa directa o estrechamente relacionada con la causa directa de la muerte.">
+            >
+            ["at0062"] = <
+                text = <"No relacionada">
+                description = <"El problema o diagnóstico no estuvo relacionado con la causa de la muerte.">
+            >
+            ["at0063"] = <
+                text = <"Indeterminada">
+                description = <"Es imposible determinar si el problema o diagnóstico estuvo estrechamente relacionado con la causa directa de la muerte">
+            >
+            ["at0064"] = <
+                text = <"Grado de parentesco">
+                description = <"El grado de parentesco entre el sujeto que recibe la atención y el familiar.">
+                comment = <"Si el elemento de datos 'Parentesco' utiliza términos precoordinados que incluyen el grado de relación, entonces este elemento de datos es redundante.">
+            >
+            ["at0065"] = <
+                text = <"Pariente de primer grado">
+                description = <"50 % de participación genética con el sujeto; por ejemplo, padre, madre, hermano o hijo.">
+            >
+            ["at0066"] = <
+                text = <"Pariente de segundo grado">
+                description = <"25 % de participación genética con el sujeto; por ejemplo, abuelos, tías, tíos, sobrinos, nietos y medio hermanos.">
+            >
+            ["at0067"] = <
+                text = <"Pariente de tercer grado">
+                description = <"12,5 % de participación genética con el sujeto; por ejemplo, bisabuelos, tías abuelas, tíos abuelos, primos hermanos, hijos de sobrinos y sobrinas, y bisnietos.">
+            >
+            ["at0068"] = <
+                text = <"Linia familiar">
+                description = <"Identificación de la línea familiar materna o paterna en el parentesco.">
+                comment = <"Si el elemento de datos 'Parentesco' utiliza términos precoordinados que incluyen la línea familiar, entonces este elemento de datos es redundante">
+            >
+            ["at0069"] = <
+                text = <"Línea materna">
+                description = <"Emparentado a través de la madre del sujeto">
+            >
+            ["at0070"] = <
+                text = <"Línea paterna">
+                description = <"Emparentado a través del padre del sujeto">
+            >
+            ["at0071"] = <
+                text = <"Impacto">
+                description = <"Evaluación global del impacto o relevancia, para el sujeto de la história clínica, de un problema de salud presente en miembros de la familia.">
+                comment = <"El mismo problema o diagnóstico  en miembros de la familia, aún con la misma gravedad, puede tener un impacto diferente en cada cada sujeto de la historia clínica. Este factor de relevancia implica ajustar el impacto general de ese problema de salud según las características del sujeto de la historia clínica.
+Por ejemplo:">
+            >
+            ["ac9030"] = <
+                text = <"Grado de parentesco (synthesised)">
+                description = <"El grado de parentesco entre el sujeto que recibe la atención y el familiar. (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"Linia familiar (synthesised)">
+                description = <"Identificación de la línea familiar materna o paterna en el parentesco. (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Relación con la muerte (synthesised)">
+                description = <"Relación del problema/diagnóstico con la muerte de este familiar. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9031"] = <
+            id = <"ac9031">
+            members = <"at0069", "at0070">
+        >
+        ["ac9030"] = <
+            id = <"ac9030">
+            members = <"at0065", "at0066", "at0067">
+        >
+        ["ac9027"] = <
+            id = <"ac9027">
+            members = <"at0061", "at0062", "at0063">
+        >
+    >

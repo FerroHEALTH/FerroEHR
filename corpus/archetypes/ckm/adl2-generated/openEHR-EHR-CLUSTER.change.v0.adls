@@ -1,0 +1,324 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=5eff3f42-58ee-428c-9545-3a5ffa5f94ba; build_uid=93bd5f60-7cb2-4432-9ef8-d736881f6dba)
+    openEHR-EHR-CLUSTER.change.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Nasjonal IKT HF">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2008-01-01">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Shahla Foozonkhah, Ocean Informatics, Australia", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"48FCC3C1640449F80FBDE971B20CF6D9">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljer om motivasjon for å endre en atferd.">
+            keywords = <"forandring", "endring", "motivasjon">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل المعلومات حول تغيير ما">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about readiness for change of a behaviour.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Readiness for change
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Readiness to change
+                value matches {
+                    DV_CODED_TEXT[at9001] matches {
+                        defining_code matches {[ac9000]}    -- Readiness to change (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Reasons
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Triggers
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Positive aspects of current behaviour
+                value matches {
+                    DV_TEXT[at9010]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Negative aspects of current behaviour
+                value matches {
+                    DV_TEXT[at9011]
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Positive aspects of change
+                value matches {
+                    DV_TEXT[at9012]
+                }
+            }
+            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Negative aspects of change
+                value matches {
+                    DV_TEXT[at9013]
+                }
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Barriers to change
+                value matches {
+                    DV_TEXT[at9008]
+                }
+            }
+            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9009]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Motivasjon for endring">
+                description = <"Motivasjon for å endre en atferd eller status.">
+            >
+            ["at0001"] = <
+                text = <"Motivasjon for endring">
+                description = <"Nåværende motivasjon for endring.">
+            >
+            ["at0002"] = <
+                text = <"Årsaker">
+                description = <"Fritekstbeskrivelser av individets årsaker for nåværende atferd.">
+            >
+            ["at0003"] = <
+                text = <"Triggere">
+                description = <"Situasjoner eller handlinger som trigger atferden.">
+            >
+            ["at0005"] = <
+                text = <"Positive aspekter av nåværende atferd">
+                description = <"Fritekstbeskrivelse av positive aspekter av den nåværende atferden, som er identifisert av individet.">
+            >
+            ["at0006"] = <
+                text = <"Negative aspekter av nåværende atferd">
+                description = <"Fritekstbeskrivelse av negative aspekter av den nåværende atferden, som er identifisert av individet.">
+            >
+            ["at0008"] = <
+                text = <"Positive aspekter av endring">
+                description = <"Fritekstbeskrivelse av positive aspekter av en hvilken som helst endring av den nåværende atferden, som er identifisert av individet.">
+            >
+            ["at0009"] = <
+                text = <"Negative aspekter av endring">
+                description = <"Fritekstbeskrivelse av negative aspekter av en hvilken som helst endring av den nåværende atferden, som er identifisert av individet.">
+            >
+            ["at0010"] = <
+                text = <"Barrierer">
+                description = <"Barrierer som forhindrer individet fra å endre atferd.">
+            >
+            ["at0011"] = <
+                text = <"Kommentar">
+                description = <"Kommentar om individets villighet til å endre atferd.">
+            >
+            ["at0012"] = <
+                text = <"Ikke klar">
+                description = <"Individet vurderer ikke seriøst endring innen de neste 6 månedene.">
+            >
+            ["at0013"] = <
+                text = <"Usikker">
+                description = <"Individet vurderer seriøst endring innen de neste 6 månedene.">
+            >
+            ["at0014"] = <
+                text = <"Klar">
+                description = <"Individet planlegger endringer innen de neste 30 dagene.">
+            >
+            ["at0015"] = <
+                text = <"Handling">
+                description = <"Individet implementerer endring. Dette omfatter også de som har implementert endring innen de siste 6 månedene.">
+            >
+            ["at0016"] = <
+                text = <"Vedlikehold">
+                description = <"Individ som har implementert endring for mer enn 6 måneder siden.">
+            >
+            ["ac9000"] = <
+                text = <"Motivasjon for endring (synthesised)">
+                description = <"Nåværende motivasjon for endring. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"*Readiness for change(en)">
+                description = <"*Record details about readiness to change current status.(en)">
+            >
+            ["at0001"] = <
+                text = <"*Readiness to change(en)">
+                description = <"*Record current status for behaviour change.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Reasons(en)">
+                description = <"*Narrative descriptions about the individual's reasons for the current behaviour.(en)">
+            >
+            ["at0003"] = <
+                text = <"*Triggers(en)">
+                description = <"*Identify triggers for the behaviour.(en)">
+            >
+            ["at0005"] = <
+                text = <"*Positive aspects of current behaviour(en)">
+                description = <"*Narrative description about positive aspects of the current behaviour that have been identified by the individual.(en)">
+            >
+            ["at0006"] = <
+                text = <"*Negative aspects of current behaviour(en)">
+                description = <"*Narrative description about negative aspects of the current behaviour that have been identified by the individual.(en)">
+            >
+            ["at0008"] = <
+                text = <"*Positive aspects of change(en)">
+                description = <"*Narrative description about positive aspects of any change to the current behaviour that have been identified by the individual.(en)">
+            >
+            ["at0009"] = <
+                text = <"*Negative aspects of change(en)">
+                description = <"*Narrative description about negative aspects of any change to the current behaviour that have been identified by the individual.(en)">
+            >
+            ["at0010"] = <
+                text = <"*Barriers to change(en)">
+                description = <"*Identify barriers which prevent the individual from changing behaviour.(en)">
+            >
+            ["at0011"] = <
+                text = <"*Comment(en)">
+                description = <"*Comment about individual's willingness to change behaviour.(en)">
+            >
+            ["at0012"] = <
+                text = <"*Not ready (Precontemplation)(en)">
+                description = <"*Individual is not seriously considering changing in the next 6 months.(en)">
+            >
+            ["at0013"] = <
+                text = <"*Unsure (Contemplation)(en)">
+                description = <"*Individual is seriously considering changing in the next 6 months.(en)">
+            >
+            ["at0014"] = <
+                text = <"*Ready (Preparation)(en)">
+                description = <"*Individual is planning to change in the next 30 days.(en)">
+            >
+            ["at0015"] = <
+                text = <"*Action(en)">
+                description = <"*Individual who is implementing change; includes those who have implemented change within the last 6 months.(en)">
+            >
+            ["at0016"] = <
+                text = <"*Maintenance(en)">
+                description = <"*Individual who has implemented change over 6 months ago.(en)">
+            >
+            ["ac9000"] = <
+                text = <"*Readiness to change(en) (synthesised)">
+                description = <"*Record current status for behaviour change.(en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Readiness for change">
+                description = <"Record details about readiness to change current status.">
+            >
+            ["at0001"] = <
+                text = <"Readiness to change">
+                description = <"Record current status for behaviour change.">
+            >
+            ["at0002"] = <
+                text = <"Reasons">
+                description = <"Narrative descriptions about the individual's reasons for the current behaviour.">
+            >
+            ["at0003"] = <
+                text = <"Triggers">
+                description = <"Identify triggers for the behaviour.">
+            >
+            ["at0005"] = <
+                text = <"Positive aspects of current behaviour">
+                description = <"Narrative description about positive aspects of the current behaviour that have been identified by the individual.">
+            >
+            ["at0006"] = <
+                text = <"Negative aspects of current behaviour">
+                description = <"Narrative description about negative aspects of the current behaviour that have been identified by the individual.">
+            >
+            ["at0008"] = <
+                text = <"Positive aspects of change">
+                description = <"Narrative description about positive aspects of any change to the current behaviour that have been identified by the individual.">
+            >
+            ["at0009"] = <
+                text = <"Negative aspects of change">
+                description = <"Narrative description about negative aspects of any change to the current behaviour that have been identified by the individual.">
+            >
+            ["at0010"] = <
+                text = <"Barriers to change">
+                description = <"Identify barriers which prevent the individual from changing behaviour.">
+            >
+            ["at0011"] = <
+                text = <"Comment">
+                description = <"Comment about individual's willingness to change behaviour.">
+            >
+            ["at0012"] = <
+                text = <"Not ready (Precontemplation)">
+                description = <"Individual is not seriously considering changing in the next 6 months.">
+            >
+            ["at0013"] = <
+                text = <"Unsure (Contemplation)">
+                description = <"Individual is seriously considering changing in the next 6 months.">
+            >
+            ["at0014"] = <
+                text = <"Ready (Preparation)">
+                description = <"Individual is planning to change in the next 30 days.">
+            >
+            ["at0015"] = <
+                text = <"Action">
+                description = <"Individual who is implementing change; includes those who have implemented change within the last 6 months.">
+            >
+            ["at0016"] = <
+                text = <"Maintenance">
+                description = <"Individual who has implemented change over 6 months ago.">
+            >
+            ["ac9000"] = <
+                text = <"Readiness to change (synthesised)">
+                description = <"Record current status for behaviour change. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0012", "at0013", "at0014", "at0015", "at0016">
+        >
+    >

@@ -1,0 +1,326 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f0309ce0-a669-443f-b666-50eac5790ac3; build_uid=d2870951-d3a1-4ca9-8573-0bd66d06c203)
+    openEHR-EHR-OBSERVATION.esas_r.v1.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand">
+                ["organisation"] = <"Haukeland Universitetssjukehus">
+                ["email"] = <"john.tore.valand@helse-bergen.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"John Tore Valand">
+        ["organisation"] = <"Helse Bergen HF">
+        ["date"] = <"2019-03-28">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Nuno Abreu, Oporto Hospital Center, Portugal", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Heidi Aursand, Oslo universitetssykehus, Norway", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway", "Terje Bektesevic Holmlund, UiT Norges arktiske universitet, Norway", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)", "Nina Hauge, Helse Fonna, Norway", "Anca Heyd, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Sergey Kovalenko, Chelyabinsk Regional Children Hospital, Russia", "Liv Laugen, Oslo universitetssykehus, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Siv Marie Lien, DIPS ASA, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Jayashree Panickar, Karolinska Institute, Sweden", "Kjersti Solvåg, HAraldsplass Diakonale Sykehus, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "June Susanne Berge, DIPS AS, Norway", "Micaela Thierley, Helse Bergen/Haraldsplass sykehus, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Sebastian von Hofacker, Haradsplass Diakonale Sykehus, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Bruera E, Kuehn N, Miller MJ, Selmser P, Macmillan K. The Edmonton Symptom Assessment System (ESAS): a simple method for the assessment of palliative care patients. J Palliat Care. 1991 Summer;7(2):6-9. PubMed PMID: 1714502.">
+        ["2"] = <"Guidelines for using the revised Edmonton Symptom Assessment System (ESAS-r) [Internet]. Edmonton: Alberta Health Services; 2010 Sep 16 [cited 2019 11 13]. Available from: http://hpcconnection.ca/wp-content/uploads/2018/02/esas-r-guidelines.pdf.">
+        ["3"] = <"Helse Bergen Haukeland Universitetssjukehus [Internet]. Bergen: Helse Bergen Haukeland Universitetssjukehus; c 2019. ESAS symptomregistrering; 2019 May 07 [cited 2019 Oct 25]. Available from: https://helse-bergen.no/kompetansesenter-i-lindrande-behandling/palliasjon-verktoy-for-helsepersonell/esas-symptomregistrering. Norwegian.">
+        ["4"] = <"Watanabe SM, Nekolaichuk C, Beaumont C, Johnson L, Myers J, Strasser F. A multicenter study comparing two numerical versions of the Edmonton Symptom Assessment System in palliative care patients. J Pain Symptom Manage. 2011 Feb;41(2):456-68. doi: 10.1016/j.jpainsymman.2010.04.020. Epub 2010 Sep 15. PubMed PMID: 20832987.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"869B10A78B155905A8632F2A70373ED7">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en selvrapportert vurdering av symptomer, vanligvis innenfor en palliativ omsorg.
+
+">
+            keywords = <"palliativ", ...>
+            use = <"Brukes for å registrere en selvrapportert vurdering av symptomer, vanligvis innenfor en palliativ omsorg.
+
+ESAS-r er ment for å følge pasientens perspektiv på symptomer, men i noen tilfeller der pasienten ikke er i stand til å selvrapportere, kan det være nødvendig å registrere en klinikers perspektiv. I slike tilfeller registreres klinikeren som kilden til informasjonen ved å benytte attributtet \"Information provider\" fra referansemodellen.
+
+Hvert symptom er rangert på en skala fra 0 til 10, med 0 som representerer fravær av symptomet og 10 representerer den maksimale opplevelsen av symptomet. Hvis det ikke er mulig å vurdere et symptom, bruk nullverdien \"Not applicable\"' for å indikere \"Kan ikke vurdere\" på det aktuelle symptomet.">
+            misuse = <"Brukes ikke for å registrere et enkelt symptom eller sykdomstegn, bruk arketypen CLUSTER.symptom_sign (Symptom/Sykdomstegn) for dette formålet.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a self-reported assessment of symptoms, usually within a palliative care setting.">
+            use = <"Use to record a self-reported assessment of symptoms, usually within a palliative care setting.
+
+The ESAS-r is intended to capture the patient’s perspective on symptoms, however in some cases where the patient is unable to self-report, the source of information may be from a carer. In this situation, record the care as the source of information using the Information provider attribute in the Reference Model.
+
+Each symptom is rated on a 0 to 10 scale, with 0 representing an absence of the symptom and 10 representing the maximal experience of the symptom. If it is not possible to rate a symptom, use the null flavour 'Not applicable' to indicate 'Unable to assess' on the relevant symptom.">
+            misuse = <"Not to be used to record details about a symptom or sign - use the CLUSTER.symptom_sign archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Edmonton Symptom Assessment System Revised (ESAS-r)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Any point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Pain
+                                        value matches {
+                                            DV_COUNT[at9021] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Tiredness
+                                        value matches {
+                                            DV_COUNT[at9012] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Drowsiness
+                                        value matches {
+                                            DV_COUNT[at9013] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Nausea
+                                        value matches {
+                                            DV_COUNT[at9014] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Lack of appetite
+                                        value matches {
+                                            DV_COUNT[at9015] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Shortness of breath
+                                        value matches {
+                                            DV_COUNT[at9016] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Depression
+                                        value matches {
+                                            DV_COUNT[at9017] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Anxiety
+                                        value matches {
+                                            DV_COUNT[at9018] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Well-being
+                                        value matches {
+                                            DV_COUNT[at9019] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0014] matches {    -- Other problem
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Problem name
+                                                value matches {
+                                                    DV_TEXT[at9010]
+                                                }
+                                            }
+                                            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Rating
+                                                value matches {
+                                                    DV_COUNT[at9020] matches {
+                                                        magnitude matches {|0..10|}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0018] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0019] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Edmonton Symptom Assessment System - revidert versjon (ESAS-r)">
+                description = <"Selvrapporteringsverktøy som brukes til å vurdere intensitet av symptomer hos pasienter som får palliativ behandling.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert tidspunkthendelse">
+                description = <"Standard, uspesifisert tidspunkt som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Smerte">
+                description = <"Egenrapportert oppfatning av nåværende smerte.">
+                comment = <"0 representerer \"Ingen smerte\" og 10 representerer \"Verst tenkelig smerte\".">
+            >
+            ["at0005"] = <
+                text = <"Slapphet">
+                description = <"Egenrapportert oppfatning av nåværende slapphet eller mangel på krefter.">
+                comment = <"0 representerer \"Ingen slapphet\" og 10 representerer \"Verst tenkelig slapphet\".">
+            >
+            ["at0006"] = <
+                text = <"Døsighet">
+                description = <"Egenrapportert oppfatning av nåværende døsighet eller søvnighet.">
+                comment = <"0 representerer \"Ingen døsighet\" og 10 representerer \"Verst tenkelig døsighet\".">
+            >
+            ["at0007"] = <
+                text = <"Kvalme">
+                description = <"Egenrapportert oppfatning av nåværende kvalme.">
+                comment = <"0 representerer \"Ingen kvalme\" og 10 representerer \"Verst tenkelig kvalme\".">
+            >
+            ["at0008"] = <
+                text = <"Nedsatt matlyst">
+                description = <"Egenrapportert oppfatning av nåværende matlyst.">
+                comment = <"0 representerer \"Ikke nedsatt matlyst\" og 10 representerer \"Verst tenkelig nedsatt matlyst\".">
+            >
+            ["at0009"] = <
+                text = <"Tung pust">
+                description = <"Egenrapportert oppfatning av nåværende tung pust.">
+                comment = <"0 representerer \"Ingen tung pust\" og 10 representerer \"Verst tenkelig tung pust\".">
+            >
+            ["at0010"] = <
+                text = <"Depresjon">
+                description = <"Egenrapportert oppfatning av nåværende depresjon.">
+                comment = <"0 representerer \"Ingen depresjon\" og 10 representerer \"Verst tenkelig depresjon\". Depresjon = å føle seg nedstemt.">
+            >
+            ["at0011"] = <
+                text = <"Angst">
+                description = <"Egenrapportert oppfatning av nåværende angst eller føle seg urolig.">
+                comment = <"0 representerer \"Ingen angst\" og 10 representerer \"Verst tenkelig angst\".">
+            >
+            ["at0012"] = <
+                text = <"Velvære">
+                description = <"Egenrapportert oppfatning av nåværende velvære.">
+                comment = <"0 representerer \"Best tenkelig velvære\" og 10 representerer \"Verst tenkelig velvære\". Velvære = hvordan du har det, alt tatt i betraktning.">
+            >
+            ["at0014"] = <
+                text = <"Annet problem">
+                description = <"Annet symptom eller plage.">
+                comment = <"Name-value pair (navn-verdi par) for å registrere ytterligere symptomer eller plager og tilhørende verdi.">
+            >
+            ["at0016"] = <
+                text = <"Navn på problem">
+                description = <"Navn på problem.">
+                comment = <"For eksempel forstoppelse.">
+            >
+            ["at0017"] = <
+                text = <"Vurdering">
+                description = <"Egenrapportert oppfatning av nåværende problem.">
+                comment = <"0 representerer \"Ikke <Problem>\" og 10 representerer \"Verst tenkelig <Problem>\".">
+            >
+            ["at0019"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Edmonton Symptom Assessment System Revised (ESAS-r)">
+                description = <"Self-reporting tool used to assess the intensity of symptoms in palliative care patients.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time event">
+                description = <"Unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Pain">
+                description = <"Self-rated perception of current pain.">
+                comment = <"0 represents 'No pain' and 10 represents 'Worst possible pain'.">
+            >
+            ["at0005"] = <
+                text = <"Tiredness">
+                description = <"Self-rated perception of current tiredness or lack of energy.">
+                comment = <"0 represents 'No tiredness' and 10 represents 'Worst possible tiredness'. ">
+            >
+            ["at0006"] = <
+                text = <"Drowsiness">
+                description = <"Self-rated perception of current drowsiness or sleepiness.">
+                comment = <"0 represents 'No drowsiness' and 10 represents 'Worst possible drowsiness'.">
+            >
+            ["at0007"] = <
+                text = <"Nausea">
+                description = <"Self-rated perception of current nausea.">
+                comment = <"0 represents 'No nausea' and 10 represents 'Worst possible nausea'.">
+            >
+            ["at0008"] = <
+                text = <"Lack of appetite">
+                description = <"Self-rated perception of current appetite.">
+                comment = <"0 represents 'No lack of appetite' and 10 represents 'Worst possible lack of appetite'.">
+            >
+            ["at0009"] = <
+                text = <"Shortness of breath">
+                description = <"Self-rated perception of current shortness of breath.">
+                comment = <"0 represents 'No shortness of breath' and 10 represents 'Worst possible shortness of breath'.">
+            >
+            ["at0010"] = <
+                text = <"Depression">
+                description = <"Self-rated perception of current depression.">
+                comment = <"0 represents 'No depression' and 10 represents 'Worst possible depression'.">
+            >
+            ["at0011"] = <
+                text = <"Anxiety">
+                description = <"Self-rated perception of current anxiety or feeling nervous.">
+                comment = <"0 represents 'No anxiety' and 10 represents 'Worst possible anxiety'.">
+            >
+            ["at0012"] = <
+                text = <"Well-being">
+                description = <"Self-rated perception of current well-being.">
+                comment = <"0 represents 'Best well-being' and 10 represents 'Worst possible well-being'.">
+            >
+            ["at0014"] = <
+                text = <"Other problem">
+                description = <"Other symptom or problem.">
+                comment = <"Name-value pair to allow for ad hoc recording of additional problems.">
+            >
+            ["at0016"] = <
+                text = <"Problem name">
+                description = <"Name of problem.">
+                comment = <"For example 'Constipation'.">
+            >
+            ["at0017"] = <
+                text = <"Rating">
+                description = <"Self-rated perception of identified problem.">
+                comment = <"0 represents 'No <Problem>' and 10 represents 'Worst possible <Problem>'.">
+            >
+            ["at0019"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+        >
+    >

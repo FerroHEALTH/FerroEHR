@@ -1,0 +1,171 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=0a171083-8e15-4626-a052-628a43c5d55c; build_uid=372d1771-9c05-4835-8355-708eeb219031)
+    openEHR-EHR-CLUSTER.laboratory_test_serology.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Pascal Biermann">
+                ["organisation"] = <"Carl von Ossietzky Universität Oldenburg">
+                ["email"] = <"pascal.biermann@uni-oldenburg.de">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2024-08-09">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"F573FE924C31A6B15E5527C9695166A6">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Dokumentation von Befunden, die bei der Untersuchtung von Laborproben unter dem Mikroskop beobachtet wurden.">
+            keywords = <"Mikroskopie", "Mikro">
+            use = <"">
+            misuse = <"Nicht zur Dokumentation von Befunden aus der Kultur einer Probe zu verwenden - für diesen Zweck ist der CLUSTER.laboratory_test_culture Archetyp zu nutzen.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record findings observed examining laboratory specimens under a microscope.">
+            keywords = <"microscopy", "micro">
+            use = <"">
+            misuse = <"Not to be used to record findings observed from culture of a specimen - use the CLUSTER.laboratory_test_culture for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Laboratory serological finding
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0049] occurrences matches {0..1} matches {    -- Test name
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            allow_archetype CLUSTER[at0033] matches {    -- Specimen
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0050] occurrences matches {0..1} matches {    -- Finding
+                value matches {
+                    DV_TEXT[at9003]
+                    DV_QUANTITY[at9004]
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[ac9000]}    -- Finding (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Labor-serologischer Befund">
+                description = <"Befunde, die bei der Untersuchung von Laborproben unter dem Mikroskop beobachtet wurden.">
+            >
+            ["at0001"] = <
+                text = <"Beschreibung">
+                description = <"Beschreibung der bei der Untersuchung einer Probe unter dem Mikroskop beobachteten Befunde.">
+            >
+            ["at0022"] = <
+                text = <"Kommentar">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Probe">
+                description = <"Identifikator der untersuchten Probe.">
+                comment = <"Wenn die Gewebeprobe zuvor in einer höheren Archetyp-Ebene, wie beispielsweise OBSERVATION.laboratory_test_result, identifiziert wurde, dann kann dieser SLOT redundant sein.">
+            >
+            ["at0049"] = <
+                text = <"Testname">
+                description = <"Antigen oder Antikörper Testname">
+            >
+            ["at0050"] = <
+                text = <"Befund">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Nachgewiesen">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Nicht nachgewiesen">
+                description = <"">
+            >
+            ["ac9000"] = <
+                text = <"Befund (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Laboratory serological finding">
+                description = <"Findings observed examining laboratory specimens under a microscope.">
+            >
+            ["at0001"] = <
+                text = <"Description">
+                description = <"Narrative description about the findings observed on inspection of a specimen using a microscope.">
+            >
+            ["at0022"] = <
+                text = <"Comment">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Specimen">
+                description = <"Identification of the specimen examined.">
+                comment = <"If the tissue specimen has previously been identified in a a higher level archetype level archetype, such as the OBSERVATION.laboratory_test_result, this SLOT may be redundant.">
+            >
+            ["at0049"] = <
+                text = <"Test name">
+                description = <"Antigen or antibody test name">
+            >
+            ["at0050"] = <
+                text = <"Finding">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Detected">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Not detected">
+                description = <"">
+            >
+            ["ac9000"] = <
+                text = <"Finding (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0051", "at0052">
+        >
+    >

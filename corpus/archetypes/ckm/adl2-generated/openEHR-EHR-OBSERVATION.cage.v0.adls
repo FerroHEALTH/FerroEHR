@@ -1,0 +1,328 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=a359f8f5-4b29-4185-9741-1cd6f8d4de28; build_uid=760200b3-dfde-49a7-a156-29fdc429e645)
+    openEHR-EHR-OBSERVATION.cage.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Dennis Forslund">
+                ["organisation"] = <"Cambio Healthcare Systems">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Dennis Forslund">
+        ["organisation"] = <"Cambio Healthcare Systems">
+        ["email"] = <"models@cambiocds.com">
+        ["date"] = <"2016-12-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Ewing JA. Detecting alcoholism. The CAGE questionnaire. JAMA. 1984 Oct 12;252(14):1905-7. doi: 10.1001/jama.252.14.1905. PubMed PMID: 6471323.">
+        ["2"] = <"Dhalla S, Kopec JA. The CAGE questionnaire for alcohol misuse: a review of reliability and validity studies. Clin Invest Med. 2007;30(1):33-41. Review. PubMed PMID: 17716538.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics. Australia">
+        ["MD5-CAM-1.0.1"] = <"813FCCFE00D09DE57142C4600E708CCC">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att identifiera alkoholmissbruk. ">
+            keywords = <"alkoholmissbruk", "missbruk", "beroende", "DSM", "psykiatri">
+            use = <"Använd för att identifiera alkoholmissbruk. Instrumentet är ett av de mest använda för upptäckt av alkoholmissbruk och potentiellt beroende.
+
+CAGE är en akronym baserad på dess fyra frågor;
+
+Cut down - Har du någon gång känt att du behöver minska din alkoholkonsumtion?
+Annoy - Har någon irriterat dig genom att kritisera dina alkoholvanor?
+Guilt - Har du någon gång haft dålig samvete eller skuldkänslor på grund av ditt drickande?
+Eye opener - Har du någon gång behövt starta dagen med alkohol för att stilla nerverna eller för att bli av med en bakfylla?
+
+En total poäng om 2p eller mer indikerar alkoholmissbruk, och bör resultera i vidare utredning.">
+            misuse = <"CAGE är avsedd för screening och är ej att betrakta som diagnostiskt.">
+            copyright = <"© Cambio Healthcare Systems, openEHR Foundation, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results of the CAGE questionnaire.">
+            keywords = <"alcohol abuse", "alcohol use disorder", "DSM", "CAGE", "psychiatry">
+            use = <"Use to record the results of the CAGE questionnaire.">
+            misuse = <"Not to be used to record a summary of alcohol consumption - use the EVALUATION.alcohol_consumption_summary for this purpose.
+
+Not to be used to record actual alcohol consumption - use the OBSERVATION.alcohol_intake for this purpose.">
+            copyright = <"© Cambio Healthcare Systems, openEHR Foundation, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- CAGE questionnaire
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Cut down?
+                                        value matches {
+                                            DV_ORDINAL[at9004] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0009]}],    -- No
+                                                    [{1}, {[at0010]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Annoyed?
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0011]}],    -- No
+                                                    [{1}, {[at0012]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Guilty?
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0013]}],    -- No
+                                                    [{1}, {[at0014]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Eye opener?
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0015]}],    -- No
+                                                    [{1}, {[at0016]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9008] matches {
+                                                magnitude matches {|0..4|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0017] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0018] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"*CAGE questionnaire (en)">
+                description = <"CAGE är ett av de mest använda instrumenten för screening av alkoholmissbruk och potentiellt beroende. Det består av fyra frågor relaterade till alkoholkonsumtion. En poäng om 2p eller mer indikerar alkoholmissbruk, och bör resultera i vidare utredning.">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time. (en)">
+            >
+            ["at0004"] = <
+                text = <"*Cut down? (en)">
+                description = <"*Have you ever felt you needed to cut down on your drinking? (en)">
+            >
+            ["at0005"] = <
+                text = <"*Annoyed? (en)">
+                description = <"*Have you ever felt you needed to cut down on your drinking? (en)">
+            >
+            ["at0006"] = <
+                text = <"*Guilty? (en)">
+                description = <"*Have you ever felt guilty about drinking? (en)">
+            >
+            ["at0007"] = <
+                text = <"*Eye opener? (en)">
+                description = <"*Have you ever felt you needed a drink first thing in the morning (eye-opener) to steady your nerves or to get rid of a hangover? (en)">
+            >
+            ["at0008"] = <
+                text = <"Total poäng">
+                description = <"*Sum of the individual scores assigned for each of the contributing variables. (en)">
+            >
+            ["at0009"] = <
+                text = <"Nej">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Ja">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"Nej">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Ja">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"Nej">
+                description = <"*">
+            >
+            ["at0014"] = <
+                text = <"Ja">
+                description = <"*">
+            >
+            ["at0015"] = <
+                text = <"Nej">
+                description = <"*">
+            >
+            ["at0016"] = <
+                text = <"Ja">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"*Extension (en)">
+                description = <"*">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents. (en)">
+            >
+            ["ac9008"] = <
+                text = <"*Cut down? (en) (synthesised)">
+                description = <"*Have you ever felt you needed to cut down on your drinking? (en) (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"*Annoyed? (en) (synthesised)">
+                description = <"*Have you ever felt you needed to cut down on your drinking? (en) (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"*Guilty? (en) (synthesised)">
+                description = <"*Have you ever felt guilty about drinking? (en) (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"*Eye opener? (en) (synthesised)">
+                description = <"*Have you ever felt you needed a drink first thing in the morning (eye-opener) to steady your nerves or to get rid of a hangover? (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"CAGE questionnaire">
+                description = <"Questionnaire to screen for harmful alcohol use and potential alcohol dependency.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Cut down?">
+                description = <"Have you ever felt you needed to cut down on your drinking?">
+            >
+            ["at0005"] = <
+                text = <"Annoyed?">
+                description = <"Have you ever felt you needed to cut down on your drinking?">
+            >
+            ["at0006"] = <
+                text = <"Guilty?">
+                description = <"Have you ever felt guilty about drinking?">
+            >
+            ["at0007"] = <
+                text = <"Eye opener?">
+                description = <"Have you ever felt you needed a drink first thing in the morning (eye-opener) to steady your nerves or to get rid of a hangover?">
+            >
+            ["at0008"] = <
+                text = <"Total score">
+                description = <"Sum of the individual scores assigned for each of the contributing variables.">
+            >
+            ["at0009"] = <
+                text = <"No">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Yes">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"No">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Yes">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"No">
+                description = <"*">
+            >
+            ["at0014"] = <
+                text = <"Yes">
+                description = <"*">
+            >
+            ["at0015"] = <
+                text = <"No">
+                description = <"*">
+            >
+            ["at0016"] = <
+                text = <"Yes">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9008"] = <
+                text = <"Cut down? (synthesised)">
+                description = <"Have you ever felt you needed to cut down on your drinking? (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Annoyed? (synthesised)">
+                description = <"Have you ever felt you needed to cut down on your drinking? (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Guilty? (synthesised)">
+                description = <"Have you ever felt guilty about drinking? (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Eye opener? (synthesised)">
+                description = <"Have you ever felt you needed a drink first thing in the morning (eye-opener) to steady your nerves or to get rid of a hangover? (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0011", "at0012">
+        >
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0009", "at0010">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0015", "at0016">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0013", "at0014">
+        >
+    >

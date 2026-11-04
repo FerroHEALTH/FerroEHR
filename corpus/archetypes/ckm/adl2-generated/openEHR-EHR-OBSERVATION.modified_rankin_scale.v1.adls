@@ -1,0 +1,278 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=141386aa-c170-4c14-a9d8-aa5cc9fe8618; build_uid=26350b67-cfca-4119-96e6-5cd52876cee7)
+    openEHR-EHR-OBSERVATION.modified_rankin_scale.v1.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Kim Werle">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Mikkel Johan Gaup Grønmo">
+                ["organisation"] = <"Forvaltningssenter EPJ, Helse Nord">
+                ["email"] = <"mikkel.johan.gaup.gronmo@helse-nord.no">
+            >
+            accreditation = <"Nasjonal IKT HF">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Mikkel Johan Gaup Grønmo">
+        ["organisation"] = <"Helse Nord RHF">
+        ["email"] = <"mikkel.johan.gaup.gronmo@helse-nord.no">
+        ["date"] = <"2020-03-09">
+    >
+    original_namespace = <"no.nasjonalikt">
+    original_publisher = <"Nasjonal IKT">
+    other_contributors = <"Erling Are Hole, Helse Bergen, Norway", "Stein Arne Rimehaug, Sunnaas sykehus, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Astrid Askeland, Dips ASA, Norway", "Heidi Aursand, Oslo universitetssykehus, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Rui Coutinho, University Hospital Southampton, United Kingdom", "Veronica Dahl Hvitstein, Finnmarkssykehuset HF, Norway", "Tom Dahlberg, Helgelandssykehuset HF, Fag, forskning og utdanning, Norway", "Celeste Dias, Faculty of Medicine, Portugal", "Stig Erik Hegrestad, Helse Førde, Norway", "Kåre Flø, DIPS ASA, Norway", "Mikkel Gaup Grønmo, Helse-Nord, FSE, Norway (openEHR Editor)", "Roar Holm, Helse Vest IKT A/S, Norway", "Morten Hørthe, DIPS, Norway", "Hanne Joensen, Helse Bergen HUS, Norway", "Mikkel Johan Gaup Grønmo, Forvaltningssenter EPJ, Helse Nord, Norway (Nasjonal IKT redaktør)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Tone Løkse, UNN, Norway", "Anne M Gromsrud, DIPS AS, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Bjørn Næss, DIPS ASA, Norway", "Nils Ottar Henryson Talle, Seksjon for Ergoterapi og Velferdsteknologi, Helse Førde, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openEHR Foundation">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"van Swieten JC, Koudstaal PJ, Visser MC, Schouten HJ, van Gijn J. Interobserver agreement for the assessment of handicap in stroke patients. Stroke. 1988 May;19(5):604-7. doi: 10.1161/01.str.19.5.604. PubMed PMID: 3363593.">
+        ["2"] = <"Banks JL, Marotta CA. Outcomes validity and reliability of the modified Rankin scale: implications for stroke clinical trials: a literature review and synthesis. Stroke. 2007 Mar;38(3):1091-6. doi: 10.1161/01.STR.0000258355.23810.c6. Epub 2007 Feb 1. Review. PubMed PMID: 17272767. https://www.ahajournals.org/doi/10.1161/01.STR.0000258355.23810.c6">
+        ["3"] = <"Rankin J. Cerebral vascular accidents in patients over the age of 60. II. Prognosis. Scott Med J. 1957 May;2(5):200-15. doi: 10.1177/003693305700200504. PMID: 13432835.">
+        ["4"] = <"H.. Pakkeforløp hjerneslag, modified rankin scale. [Internet]. Helsedirektoratet; 2018 January. 1 PDF. Available from: https://www.helsedirektoratet.no/pakkeforlop/hjerneslag/hjerneslag-pakkeforlop-dokumenter/Pakkeforl%C3%B8p%20hjerneslag%20-%20mRS.pdf.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B89C90091DD22EDA44C2C915FA83CC72">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Erfassung des Grads der Behinderung und des Umfangs der erforderlichen Unterstützung nach einem Schlaganfall oder einem anderen neurologischen Ereignis.">
+            keywords = <"Schlaganfall, Funktion, neurologisch, Behinderung, Pflege, Aktivitäten des täglichen Lebens, mRS", ...>
+            use = <"Wird verwendet, um den Grad der Behinderung und den Umfang der erforderlichen Unterstützung nach einem Schlaganfall oder einem anderen neurologischen Ereignis zu erfassen.">
+            misuse = <"">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"Brukes for å registrere graden av funksjonsnedsettelse eller behov for bistand i aktiviteter i dagliglivet hos et individ som har hatt hjerneslag eller en annen form for nevrologisk hendelse.">
+            keywords = <"mrs, funksjonssvikt, funksjonsnedsettelse, hjelpebehov, hjerneblødning, ADL, kroppsfunksjon, nevrologisk skade, nevrologisk uførhet", ...>
+            use = <"For å registrere graden av funksjonsnedsettelse eller behov for bistand i aktiviteter i dagliglivet hos et individ som har hatt hjerneslag eller en annen form for nevrologisk hendelse.">
+            misuse = <"">
+            copyright = <"© Nasjonal IKT HF, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the degree of disability and level of assistance required after a stroke or another neurological event.">
+            keywords = <"Stroke, function, neurological, disability, nursing, ADL, mrs", ...>
+            use = <"Use to record the degree of disability and level of assistance required after a stroke or another neurological event.">
+            misuse = <"">
+            copyright = <"© Nasjonal IKT HF, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Modified Rankin Scale (mRS)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Any point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0007] occurrences matches {1} matches {    -- Modified Rankin Scale
+                                        value matches {
+                                            DV_ORDINAL[at9001] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0008]}],    -- No symptoms
+                                                    [{1}, {[at0009]}],    -- No significant disability
+                                                    [{2}, {[at0010]}],    -- Slight disability
+                                                    [{3}, {[at0011]}],    -- Moderate disability
+                                                    [{4}, {[at0012]}],    -- Moderately severe disability
+                                                    [{5}, {[at0013]}],    -- Severe disability
+                                                    [{6}, {[at0014]}]    -- Death
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0004] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0005] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Modifizierte Rankin-Skala (mRS)">
+                description = <"Ein Beurteilungsinstrument zur Messung des Grads der Behinderung und des Umfangs der erforderlichen Unterstützung nach einem Schlaganfall oder einem anderen neurologischen Ereignis.">
+            >
+            ["at0002"] = <
+                text = <"Ereignis zu einem beliebigen Zeitpunkt">
+                description = <"Standardmäßiges, nicht spezifiziertes Ereignis zu einem bestimmten Zeitpunkt, das explizit in einem Template oder zur Laufzeit definiert werden kann.">
+            >
+            ["at0005"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen, die erforderlich sind, um das Modell um lokale Inhalte zu erweitern oder es an andere Referenzmodelle oder Formalismen anzupassen.">
+                comment = <"Zum Beispiel: lokale Informationsanforderungen; oder zusätzliche Metadaten zur Angleichung an FHIR.">
+            >
+            ["at0007"] = <
+                text = <"Modifizierte Rankin-Skala">
+                description = <"Grad der Behinderung und Umfang der erforderlichen Hilfe nach einem Schlaganfall oder einem anderen neurologischen Ereignis.">
+            >
+            ["at0008"] = <
+                text = <"Keine Symptome">
+                description = <"Überhaupt keine Symptome.">
+            >
+            ["at0009"] = <
+                text = <"Keine nennenswerte Behinderung">
+                description = <"Trotz Symptomen in der Lage, alle üblichen Aufgaben und Tätigkeiten auszuführen.">
+            >
+            ["at0010"] = <
+                text = <"Leichte Behinderung">
+                description = <"Unfähig, alle bisherigen Tätigkeiten auszuführen, aber in der Lage, sich ohne Hilfe um die eigenen Angelegenheiten zu kümmern.">
+            >
+            ["at0011"] = <
+                text = <"Mäßige Behinderung">
+                description = <"Benötigt etwas Hilfe, kann aber ohne Hilfe gehen.">
+            >
+            ["at0012"] = <
+                text = <"Mittelschwere Behinderung">
+                description = <"Unfähig, ohne Hilfe zu gehen und nicht in der Lage, sich ohne Hilfe um die eigenen körperlichen Bedürfnisse zu kümmern.">
+            >
+            ["at0013"] = <
+                text = <"Schwere Behinderung">
+                description = <"Bettlägerig, inkontinent und ständige Pflege und Aufmerksamkeit erfordernd.">
+            >
+            ["at0014"] = <
+                text = <"Tod">
+                description = <"Tod.">
+            >
+            ["ac9001"] = <
+                text = <"Modifizierte Rankin-Skala (synthesised)">
+                description = <"Grad der Behinderung und Umfang der erforderlichen Hilfe nach einem Schlaganfall oder einem anderen neurologischen Ereignis. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Modifisert Rankin Skala (mRS)">
+                description = <"Skala for å registrere omfang av funksjonsnedsettelse eller behov for bistand i aktiviteter i dagliglivet hos et individ som har hatt hjerneslag eller en annen form for nevrologisk hendelse.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0005"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel: lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0007"] = <
+                text = <"Modified Rankin Skala">
+                description = <"Grad av funksjonsnedsettelse eller behov for bistand i aktiviteter i dagliglivet hos et individ som har hatt hjerneslag eller en annen form for nevrologisk hendelse.">
+            >
+            ["at0008"] = <
+                text = <"Ingen symptomer">
+                description = <"Ingen symptomer i det hele tatt.">
+            >
+            ["at0009"] = <
+                text = <"Ingen betydningsfull funksjonssvikt til tross for symptomer">
+                description = <"Klarer å utføre alle oppgaver og aktiviteter som før.">
+            >
+            ["at0010"] = <
+                text = <"Lett funksjonssvikt">
+                description = <"Klarer ikke å utføre alle aktiviteter som før, men klarer sine daglige gjøremål.">
+            >
+            ["at0011"] = <
+                text = <"Moderat funksjonssvikt">
+                description = <"Trenger noe hjelp, men går uten hjelp.">
+            >
+            ["at0012"] = <
+                text = <"Alvorlig funksjonssvikt">
+                description = <"Klarer ikke å gå uten hjelp og klarer ikke å ivareta sine grunnleggende behov uten hjelp.">
+            >
+            ["at0013"] = <
+                text = <"Svært alvorlig funksjonssvikt">
+                description = <"Sengeliggende og behov for konstant tilsyn og hjelp.">
+            >
+            ["at0014"] = <
+                text = <"Død">
+                description = <"Død.">
+            >
+            ["ac9001"] = <
+                text = <"Modified Rankin Skala (synthesised)">
+                description = <"Grad av funksjonsnedsettelse eller behov for bistand i aktiviteter i dagliglivet hos et individ som har hatt hjerneslag eller en annen form for nevrologisk hendelse. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Modified Rankin Scale (mRS)">
+                description = <"An assessment tool used to measure the degree of disability and level of assistance required after a stroke or another neurological event.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time event">
+                description = <"Default, unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0005"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0007"] = <
+                text = <"Modified Rankin Scale">
+                description = <"Degree of disability and level of assistance required after a stroke or another neurological event.">
+            >
+            ["at0008"] = <
+                text = <"No symptoms">
+                description = <"No symptoms at all.">
+            >
+            ["at0009"] = <
+                text = <"No significant disability">
+                description = <"Despite symptoms, able to carry out all usual duties and activities.">
+            >
+            ["at0010"] = <
+                text = <"Slight disability">
+                description = <"Unable to perform all previous activities but able to look after own affairs without assistance.">
+            >
+            ["at0011"] = <
+                text = <"Moderate disability">
+                description = <"Requiring some help but able to walk without assistance.">
+            >
+            ["at0012"] = <
+                text = <"Moderately severe disability">
+                description = <"Unable to walk without assistance and unable to attend to own bodily needs without assistance.">
+            >
+            ["at0013"] = <
+                text = <"Severe disability">
+                description = <"Bedridden, incontinent and requiring constant nursing care and attention.">
+            >
+            ["at0014"] = <
+                text = <"Death">
+                description = <"Death.">
+            >
+            ["ac9001"] = <
+                text = <"Modified Rankin Scale (synthesised)">
+                description = <"Degree of disability and level of assistance required after a stroke or another neurological event. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0008", "at0009", "at0010", "at0011", "at0012", "at0013", "at0014">
+        >
+    >

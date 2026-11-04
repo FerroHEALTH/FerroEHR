@@ -1,0 +1,387 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=36c08c13-3d3e-4e74-9770-4505efcea04d; build_uid=8e1b912f-42d8-48bb-81d9-7a4769348b59)
+    openEHR-EHR-OBSERVATION.hand_grip_strength.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Kanika Kuwelker">
+        ["organisation"] = <"Helse Vest IKT">
+        ["email"] = <"kanika.kuwelker@helse-vest-ikt.no">
+        ["date"] = <"2025-11-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Stein Arne Rimehaug, Sunnaas sykehus, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Pascal Bolla, Nexus Digital Health, Canada", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "Grete Hovde Bøe, Sykehuspartner HF, Norway (openEHR Editor)", "Kristina Fjone, Oslo universitetssykehus, Norway", "Aleksander Furnes, Helse Nord IKT, Norway (openEHR Editor)", "Ciprian Gerstenberger, Helse Nord IKT, Norway (openEHR Editor)", "Tore Gravdal, Tieto Caretech, Norway", "Ylva Hivand Hiorth, sus, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Anji Kingman, openOutcomes, Northumbria Healthcare NHS Foundation Trust, United Kingdom", "Martin Koch, Servei Català de la Salut, Spain", "Ronald Krawec, Alberta Health Services, Canada", "Elin Kristiansen, Sykehuspartner HF, Norway (openEHR Editor)", "Anne Kristine Brekka, SSHF, Norway", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Eli Larsen, UNN, Norway (openEHR Editor)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Michael Lutz, BITsoft, Germany", "Tone Løkse, UNN, Norway", "Charlotte Marie Schanke, Oslo Universitetssykehus, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Martin Milde, Helse Vest IKT, Norway (openEHR Editor)", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Marianne Opsahl Bredesen, Helse Nord IKT HF, Norway (openEHR Norway redaktør)", "Ruben Rognmo, Helse Nord IKT, Norway", "Terje Sagmyr, Helse Vest IKT, Norway (openEHR Editor)", "Lena Schell-Majoor, University of Oldenburg, Germany", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Kanthan Theivendran, NHS, United Kingdom", "Terese Tveit Helland, helse fonna, haugesund sjukehus, Norway", "John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)", "Marte Vassli Gullesen, HNIKT, Norway (openEHR Norway redaktør)", "Cilie Åsberg, Sunnaas Sykehus, Norway", "Karsten Øvretveit, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Svinøy OE, Hilde G, Bergland A, Strand BH. Reference values for Jamar+ digital dynamometer hand grip strength in healthy adults and in adults with non-communicable diseases or osteoarthritis: the Norwegian Tromsø study 2015–2016 [Internet]. Eur J Ageing. 2023 Nov 24;20(1):44. Available from: https://pubmed.ncbi.nlm.nih.gov/37999814/">
+        ["2"] = <"Lee SH, Gong HS. Measurement and Interpretation of Handgrip Strength for Research on Sarcopenia and Osteoporosis [Internet]. J Bone Metab. 2020 May;27(2):85–96. Available from: https://pubmed.ncbi.nlm.nih.gov/32572369/">
+        ["3"] = <"Peters MJ, van Nes SI, Vanhoutte EK, Bakkers M, van Doorn PA, Merkies IS, Faber CG. Revised normative values for grip strength with the Jamar dynamometer [Internet]. J Peripher Nerv Syst. 2011 Mar;16(1):47–50. Available from: https://pubmed.ncbi.nlm.nih.gov/21504502/">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"80DB81F3B2A7AC51FB038AA0A3807BCC">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere et individs håndgrepsstyrke.">
+            keywords = <"Gripestyrke, grepstyrke, håndgrepsstyrke, muskelstyrke, styrke i overekstremitetene, dynamometer, skrøpelighet, håndfunksjon, funksjonsstatus, fysisk funksjon, rehabilitering, fysioterapi, ergoterapi", ...>
+            use = <"Brukes for å registrere et individs håndgrepsstyrke.">
+            misuse = <"Brukes ikke for å registrere estimert eller ikke‑målt håndgrepsstyrke. Brukes ikke for å registrere andre gripestyrker som nøkkelklypestyrke, fingertuppklypestyrke eller trepunktsklypestyrke. Behovet for egne arketyper for disse formålene er anerkjent, men slike arketyper var ikke tilgjengelige da denne arketypen ble publisert.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the measured handgrip strength of an individual, typically using a hand dynamometer.">
+            keywords = <"grip strength, grip, strength, handgrip strength, muscle strength, upper limp strength, dynamometer, frailty, functional status, hand function, physical performance, rehabilitation, physiotherapy, occupational therapy", ...>
+            use = <"Use to record the measured handgrip strength of an individual, typically using a hand dynamometer.">
+            misuse = <"Not to be used to record estimated or non‑measured handgrip strength. Not to be used to record other grip types such as lateral pinch, tip pinch, or three‑jaw chuck pinch. The need for a specific archetypes for these purposes is acknowledged but had not yet been developed at the time of the publication of this archetype.">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Handgrip strength
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {1} matches {    -- Measured hand
+                                        value matches {
+                                            DV_CODED_TEXT[at9006] matches {
+                                                defining_code matches {[ac9000]}    -- Measured hand (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {1} matches {    -- Grip strength
+                                        value matches {
+                                            DV_QUANTITY[at9007] matches {
+                                                property matches {[at9001]}    -- Force
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"kgf"}],
+                                                    [{|>=0.0|}, {"[lbf_av]"}],
+                                                    [{|>=0.0|}, {"N"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9008]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0013] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9010]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    INTERVAL_EVENT[at0035] occurrences matches {0..1} matches {    -- Maximum grip strength
+                        data matches {
+                            use_node ITEM_TREE[at9013] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                        state matches {
+                            use_node ITEM_TREE[at9014] /data[at0001]/events[at0002]/state[at0013]
+                        }
+                        math_function matches {
+                            DV_CODED_TEXT[at9015] matches {
+                                defining_code matches {[at9003]}    -- maximum
+                            }
+                        }
+                    }
+                    INTERVAL_EVENT[at0036] occurrences matches {0..1} matches {    -- Mean grip strength
+                        data matches {
+                            use_node ITEM_TREE[at9016] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                        state matches {
+                            use_node ITEM_TREE[at9017] /data[at0001]/events[at0002]/state[at0013]
+                        }
+                        math_function matches {
+                            DV_CODED_TEXT[at9018] matches {
+                                defining_code matches {[at9004]}    -- mean
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0011] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0032] occurrences matches {0..1} matches {    -- Measurement protocol
+                        value matches {
+                            DV_CODED_TEXT[at9019] matches {
+                                defining_code matches {[ac9005]}    -- Measurement protocol (synthesised)
+                            }
+                            DV_TEXT[at9020]
+                        }
+                    }
+                    ELEMENT[at0039] occurrences matches {0..1} matches {    -- Grip span
+                        value matches {
+                            DV_QUANTITY[at9022] matches {
+                                property matches {[at9021]}    -- Length
+                                [magnitude, units, precision] matches {
+                                    [{|0.0..<100.0|}, {"cm"}, {1}],
+                                    [{|0.0..<1000.0|}, {"mm"}, {|>=0|}]
+                                }
+                            }
+                            DV_TEXT[at9023]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0010] occurrences matches {0..1} matches {    -- Measuring device
+                        include
+                            archetype_id/value matches {/.*|openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0024] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Håndgrepsstyrke">
+                description = <"Den maksimale viljestyrte isometriske kraften som genereres av musklene i hånd og underarm under et håndgrep, vanligvis målt med et håndholdt dynamometer.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i en template eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Målt hånd">
+                description = <"Hånden som ble brukt ved måling av håndgrepsstyrke.">
+            >
+            ["at0005"] = <
+                text = <"Høyre hånd">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Venstre hånd">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Gripestyrke">
+                description = <"Den målte kraften som genereres under et håndgrep.">
+            >
+            ["at0008"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om målingen, som ikke omfattes av andre felt.">
+            >
+            ["at0010"] = <
+                text = <"Måleapparat">
+                description = <"Detaljer om utstyret som ble brukt til å måle håndgrepsstyrken.">
+            >
+            ["at0019"] = <
+                text = <"Konfunderende faktorer">
+                description = <"Problemer eller faktorer som kan påvirke målingen av håndgrepsstyrke, som ikke fanges opp i andre felt.">
+                comment = <"For eksempel: smerte, muskel‑ og skjelettlidelser, tretthet eller avvik fra en måleprotokoll.">
+            >
+            ["at0024"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at0032"] = <
+                text = <"Protokoll for måling">
+                description = <"Spesifikasjon av protokollen eller den standardiserte metoden som ble brukt til å måle håndgrepsstyrke under vurderingen.">
+            >
+            ["at0034"] = <
+                text = <"NIHR Southampton Biomedial Research Centre">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Maksimal håndgrepsstyrke">
+                description = <"Maksimal håndgrepsstyrke beregnet fra en serie målinger, registrert som den høyeste verdien oppnådd under standardiserte testforhold.">
+            >
+            ["at0036"] = <
+                text = <"Gjennomsnittlig håndgrepsstyrke">
+                description = <"Gjennomsnittlig gripestyrke beregnet fra en serie målinger, registrert som gjennomsnittsverdien oppnådd under standardiserte testforhold.">
+            >
+            ["at0037"] = <
+                text = <"Jamar Standard Position (American Society of Hand Therapists)">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"NIH Toolbox Grip Strength Test">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Gripespenn">
+                description = <"Den faktiske avstanden mellom håndtakene på dynamometeret ved måletidspunktet.">
+                comment = <"Kan registreres som en kontinuerlig lengde i centimeter eller millimeter, eller som en kodet produsentdefinert innstilling for instrumenter som ikke angir en numerisk avstand.">
+            >
+            ["at9021"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9003"] = <
+                text = <"* maximum (en)">
+                description = <"* maximum (en)">
+            >
+            ["at9004"] = <
+                text = <"* mean (en)">
+                description = <"* mean (en)">
+            >
+            ["at9001"] = <
+                text = <"* Force (en)">
+                description = <"* Force (en)">
+            >
+            ["ac9000"] = <
+                text = <"Målt hånd (synthesised)">
+                description = <"Hånden som ble brukt ved måling av håndgrepsstyrke. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Protokoll for måling (synthesised)">
+                description = <"Spesifikasjon av protokollen eller den standardiserte metoden som ble brukt til å måle håndgrepsstyrke under vurderingen. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Handgrip strength">
+                description = <"The maximum voluntary isometric force generated by the muscles of the hand and forearm during a gripping action, usually measured with a hand-held dynamometer.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Measured hand">
+                description = <"The hand for which handgrip strength was measured.">
+            >
+            ["at0005"] = <
+                text = <"Right hand">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Left hand">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Grip strength">
+                description = <"The measured force produced during a handgrip.">
+            >
+            ["at0008"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the handgrip strength not captured in other fields.">
+            >
+            ["at0010"] = <
+                text = <"Measuring device">
+                description = <"Details about the device used to measure the handgrip strength.">
+            >
+            ["at0019"] = <
+                text = <"Confounding factors">
+                description = <"Issues or factors that may impact on the measurement of handgrip strength, not captured in other fields.">
+                comment = <"For example: pain, musculoskeletal conditions, fatigue, or deviations from a measurement protocol.">
+            >
+            ["at0024"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0032"] = <
+                text = <"Measurement protocol">
+                description = <"Specification of the protocol or standardized method used to measure handgrip strength during the assessment.">
+            >
+            ["at0034"] = <
+                text = <"NIHR Southampton Biomedial Research Centre">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Maximum grip strength">
+                description = <"Maximum handgrip strength calculated from a series of measurements, recorded as the highest value achieved under standardised testing conditions.">
+            >
+            ["at0036"] = <
+                text = <"Mean grip strength">
+                description = <"Mean handgrip strength calculated from a series of measurements, recorded as the mean value achieved under standardised testing conditions.">
+            >
+            ["at0037"] = <
+                text = <"Jamar Standard Position (American Society of Hand Therapists)">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"NIH Toolbox Grip Strength Test">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Grip span">
+                description = <"The actual distance between the handles of the dynamometer at the time of measurement.">
+                comment = <"May be recorded as a continuous length in centimetres or millimeters, or as a coded manufacturer‑defined setting for instruments that do not provide a numerical distance.">
+            >
+            ["at9021"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["at9003"] = <
+                text = <"maximum">
+                description = <"maximum">
+            >
+            ["at9004"] = <
+                text = <"mean">
+                description = <"mean">
+            >
+            ["at9001"] = <
+                text = <"Force">
+                description = <"Force">
+            >
+            ["ac9000"] = <
+                text = <"Measured hand (synthesised)">
+                description = <"The hand for which handgrip strength was measured. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Measurement protocol (synthesised)">
+                description = <"Specification of the protocol or standardized method used to measure handgrip strength during the assessment. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9021"] = <http://openehr.org/id/122>
+            ["at9003"] = <http://openehr.org/id/144>
+            ["at9004"] = <http://openehr.org/id/146>
+            ["at9001"] = <http://openehr.org/id/355>
+        >
+        ["SNOMED-CT"] = <
+            ["at0005"] = <http://snomed.info/id/78791008>
+            ["at0006"] = <http://snomed.info/id/85151006>
+            ["at0007"] = <http://snomed.info/id/251433001>
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0005", "at0006">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0034", "at0037", "at0038">
+        >
+    >

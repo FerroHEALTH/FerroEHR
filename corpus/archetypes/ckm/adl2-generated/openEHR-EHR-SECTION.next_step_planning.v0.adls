@@ -1,0 +1,98 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=64e11054-781b-4ed4-8b2c-bd899789a75f; build_uid=a8a57a1b-1b46-4d65-8d4f-82f739ba0e1c)
+    openEHR-EHR-SECTION.next_step_planning.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2016-07-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"9D5EB3A8E67BDF2E23AF01E27214BC37">
+    >
+    details = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar la solicitud de informes de evaluación acerca de pruebas diagnósticas específicas.">
+            use = <"Se utiliza para registrar la solicitud de informes para revisar las pruebas diagnósticas realizadas. La declaración se considera únicamente para el momento en que ha sido registrada. Es decir, se pueden planificar varios informes a lo largo del tiempo para evaluar las mismas pruebas diagnósticas, en caso de requerirse una segunda opinión.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Register the statement/s about the request of a report of assessment about specific diagnostic tests.">
+            keywords = <"review", "diagnostic test", "report">
+            use = <"Use to record statement/s about asking reports to review the diagnostic tests carried out. The statement is considered only at the time it is registered. That is to say, other reports can be planned along the time, if second opinion is required.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Next step planning
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype INSTRUCTION[at0002] matches {    -- Diagnostic report request
+                include
+                    archetype_id/value matches {/openEHR-EHR-INSTRUCTION\.request-report(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype INSTRUCTION[at0003] matches {    -- Service request
+                include
+                    archetype_id/value matches {/openEHR-EHR-INSTRUCTION\.request(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Next step planning">
+                description = <"Decision-making concerning the planning of next assessment for the diagnostic tests carried out.">
+            >
+            ["at0002"] = <
+                text = <"Diagnostic report request">
+                description = <"Request for a diagnostic report involving the study of specific diagnostic tests.">
+            >
+            ["at0003"] = <
+                text = <"Service request">
+                description = <"Request for provision of a specified service by another healthcare provider or organisation.">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Planificación del siguiente paso">
+                description = <"Proceso de toma de decisiones con respecto a la petición de un informe de evaluación de pruebas diagnósticas específicas.">
+            >
+            ["at0002"] = <
+                text = <"Solicitud de informe diagnóstico">
+                description = <"Solicitud de un informe diagnóstico acerca del estudio de pruebas diagnósticas concretas.">
+            >
+            ["at0003"] = <
+                text = <"Solicitud de servicio">
+                description = <"Solicitud de la prestación de un servicio especificado por otro proveedor de salud u organización.">
+            >
+        >
+    >

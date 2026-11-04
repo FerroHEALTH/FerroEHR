@@ -1,0 +1,359 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=0f57bc87-f0a2-48c9-b3cd-7d97b81c942d; build_uid=aa403a07-15fb-450f-8435-8882a992a60c)
+    openEHR-EHR-CLUSTER.imaging_exam-fallopian_tube.v1.0.1
+
+specialize
+    openEHR-EHR-CLUSTER.imaging_exam.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch, Martin Koch">
+                ["organisation"] = <"Medizinische Hochschule Hannover, Servei Català de la Salut">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de, martinandreaskoch@catsalut.cat">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen">
+                ["organisation"] = <"Oslo University Hospital">
+                ["email"] = <"varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-11-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Marit Alice Venheim, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Randi Brendberg, Helse Nord RHF, Norway", "Peter Fedorcsak, University of Oslo, Norway (openEHR Editor)", "Heather Grain, Llewelyn Grain Informatics, Australia", "Anca Heyd, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (Nasjonal IKT redaktør)", "Kanika Kuwelker, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hanne Marte Bårholm, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Tina Tellum, Oslo Universitetssykehus, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Ina Wille, Helse-Vest RHF, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"1A00B05BD58D3F4D7870AB41666BC2CD">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Aufzeichnung der Befunde der radiologischen Untersuchung eines einzelnen Eileiters und deren Interpretation.">
+            keywords = <"Fluoroskopie", "Hysterosalpingogramm", "Kontrast", "Kochsalzlösung", "Hykose", "hsg", "Sonographie", "Ultraschall", "Rohr", "Saktosalpinx", "Hydrosalpinx", "Pyosalpinx">
+            use = <"Dient zur Aufzeichnung der Befunde der radiologischen Untersuchung eines einzelnen Eileiters und deren Interpretation.
+
+Der vorgesehene Anwendungsbereich dieses Archetyps besteht darin, letztendlich alle detaillierten Befunde radiologischer Untersuchungen des Eileiters mit allen Modalitäten aufzuzeichnen, einschließlich Untersuchungen mit Kontrastmitteln wie beispielsweise der Hysterosalpingographie (HSG) oder der Hysterosalpingo-Kontrast-Sonographie (HyCoSy). Es wird erwartet, dass weitere Datenelemente hinzugefügt werden, wenn Anforderungen ermittelt und bestätigt werden.
+
+Dieser Archetyp ist für die Verschachtelung im SLOT „Zusätzliche Details“ im CLUSTER.imaging_exam-uterine_body, im SLOT „Strukturierte Bildgebungsbefunde“ im OBSERVATION.imaging_exam_result oder in anderen relevanten CLUSTER.imaging_exam-Archetypen vorgesehen, kann aber, sofern klinisch angebracht, auch in anderen ENTRY- oder CLUSTER-Archetypen verwendet werden. Wenn dieser Archetyp um weitere Ebenen strukturierter Ergebnisse erweitert werden muss, können zusätzliche Instanzen des CLUSTER.imaging_exam oder seiner Spezialisierungen im SLOT „Zusätzliche Details“ verschachtelt werden.
+
+Details zu Medikamenten oder Kontrastmitteln, die im Rahmen einer bildgebenden Untersuchung verabreicht werden, werden mithilfe des Archetyps ACTION.medication aufgezeichnet, der normalerweise über das Datenelement „Procedure“ innerhalb des Archetyps OBSERVATION.imaging_exam_result verknüpft ist.
+
+Eine Zusammenfassung aller während des Verfahrens auftretenden Probleme, wie z. B. ein erhöhter Widerstand beim Spülen mit Kontrastmittel, sollte im Datenelement „Kommentar“ innerhalb dieses Archetyps oder im Datenelement „Verfahrenszusammenfassung“ innerhalb von OBSERVATION.imaging_exam_result aufgezeichnet werden. Details zum Verfahren können in einem separaten Verfahrensbericht mithilfe des Archetyps ACTION.procedure aufgezeichnet werden.">
+            misuse = <"Nicht zur Aufzeichnung von Befunden aus bildgebenden Untersuchungen anderer Körperstrukturen oder -regionen als eines einzelnen Eileiters zu verwenden. Verwenden Sie hierfür andere Archetypen aus der CLUSTER.imaging_exam-Familie.
+
+Nicht zur Aufzeichnung von Details im Zusammenhang mit den Gesamtbefunden, dem Kontext oder technischen Details im Zusammenhang mit dem Testergebnis einer vollständigen bildgebenden Untersuchung zu verwenden. Verwenden Sie hierfür OBERSERVATION.imaging_exam_result. Beispielsweise Anmerkungen zur Studienqualität, zu Differenzialdiagnosen und zum Gesamteindruck.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere funn eller observasjoner ved radiologisk undersøkelse av en eggleder.">
+            keywords = <"fluoroskopi", "hysterosalpingografi", "kontrast", "saltløsning", "hycosy", "hsg", "sonografi", "ultralyd", "tube", "sactosalpinx", "hydrosalpinx", "pyosalpinx">
+            use = <"Brukes for å registrere funn ved radiologisk undersøkelse av en eggleder og tolkning av dem.
+
+Det tiltenkte omfanget for denne CLUSTER.imaging_exam (Bildediagnostisk undersøkelse) - arketypen er til slutt å kunne registrere alle detaljerte funn ved bildediagnostisk undersøkelse av en eggleder. Dette inkluderer undersøkelser med kontrast, som røntgen hysterosalpingografi (HSG) eller ultralyd med kontrast (HyCoSy). Det er forventet at flere dataelementer kan bli lagt til når krav til slike er identifisert og bekreftet.
+
+Denne arketypen er utformet for å bli nøstet i SLOT'et \"Ytterligere detaljer\" i arketypen CLUSTER.imaging_exam-uterine_body (Bildediagnostisk undersøkelse - livmor), SLOT'et \"Strukturerte funn\" i OBSERVATION.imaging_exam_result (Bildediagnostisk svar) eller i andre relevante Bildediagnostisk svar-arketyper, men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende. Hvis denne arketypen, eller en spesialisering av denne, må utvides med flere nivåer med detaljerte funn eller observasjoner, kan flere forekomster av arketypen eller dens spesialiseringer nøstes i SLOT'et \"Ytterligere detaljer\".
+
+Detaljer om om medikasjon eller kontrast som er administrert som del av en bildeundersøkelse vil bli registrert ved å bruke arketypen ACTION.medcation (Legemiddelhåndtering) og vanligvis linket til fra dataelementet \"Prosedyre\" i arketypen OBSERVATION.imaging_exam_result (Bildediagnostisk svar).
+
+En oppsummering av eventuelle problemer som har oppstått i prosedyren, som økt motstand ved skylling med kontrastvæske, bør registreres i dataelementet \"Kommentar\" i denne arketypen, eller i \"Sammendrag av prosedyre\" i arketypen OBSERVATION.imaging_exam_result (Bildediagnostisk svar). Detaljer knyttet til prosedyren kan registreres i en egen prosedyrerapport ved å bruke ACTION.procedure archetype (Prosedyre).">
+            misuse = <"Skal ikke brukes til å registrere funn fra undersøkelser av andre kroppsstrukturer enn en enkelt eggleder. Bruk andre arketyper fra gruppen av CLUSTER.imaging_exam-arketyper for dette.
+
+Skal ikke brukes til å registrere overordnede undersøkelsesfunn, kontekst eller tekniske detaljer relatert til billedundersøkelsen. Bruk arketypen OBSERVATION.imaging_exam_result (Bildediagnistisk svar) for å registrere for eksempel kommentar om undersøkelseskvalitet, differensialdiagnose og overordnet konklusjon.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the findings on radiological examination of a single fallopian tube, and their interpretation.">
+            keywords = <"fluroscopy", "hysterosalpingogram", "contrast", "saline", "hycosy", "hsg", "sonography", "ultrasound", "tube", "sactosalpinx", "hydrosalpinx", "pyosalpinx">
+            use = <"Use to record the findings on radiological examination of a single fallopian tube, and their interpretation.
+
+The intended scope for this archetype is to eventually record all detailed findings on radiological examination about the fallopian tube using any modality, including examinations using contrast, such as Hysterosalpingography (HSG) or Hysterosalpingo-Contrast Sonography (HyCoSy). It is anticipated that further data elements may be added as requirements are identified and confirmed. 
+
+This archetype is designed to be nested within the 'Additional details' SLOT in the CLUSTER.imaging_exam-uterine_body, the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or within other relevant CLUSTER.imaging_exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. If this archetype needs to be extended with further levels of structured findings, additional instances of the CLUSTER.imaging_exam or its specialisations can be nested in the 'Additional details' SLOT.
+
+Details about medication or contrast medium administered as part of an imaging examination will be recorded using the ACTION.medication archetype, usually linked from the 'Procedure' data element within the OBSERVATION.imaging_exam_result archetype. 
+
+A summary of any issues arising during the procedure, such as an increased resistance observed while flushing with contrast, should be recorded in the 'Comment' data element within this archetype or the 'Procedure summary' data element within the OBSERVATION.imaging_exam_result. Details related to the procedure can be recorded in a separate Procedure report using the ACTION.procedure archetype.">
+            misuse = <"Not to be used to record imaging examination findings for any body structure or region other than a single fallopian tube. Use other archetypes from the CLUSTER.imaging_exam family for this purpose.
+
+Not to be used to record details related to the overall findings, context or technical details related to a complete imaging examination test result. Use the OBERSERVATION.imaging_exam_result for this purpose. For example, comments on the study quality, differential diagnoses, and overall impression.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Imaging examination of a fallopian tube
+        items matches {
+            ELEMENT[at0001.1] matches {    -- Body structure
+                value matches {
+                    DV_CODED_TEXT[at0.9002] matches {
+                        defining_code matches {[ac0.9000]}    -- Body structure (synthesised)
+                    }
+                }
+            }
+            allow_archetype CLUSTER[at0.11] matches {    -- Gestational sac details
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.imaging_exam-gestational_sac(-[a-zA-Z0-9_]+)*\.v0\..*/}
+            }
+            after [at0004]
+            ELEMENT[at0.3] occurrences matches {0..1} matches {    -- Patency
+                value matches {
+                    DV_CODED_TEXT[at0.9003] matches {
+                        defining_code matches {[ac0.9001]}    -- Patency (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.7] occurrences matches {0..1} matches {    -- Gestational sac presence
+                value matches {
+                    DV_CODED_TEXT[at0.9004] matches {
+                        defining_code matches {[ac0.9003]}    -- Gestational sac presence (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0.1"] = <
+                text = <"Right fallopian tube">
+                description = <"">
+            >
+            ["at0.10"] = <
+                text = <"Unbestimmt">
+                description = <"Es ist nicht möglich festzustellen, ob eine Fruchtblase vorhanden ist oder nicht.">
+            >
+            ["at0.11"] = <
+                text = <"Details zur Fruchtblase">
+                description = <"Strukturierte Details zu einer beobachteten Fruchtblase im Eileiter.">
+            >
+            ["at0.2"] = <
+                text = <"Left fallopian tube">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"Durchgängigkeit">
+                description = <"Beurteilung der Durchgängigkeit der Eileiter.">
+            >
+            ["at0.4"] = <
+                text = <"Patent">
+                description = <"Contrast medium spills into the peritoneum.">
+            >
+            ["at0.5"] = <
+                text = <"Blocked">
+                description = <"Contrast medium does not spill into the peritoneum.">
+            >
+            ["at0.6"] = <
+                text = <"Unbestimmt">
+                description = <"Es lässt sich nicht feststellen, ob der Eileiter durchgängig oder verschlossen ist.">
+            >
+            ["at0.7"] = <
+                text = <"Vorhandensein einer Fruchtblase">
+                description = <"Vorhandensein einer Fruchtblase innerhalb des identifizierten Eileiters.">
+            >
+            ["at0.8"] = <
+                text = <"Vorhanden">
+                description = <"Es ist ein Fruchtsack zu erkennen.">
+            >
+            ["at0.9"] = <
+                text = <"Abwesend">
+                description = <"Es ist kein Fruchtsack zu erkennen.">
+            >
+            ["at0000.1"] = <
+                text = <"Bildgebende Untersuchung einer Körperstruktur">
+                description = <"Befunde der radiologischen Untersuchung eines einzelnen Eileiters.">
+            >
+            ["at0001.1"] = <
+                text = <"Körperstruktur">
+                description = <"Identifizierung der untersuchten Körperstruktur oder Region.">
+                comment = <"Wenn die Körperstruktur in diesem Element „Körperstruktur“ vollständig identifiziert wurde, werden das Datenelement „Körperstelle“ und der SLOT „Strukturierte Körperstelle“ überflüssig.">
+            >
+            ["ac0.9000"] = <
+                text = <"Körperstruktur (synthesised)">
+                description = <"Identifizierung der untersuchten Körperstruktur oder Region. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Durchgängigkeit (synthesised)">
+                description = <"Beurteilung der Durchgängigkeit der Eileiter. (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"Vorhandensein einer Fruchtblase (synthesised)">
+                description = <"Vorhandensein einer Fruchtblase innerhalb des identifizierten Eileiters. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0.1"] = <
+                text = <"Høyre eggleder">
+                description = <"">
+            >
+            ["at0.10"] = <
+                text = <"Ubstemmelig">
+                description = <"Det er ikke mulig å avgjøre om en gestasjonssekk er tilstede eller fraværende.">
+            >
+            ["at0.11"] = <
+                text = <"Gestasjonssekkdetaljer">
+                description = <"Strukturerte detaljer om en observert gestasjonssekk i egglederen.">
+            >
+            ["at0.2"] = <
+                text = <"Venstre eggleder">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"Gjennomtrengelighet">
+                description = <"Vurdering av i hvilken grad egglederen er åpen.">
+            >
+            ["at0.4"] = <
+                text = <"Åpen">
+                description = <"Kontrastvæsken flyter fritt til bukhulen.">
+            >
+            ["at0.5"] = <
+                text = <"Blokkert">
+                description = <"Kontrastvæsken flyter ikke til bukhulen.">
+            >
+            ["at0.6"] = <
+                text = <"Ubestemmelig">
+                description = <"Det er ikke mulig å bestemme om egglederen er åpen eller blokkert.">
+            >
+            ["at0.7"] = <
+                text = <"Gestasjonssekk tilstedeværelse">
+                description = <"Tilstedeværelse av en gestasjonssekk i den identifiserte egglederen.">
+            >
+            ["at0.8"] = <
+                text = <"Tilstede">
+                description = <"En gestasjonssekk er observert.">
+            >
+            ["at0.9"] = <
+                text = <"Fraværende">
+                description = <"Ingen gestasjonssekk er observert.">
+            >
+            ["at0000.1"] = <
+                text = <"Bildediagnostisk undersøkelse - eggleder">
+                description = <"Funn eller observasjoner ved radiologisk undersøkelse av en eggleder.">
+            >
+            ["at0001.1"] = <
+                text = <"Kroppsstruktur">
+                description = <"Identifisering av strukturen i kroppen eller regionen som er undersøkt.">
+                comment = <"Dersom den aktuelle strukturen i kroppen er fullt ut angitt i dette \"Kroppsstruktur\"-elementet er det ikke nødvendig å bruke \"Anatomisk lokalisasjon\" eller \"Strukturert anatomisk lokalisasjon\".">
+            >
+            ["ac0.9000"] = <
+                text = <"Kroppsstruktur (synthesised)">
+                description = <"Identifisering av strukturen i kroppen eller regionen som er undersøkt. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Gjennomtrengelighet (synthesised)">
+                description = <"Vurdering av i hvilken grad egglederen er åpen. (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"Gestasjonssekk tilstedeværelse (synthesised)">
+                description = <"Tilstedeværelse av en gestasjonssekk i den identifiserte egglederen. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0.1"] = <
+                text = <"Right fallopian tube">
+                description = <"">
+            >
+            ["at0.2"] = <
+                text = <"Left fallopian tube">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"Patency">
+                description = <"Assessment of the patency of the fallopian tube.">
+            >
+            ["at0.4"] = <
+                text = <"Patent">
+                description = <"Contrast medium spills into the peritoneum.">
+            >
+            ["at0.5"] = <
+                text = <"Blocked">
+                description = <"Contrast medium does not spill into the peritoneum.">
+            >
+            ["at0.6"] = <
+                text = <"Indeterminate">
+                description = <"It is not possible to determine if the fallopian tube is patent or blocked.">
+            >
+            ["at0000.1"] = <
+                text = <"Imaging examination of a fallopian tube">
+                description = <"Findings on radiological examination of a single fallopian tube.">
+            >
+            ["at0001.1"] = <
+                text = <"Body structure">
+                description = <"Identification of the body structure or region examined.">
+                comment = <"If the body structure has been fully identified in this 'Body structure' element, then the 'Body site' data element and 'Structured body site' SLOT becomes redundant.">
+            >
+            ["at0.7"] = <
+                text = <"Gestational sac presence">
+                description = <"Presence of a gestational sac within the identified fallopian tube.">
+            >
+            ["at0.8"] = <
+                text = <"Present">
+                description = <"A gestational sac is observed.">
+            >
+            ["at0.9"] = <
+                text = <"Absent">
+                description = <"No gestational sac is observed.">
+            >
+            ["at0.10"] = <
+                text = <"Indeterminate">
+                description = <"It is not possible to determine if a gestational sac is present or absent.">
+            >
+            ["at0.11"] = <
+                text = <"Gestational sac details">
+                description = <"Structured details about an observed gestational sac within the fallopian tube.">
+            >
+            ["ac0.9000"] = <
+                text = <"Body structure (synthesised)">
+                description = <"Identification of the body structure or region examined. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Patency (synthesised)">
+                description = <"Assessment of the patency of the fallopian tube. (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"Gestational sac presence (synthesised)">
+                description = <"Presence of a gestational sac within the identified fallopian tube. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0.1"] = <http://snomed.info/id/2033006>
+            ["at0.2"] = <http://snomed.info/id/113293009>
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.1", "at0.2">
+        >
+        ["ac0.9003"] = <
+            id = <"ac0.9003">
+            members = <"at0.8", "at0.9", "at0.10">
+        >
+        ["ac0.9001"] = <
+            id = <"ac0.9001">
+            members = <"at0.4", "at0.5", "at0.6">
+        >
+    >

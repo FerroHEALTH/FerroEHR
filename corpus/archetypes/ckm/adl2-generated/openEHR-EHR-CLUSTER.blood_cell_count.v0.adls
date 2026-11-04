@@ -1,0 +1,225 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=641d30c9-90ad-44bc-a122-a64597f9b723; build_uid=88f5e521-de4c-44c0-b733-5b306f53b99d)
+    openEHR-EHR-CLUSTER.blood_cell_count.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2024-08-28">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"5330D535481B1B8EC76F95F81C6932DA">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Blood cell count
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype CLUSTER[at0012] matches {    -- Specimen
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.specimen(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Red blood cells
+                value matches {
+                    DV_TEXT[at9000]
+                    DV_QUANTITY[at9001] matches {
+                        [units] matches {
+                            [{"10*6/uL"}],
+                            [{"10*12/L"}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- White blood cells
+                value matches {
+                    DV_TEXT[at9002]
+                    DV_QUANTITY[at9003] matches {
+                        [units] matches {
+                            [{"10*3/uL"}],
+                            [{"10*9/L"}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Differential description
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Lymphocytes
+                value matches {
+                    DV_QUANTITY[at9005] matches {
+                        [units] matches {
+                            [{"%"}],
+                            [{"10*9/L"}]
+                        }
+                    }
+                    DV_TEXT[at9006]
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Polymorphonuclear leucocytes
+                value matches {
+                    DV_QUANTITY[at9007] matches {
+                        [units] matches {
+                            [{"%"}],
+                            [{"10*9/L"}],
+                            [{"10*3/uL"}]
+                        }
+                    }
+                    DV_TEXT[at9008]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Neutrophils
+                value matches {
+                    DV_QUANTITY[at9009] matches {
+                        [units] matches {
+                            [{"%"}],
+                            [{"10*9/L"}]
+                        }
+                    }
+                    DV_TEXT[at9010]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Eosinophils
+                value matches {
+                    DV_QUANTITY[at9011] matches {
+                        [units] matches {
+                            [{"%"}],
+                            [{"10*9/L"}]
+                        }
+                    }
+                    DV_TEXT[at9012]
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Basophils
+                value matches {
+                    DV_QUANTITY[at9013] matches {
+                        [units] matches {
+                            [{"%"}],
+                            [{"10*9/L"}]
+                        }
+                    }
+                    DV_TEXT[at9014]
+                }
+            }
+            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Monocytes
+                value matches {
+                    DV_QUANTITY[at9015] matches {
+                        [units] matches {
+                            [{"%"}],
+                            [{"10*9/L"}]
+                        }
+                    }
+                    DV_TEXT[at9016]
+                }
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Platelets
+                value matches {
+                    DV_QUANTITY[at9017]
+                    DV_TEXT[at9018]
+                }
+            }
+            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Blast cells
+                value matches {
+                    DV_QUANTITY[at9019] matches {
+                        [units] matches {
+                            [{"{cells}/uL"}],
+                            [{"%"}]
+                        }
+                    }
+                    DV_TEXT[at9020]
+                }
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9021]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Blood cell count">
+                description = <"Cell counts observed during microscopic examination or automated detection by laboratory machine of blood or other body fluids.">
+                comment = <"For example: whole blood; urine; or CSF.">
+            >
+            ["at0001"] = <
+                text = <"Red blood cells">
+                description = <"Number of red blood cells observed per volume unit.">
+            >
+            ["at0002"] = <
+                text = <"White blood cells">
+                description = <"Number of white blood cells observed per volume unit.">
+            >
+            ["at0003"] = <
+                text = <"Differential description">
+                description = <"Narrative description of the percentages and ratios of each type of white blood cell in the specimen. ">
+            >
+            ["at0004"] = <
+                text = <"Lymphocytes">
+                description = <"Number of lymphocytes observed per volume unit.">
+            >
+            ["at0005"] = <
+                text = <"Polymorphonuclear leucocytes">
+                description = <"Number of granulocytes or polymorphonuclear (PMN) leucocytes observed per volume unit.">
+            >
+            ["at0006"] = <
+                text = <"Neutrophils">
+                description = <"Number of neutrophils observed per volume unit.">
+            >
+            ["at0007"] = <
+                text = <"Eosinophils">
+                description = <"Number of eosinophils observed per volume unit.">
+            >
+            ["at0008"] = <
+                text = <"Basophils">
+                description = <"Number of basophils observed per volume unit.">
+            >
+            ["at0009"] = <
+                text = <"Monocytes">
+                description = <"Number of monocytes observed per volume unit.">
+            >
+            ["at0010"] = <
+                text = <"Platelets">
+                description = <"Number of platelets observed per volume unit.">
+            >
+            ["at0011"] = <
+                text = <"Blast cells">
+                description = <"Number of blast cells observed per volume unit.">
+            >
+            ["at0012"] = <
+                text = <"Specimen">
+                description = <"Identification of the specimen examined.">
+                comment = <"Most commonly, the specimen analysed is blood, as part of a complete blood count (or full blood examination) but other body fluids, such as cerebrospinal fluid or urine, may also be tested to identify and quantify the blood cells present. If the tissue specimen has previously been identified in a a higher level archetype level archetype, such as the OBSERVATION.laboratory_test_result, this SLOT may be redundant.
+
+Most often, the specimen is blood, but other body fluids like cerebrospinal fluid or urine can also be analyzed to identify and quantify the blood cells present.
+
+Typically, the sample used is blood, but other body fluids like cerebrospinal fluid or urine may also be tested to identify and count the blood cells present.">
+            >
+            ["at0014"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the blood cell count, not captured in other fields.">
+            >
+        >
+    >

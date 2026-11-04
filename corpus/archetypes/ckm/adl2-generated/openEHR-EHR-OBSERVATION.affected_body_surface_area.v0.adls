@@ -1,0 +1,242 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=8e75904f-1f01-47a7-b835-448ba1a287bc; build_uid=7dadd608-b833-4b6f-812e-08b18bcb0302)
+    openEHR-EHR-OBSERVATION.affected_body_surface_area.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-10-06">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Åsa Skagerhult, Region Östergötland, Sweden (openEHR Editor)", "Erik Sundvall, Region Östergötland + Linköping University, Sweden (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"23D0148D78948A0A43DDC18CD62DC789">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about the estimated proportion of body surface area affected by a skin injury or disease.">
+            keywords = <"TBSA", "BSA", "burn", "rash", "psoriasis">
+            use = <"Use to record details about the estimated proportion of body surface area affected by a skin injury or disease, including the total body surface area affected, the body surface area affected per body site and the body surface area affected per severity.">
+            misuse = <"Not to be used to record the measured or calculated body surface area of an individual - use the OBSERVATION.body_surface_area for this purpose.">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Affected body surface area
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Condition name
+                                        value matches {
+                                            DV_TEXT[at9000]
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at9001]
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Total body surface area (TBSA) affected
+                                        value matches {
+                                            DV_PROPORTION[at9002] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0006] matches {    -- Per body site
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0007] occurrences matches {1} matches {    -- Body site name
+                                                value matches {
+                                                    DV_TEXT[at9003]
+                                                }
+                                            }
+                                            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Site surface area
+                                                value matches {
+                                                    DV_PROPORTION[at9004] matches {
+                                                        numerator matches {|0.0..100.0|}
+                                                        type matches {2}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Affected site surface area
+                                                value matches {
+                                                    DV_PROPORTION[at9005] matches {
+                                                        numerator matches {|0.0..100.0|}
+                                                        type matches {2}
+                                                    }
+                                                }
+                                            }
+                                            CLUSTER[at0011] occurrences matches {0..1} matches {    -- Per severity
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0012] occurrences matches {1} matches {    -- Severity
+                                                        value matches {
+                                                            DV_TEXT[at9006]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0013] occurrences matches {1} matches {    -- Affected site surface area
+                                                        value matches {
+                                                            DV_PROPORTION[at9007] matches {
+                                                                numerator matches {|0.0..100.0|}
+                                                                type matches {2}
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0015] occurrences matches {0..1} matches {    -- Total body surface area per severity
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0016] occurrences matches {1} matches {    -- Severity
+                                                value matches {
+                                                    DV_TEXT[at9008]
+                                                }
+                                            }
+                                            ELEMENT[at0017] occurrences matches {1} matches {    -- Total body surface area affected
+                                                value matches {
+                                                    DV_PROPORTION[at9009] matches {
+                                                        numerator matches {|0.0..100.0|}
+                                                        type matches {2}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0018] matches {    -- Additional detail
+                                        include
+                                            archetype_id/value matches {/.*/}
+                                    }
+                                    allow_archetype CLUSTER[at0019] matches {    -- Image representation
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.media_file(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9010]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0009] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0021] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Affected body surface area">
+                description = <"Estimation of the proportion of body surface area affected by a skin injury or disease.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Condition name">
+                description = <"The name of the injury or disease affected the skin.">
+                comment = <"For example: burn; or psoriasis. Coding of the condition name with an external terminology is preferred, where possible. ">
+            >
+            ["at0005"] = <
+                text = <"Description">
+                description = <"Narrative description about the affected body surface area assessment.">
+            >
+            ["at0006"] = <
+                text = <"Per body site">
+                description = <"Details about body surface area affected at each body site.">
+            >
+            ["at0007"] = <
+                text = <"Body site name">
+                description = <"The name of the body site assessed.">
+                comment = <"Coding of the body site name with an external terminology is preferred, where possible. ">
+            >
+            ["at0008"] = <
+                text = <"Site surface area">
+                description = <"The estimated percentage of total body surface area apportioned for the entire identified body site.">
+                comment = <"For example: when using the 'Rule of nines' method of estimation, 9% is apportioned for each arm, 18% for the back of the torso, and 1% for the genitalia.">
+            >
+            ["at0010"] = <
+                text = <"Affected site surface area">
+                description = <"The estimated extent of total body surface area affected at the identified body site.">
+                comment = <"For example: when using the 'Rule of nines' method, if half of an arm is affected, the affected site surface area value is 4.5%; or if a third of the back is affected, the value is 6%.">
+            >
+            ["at0011"] = <
+                text = <"Per severity">
+                description = <"Details about each severity of findings at the identified body site.">
+            >
+            ["at0012"] = <
+                text = <"Severity">
+                description = <"The degree of severity of the condition at the identified site.">
+                comment = <"For example: mild, moderate or severe for a rash; or first degree, second degree or third degree for a burn. Coding of the severity with an external terminology is preferred, where possible. It is expected that the severity values will be identical as the values used in the 'Affected body surface area per severity' cluster.">
+            >
+            ["at0013"] = <
+                text = <"Affected site surface area">
+                description = <"The estimated extent of total body surface area affected by the degree of identified severity, at the identified body site.">
+                comment = <"For example: when using the 'Rule of nines' method, if half of an arm is affected, the affected site surface area value is 4.5%; or if a third of the back is affected, the value is 6%.">
+            >
+            ["at0014"] = <
+                text = <"Total body surface area (TBSA) affected">
+                description = <"The total sum of affected surface area across all body sites.">
+                comment = <"For example: if 4.5% of an arm and 6% of the back is affected, then the TBSA is 10%.">
+            >
+            ["at0015"] = <
+                text = <"Total body surface area per severity">
+                description = <"Details about the total sum of surface area affected per severity, across all body sites.">
+            >
+            ["at0016"] = <
+                text = <"Severity">
+                description = <"The degree of severity of the condition.">
+                comment = <"For example: mild, moderate or severe for a rash; or first degree, second degree or third degree for a burn. Coding of the severity with an external terminology is preferred, where possible. It is expected that the severity values will be identical as the values used in the 'Per severity' cluster.">
+            >
+            ["at0017"] = <
+                text = <"Total body surface area affected">
+                description = <"The total sum of body surface area affected by the degree of the identified severity, across all body sites.">
+                comment = <"For example: when using the 'Rule of nines' method, if half of an arm is affected, the affected site surface area value is 4.5 %; or if a third of the back is affected, the value is 6 %.">
+            >
+            ["at0018"] = <
+                text = <"Additional detail">
+                description = <"Additional details about the estimation of affected body surface area.">
+            >
+            ["at0019"] = <
+                text = <"Image representation">
+                description = <"Digital image, video or diagram representing the affected body surface area findings.">
+            >
+            ["at0020"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the estimation of affected body surface area, not captured in other fields.">
+            >
+            ["at0021"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+        >
+    >

@@ -1,0 +1,2225 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6359150e-4104-4044-b81d-855ba7c4b643; build_uid=0ca6f20e-12a8-4185-bbb6-5801a9dbb7de)
+    openEHR-EHR-OBSERVATION.nihss.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Carlotta Jöhnk">
+                ["organisation"] = <"Universitätsklinikum Schleswig-Holstein, Germany">
+                ["email"] = <"carlottapauline.joehnk@uksh.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"June Marie Nepstad Knappskog">
+                ["organisation"] = <"Helse Nord IKT, Norway (openEHR Editor)">
+                ["email"] = <"June.Marie.Nepstad.Knappskog@hnikt.no">
+            >
+            accreditation = <"Nasjonal IKT">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Osmeire Chamelette Sanzovo">
+                ["email"] = <"osmeire.acsanzovo@hsl.org.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Gustavo M Bacelar-Silva">
+        ["organisation"] = <"Healthcare Designs">
+        ["email"] = <"mail@gustavobacelar.com">
+        ["date"] = <"2012-05-11">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Gustavo Bacelar-Silva, Healthcare Designs, Portugal", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Rong Chen, Cambio Healthcare Systems, Sweden", "Ricardo Cruz-Correia, Faculty of Medicine of Porto University, Portugal", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"National Institute of Health. NIH Stroke Scale [Internet]. Bethesda, MD: National Institute of Health; [cited 2025 Mar 11]. Available from: https://www.ninds.nih.gov/health-information/stroke/assess-and-treat/nih-stroke-scale">
+        ["2"] = <"Kristensen DV, Johnsen NT, Amthor KF, Lunde L, Strømmen LB, Vestby EM, et al. Validated translation of the NIHSS with cultural adaptation [Internet]. Sykepleien Research. 2020;15(82736):e-82736. Available from: https://sykepleien.no/forskning/2020/11/validert-oversettelse-av-nihss-med-kulturell-tilpasning">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"9C13BFF63C68EFD92C3BB066C95FDB66">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Um die Ergebnisse des NIHSS als quantitatives Maß für schlaganfallbedingte neurologische Defizite zu erfassen.">
+            keywords = <"Skala, neurologisch, Schlaganfall, Einschätzung, Untersuchung, NIHSS", ...>
+            use = <"Der Archetyp wird verwendet, um die Ergebnisse des NIHSS als quantitatives Maß für schlaganfallbedingte neurologische Defizite zu erfassen. Der Gesamtscore ergibt sich aus der Summe der 15 Kriterien (ausgenommen der Kriterien, die nicht getestet werden konnten).
+
+Der Wert '99' wird verwendet, um den nicht-numerischen Wert 'nicht testbar' auszudrücken. Derzeit ist eine Kombination aus numerischen und nicht-numerischen Werten innerhalb eines einzigen Wertesatzes nicht möglich.">
+            misuse = <"">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere resultat av NIHSS som en kvantitativ måling av slag-relaterte nevrologiske avvik.">
+            keywords = <"skala", "nevrologisk", "hjerneslag", "vurdering", "undersøkelse", "NIHSS", "pakkeforløp">
+            use = <"Brukes for å registrere resultat av NIHSS skåring som en kvantitativ måling av slag-relaterte nevrologiske avvik. Total skåren er en aritmetisk sum av alle 15 svarene, med alle \"Ikke testbar\" verdier ekskludert.
+
+Ordinalverdien \"99\" er tatt med for å kunne representere den ikke-numeriske verdien \"Ikke testbar\". Per nå tillater ikke verken modelleringsverktøyer eller ferdige openEHR journalsystemer å bruke en kombinasjon av numeriske og ikke-numeriske verdier innen ett enkelt verdisett.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Para registrar uma medição sistemática quantitativa de déficit neurológico relacionados ao acidente vascular cerebral. A NIHSS foi originalmente concebida como uma ferramenta de pesquisa para medir os dados de referência sobre doentes em ensaios clínicos de AVC agudo. Atualmente, a escala é também amplamente utilizada como uma ferramenta de avaliação clínica para avaliar a acuidade dos pacientes com AVC, determinar o tratamento adequado e prever o resultado do paciente.">
+            keywords = <"escala", "neurológico", "acidente vascular cerebral", "avaliação", "exame">
+            use = <"*Use to record the results of the National Institutes of Health Stroke Score as a quantitative measurement of stroke-related neurologic deficit.
+
+The total score is the arithmetic sum of all 15 responses, excluding any untestable responses. (en)">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results of NIHSS as a quantitative measurement of stroke-related neurologic deficit.">
+            keywords = <"scale, neurological, stroke, assessment, examination, NIHSS", ...>
+            use = <"Used to record the results of NIHSS scoring as a quantitative measurement of stroke-related neurological deficits. The total score is the arithmetic sum of all 15 responses, with all 'untestable' values excluded.
+
+The ordinal value '99' is included to represent the non-numeric value 'untestable'. Currently, neither modeling tools nor existing openEHR journal systems allow for a combination of numeric and non-numeric values within a single value set.
+">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- NIHSS
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Baseline
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- LOC responsiveness
+                                        value matches {
+                                            DV_ORDINAL[at9015] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- Alert; keenly responsive.
+                                                    [{1}, {[at0006]}],    -- Not Alert; but arousable by minor stimulation to obey, answer, or respond.
+                                                    [{2}, {[at0007]}],    -- Not Alert; requires repeated stimulation to attend, or is obtunded and requires strong or painful
+                                                    [{3}, {[at0008]}]    -- Responds only with reflex motor or autonomic effects, or totally unresponsive, flaccid, and areflexic.
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- LOC questions
+                                        value matches {
+                                            DV_ORDINAL[at9016] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0010]}],    -- Answers both questions correctly.
+                                                    [{1}, {[at0011]}],    -- Answers one question correctly.
+                                                    [{2}, {[at0012]}]    -- Answers neither question correctly.
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- LOC commands
+                                        value matches {
+                                            DV_ORDINAL[at9017] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0014]}],    -- Performs both tasks correctly.
+                                                    [{1}, {[at0015]}],    -- Performs one task correctly.
+                                                    [{2}, {[at0016]}]    -- Performs neither task correctly.
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Best Gaze
+                                        value matches {
+                                            DV_ORDINAL[at9018] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0018]}],    -- Normal.
+                                                    [{1}, {[at0019]}],    -- Partial gaze palsy; gaze is abnormal in one or both eyes, but forced deviation or total gaze paresis is not present.
+                                                    [{2}, {[at0020]}]    -- Forced deviation, or total gaze paresis is not overcome by the oculocephalic maneuver.
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Visual
+                                        value matches {
+                                            DV_ORDINAL[at9019] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0022]}],    -- No visual loss.
+                                                    [{1}, {[at0023]}],    -- Partial hemianopia.
+                                                    [{2}, {[at0024]}],    -- Complete hemianopia.
+                                                    [{3}, {[at0025]}]    -- Bilateral hemianopia (blind including cortical blindness).
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Facial palsy
+                                        value matches {
+                                            DV_ORDINAL[at9020] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0027]}],    -- Normal symmetrical movements.
+                                                    [{1}, {[at0028]}],    -- Minor paralysis (flattened nasolabial fold, asymmetry on smiling).
+                                                    [{2}, {[at0029]}],    -- Partial paralysis (total or near-total paralysis of lower face).
+                                                    [{3}, {[at0030]}]    -- Complete paralysis of one or both sides (absence of facial movement in the upper and lower face).
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0031] occurrences matches {0..1} matches {    -- Motor - left arm
+                                        value matches {
+                                            DV_ORDINAL[at9021] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0032]}],    -- No drift; limb holds 90 (or 45) degrees for full 10 seconds.
+                                                    [{1}, {[at0033]}],    -- Drift; limb holds 90 (or 45) degrees, but drifts down before full 10 seconds; does not hit bed or other support.
+                                                    [{2}, {[at0034]}],    -- Some effort against gravity; limb cannot get to or maintain (if cued) 90 (or 45) degrees, drifts down  to bed, but has some effort against gravity.
+                                                    [{3}, {[at0124]}],    -- No effort against gravity; limb falls.
+                                                    [{4}, {[at0035]}],    -- No movement.
+                                                    [{99}, {[at0036]}]    -- Untestable: Amputation or joint fusion.
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0037] occurrences matches {0..1} matches {    -- Reason left arm untestable
+                                        value matches {
+                                            DV_TEXT[at9022]
+                                        }
+                                    }
+                                    ELEMENT[at0038] occurrences matches {0..1} matches {    -- Motor - right arm
+                                        value matches {
+                                            DV_ORDINAL[at9023] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0039]}],    -- No drift; limb holds 90 (or 45) degrees for full 10 seconds.
+                                                    [{1}, {[at0040]}],    -- Drift; limb holds 90 (or 45) degrees, but drifts down before full 10 seconds; does not hit bed or other support.
+                                                    [{2}, {[at0041]}],    -- Some effort against gravity; limb cannot get to or maintain (if cued) 90 (or 45) degrees, drifts down  to bed, but has some effort against gravity.
+                                                    [{3}, {[at0042]}],    -- No effort against gravity; limb falls.
+                                                    [{4}, {[at0043]}],    -- No movement.
+                                                    [{99}, {[at0044]}]    -- Untestable: Amputation or joint fusion.
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0045] occurrences matches {0..1} matches {    -- Reason right arm untestable
+                                        value matches {
+                                            DV_TEXT[at9024]
+                                        }
+                                    }
+                                    ELEMENT[at0046] occurrences matches {0..1} matches {    -- Motor - left leg
+                                        value matches {
+                                            DV_ORDINAL[at9025] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0047]}],    -- No drift; leg holds 30-degree position for full 5 seconds.
+                                                    [{1}, {[at0048]}],    -- Drift; leg falls by the end of the 5-second period but does not hit the bed.
+                                                    [{2}, {[at0049]}],    -- Some effort against gravity; leg falls to bed by 5 seconds but has some effort against gravity.
+                                                    [{3}, {[at0050]}],    -- No effort against gravity; leg falls to bed immediately.
+                                                    [{4}, {[at0051]}],    -- No movement.
+                                                    [{99}, {[at0052]}]    -- Untestable: Amputation or joint fusion.
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0053] occurrences matches {0..1} matches {    -- Reason left leg untestable
+                                        value matches {
+                                            DV_TEXT[at9026]
+                                        }
+                                    }
+                                    ELEMENT[at0141] occurrences matches {0..1} matches {    -- Motor - right leg
+                                        value matches {
+                                            DV_ORDINAL[at9027] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0054]}],    -- No drift; leg holds 30-degree position for full 5 seconds.
+                                                    [{1}, {[at0055]}],    -- Drift; leg falls by the end of the 5-second period but does not hit the bed.
+                                                    [{2}, {[at0056]}],    -- Some effort against gravity; leg falls to bed by 5 seconds but has some effort against gravity.
+                                                    [{3}, {[at0057]}],    -- No effort against gravity; leg falls to bed immediately.
+                                                    [{4}, {[at0058]}],    -- No movement.
+                                                    [{99}, {[at0059]}]    -- Untestable: Amputation or joint fusion.
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0060] occurrences matches {0..1} matches {    -- Reason right leg untestable
+                                        value matches {
+                                            DV_TEXT[at9028]
+                                        }
+                                    }
+                                    ELEMENT[at0061] occurrences matches {0..1} matches {    -- Limb ataxia
+                                        value matches {
+                                            DV_ORDINAL[at9029] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0062]}],    -- Absent
+                                                    [{1}, {[at0063]}],    -- Present in one limb
+                                                    [{2}, {[at0064]}],    -- Present in two limbs
+                                                    [{99}, {[at0065]}]    -- Untestable: Amputation or joint fusion, explain:
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0066] occurrences matches {0..1} matches {    -- Reason limb ataxia untestable
+                                        value matches {
+                                            DV_TEXT[at9030]
+                                        }
+                                    }
+                                    ELEMENT[at0067] occurrences matches {0..1} matches {    -- Sensory
+                                        value matches {
+                                            DV_ORDINAL[at9031] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0068]}],    -- Normal; no sensory loss.
+                                                    [{1}, {[at0069]}],    -- Mild-to-moderate sensory loss; patient feels pinprick is less sharp or is dull on the affected side; or  there is a loss of superficial pain with pinprick, but patient is aware of being touched.
+                                                    [{2}, {[at0070]}]    -- Severe or total sensory loss; patient is not aware of being touched in the face, arm, and leg.
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0071] occurrences matches {0..1} matches {    -- Best Language
+                                        value matches {
+                                            DV_ORDINAL[at9032] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0072]}],    -- No aphasia; normal.
+                                                    [{1}, {[at0073]}],    -- Mild-to-moderate aphasia; some obvious loss of fluency or facility of comprehension, without  significant limitation on ideas expressed or form of expression. Reduction of speech and/or  comprehension, however, makes conversation about provided materials difficult or impossible. For  example, in conversation about provided materials, examiner can identify picture or naming card  content from patient’s response.
+                                                    [{2}, {[at0074]}],    -- Severe aphasia; all communication is through fragmentary expression; great need for inference, questioning, and guessing by the listener. Range of information that can be exchanged is limited; listener carries burden of communication. Examiner cannot identify materials provided from patient response.
+                                                    [{3}, {[at0075]}]    -- Mute, global aphasia; no usable speech or auditory comprehension.
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0076] occurrences matches {0..1} matches {    -- Dysarthria
+                                        value matches {
+                                            DV_ORDINAL[at9033] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0077]}],    -- Normal
+                                                    [{1}, {[at0078]}],    -- Mild-to-moderate dysarthria; patient slurs at least some words and, at worst, can be understood with some difficulty.
+                                                    [{2}, {[at0079]}],    -- Severe dysarthria; patient’s speech is so slurred as to be unintelligible in the absence of or out of proportion to any dysphasia, or is mute/anarthric.
+                                                    [{99}, {[at0080]}]    -- Untestable: Intubated or other physical barrier.
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0081] occurrences matches {0..1} matches {    -- Reason speech untestable
+                                        value matches {
+                                            DV_TEXT[at9034]
+                                        }
+                                    }
+                                    ELEMENT[at0082] occurrences matches {0..1} matches {    -- Extinction and inattention
+                                        value matches {
+                                            DV_ORDINAL[at9035] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0083]}],    -- No abnormality.
+                                                    [{1}, {[at0084]}],    -- Visual, tactile, auditory, spatial, or personal inattention, or extinction to bilateral simultaneous stimulation in one of the sensory modalities.
+                                                    [{2}, {[at0085]}]    -- Profound hemi-inattention or extinction to more than one modality; does not recognize own hand or orients to only one side of space.
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0086] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9036] matches {
+                                                magnitude matches {|0..42|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    POINT_EVENT[at0087] occurrences matches {0..1} matches {    -- 2 hours post treatment
+                        data matches {
+                            use_node ITEM_TREE[at9037] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                    POINT_EVENT[at0088] occurrences matches {0..1} matches {    -- 24 hours post symptom onset
+                        data matches {
+                            use_node ITEM_TREE[at9038] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                    POINT_EVENT[at0089] occurrences matches {0..1} matches {    -- 7–10 days
+                        data matches {
+                            use_node ITEM_TREE[at9039] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                    POINT_EVENT[at0090] occurrences matches {0..1} matches {    -- 3 months
+                        data matches {
+                            use_node ITEM_TREE[at9040] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                    EVENT[at0091] matches {    -- Any event
+                        data matches {
+                            use_node ITEM_TREE[at9041] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0092] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0093] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"NIHSS">
+                description = <"Neurologische Schlaganfallskala, die sich aus 15 Punkten zusammensetzt und ein quantitatives Maß für schlaganfallbedingte neurologische Defizite liefert.">
+                comment = <"NIHSS - National Institutes of Health Stroke Scale">
+            >
+            ["at0002"] = <
+                text = <"Baseline">
+                description = <"Basis-Bewertung">
+            >
+            ["at0004"] = <
+                text = <"Bewusstseinslage  (Vigilanz)">
+                description = <"Beim Patienten beobachtete Bewusstseinslage.">
+            >
+            ["at0005"] = <
+                text = <"Wach">
+                description = <"Unmittelbar antwortend.">
+            >
+            ["at0006"] = <
+                text = <"Benommen">
+                description = <"Benommen, aber durch geringe Stimulation zum Befolgen von Aufforderungen, Antworten oder Reaktionen zu bewegen.">
+            >
+            ["at0007"] = <
+                text = <"Somnolent">
+                description = <"Bedarf wiederholter Stimulation um aufmerksam zu sein, oder ist soporös und bedarf starker oder schmerzhafter Stimulation zum Erzielen von Bewegungen.">
+            >
+            ["at0008"] = <
+                text = <"Koma">
+                description = <"Antwortet nur mit motorischen oder vegetativen Reflexen oder reagiert gar nicht, ist schlaff und ohne Reflexe.">
+            >
+            ["at0009"] = <
+                text = <"Orientierung">
+                description = <" Frage nach Monat und Alter des Patienten.">
+            >
+            ["at0010"] = <
+                text = <"Beide Fragen richtig beantwortet.">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Eine Frage richtig beantwortet.">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Keine Frage richtig beantwortet.">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Befolgung von Aufforderungen">
+                description = <"Aufforderung die Augen und die nicht paretische Hand zu öffnen und zu schließen.">
+            >
+            ["at0014"] = <
+                text = <"Beide Aufforderungen richtig befolgt.">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Eine Aufforderung richtig befolgt.">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Keine Aufforderung richtig befolgt.">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Blickbewegungen (Oculomotorik)">
+                description = <"Horizontale Bewegung der Augen.">
+            >
+            ["at0018"] = <
+                text = <"Normal">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Partielle Blickparese">
+                description = <"Die Blickrichtung von einem oder beiden Augen ist abnormal, jedoch besteht keine forcierte Blickdeviation oder komplette Blickparese.">
+            >
+            ["at0020"] = <
+                text = <"Forcierte Blickdeviation oder komplette Blickparese">
+                description = <"Forcierte Blickdeviation oder komplette Blickparese, die durch Ausführen des oculocephalen Reflexes nicht überwunden werden kann.">
+            >
+            ["at0021"] = <
+                text = <"Gesichtsfeld">
+                description = <"Durchführung einer Gesichtsfelduntersuchung.">
+            >
+            ["at0022"] = <
+                text = <"Keine Einschränkung">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Partielle Hemianopsie">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Komplette Hemianopsie">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Bilaterale Hemianopsie">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Facialisparese">
+                description = <"Prüfung auf Facialisparese.">
+            >
+            ["at0027"] = <
+                text = <"Normal">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Gering">
+                description = <"Abgeflachte Nasolabialfalte, Asymmetrie beim Lächeln.">
+            >
+            ["at0029"] = <
+                text = <"Partiell">
+                description = <"Vollständige oder fast vollständige Parese des unteren Gesichts.">
+            >
+            ["at0030"] = <
+                text = <"Vollständig auf einer oder beiden Seiten">
+                description = <"Fehlende Bewegungen unterer und oberer Teil des Gesichts.">
+            >
+            ["at0067"] = <
+                text = <"Sensibilität">
+                description = <"Untersuchung auf Sensibilitätsverlust.">
+            >
+            ["at0068"] = <
+                text = <"Normal">
+                description = <"Kein Sensibilitätsverlust.">
+            >
+            ["at0069"] = <
+                text = <"Leichter bis mittelschwerer Sensibilitätsverlust">
+                description = <"Patient empfindet Nadelstiche auf der betroffenen Seite als stumpf, oder er nimmt diese nur als Berührung wahr.">
+            >
+            ["at0070"] = <
+                text = <"Schwerer bis vollständiger Sensibilitätsverlust">
+                description = <"Patient nimmt die Berührung von Gesicht, Arm und Bein nicht wahr.">
+            >
+            ["at0071"] = <
+                text = <"Sprache">
+                description = <"Untersuchung der Sprachfähigkeiten.">
+            >
+            ["at0072"] = <
+                text = <"Normal">
+                description = <"Keine Aphasie.">
+            >
+            ["at0073"] = <
+                text = <"Leichte bis mittelschwere Aphasie">
+                description = <"Deutliche Einschränkung der Wortflüssigkeit oder des Sprachverständnisses, keine relevante Einschränkung von Umfang oder Art des Ausdruckes. Die  Einschränkung des Sprachvermögens und/oder des Sprachverständnisses macht die Unterhaltung schwierig bis unmöglich.">
+            >
+            ["at0074"] = <
+                text = <"Schwere Aphasie">
+                description = <"Die Kommunikation findet über fragmentierte Ausdrucksformen statt. Der Untersucher muss das Gesagte in großem Umfang interpretieren, nachfragen oder erraten. Der Untersucher trägt im wesentlichen die Kommunikation.">
+            >
+            ["at0075"] = <
+                text = <"Stumm, globale Aphasie">
+                description = <"Sprachproduktion oder Sprachverständnis nicht verwertbar (auch bei Koma).">
+            >
+            ["at0082"] = <
+                text = <"Neglect">
+                description = <"Untersuchung auf Neglect.">
+            >
+            ["at0083"] = <
+                text = <"Keine Abnormalität">
+                description = <"">
+            >
+            ["at0084"] = <
+                text = <"Visuelle, taktile, auditive oder personenbezogene Unaufmerksamkeit oder Auslöschung bei Überprüfung von gleichzeitiger bilateraler Stimulation in einer der sensiblen Qualitäten.">
+                description = <"">
+            >
+            ["at0085"] = <
+                text = <"Schwere halbseitige Unaufmerksamkeit. Kein Erkennen der eigenen Hand oder Orientierung nur zu einer Seite des Raumes.">
+                description = <"">
+            >
+            ["at0086"] = <
+                text = <"Gesamtscore">
+                description = <"Der Gesamtscore ergibt sich aus der Summe der 15 Kriterien ausgenommen der Kriterien, die nicht getestet werden konnten.">
+            >
+            ["at0031"] = <
+                text = <"Motorik linker Arm">
+                description = <"Test der Motorik des linken Arms.">
+                comment = <"*Only in the case of amputation or joint fusion at the shoulder, the examiner should record the score as 'Untestable' and record the reason in the 'Reason left arm untestable' data element. 
+Implementation note: Although the 'Untestable' value is included in the ordinal to allow its inclusion in the user interface dropdown menu, NIHSS does not assign a numerical score for the 'Untestable' option in the total NIHSS score.(en)">
+            >
+            ["at0032"] = <
+                text = <"Kein Absinken">
+                description = <"Der Arm wird über 10 Sekunden in der 90º/45º Position gehalten.">
+            >
+            ["at0033"] = <
+                text = <"Absinken">
+                description = <"Der Arm wird zunächst bei 90º/45º gehalten, sinkt aber im Verlauf von 10 Sek. ab.">
+            >
+            ["at0034"] = <
+                text = <"Anheben gegen Schwerkraft möglich">
+                description = <"Der Arm kann die 90º/45º Position nicht erreichen oder halten, sinkt auf die Liegefläche ab, kann aber gegen Schwerkraft angehoben werden.">
+            >
+            ["at0124"] = <
+                text = <"Kein (aktives) Anheben gegen Schwerkraft möglich">
+                description = <"Der Arm fällt nach passivem Anheben sofort auf die Liegefläche.">
+            >
+            ["at0035"] = <
+                text = <"Keine Bewegung">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Kann nicht getestet werden">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Motorik rechter Arm">
+                description = <"Test der Motorik des rechten Arms.">
+                comment = <"*Only in the case of amputation or joint fusion at the shoulder, the examiner should record the score as 'Untestable' and record the reason in the 'Reason right arm untestable' data element. 
+Implementation note: Although the 'Untestable' value is included in the ordinal to allow its inclusion in the user interface dropdown menu, NIHSS does not assign a numerical score for the 'Untestable' option in the total NIHSS score.(en)">
+            >
+            ["at0039"] = <
+                text = <"Kein Absinken">
+                description = <"Der Arm wird über 10 Sekunden in der 90º/45º Position gehalten.">
+            >
+            ["at0040"] = <
+                text = <"Absinken">
+                description = <"Der Arm wird zunächst bei 90º/45º gehalten, sinkt aber im Verlauf von 10 Sek. ab.">
+            >
+            ["at0041"] = <
+                text = <"Anheben gegen Schwerkraft möglich">
+                description = <"Der Arm kann die 90º/45º Position nicht erreichen oder halten, sinkt auf die Liegefläche ab, kann aber gegen Schwerkraft angehoben werden.">
+            >
+            ["at0042"] = <
+                text = <"Kein (aktives) Anheben gegen Schwerkraft möglich">
+                description = <"Der Arm fällt nach passivem Anheben sofort auf die Liegefläche.">
+            >
+            ["at0043"] = <
+                text = <"Keine Bewegung">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Kann nicht getestet werden.">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Motorik linkes Bein">
+                description = <"Test der Motorik des linken Beins.">
+                comment = <"*Only in the case of amputation or joint fusion at the hip, the examiner should record the score as 'Untestable' and record the reason in the 'Reason left leg untestable' data element. 
+Implementation note: Although the 'Untestable' value is included in the ordinal to allow its inclusion in the user interface dropdown menu, NIHSS does not assign a numerical score for the 'Untestable' option in the total NIHSS score.(en)">
+            >
+            ["at0047"] = <
+                text = <"Kein Absinken">
+                description = <"Das Bein bleibt über 5 Sekunden in der 30º Position.">
+            >
+            ["at0048"] = <
+                text = <"Absinken">
+                description = <"Das Bein sinkt am Ende der 5 Sekundenperiode, berührt aber die Liegefläche nicht.">
+            >
+            ["at0049"] = <
+                text = <"Aktive Bewegung gegen die Schwerkraft">
+                description = <"Das Bein sinkt binnen 5 Sek. auf die Liegefläche ab, kann aber gegen die Schwerkraft gehoben werden.">
+            >
+            ["at0050"] = <
+                text = <"Kein (aktives) Anheben gegen die Schwerkraft">
+                description = <"Das Bein fällt nach passivem Anheben sofort auf die Liegefläche.">
+            >
+            ["at0051"] = <
+                text = <"Keine Bewegung">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Kann nicht getestet werden.">
+                description = <"">
+            >
+            ["at0141"] = <
+                text = <"Motorik rechtes Bein">
+                description = <"Test der Motorik des rechten Beins.">
+                comment = <"*Only in the case of amputation or joint fusion at the hip, the examiner should record the score as 'Untestable' and record the reason in the 'Reason right leg untestable' data element.
+Implementation note: Although the 'Untestable' value is included in the ordinal to allow its inclusion in the user interface dropdown menu, NIHSS does not assign a numerical score for the 'Untestable' option in the total NIHSS score.(en)">
+            >
+            ["at0054"] = <
+                text = <"Kein Absinken">
+                description = <"Das Bein bleibt über 5 Sekunden in der 30º Position.">
+            >
+            ["at0055"] = <
+                text = <"Absinken">
+                description = <"Das Bein sinkt am Ende der 5 Sekundenperiode, berührt aber die Liegefläche nicht.">
+            >
+            ["at0056"] = <
+                text = <"Aktive Bewegung gegen die Schwerkraft">
+                description = <"Das Bein sinkt binnen 5 Sek. auf die Liegefläche ab, kann aber gegen die Schwerkraft gehoben werden.">
+            >
+            ["at0057"] = <
+                text = <"Kein (aktives) Anheben gegen die Schwerkraft">
+                description = <"Das Bein fällt nach passivem Anheben sofort auf die Liegefläche.">
+            >
+            ["at0058"] = <
+                text = <"Keine Bewegung">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Kann nicht getestet werden.">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Extremitätenataxie">
+                description = <"Prüfung auf Extremitätenataxie als Hinweis auf einseitige Verletzung des Kleinhirns.">
+            >
+            ["at0062"] = <
+                text = <"Fehlend">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"In einer Extremität vorhanden.">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"In zwei Extremitäten vorhanden.">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Kann nicht getestet werden.">
+                description = <"">
+            >
+            ["at0076"] = <
+                text = <"Dysarthrie">
+                description = <"Untersuchung der Sprechfähigkeiten.">
+                comment = <"*Only if the patient is intubated or has other physical barriers to producing speech, the examiner should record the score as 'Untestable' and record the reason in the 'Reason speech untestable' data element. 
+Implementation note: Although the 'Untestable' value is included in the ordinal to allow its inclusion in the user interface dropdown menu, NIHSS does not assign a numerical score for the 'Untestable' option in the total NIHSS score.(en)">
+            >
+            ["at0077"] = <
+                text = <"Normal">
+                description = <"Normale Sprache.">
+            >
+            ["at0078"] = <
+                text = <"Leicht bis mittelschwer">
+                description = <"Der Patient spricht zumindest einige Worte verwaschen und kann nur mit Schwierigkeiten verstanden werden.">
+            >
+            ["at0079"] = <
+                text = <"Schwer, anarthrisch">
+                description = <"Die verwaschene Sprache des Patienten ist unverständlich und beruht nicht auf einer Aphasie.">
+            >
+            ["at0087"] = <
+                text = <"2 Stunden nach Behandlung">
+                description = <"Beurteilung 2 Stunden nach der Behandlung.">
+            >
+            ["at0088"] = <
+                text = <"24 Stunden nach Beginn der Symptome">
+                description = <"Beurteilung 24 Stunden nach Beginn der Symptome (mit einer Toleranz von +- 20 Minuten).">
+            >
+            ["at0089"] = <
+                text = <"7-10 Tage">
+                description = <"Beurteilung 7-10 Tage nach dem Schlaganfall.">
+            >
+            ["at0090"] = <
+                text = <"3 Monate">
+                description = <"Beurteilung 3 Monate nach dem Schlaganfall.">
+            >
+            ["at0091"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Undefinierter Zeitpunkt, der explizit in einem Template oder zur Laufzeit der Anwendung definiert werden kann.">
+            >
+            ["at0037"] = <
+                text = <"Grund, warum linker Arm nicht getestet werden kann">
+                description = <"Beschreibung, warum die Motorik des linken Arms nicht getestet werden kann.">
+            >
+            ["at0045"] = <
+                text = <"Grund, warum rechter Arm nicht getestet werden kann">
+                description = <"Beschreibung, warum die Motorik des rechten Arms nicht getestet werden kann.">
+            >
+            ["at0053"] = <
+                text = <"Grund, warum linkes Bein nicht getestet werden kann">
+                description = <"Beschreibung, warum die Motorik des linken Beins nicht getestet werden kann.">
+            >
+            ["at0060"] = <
+                text = <"Grund, warum rechtes Bein nicht getestet werden kann">
+                description = <"Beschreibung, warum die Motorik des rechten Beins nicht getestet werden kann.">
+            >
+            ["at0066"] = <
+                text = <"Grund, warum Extremitätenataxie nicht testbar ist">
+                description = <"Beschreibung, warum Extremitätenataxie nicht testbar ist.">
+            >
+            ["at0081"] = <
+                text = <"Grund, warum die Sprechfähigkeit nicht testbar ist">
+                description = <"Beschreibung, warum die Sprechfähigkeit nicht getestet werden kann.">
+            >
+            ["at0080"] = <
+                text = <"Kann nicht getestet werden">
+                description = <"">
+            >
+            ["at0093"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder zur Anpassung an andere Referenzmodelle / Formalismen.">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR.(en)">
+            >
+            ["ac9041"] = <
+                text = <"Bewusstseinslage  (Vigilanz) (synthesised)">
+                description = <"Beim Patienten beobachtete Bewusstseinslage. (synthesised)">
+            >
+            ["ac9042"] = <
+                text = <"Orientierung (synthesised)">
+                description = <" Frage nach Monat und Alter des Patienten. (synthesised)">
+            >
+            ["ac9043"] = <
+                text = <"Befolgung von Aufforderungen (synthesised)">
+                description = <"Aufforderung die Augen und die nicht paretische Hand zu öffnen und zu schließen. (synthesised)">
+            >
+            ["ac9044"] = <
+                text = <"Blickbewegungen (Oculomotorik) (synthesised)">
+                description = <"Horizontale Bewegung der Augen. (synthesised)">
+            >
+            ["ac9045"] = <
+                text = <"Gesichtsfeld (synthesised)">
+                description = <"Durchführung einer Gesichtsfelduntersuchung. (synthesised)">
+            >
+            ["ac9046"] = <
+                text = <"Facialisparese (synthesised)">
+                description = <"Prüfung auf Facialisparese. (synthesised)">
+            >
+            ["ac9047"] = <
+                text = <"Motorik linker Arm (synthesised)">
+                description = <"Test der Motorik des linken Arms. (synthesised)">
+            >
+            ["ac9048"] = <
+                text = <"Motorik rechter Arm (synthesised)">
+                description = <"Test der Motorik des rechten Arms. (synthesised)">
+            >
+            ["ac9049"] = <
+                text = <"Motorik linkes Bein (synthesised)">
+                description = <"Test der Motorik des linken Beins. (synthesised)">
+            >
+            ["ac9050"] = <
+                text = <"Motorik rechtes Bein (synthesised)">
+                description = <"Test der Motorik des rechten Beins. (synthesised)">
+            >
+            ["ac9051"] = <
+                text = <"Extremitätenataxie (synthesised)">
+                description = <"Prüfung auf Extremitätenataxie als Hinweis auf einseitige Verletzung des Kleinhirns. (synthesised)">
+            >
+            ["ac9052"] = <
+                text = <"Sensibilität (synthesised)">
+                description = <"Untersuchung auf Sensibilitätsverlust. (synthesised)">
+            >
+            ["ac9053"] = <
+                text = <"Sprache (synthesised)">
+                description = <"Untersuchung der Sprachfähigkeiten. (synthesised)">
+            >
+            ["ac9054"] = <
+                text = <"Dysarthrie (synthesised)">
+                description = <"Untersuchung der Sprechfähigkeiten. (synthesised)">
+            >
+            ["ac9055"] = <
+                text = <"Neglect (synthesised)">
+                description = <"Untersuchung auf Neglect. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"NIHSS">
+                description = <"15-punkts nevrologisk hjerneslagskalaundersøkelse som gir en kvantitativ måling av slag-relaterte nevrologiske avvik.">
+                comment = <"NIHSS - National Institutes of Health Stroke Scale.">
+            >
+            ["at0002"] = <
+                text = <"Baseline">
+                description = <"Vurdering ved mottak.">
+            >
+            ["at0004"] = <
+                text = <"Bevissthetsnivå">
+                description = <"Observert bevissthetsnivå av individet.">
+            >
+            ["at0005"] = <
+                text = <"Våken og adekvat">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Døsig, reagerer adekvat ved lett stimulering">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Døsig, reagerer først ved kraftigere/gjentatt stimulering">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Reagerer ikke, eller bare med ikke-målrettet bevegelse">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Orientering">
+                description = <"Individet spørres om måned og alder.">
+            >
+            ["at0010"] = <
+                text = <"Riktig svar på begge spørsmål">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Riktig svar på ett spørsmål">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Ingen riktige svar">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Respons på kommando">
+                description = <"Individet bes åpne og lukke øyne, og knyte hånd.">
+            >
+            ["at0014"] = <
+                text = <"Utfører begge kommandoer korrekt">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Utfører en kommando korrekt">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Utfører ingen korrekt">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Blikkbevegelse">
+                description = <"Horisontal bevegelse til begge sider.">
+            >
+            ["at0018"] = <
+                text = <"Normal øyebevegelse">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Delvis blikkparese (eller ved øyemuskelparese)">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Fiksert blikkdreining til siden eller total blikkparese">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Synsfelt">
+                description = <"Bevege fingre/fingertelling i laterale synsfelt.">
+            >
+            ["at0022"] = <
+                text = <"Normalt">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Delvis hemianopsi">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Total hemianopsi">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Bilateral hemianopsi/blind">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Ansikt">
+                description = <"Individet spørres om å vise tenner, knipe igjen øynene og løfte øyenbryn.">
+            >
+            ["at0027"] = <
+                text = <"Normale symmetriske bevegelser">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Utvisket nasolabalfure, asymmetri ved smil">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Betydelig lammelse i nedre ansiktshalvdel">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Total lammelse i halve ansiktet">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Kraft i armen - venstre arm">
+                description = <"Holde venstre arm utstrakt 45 grader i 10 sekunder.">
+                comment = <"Bare i tilfeller som amputasjon eller skulderleddfusjon, bør helsepersonell registrere verdien 'Ikke testbar' og registrere beskrivelsen i dataelementet 'Beskriv Ikke testbar - venstre arm'.
+Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen for å tillate inkludering i brukergrensesnittets nedtrekksmeny, tilegner NIHSS ikke en numerisk skår for 'Ikke testbar' valget til total NIHSS skår.">
+            >
+            ["at0032"] = <
+                text = <"Ingen drifting">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Drifter til lavere posisjon (treffer ikke underlag)">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Noe bevegelse mot tyngdekraften, drifter til sengen">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Ingen bevegelse">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Ikke testbar">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Beskriv Ikke testbar - venstre arm">
+                description = <"Fritekstlig beskrivelse om hvorfor venstre arm er Ikke testbar.">
+            >
+            ["at0038"] = <
+                text = <"Kraft i armen - høyre arm">
+                description = <"Holde høyre arm utstrakt 45 grader i 10 sekunder.">
+                comment = <"Bare i tilfeller som amputasjon eller skulderleddfusjon, bør helsepersonell registrere verdien 'Ikke testbar' og registrere beskrivelsen i dataelementet 'Beskriv Ikke testbar - høyre arm'.
+Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen for å tillate inkludering i brukergrensesnittets nedtrekksmeny, tilegner NIHSS ikke en numerisk skår for 'Ikke testbar' valget til total NIHSS skår.">
+            >
+            ["at0039"] = <
+                text = <"Ingen drifting">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Drifter til lavere posisjon (treffer ikke underlag)">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Noe bevegelse mot tyngdekraften, drifter til sengen">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Kun små muskelbevegelser, faller til sengen">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Ingen bevegelse">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Ikke testbar">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Beskriv Ikke testbar - høyre arm">
+                description = <"Fritekstlig beskrivelse om hvorfor høyre arm er Ikke testbar.">
+            >
+            ["at0046"] = <
+                text = <"Kraft i benet - venstre ben">
+                description = <"Holde venstre ben utstrakt 30 grader i 5 sekunder.">
+                comment = <"Bare i tilfeller så som amputasjon eller hofteleddfusjon, bør helsepersonell registrere verdien 'Ikke testbar' og registrere beskrivelsen i 'Beskriv Ikke testbar - venstre ben' dataelementet.
+Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen for å tillate inkludering i brukergrensesnittets nedtrekksmeny, tilegner NIHSS ikke en numerisk skår for 'Ikke testbar' valget til total NIHSS skår.">
+            >
+            ["at0047"] = <
+                text = <"Ingen drifting">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Drifter til lavere posisjon (treffer ikke underlag)">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Noe bevegelse mot tyngdekraften, drifter til sengen">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Ingen bevegelse mot tyngdekraften, faller til sengen">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Ingen bevegelse">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Ikke testbar">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Beskriv Ikke testbar - venstre ben">
+                description = <"Fritekstlig beskrivelse om hvorfor venstre ben er Ikke testbar.">
+            >
+            ["at0054"] = <
+                text = <"Ingen drifting">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"Drifter til lavere posisjon (treffer ikke underlag)">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"Noe bevegelse mot tyngdekraften, drifter til sengen">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"Kun små muskelbevegelser, faller til sengen">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"Ingen bevegelse">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Ikke testbar">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Beskriv Ikke testbar - høyre ben">
+                description = <"Fritekstlig beskrivelse om hvorfor høyre ben er Ikke testbar.">
+            >
+            ["at0061"] = <
+                text = <"Ataksi">
+                description = <"Finger-nese-finger test/kne-hæl test.">
+                comment = <"Bare i tilfeller som amputasjon eller leddfusjon, bør helsepersonell registrere verdien 'Ikke testbar' og registrere beskrivelsen i 'Beskriv Ikke testbar - ataksi' dataelementet.
+Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen for å tillate inkludering i brukergrensesnittets nedtrekksmeny, tilegner NIHSS ikke en numerisk skår for 'Ikke testbar' valget til total NIHSS skår.">
+            >
+            ["at0062"] = <
+                text = <"Ingen ataksi">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"Tilstede i en ekstremitet">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"Tilstede i to ekstremiteter">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Ikke testbar">
+                description = <"">
+            >
+            ["at0066"] = <
+                text = <"Beskriv Ikke testbar - ataksi">
+                description = <"Fritekstlig beskrivelse om hvorfor ataksi er Ikke testbar.">
+            >
+            ["at0067"] = <
+                text = <"Sensibilitet">
+                description = <"Sensibilitet for stikk.">
+            >
+            ["at0068"] = <
+                text = <"Normal">
+                description = <"">
+            >
+            ["at0069"] = <
+                text = <"Mild til moderat utfall (kjenne stikk som mindre skarpt)">
+                description = <"">
+            >
+            ["at0070"] = <
+                text = <"Alvorlig til total utfall (også ved coma, kvadriplegisk)">
+                description = <"">
+            >
+            ["at0071"] = <
+                text = <"Språk">
+                description = <"Tale, taleforståelse, leseforståelse, benevning.">
+            >
+            ["at0072"] = <
+                text = <"Ingen afasi">
+                description = <"">
+            >
+            ["at0073"] = <
+                text = <"Mild til moderat afasi, samtale mulig">
+                description = <"">
+            >
+            ["at0074"] = <
+                text = <"Alvorlig afasi, samtale svært vanskelig eller umulig">
+                description = <"">
+            >
+            ["at0075"] = <
+                text = <"Ikke språk (også ved coma)">
+                description = <"">
+            >
+            ["at0076"] = <
+                text = <"Dysartri">
+                description = <"Spontan tale.">
+                comment = <"Kun hvis individet er intubert eller har en annen fysisk sperre for å produsere tale, bør helsepersonell registrere verdien 'Ikke testbar' og registrere beskrivelsen i 'Beskriv Ikke testbar - dysartri' dataelementet.
+Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen for å tillate inkludering i brukergrensesnittets nedtrekksmeny, tilegner NIHSS ikke en numerisk skår for 'Ikke testbar' valget til total NIHSS skår.">
+            >
+            ["at0077"] = <
+                text = <"Ingen dysartri">
+                description = <"">
+            >
+            ["at0078"] = <
+                text = <"Mild - moderat dysartri (lett snøvling)">
+                description = <"">
+            >
+            ["at0079"] = <
+                text = <"Nær uforståelig tale eller stum/global afasi (også koma)">
+                description = <"">
+            >
+            ["at0080"] = <
+                text = <"Ikke testbar">
+                description = <"">
+            >
+            ["at0081"] = <
+                text = <"Beskriv Ikke testbar - dysartri">
+                description = <"Fritekstlig beskrivelse om hvorfor dysartri er Ikke testbar.">
+            >
+            ["at0082"] = <
+                text = <"Neglekt">
+                description = <"Bilateral simultan stimulering av syn og hudfølelse.">
+            >
+            ["at0083"] = <
+                text = <"Ingen neglekt (også ved hemianopsi med normal sensibilitet)">
+                description = <"">
+            >
+            ["at0084"] = <
+                text = <"Neglekt i en sansemodalitet">
+                description = <"">
+            >
+            ["at0085"] = <
+                text = <"Neglekt i begge sansemodaliteter">
+                description = <"">
+            >
+            ["at0086"] = <
+                text = <"Total NIHSS-Score">
+                description = <"Summen av ordinalverdier registrert for hver av de 15 komponentsvarene.">
+            >
+            ["at0087"] = <
+                text = <"2 timer etter behandling">
+                description = <"Vurdering utført 2 timer etter behandling.">
+            >
+            ["at0088"] = <
+                text = <"24 timer etter symptomdebut">
+                description = <"Vurdering utført 24 timer etter symptomdebut (med et slingringsmonn på +-20 minutter).">
+            >
+            ["at0089"] = <
+                text = <"7–10 dager">
+                description = <"Vurdering utført 7-10 dager etter hjerneslag.">
+            >
+            ["at0090"] = <
+                text = <"3 måneder">
+                description = <"Vurdering utført 3 måneder etter hjerneslag.">
+            >
+            ["at0091"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard uspesifisert tidspunkt- eller intervallhendelse som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0093"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller eller formalismer.">
+                comment = <"For eksempel: lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0124"] = <
+                text = <"Kun små muskelbevegelser, faller til sengen">
+                description = <"">
+            >
+            ["at0141"] = <
+                text = <"Kraft i benet - høyre ben">
+                description = <"Holde høyre ben utstrakt 30 grader i 5 sekunder.">
+                comment = <"Bare i tilfeller så som amputasjon eller hofteleddfusjon, bør helsepersonell registrere verdien 'Ikke testbar' og registrere beskrivelsen i 'Beskriv Ikke testbar - høyre ben' dataelementet.
+Implementeringsnotat: Selv om 'Ikke testbar' verdien er inkludert i ordinalen for å tillate inkludering i brukergrensesnittets nedtrekksmeny, tilegner NIHSS ikke en numerisk skår for 'Ikke testbar' valget til total NIHSS skår.">
+            >
+            ["ac9041"] = <
+                text = <"Bevissthetsnivå (synthesised)">
+                description = <"Observert bevissthetsnivå av individet. (synthesised)">
+            >
+            ["ac9042"] = <
+                text = <"Orientering (synthesised)">
+                description = <"Individet spørres om måned og alder. (synthesised)">
+            >
+            ["ac9043"] = <
+                text = <"Respons på kommando (synthesised)">
+                description = <"Individet bes åpne og lukke øyne, og knyte hånd. (synthesised)">
+            >
+            ["ac9044"] = <
+                text = <"Blikkbevegelse (synthesised)">
+                description = <"Horisontal bevegelse til begge sider. (synthesised)">
+            >
+            ["ac9045"] = <
+                text = <"Synsfelt (synthesised)">
+                description = <"Bevege fingre/fingertelling i laterale synsfelt. (synthesised)">
+            >
+            ["ac9046"] = <
+                text = <"Ansikt (synthesised)">
+                description = <"Individet spørres om å vise tenner, knipe igjen øynene og løfte øyenbryn. (synthesised)">
+            >
+            ["ac9047"] = <
+                text = <"Kraft i armen - venstre arm (synthesised)">
+                description = <"Holde venstre arm utstrakt 45 grader i 10 sekunder. (synthesised)">
+            >
+            ["ac9048"] = <
+                text = <"Kraft i armen - høyre arm (synthesised)">
+                description = <"Holde høyre arm utstrakt 45 grader i 10 sekunder. (synthesised)">
+            >
+            ["ac9049"] = <
+                text = <"Kraft i benet - venstre ben (synthesised)">
+                description = <"Holde venstre ben utstrakt 30 grader i 5 sekunder. (synthesised)">
+            >
+            ["ac9050"] = <
+                text = <"Kraft i benet - høyre ben (synthesised)">
+                description = <"Holde høyre ben utstrakt 30 grader i 5 sekunder. (synthesised)">
+            >
+            ["ac9051"] = <
+                text = <"Ataksi (synthesised)">
+                description = <"Finger-nese-finger test/kne-hæl test. (synthesised)">
+            >
+            ["ac9052"] = <
+                text = <"Sensibilitet (synthesised)">
+                description = <"Sensibilitet for stikk. (synthesised)">
+            >
+            ["ac9053"] = <
+                text = <"Språk (synthesised)">
+                description = <"Tale, taleforståelse, leseforståelse, benevning. (synthesised)">
+            >
+            ["ac9054"] = <
+                text = <"Dysartri (synthesised)">
+                description = <"Spontan tale. (synthesised)">
+            >
+            ["ac9055"] = <
+                text = <"Neglekt (synthesised)">
+                description = <"Bilateral simultan stimulering av syn og hudfølelse. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"*NIH Stroke Scale (NIHSS) (en)">
+                description = <"*15-item neurologic examination stroke scale that provides a quantitative measure of stroke-related neurological deficit.(en)">
+            >
+            ["at0002"] = <
+                text = <"Base">
+                description = <"Avaliação Básica">
+            >
+            ["at0004"] = <
+                text = <"*LOC responsiveness(en)">
+                description = <"*Observed level of consciousness of the patient.(en)">
+            >
+            ["at0005"] = <
+                text = <"Alerta">
+                description = <"Profundamente responsivo">
+            >
+            ["at0006"] = <
+                text = <"*Not alert, but arousable by minor stimulation(en)">
+                description = <"*Not alert; but arousable by minor stimulation to obey, answer or respond.(en)">
+            >
+            ["at0007"] = <
+                text = <"*Not alert, requires repeated stimulation or strong stimuli.(en)">
+                description = <"*Not alert; requires repeated stimulation to attend, or is obtunded and requires strong or painful stimulation to make movements.(en)">
+            >
+            ["at0008"] = <
+                text = <"*Reflex reponses only or totally unreponsive(en)">
+                description = <"*Responds only with reflex motor or autonomic effects, or totally unresponsive, flaccid, and areflexic.(en)">
+            >
+            ["at0009"] = <
+                text = <"*LOC questions(en)">
+                description = <"*The patient is asked the month and his/her age.(en)">
+            >
+            ["at0010"] = <
+                text = <"*Both correct(en)">
+                description = <"*Patient answered both questions correctly.(en)">
+            >
+            ["at0011"] = <
+                text = <"*One correct(en)">
+                description = <"*Patient answered one question correctly or is unable to communicate because of a problem not secondary to aphasia.(en)">
+            >
+            ["at0012"] = <
+                text = <"*Neither correct(en)">
+                description = <"*Patient answered neither question correctly or is comatose or does not comprehend the question.(en)">
+            >
+            ["at0013"] = <
+                text = <"*LOC commands(en)">
+                description = <"*The patient is asked to open and close the eyes and then to grip and release the non-paretic hand.(en)">
+            >
+            ["at0014"] = <
+                text = <"*Both correct(en)">
+                description = <"*Patient performs both tasks correctly.(en)">
+            >
+            ["at0015"] = <
+                text = <"*One correct(en)">
+                description = <"*Patient performs one task correctly.(en)">
+            >
+            ["at0016"] = <
+                text = <"*Neither correct(en)">
+                description = <"*Patient performs neither task correctly.(en)">
+            >
+            ["at0017"] = <
+                text = <"*Horizontal eye movements(en)">
+                description = <"*Horizontal eye movement observation.(en)">
+            >
+            ["at0018"] = <
+                text = <"*Normal(en)">
+                description = <"*Normal eye movement.(en)">
+            >
+            ["at0019"] = <
+                text = <"*Partial gaze palsy(en)">
+                description = <"*Gaze is abnormal in one or both eyes, but forced deviation or total gaze paresis is not present.(en)">
+            >
+            ["at0020"] = <
+                text = <"*Forced deviation or total gaze paresis(en)">
+                description = <"*Forced deviation or total gaze paresis is not overcome by the oculocephalic maneuver.(en)">
+            >
+            ["at0021"] = <
+                text = <"*Visual fields(en)">
+                description = <"*Visual field test observation.(en)">
+            >
+            ["at0022"] = <
+                text = <"*No visual loss(en)">
+                description = <"*No visual loss detected.(en)">
+            >
+            ["at0023"] = <
+                text = <"*Partial hemianopia(en)">
+                description = <"*Partial hemianopia or complete quadrantanopia detected.(en)">
+            >
+            ["at0024"] = <
+                text = <"*Complete hemianopia(en)">
+                description = <"*Complete hemianopia detected(en)">
+            >
+            ["at0025"] = <
+                text = <"*Bilateral hemianopia(en)">
+                description = <"*Blindness from any cause, including cortical blindness.(en)">
+            >
+            ["at0026"] = <
+                text = <"*Facial palsy(en)">
+                description = <"*Facial palsy observation.(en)">
+            >
+            ["at0027"] = <
+                text = <"*Normal(en)">
+                description = <"*Normal symmetrical movements.(en)">
+            >
+            ["at0028"] = <
+                text = <"*Minor paralysis(en)">
+                description = <"*Flattened nasolabial fold, asymmetry on smiling.(en)">
+            >
+            ["at0029"] = <
+                text = <"*Partial paralysis(en)">
+                description = <"*Total or near-total paralysis of lower face.(en)">
+            >
+            ["at0030"] = <
+                text = <"*Complete paralysis of one or both sides(en)">
+                description = <"*Absence of facial movement in the upper and lower face.(en)">
+            >
+            ["at0067"] = <
+                text = <"*Sensory(en)">
+                description = <"*Observation of sensory loss.(en)">
+            >
+            ["at0068"] = <
+                text = <"Normal">
+                description = <"Nenhuma perda de sensibilidade">
+            >
+            ["at0069"] = <
+                text = <"Leva a moderada perda de sensibilidade">
+                description = <"Paciente sente que a picada é menos acentuada ou maçante no lado afetado; ou há uma perda de dor superficial com a picada de agulha, mas paciente está consciente ao ser tocado">
+            >
+            ["at0070"] = <
+                text = <"Severa ou total perda de sensibilidade">
+                description = <"Paciente não está ciente ao ser tocado na face, braço e perna">
+            >
+            ["at0071"] = <
+                text = <"*Language(en)">
+                description = <"*Observation of language capability.(en)">
+            >
+            ["at0072"] = <
+                text = <"*No aphasia(en)">
+                description = <"*Normal(en)">
+            >
+            ["at0073"] = <
+                text = <"*Mild-to-moderate aphasia(en)">
+                description = <"*Some obvious loss of fluency or facility of comprehension, without significant limitation on ideas expressed or form of expression.(en)">
+            >
+            ["at0074"] = <
+                text = <"*Severe aphasia(en)">
+                description = <"*All communication is through fragmentary expression; great need for inference, questioning, and guessing by the listener.(en)">
+            >
+            ["at0075"] = <
+                text = <"*Mute, global aphasia(en)">
+                description = <"*No usable speech or auditory comprehension.(en)">
+            >
+            ["at0082"] = <
+                text = <"*Extinction and inattention(en)">
+                description = <"*Observation of any evidence of extinction or inattention.(en)">
+                comment = <"*Also known as 'neglect'.(en)">
+            >
+            ["at0083"] = <
+                text = <"*No abnormality(en)">
+                description = <"*No abnormality observed.(en)">
+            >
+            ["at0084"] = <
+                text = <"*Inattention, or bilateral extinction in one sensory modality(en)">
+                description = <"*Visual, tactile, auditory, spatial, or personal inattention, or extinction to bilateral simultaneous stimulation in one of the sensory modalities.(en)">
+            >
+            ["at0085"] = <
+                text = <"*Profound hemi-inattention or extinction to more than one modality(en)">
+                description = <"*Profound hemi-inattention or extinction to more than one modality; does not recognize own hand or orients to only one side of space.(en)">
+            >
+            ["at0086"] = <
+                text = <"*Total score(en)">
+                description = <"*The total score is the arithmetic sum of all 15 responses, excluding any untestable responses. (en)">
+            >
+            ["at0031"] = <
+                text = <"*Motor - left arm(en)">
+                description = <"*Observation of left arm motor function. (en)">
+                comment = <"*Only in the case of amputation or joint fusion at the shoulder, the examiner should record the score as 'UNTESTABLE' and record the reason in the 'Reason left arm untestable' data element. Implementation note: while the UNTESTABLE value has been included in this ordinal to allow for inclusion in user interface picklists, the NIHSS applies no numerical score from this selection to the 'Total score'. (en)">
+            >
+            ["at0032"] = <
+                text = <"Nenhum Movimento">
+                description = <"Membro permanece 90 (ou 45) graus por 10 segundos completos">
+            >
+            ["at0033"] = <
+                text = <"Movimento">
+                description = <"Membro mantém 90 (ou 45) graus, mas desvia para o chão antes de completar 10 segundos; Não utilize a cama ou outro suporte.">
+            >
+            ["at0034"] = <
+                text = <"Um pouco de esforço contra a gravidade">
+                description = <"Membro não pode obter ou manter 90 (ou 45) graus, mas tem um pouco de esforço contra a gravidade.">
+            >
+            ["at0124"] = <
+                text = <"Nenhum esforço contra a gravidade">
+                description = <"Membro cai">
+            >
+            ["at0035"] = <
+                text = <"*No movement(en)">
+                description = <"*There is no observed limb movement.(en)">
+            >
+            ["at0036"] = <
+                text = <"*UNTESTABLE(en)">
+                description = <"*Amputation or joint fusion at the shoulder.(en)">
+            >
+            ["at0038"] = <
+                text = <"*Motor - right arm(en)">
+                description = <"*Observation of right arm motor function. (en)">
+                comment = <"*Only in the case of amputation or joint fusion at the shoulder, the examiner should record the score as 'UNTESTABLE' and record the reason in the 'Reason right arm untestable' data element. Implementation note: while the UNTESTABLE value has been included in this ordinal to allow for inclusion in user interface picklists, the NIHSS applies no numerical score from this selection to the 'Total score'. (en)">
+            >
+            ["at0039"] = <
+                text = <"*No drift(en)">
+                description = <"*Limb holds 90 (or 45) degrees for full 10 seconds.(en)">
+            >
+            ["at0040"] = <
+                text = <"*Drift(en)">
+                description = <"*Limb holds 90 (or 45) degrees, but drifts down before full 10 seconds; does not hit bed or other support.(en)">
+            >
+            ["at0041"] = <
+                text = <"*Some effort against gravity(en)">
+                description = <"*Limb cannot get to or maintain (if cued) 90 (or 45) degrees, drifts down to bed, but has some effort against gravity.(en)">
+            >
+            ["at0042"] = <
+                text = <"*No effort against gravity(en)">
+                description = <"*Limb falls.
+(en)">
+            >
+            ["at0043"] = <
+                text = <"*No movement(en)">
+                description = <"*There is no observed limb movement.(en)">
+            >
+            ["at0044"] = <
+                text = <"*UNTESTABLE(en)">
+                description = <"*Amputation or joint fusion at the shoulder.(en)">
+            >
+            ["at0046"] = <
+                text = <"*Motor - left leg(en)">
+                description = <"*Observation of left leg motor function. (en)">
+                comment = <"*Only in the case of amputation or joint fusion at the hip, the examiner should record the score as 'UNTESTABLE' and record the reason in the 'Reason left leg untestable' data element. Implementation note: while the UNTESTABLE value has been included in this ordinal to allow for inclusion in user interface picklists, the NIHSS applies no numerical score from this selection to the 'Total score'. (en)">
+            >
+            ["at0047"] = <
+                text = <"Nenhum movimento">
+                description = <"Perna detém posição de 30 graus por 5 segundos completos">
+            >
+            ["at0048"] = <
+                text = <"Movimento">
+                description = <"Perna cai ao final do período de 5 segundos, mas não bate na cama.">
+            >
+            ["at0049"] = <
+                text = <"Um pouco de esforço contra a gravidade">
+                description = <"Perna cai na cama após 5 segundos, mas tem um pouco de esforço contra a gravidade">
+            >
+            ["at0050"] = <
+                text = <"Um pouco de esforço contra a gravidade">
+                description = <"Perna cai na cama imediatamente">
+            >
+            ["at0051"] = <
+                text = <"*No movement(en)">
+                description = <"*There is no observed leg movement.(en)">
+            >
+            ["at0052"] = <
+                text = <"*UNTESTABLE(en)">
+                description = <"*Amputation or joint fusion at the hip.(en)">
+            >
+            ["at0141"] = <
+                text = <"*Motor - right leg(en)">
+                description = <"*Observation of right leg motor function. (en)">
+                comment = <"*Only in the case of amputation or joint fusion at the hip, the examiner should record the score as 'UNTESTABLE' and record the reason in the 'Reason right leg untestable' data element Implementation note: while the UNTESTABLE value has been included in this ordinal to allow for inclusion in user interface picklists, the NIHSS applies no numerical score from this selection to the 'Total score'. (en)">
+            >
+            ["at0054"] = <
+                text = <"Nenhum movimento">
+                description = <"Perna detém posição de 30 graus por 5 segundos completos">
+            >
+            ["at0055"] = <
+                text = <"Movimento">
+                description = <"Perna cai ao final do período de 5 segundos, mas não bate na cama.">
+            >
+            ["at0056"] = <
+                text = <"Um pouco de esforço contra a gravidade">
+                description = <"Perna cai na cama após 5 segundos, mas tem um pouco de esforço contra a gravidade">
+            >
+            ["at0057"] = <
+                text = <"Um pouco de esforço contra a gravidade">
+                description = <"Perna cai na cama imediatamente">
+            >
+            ["at0058"] = <
+                text = <"*No movement(en)">
+                description = <"*There is no observed leg movement.(en)">
+            >
+            ["at0059"] = <
+                text = <"*UNTESTABLE(en)">
+                description = <"*Amputation or joint fusion at the hip.(en)">
+            >
+            ["at0061"] = <
+                text = <"*Limb ataxia(en)">
+                description = <"*Observation of limb ataxia as evidence of a unilateral cerebellar lesion.
+
+Only in the case of amputation or joint fusion, the examiner should record the score as untestable (UN)and record the reason in the 'Reason limb ataxia untestable' data element. (en)">
+                comment = <"*Only in the case of amputation or joint fusion, the examiner should record the score as 'UNTESTABLE' and record the reason in the 'Reason limb ataxia untestable' data element. Implementation note: while the UNTESTABLE value has been included in this ordinal to allow for inclusion in user interface picklists, the NIHSS applies no numerical score from this selection to the 'Total score'. (en)">
+            >
+            ["at0062"] = <
+                text = <"*Absent(en)">
+                description = <"*No limb ataxia observed(en)">
+            >
+            ["at0063"] = <
+                text = <"*Present in one limb(en)">
+                description = <"*Limb ataxia observed in one limb.(en)">
+            >
+            ["at0064"] = <
+                text = <"*Present in two limbs(en)">
+                description = <"*Limb ataxia observed in two limbs.(en)">
+            >
+            ["at0065"] = <
+                text = <"*UNTESTABLE(en)">
+                description = <"*Amputation or joint fusion.(en)">
+            >
+            ["at0076"] = <
+                text = <"*Speech(en)">
+                description = <"*Observation about speech capability.
+
+ (en)">
+                comment = <"*Only if the patient is intubated or has other physical barriers to producing speech, the examiner should record the score as 'UNTESTABLE' and record the reason in the 'Reason speech untestable' data element. Implementation note: while the UNTESTABLE value has been included in this ordinal to allow for inclusion in user interface picklists, the NIHSS applies no numerical score from this selection to the 'Total score'. (en)">
+            >
+            ["at0077"] = <
+                text = <"*Normal(en)">
+                description = <"*Normal speech.(en)">
+            >
+            ["at0078"] = <
+                text = <"*Mild-to-moderate dysarthria(en)">
+                description = <"*Patient slurs at least some words and, at worst, can be understood with some difficulty.(en)">
+            >
+            ["at0079"] = <
+                text = <"*Severe dysarthria(en)">
+                description = <"*Patient's speech is so slurred as to be unintelligible in the absence of or out of proportion to any dysphasia, or is mute/anarthric.(en)">
+            >
+            ["at0087"] = <
+                text = <"*2 hours post treatment(en)">
+                description = <"*Assessment carried out 2 hours post treatment.(en)">
+            >
+            ["at0088"] = <
+                text = <"*24 hours post symptom onset (en)">
+                description = <"*Assessment carried out 24 hours post onset of symptoms (with tolerance of +-20 minutes).(en)">
+            >
+            ["at0089"] = <
+                text = <"*7–10 days(en)">
+                description = <"*Assessment carried out 7-10 days after stroke.(en)">
+            >
+            ["at0090"] = <
+                text = <"*3 months(en)">
+                description = <"*Assessment carried out 3 months after stroke.(en)">
+            >
+            ["at0091"] = <
+                text = <"*Any event (en)">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time. (en)">
+            >
+            ["at0037"] = <
+                text = <"*Reason left arm untestable(en)">
+                description = <"*Narrative description about why the left arm motor function was untestable.(en)">
+            >
+            ["at0045"] = <
+                text = <"*Reason right arm untestable(en)">
+                description = <"*Narrative description about why the right arm motor function was untestable.(en)">
+            >
+            ["at0053"] = <
+                text = <"*Reason left leg untestable(en)">
+                description = <"*Narrative description about why the left leg motor function was untestable.(en)">
+            >
+            ["at0060"] = <
+                text = <"*Reason right leg untestable(en)">
+                description = <"*Narrative description about why the right leg motor function was untestable.(en)">
+            >
+            ["at0066"] = <
+                text = <"*Reason limb ataxia untestable (en)">
+                description = <"*Narrative description about why limb ataxia was untestable.(en)">
+            >
+            ["at0081"] = <
+                text = <"*Reason speech untestable(en)">
+                description = <"*Narrative description about why speech was untestable.(en)">
+            >
+            ["at0080"] = <
+                text = <"*UNTESTABLE(en)">
+                description = <"*Intubated or other physical barrier.(en)">
+            >
+            ["at0093"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["ac9041"] = <
+                text = <"*LOC responsiveness(en) (synthesised)">
+                description = <"*Observed level of consciousness of the patient.(en) (synthesised)">
+            >
+            ["ac9042"] = <
+                text = <"*LOC questions(en) (synthesised)">
+                description = <"*The patient is asked the month and his/her age.(en) (synthesised)">
+            >
+            ["ac9043"] = <
+                text = <"*LOC commands(en) (synthesised)">
+                description = <"*The patient is asked to open and close the eyes and then to grip and release the non-paretic hand.(en) (synthesised)">
+            >
+            ["ac9044"] = <
+                text = <"*Horizontal eye movements(en) (synthesised)">
+                description = <"*Horizontal eye movement observation.(en) (synthesised)">
+            >
+            ["ac9045"] = <
+                text = <"*Visual fields(en) (synthesised)">
+                description = <"*Visual field test observation.(en) (synthesised)">
+            >
+            ["ac9046"] = <
+                text = <"*Facial palsy(en) (synthesised)">
+                description = <"*Facial palsy observation.(en) (synthesised)">
+            >
+            ["ac9047"] = <
+                text = <"*Motor - left arm(en) (synthesised)">
+                description = <"*Observation of left arm motor function. (en) (synthesised)">
+            >
+            ["ac9048"] = <
+                text = <"*Motor - right arm(en) (synthesised)">
+                description = <"*Observation of right arm motor function. (en) (synthesised)">
+            >
+            ["ac9049"] = <
+                text = <"*Motor - left leg(en) (synthesised)">
+                description = <"*Observation of left leg motor function. (en) (synthesised)">
+            >
+            ["ac9050"] = <
+                text = <"*Motor - right leg(en) (synthesised)">
+                description = <"*Observation of right leg motor function. (en) (synthesised)">
+            >
+            ["ac9051"] = <
+                text = <"*Limb ataxia(en) (synthesised)">
+                description = <"*Observation of limb ataxia as evidence of a unilateral cerebellar lesion.
+
+Only in the case of amputation or joint fusion, the examiner should record the score as untestable (UN)and record the reason in the 'Reason limb ataxia untestable' data element. (en) (synthesised)">
+            >
+            ["ac9052"] = <
+                text = <"*Sensory(en) (synthesised)">
+                description = <"*Observation of sensory loss.(en) (synthesised)">
+            >
+            ["ac9053"] = <
+                text = <"*Language(en) (synthesised)">
+                description = <"*Observation of language capability.(en) (synthesised)">
+            >
+            ["ac9054"] = <
+                text = <"*Speech(en) (synthesised)">
+                description = <"*Observation about speech capability.
+
+ (en) (synthesised)">
+            >
+            ["ac9055"] = <
+                text = <"*Extinction and inattention(en) (synthesised)">
+                description = <"*Observation of any evidence of extinction or inattention.(en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"NIHSS">
+                description = <"15-item neurologic examination stroke scale that provides a quantitative measure of stroke-related neurological deficit.">
+                comment = <"NIHSS - National Institutes of Health Stroke Scale.">
+            >
+            ["at0002"] = <
+                text = <"Baseline">
+                description = <"Baseline assessment.">
+            >
+            ["at0004"] = <
+                text = <"LOC responsiveness">
+                description = <"Level of Consciousness">
+            >
+            ["at0005"] = <
+                text = <"Alert; keenly responsive.">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Not Alert; but arousable by minor stimulation to obey, answer, or respond.">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Not Alert; requires repeated stimulation to attend, or is obtunded and requires strong or painful">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Responds only with reflex motor or autonomic effects, or totally unresponsive, flaccid, and areflexic.">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"LOC questions">
+                description = <"Level of Consciousness">
+            >
+            ["at0010"] = <
+                text = <"Answers both questions correctly.">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Answers one question correctly.">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Answers neither question correctly.">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"LOC commands">
+                description = <"Level of Consciousness">
+            >
+            ["at0014"] = <
+                text = <"Performs both tasks correctly.">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Performs one task correctly.">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Performs neither task correctly.">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Best Gaze">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Normal.">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Partial gaze palsy; gaze is abnormal in one or both eyes, but forced deviation or total gaze paresis is not present.">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Forced deviation, or total gaze paresis is not overcome by the oculocephalic maneuver.">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Visual">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"No visual loss.">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Partial hemianopia.">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Complete hemianopia.">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Bilateral hemianopia (blind including cortical blindness).">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Facial palsy">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Normal symmetrical movements.">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Minor paralysis (flattened nasolabial fold, asymmetry on smiling).">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Partial paralysis (total or near-total paralysis of lower face).">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Complete paralysis of one or both sides (absence of facial movement in the upper and lower face).">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"Sensory">
+                description = <"">
+            >
+            ["at0068"] = <
+                text = <"Normal; no sensory loss.">
+                description = <"">
+            >
+            ["at0069"] = <
+                text = <"Mild-to-moderate sensory loss; patient feels pinprick is less sharp or is dull on the affected side; or  there is a loss of superficial pain with pinprick, but patient is aware of being touched.">
+                description = <"">
+            >
+            ["at0070"] = <
+                text = <"Severe or total sensory loss; patient is not aware of being touched in the face, arm, and leg.">
+                description = <"">
+            >
+            ["at0071"] = <
+                text = <"Best Language">
+                description = <"">
+            >
+            ["at0072"] = <
+                text = <"No aphasia; normal.">
+                description = <"">
+            >
+            ["at0073"] = <
+                text = <"Mild-to-moderate aphasia; some obvious loss of fluency or facility of comprehension, without  significant limitation on ideas expressed or form of expression. Reduction of speech and/or  comprehension, however, makes conversation about provided materials difficult or impossible. For  example, in conversation about provided materials, examiner can identify picture or naming card  content from patient’s response.">
+                description = <"">
+            >
+            ["at0074"] = <
+                text = <"Severe aphasia; all communication is through fragmentary expression; great need for inference, questioning, and guessing by the listener. Range of information that can be exchanged is limited; listener carries burden of communication. Examiner cannot identify materials provided from patient response.">
+                description = <"">
+            >
+            ["at0075"] = <
+                text = <"Mute, global aphasia; no usable speech or auditory comprehension.">
+                description = <"">
+            >
+            ["at0082"] = <
+                text = <"Extinction and inattention">
+                description = <"">
+            >
+            ["at0083"] = <
+                text = <"No abnormality.">
+                description = <"">
+            >
+            ["at0084"] = <
+                text = <"Visual, tactile, auditory, spatial, or personal inattention, or extinction to bilateral simultaneous stimulation in one of the sensory modalities.">
+                description = <"">
+            >
+            ["at0085"] = <
+                text = <"Profound hemi-inattention or extinction to more than one modality; does not recognize own hand or orients to only one side of space.">
+                description = <"">
+            >
+            ["at0086"] = <
+                text = <"Total score">
+                description = <"The total score is the arithmetic sum of all 15 responses, excluding any untestable responses.">
+            >
+            ["at0031"] = <
+                text = <"Motor - left arm">
+                description = <"Observation of left arm motor function.">
+                comment = <"Only in the case of amputation or joint fusion at the shoulder, the examiner should record the score as 'Untestable' and record the reason in the 'Reason left arm untestable' data element. 
+Implementation note: Although the 'Untestable' value is included in the ordinal to allow its inclusion in the user interface dropdown menu, NIHSS does not assign a numerical score for the 'Untestable' option in the total NIHSS score.">
+            >
+            ["at0032"] = <
+                text = <"No drift; limb holds 90 (or 45) degrees for full 10 seconds.">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Drift; limb holds 90 (or 45) degrees, but drifts down before full 10 seconds; does not hit bed or other support.">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Some effort against gravity; limb cannot get to or maintain (if cued) 90 (or 45) degrees, drifts down  to bed, but has some effort against gravity.">
+                description = <"">
+            >
+            ["at0124"] = <
+                text = <"No effort against gravity; limb falls.">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"No movement.">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Untestable: Amputation or joint fusion.">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Motor - right arm">
+                description = <"Observation of right arm motor function.">
+                comment = <"Only in the case of amputation or joint fusion at the shoulder, the examiner should record the score as 'Untestable' and record the reason in the 'Reason right arm untestable' data element. 
+Implementation note: Although the 'Untestable' value is included in the ordinal to allow its inclusion in the user interface dropdown menu, NIHSS does not assign a numerical score for the 'Untestable' option in the total NIHSS score.">
+            >
+            ["at0039"] = <
+                text = <"No drift; limb holds 90 (or 45) degrees for full 10 seconds.">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Drift; limb holds 90 (or 45) degrees, but drifts down before full 10 seconds; does not hit bed or other support.">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Some effort against gravity; limb cannot get to or maintain (if cued) 90 (or 45) degrees, drifts down  to bed, but has some effort against gravity.">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"No effort against gravity; limb falls.">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"No movement.">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Untestable: Amputation or joint fusion.">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Motor - left leg">
+                description = <"Observation of left leg motor function.">
+                comment = <"Only in the case of amputation or joint fusion at the hip, the examiner should record the score as 'Untestable' and record the reason in the 'Reason left leg untestable' data element. 
+Implementation note: Although the 'Untestable' value is included in the ordinal to allow its inclusion in the user interface dropdown menu, NIHSS does not assign a numerical score for the 'Untestable' option in the total NIHSS score.">
+            >
+            ["at0047"] = <
+                text = <"No drift; leg holds 30-degree position for full 5 seconds.">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Drift; leg falls by the end of the 5-second period but does not hit the bed.">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Some effort against gravity; leg falls to bed by 5 seconds but has some effort against gravity.">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"No effort against gravity; leg falls to bed immediately.">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"No movement.">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Untestable: Amputation or joint fusion.">
+                description = <"">
+            >
+            ["at0141"] = <
+                text = <"Motor - right leg">
+                description = <"Observation of right leg motor function.">
+                comment = <"Only in the case of amputation or joint fusion at the hip, the examiner should record the score as 'Untestable' and record the reason in the 'Reason right leg untestable' data element.
+Implementation note: Although the 'Untestable' value is included in the ordinal to allow its inclusion in the user interface dropdown menu, NIHSS does not assign a numerical score for the 'Untestable' option in the total NIHSS score.">
+            >
+            ["at0054"] = <
+                text = <"No drift; leg holds 30-degree position for full 5 seconds.">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"Drift; leg falls by the end of the 5-second period but does not hit the bed.">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"Some effort against gravity; leg falls to bed by 5 seconds but has some effort against gravity.">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"No effort against gravity; leg falls to bed immediately.">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"No movement.">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Untestable: Amputation or joint fusion.">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Limb ataxia">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"Absent">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"Present in one limb">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"Present in two limbs">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Untestable: Amputation or joint fusion, explain:">
+                description = <"">
+            >
+            ["at0076"] = <
+                text = <"Dysarthria">
+                description = <"">
+                comment = <"Only if the patient is intubated or has other physical barriers to producing speech, the examiner should record the score as 'Untestable' and record the reason in the 'Reason speech untestable' data element. 
+Implementation note: Although the 'Untestable' value is included in the ordinal to allow its inclusion in the user interface dropdown menu, NIHSS does not assign a numerical score for the 'Untestable' option in the total NIHSS score.">
+            >
+            ["at0077"] = <
+                text = <"Normal">
+                description = <"">
+            >
+            ["at0078"] = <
+                text = <"Mild-to-moderate dysarthria; patient slurs at least some words and, at worst, can be understood with some difficulty.">
+                description = <"">
+            >
+            ["at0079"] = <
+                text = <"Severe dysarthria; patient’s speech is so slurred as to be unintelligible in the absence of or out of proportion to any dysphasia, or is mute/anarthric.">
+                description = <"">
+            >
+            ["at0087"] = <
+                text = <"2 hours post treatment">
+                description = <"Assessment carried out 2 hours post treatment.">
+            >
+            ["at0088"] = <
+                text = <"24 hours post symptom onset">
+                description = <"Assessment carried out 24 hours post onset of symptoms (with tolerance of +-20 minutes).">
+            >
+            ["at0089"] = <
+                text = <"7–10 days">
+                description = <"Assessment carried out 7-10 days after stroke.">
+            >
+            ["at0090"] = <
+                text = <"3 months">
+                description = <"Assessment carried out 3 months after stroke.">
+            >
+            ["at0091"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0037"] = <
+                text = <"Reason left arm untestable">
+                description = <"Amputation or joint fusion, explain:">
+            >
+            ["at0045"] = <
+                text = <"Reason right arm untestable">
+                description = <"Amputation or joint fusion, explain:">
+            >
+            ["at0053"] = <
+                text = <"Reason left leg untestable">
+                description = <"Amputation or joint fusion, explain:">
+            >
+            ["at0060"] = <
+                text = <"Reason right leg untestable">
+                description = <"Amputation or joint fusion, explain:">
+            >
+            ["at0066"] = <
+                text = <"Reason limb ataxia untestable">
+                description = <"Untestable: Amputation or joint fusion, explain:">
+            >
+            ["at0081"] = <
+                text = <"Reason speech untestable">
+                description = <"Intubated or other physical barrier, explain:">
+            >
+            ["at0080"] = <
+                text = <"Untestable: Intubated or other physical barrier.">
+                description = <"">
+            >
+            ["at0093"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9041"] = <
+                text = <"LOC responsiveness (synthesised)">
+                description = <"Level of Consciousness (synthesised)">
+            >
+            ["ac9042"] = <
+                text = <"LOC questions (synthesised)">
+                description = <"Level of Consciousness (synthesised)">
+            >
+            ["ac9043"] = <
+                text = <"LOC commands (synthesised)">
+                description = <"Level of Consciousness (synthesised)">
+            >
+            ["ac9044"] = <
+                text = <"Best Gaze (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9045"] = <
+                text = <"Visual (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9046"] = <
+                text = <"Facial palsy (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9047"] = <
+                text = <"Motor - left arm (synthesised)">
+                description = <"Observation of left arm motor function. (synthesised)">
+            >
+            ["ac9048"] = <
+                text = <"Motor - right arm (synthesised)">
+                description = <"Observation of right arm motor function. (synthesised)">
+            >
+            ["ac9049"] = <
+                text = <"Motor - left leg (synthesised)">
+                description = <"Observation of left leg motor function. (synthesised)">
+            >
+            ["ac9050"] = <
+                text = <"Motor - right leg (synthesised)">
+                description = <"Observation of right leg motor function. (synthesised)">
+            >
+            ["ac9051"] = <
+                text = <"Limb ataxia (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9052"] = <
+                text = <"Sensory (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9053"] = <
+                text = <"Best Language (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9054"] = <
+                text = <"Dysarthria (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9055"] = <
+                text = <"Extinction and inattention (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9053"] = <
+            id = <"ac9053">
+            members = <"at0072", "at0073", "at0074", "at0075">
+        >
+        ["ac9052"] = <
+            id = <"ac9052">
+            members = <"at0068", "at0069", "at0070">
+        >
+        ["ac9051"] = <
+            id = <"ac9051">
+            members = <"at0062", "at0063", "at0064", "at0065">
+        >
+        ["ac9050"] = <
+            id = <"ac9050">
+            members = <"at0054", "at0055", "at0056", "at0057", "at0058", "at0059">
+        >
+        ["ac9055"] = <
+            id = <"ac9055">
+            members = <"at0083", "at0084", "at0085">
+        >
+        ["ac9054"] = <
+            id = <"ac9054">
+            members = <"at0077", "at0078", "at0079", "at0080">
+        >
+        ["ac9042"] = <
+            id = <"ac9042">
+            members = <"at0010", "at0011", "at0012">
+        >
+        ["ac9041"] = <
+            id = <"ac9041">
+            members = <"at0005", "at0006", "at0007", "at0008">
+        >
+        ["ac9046"] = <
+            id = <"ac9046">
+            members = <"at0027", "at0028", "at0029", "at0030">
+        >
+        ["ac9045"] = <
+            id = <"ac9045">
+            members = <"at0022", "at0023", "at0024", "at0025">
+        >
+        ["ac9044"] = <
+            id = <"ac9044">
+            members = <"at0018", "at0019", "at0020">
+        >
+        ["ac9043"] = <
+            id = <"ac9043">
+            members = <"at0014", "at0015", "at0016">
+        >
+        ["ac9049"] = <
+            id = <"ac9049">
+            members = <"at0047", "at0048", "at0049", "at0050", "at0051", "at0052">
+        >
+        ["ac9048"] = <
+            id = <"ac9048">
+            members = <"at0039", "at0040", "at0041", "at0042", "at0043", "at0044">
+        >
+        ["ac9047"] = <
+            id = <"ac9047">
+            members = <"at0032", "at0033", "at0034", "at0124", "at0035", "at0036">
+        >
+    >

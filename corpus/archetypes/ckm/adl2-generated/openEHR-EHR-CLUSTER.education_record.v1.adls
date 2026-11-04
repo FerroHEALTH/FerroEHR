@@ -1,0 +1,281 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=318fd7c3-e506-4ea8-afa8-ed33d1343763; build_uid=53e90987-1700-4c88-b643-8ef44a72dc2f)
+    openEHR-EHR-CLUSTER.education_record.v1.0.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Darin Leonhardt">
+                ["organisation"] = <"PLRI">
+                ["email"] = <"leonhardt.darin@mh-hannover.de">
+            >
+            accreditation = <"-">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand">
+                ["organisation"] = <"Helse Bergen HF, Norway">
+                ["email"] = <"john.tore.valand@helse-bergen.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"John Tore Valand">
+        ["organisation"] = <"Helse Bergen">
+        ["email"] = <"john.tore.valand@helse-bergen.no">
+        ["date"] = <"2019-03-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Amund Aakerholt, Helse Stavanger, KORFOR, Norway", "Erling Are Hole, Helse Bergen, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Linda Bokn, Helse Fonna, Norway", "Are Edvardsen, SKDE, Helse Nord RHF, Norway", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)", "Heather Grain, Llewelyn Grain Informatics, Australia", "Evelyn Hovenga, EJSH Consulting, Australia", "Ronald Krawec, Alberta Health Services, Canada", "Anita Lagos, Haraldsplass Diakonale Sykehus, Norway", "Liv Laugen, Oslo universitetssykehus, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Erhard Lohse, Fjell kommune, Norway", "Paul Miller, SCIMP NHS Scotland, United Kingdom", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Jayashree Panickar, Karolinska Institute, Sweden", "Gro-Hilde Severinsen, Norwegian center for ehealthresearch, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Tesfay Teame, Folkehelseinstituttet, Norway", "Micaela Thierley, Helse Bergen/Haraldsplass sykehus, Norway", "Susanne Trønnes, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"John Tore Valand <john.tore.valand@helse-bergen.no>">
+        ["MD5-CAM-1.0.1"] = <"EC3D78EFDD96860369EDC6734B065A52">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Erfassung von Einzelheiten über einen einzelnen Zeitraum der schulischen Bildung oder Ausbildung einer Person, die einen Überblick über ihren Bildungshintergrund geben.">
+            keywords = <"Universität, Schule, Zertifikat, Lehre, Diplom, Abschluss, Kurs, Studium, Ausbildung", ...>
+            use = <"Der Archetyp wird verwendet, um Einzelheiten über einen einzelnen Zeitraum der schulischen Bildung oder Ausbildung einer Person aufzuzeichnen, die einen Überblick über ihren Bildungshintergrund geben.
+
+Eine Person kann mehrere Bildungsgänge gleichzeitig oder überlappend absolvieren. Jede Aus- oder Weiterbildung sollte in einer separaten Instanz dieses Archetyps erfasst werden. Mehrere Instanzen dieses Archetyps, die im Laufe der Zeit erfasst werden, bilden eine kumulative Geschichte der vergangenen und gegenwärtigen Bildung und Ausbildung.
+
+Die derzeitige Aus- oder Weiterbildung kann aus einem \"Datum des Beginns\", aber keinem \"erreichten Meilenstein\" abgeleitet werden.
+
+Dieser Archetyp wurde speziell für die Verwendung im SLOT \"Education record\" innerhalb des Archetyps EVALUATION.education_summary entwickelt, kann aber auch in jedem anderen ENTRY- oder CLUSTER-Archetyp verwendet werden, sofern dies klinisch sinnvoll ist.
+">
+            misuse = <"Nicht zur Darstellung detaillierter Beschreibungen von Gesundheitsrisiken oder der Exposition gegenüber gefährlichen Stoffen während der Aus- oder Weiterbildung. Verwenden Sie zu diesem Zweck die Archetypen EVALUATION.health_risk oder EVALUATION.exposure.
+
+Nicht zur Aufzeichnung von Informationen über die Aus- oder Weiterbildung einer Person zu einem bestimmten Zeitpunkt (z. B. am 16. Juni 2014) oder während eines relativen Zeitraums (z. B. \"in den letzten 30 Tagen\") verwenden. Verwenden Sie zu diesem Zweck einen geeigneten Archetyp OBSERVATION.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljert informasjon om utdanning eller opplæring individet har foretatt, som vil gi en oversikt over utdanningsbakgrunn.">
+            keywords = <"utdanning, skole, universitet, videregående, ungdomsskole, barneskole, lærling, læretid, kurs, fagbrev, diplom, studie, bachelor, master, PhD, videreutdanning, realkompetanse, formalkompetanse, sertifikat, studiekompetanse", ...>
+            use = <"Brukes for å registrere detaljert informasjon om utdanning eller opplæring individet har foretatt, som vil gi en oversikt over utdanningsbakgrunn.
+
+Et individ kan ha gjennomføre flere samtidige eller overlappende utdanning eller opplæring. Hver utdanning eller opplæring registreres i egne instanser av denne arketypen. Flere instanser av denne arketypen registrert over tid vil danne en samlet oversikt over nåværende og tidligere utdanning og opplæring.
+
+Nåværende utdanning eller opplæring utledes fra \"Startdato\" hvis det ikke er registrert noe i \"Sluttdato\".
+
+Arketypen er laget for å benyttes i SLOTet \"Utdanning\" i arketypen EVALUATION.education_summary (Utdanningsammendrag) , men kan også brukes innen andre ENTRY- eller CLUSTER-arketyper der det er klinisk relevant.">
+            misuse = <"Brukes ikke for å beskrive helserisikoer eller eksponering for farlige substanser under skolegangen/utdanningen. Til dette brukes henholdsvis arketypene EVALUATION.health_risk (Helserisiko) eller EVALUATION.exposure.
+
+Brukes ikke for å registrere informasjon om utdanning eller opplæring for et individ på en bestemt dato (for eksempel 16. juni 2014) eller i løpet av en relativ tidsperiode, som for eksempel \"siste 30 dager\". Dette kan utledes fra \"Startdato\" hvis det ikke er registrert noe i \"Sluttdato\", og må registreres i en egen OBSERVATION-arketype for dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about a single period of formal education or training undertaken by an individual, which will contribute to an overview of their educational background.">
+            keywords = <"university, school, certificate, apprenticeship, diploma, degree, course, study, training,", ...>
+            use = <"Use to record details about a single period of formal education or training undertaken by an individual, which will contribute to an overview of their educational background.
+
+An individual may undertake multiple training courses simultaniously, or overlapping. Each education or training should be recorded in a separate instance of this archetype. Multiple instances of this archetype captured over time will build a cumulative history of past and present education and training.
+
+Current education or training may be implied from a 'Date commenced' but no 'Milestone achieved'.
+
+This archetype has been specifically designed to be used in the 'Education record' SLOT within the EVALUATION.education_summary archetype, but can also be used within any other ENTRY or CLUSTER archetypes, where clinically appropriate.">
+            misuse = <"Not to be used for detailed descriptions of health risks or exposure to hazardous substances during the education or training. Use the archetypes EVALUATION.health_risk or EVALUATION.exposure for this purpose.
+
+Not to be used to record information about the education or training of an individual at a specific point in time (for example, on June 16, 2014) or during a relative interval of time (for example 'in the past 30 days'. Use an appropriate OBSERVATION archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Education record
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Educational institution
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            allow_archetype CLUSTER[at0002] matches {    -- Organisation details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Milestone
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Field of study
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Date started
+                value matches {
+                    DV_DATE[at9007]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Date ended
+                value matches {
+                    DV_DATE[at9008]
+                }
+            }
+            allow_archetype CLUSTER[at0009] matches {    -- Additional details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Bildungsstation">
+                description = <"Aufzeichnung über eine von einer Person absolvierte Bildungs- oder Ausbildungsperiode.">
+            >
+            ["at0001"] = <
+                text = <"Bildungseinrichtung">
+                description = <"Name der Einrichtung, Institution oder Schule, in der die Bildung oder Ausbildung stattgefunden hat.">
+                comment = <"Zum Beispiel: Universität von London.
+">
+            >
+            ["at0002"] = <
+                text = <"Details zur Organisation">
+                description = <"Detaillierte Angaben über die Einrichtung, Institution oder Schule.">
+            >
+            ["at0003"] = <
+                text = <"Meilenstein">
+                description = <"Bezeichnung des erreichten Schulabschlusses oder akademischen Abschlusses.">
+                comment = <"Eine Kodierung mit einer Terminologie ist, wenn möglich, wünschenswert. Zum Beispiel: die ISCED-Klassifizierung, wie \"Berufsausbildung der Sekundarstufe II\"; \"Berufsausbildung nach dem Sekundarbereich, nicht tertiär\"; \"Bachelor oder gleichwertiger Abschluss, beruflich\"; \"Doktorat oder gleichwertiger Abschluss, akademisch\"; \"Berufsausbildung nach dem Sekundarbereich, nicht tertiär\"; oder \"hat nie an einem Bildungsgang teilgenommen\".">
+            >
+            ["at0004"] = <
+                text = <"Studienfach">
+                description = <"Das Fachgebiet, auf das sich die allgemeine oder berufliche Bildung bezieht.">
+                comment = <"Eine Kodierung mit einer Terminologie ist wünschenswert, wenn möglich. Zum Beispiel: Betriebswirtschaftslehre oder Gesundheitsinformatik.">
+            >
+            ["at0005"] = <
+                text = <"Datum des Beginns">
+                description = <"Das Datum, an dem die Person die allgemeine oder berufliche Ausbildung begonnen hat.">
+            >
+            ["at0006"] = <
+                text = <"Darum der Beendigung">
+                description = <"Das Datum, an dem der Meilenstein erreicht wurde oder die Person die allgemeine oder berufliche Ausbildung beendet hat.">
+            >
+            ["at0008"] = <
+                text = <"Beschreibung">
+                description = <"Narrative Beschreibung des allgemeinen Bildungs- oder Ausbildungsweges einer Person.">
+            >
+            ["at0009"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Zusätzliche Angaben über die Bildungsstationen.">
+            >
+            ["at0010"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Informationen über die Bildungsstationen, die nicht in anderen Feldern erfasst werden.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Utdanning">
+                description = <"En utdanning eller opplæring individet har foretatt i en gitt periode.">
+            >
+            ["at0001"] = <
+                text = <"Utdanningsinstitusjon">
+                description = <"Navnet på institusjonen eller skolen hvor utdanningen eller opplæringen ble gjennomført.">
+                comment = <"For eksempel: Norges teknisk-naturvitenskapelige universitet (NTNU) eller University College London.">
+            >
+            ["at0002"] = <
+                text = <"Organisasjonsdetaljer">
+                description = <"Strukturerte detaljer om utdanningsinstitusjonen eller skolen.">
+            >
+            ["at0003"] = <
+                text = <"Utdanningsnivå">
+                description = <"Navn på utdanningsnivået eller akademisk kvalifikasjon som er oppnådd.">
+                comment = <"Koding av \"Utdanningsnivå\" med en terminologi er anbefalt der det er mulig. For eksempel med NUS 2000 eller Unescos ISCED klassifikasjon. Sistnevnte forefinnes ikke på norsk, men eksempel er \"'Upper secondary vocational education\"; \"Post-secondary non-tertiary vocational education\"; \"Bachelor’s or equivalent level, professional\"; \"Doctoral or equivalent level, academic\"; \"Post-secondary non-tertiary vocational education\"; or \"Never attended an educational program\".">
+            >
+            ["at0004"] = <
+                text = <"Fagområde">
+                description = <"Fagområdet som er omfattet av utdanningen eller opplæringen.">
+                comment = <"Koding med en terminologi er ønskelig, der det er mulig. For eksempel: Økonomi eller helseinformatikk.">
+            >
+            ["at0005"] = <
+                text = <"Startdato">
+                description = <"Datoen da individet begynte på utdanningen eller opplæringen.">
+            >
+            ["at0006"] = <
+                text = <"Sluttdato">
+                description = <"Dato da utdanningsnivået var oppnådd eller individet sluttet på utdanningen eller opplæringen.">
+            >
+            ["at0008"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse om utdanning eller opplæring som er foretatt av individet.">
+            >
+            ["at0009"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere strukturerte detaljer om utdanningen.">
+            >
+            ["at0010"] = <
+                text = <"Kommetar">
+                description = <"Ytterligere fritekst om utdanningen/opplæringen som ikke passer i andre felt.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Education record">
+                description = <"Record of a period of education or training undertaken by an individual.">
+            >
+            ["at0001"] = <
+                text = <"Educational institution">
+                description = <"Name of the facility, institution or school where the education or training took place.">
+                comment = <"For example: University College London.">
+            >
+            ["at0002"] = <
+                text = <"Organisation details">
+                description = <"Structured details about the facility, institution or school.">
+            >
+            ["at0003"] = <
+                text = <"Milestone">
+                description = <"Name of the education milestone or academic qualification achieved.">
+                comment = <"Coding with a terminology is desirable, where possible. For example: the ISCED classification, such as 'Upper secondary vocational education'; 'Post-secondary non-tertiary vocational education'; 'Bachelor’s or equivalent level, professional'; 'Doctoral or equivalent level, academic'; 'Post-secondary non-tertiary vocational education'; or 'never attended an educational program'.">
+            >
+            ["at0004"] = <
+                text = <"Field of study">
+                description = <"The field of study covered by the education or training.">
+                comment = <"Coding with a terminology is desirable, where possible. For example: business studies; or health informatics.">
+            >
+            ["at0005"] = <
+                text = <"Date started">
+                description = <"The date when the individual commenced the education or training.">
+            >
+            ["at0006"] = <
+                text = <"Date ended">
+                description = <"The date when the milestone was achieved or the individual ceased the education or training.">
+            >
+            ["at0008"] = <
+                text = <"Description">
+                description = <"Narrative description about the education or training undertaken by the individual.">
+            >
+            ["at0009"] = <
+                text = <"Additional details">
+                description = <"Further details about the education record.">
+            >
+            ["at0010"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the education record not captured in other fields.">
+            >
+        >
+    >

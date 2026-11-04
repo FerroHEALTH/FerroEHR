@@ -1,0 +1,273 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=69e173a1-6963-4313-a500-669da9fc11b4; build_uid=aa20f6e1-9456-4bfc-b836-f3ef4238e780)
+    openEHR-EHR-CLUSTER.genomic_copy_number_variant.v1.1.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Aurelie Tomczak, Natalia Strauch">
+                ["organisation"] = <"Institute of Pathology, University Hospital Heidelberg, Germany; Medizinische Hochschule Hannover">
+                ["email"] = <"au.tomczak@yahoo.com, Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Liv Laugen">
+                ["organisation"] = <"​Oslo University Hospital, Norway">
+                ["email"] = <"liv.laugen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Gideon Giacomelli">
+        ["organisation"] = <"Charité Berlin, Germany">
+        ["email"] = <"gideon.giacomelli@charite.de">
+        ["date"] = <"2019-02-01">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Gyri Aasland Gradek, Haukeland University Hospital, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Dag Erik Undlien, Oslo University Hospital, Norway", "Camilla F. Skjelbred, Telemark HF Hospital, Norway", "Toril Fagerheim, University Hospital of North Norway, Norway", "Francesca Frexia, CRS4, Italy", "Sjur Gjerald, Oslo University Hospital, Norway", "Gunnar Houge, Haukeland University Hospital, Norway", "Christina Jaeger-Schmidt, Heidelberg University Hospital, Germany", "Florian Kaercher, Charité Berlin, Germany", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Cecilia Mascia, CRS4, Italy (openEHR Editor)", "Simon Schumacher, HiGHmed, Germany", "Asbjørg Stray-Pedersen, Oslo University Hospital, Norway", "Nyree Taylor, Ocean Health Systems, Australia", "Aurelie Tomczak, Uniklinikum Heidelberg, Germany", "Paolo Uva, CRS4, Italy", "Gianluigi Zanetti, CRS4, Italy", "Rune Østern, St Olavs Hospital, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"den Dunnen JT, Dalgleish R, Maglott DR, Hart RK, Greenblatt MS, McGowan-Jordan J, Roux AF, Smith T, Antonarakis SE, Taschner PE. HGVS Recommendations for the Description of Sequence Variants: 2016 Update. Hum Mutat. 2016 Jun;37(6):564-9. doi: 10.1002/humu.22981. Epub 2016 Mar 25. PubMed PMID: 26931183.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"811AEF4A98143C4B70BA9CD97316F80F">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung von Informationen zu der in einer Sequenz beobachteten \"Copy number variant\" menschlicher DNA.">
+            keywords = <"Copy number", "Variation", "genetisch", "Genom", "genomisch", "Variante", "DNA", "Chromosom", "Mutation", "Nukleotid">
+            use = <"Verwenden Sie diesen Archetyp, um die Details zu einer \"Copy number variant\" menschlicher DNA darzustellen, die in einer genomischen Sequenz beobachtet wurden.
+
+Dieser Archetyp wurde speziell für die Verwendung im SLOT \"Structured variant\" innerhalb des Archetyps CLUSTER.genomic_variant_result entwickelt, kann aber auch in anderen ENTRY- oder CLUSTER-Archetypen verwendet werden, sofern dies klinisch angemessen ist.
+
+Alle Definitionen und Beispiele in diesem Archetyp entsprechen der Nomenklatur der HGVS.">
+            misuse = <"Nicht zur Darstellung von Informationen über Varianten nicht-menschlicher DNA oder jeglicher Art von RNA oder Protein.
+
+Nicht zur Darstellung von Informationen über Tandem-Wiederholungen verwenden. Verwenden Sie zu diesem Zweck den Archetyp CLUSTER.genomic_repeated_sequence_variant.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljer om en kopitallvariant (CNV) i humant DNA, funnet i en genomisk sekvens.">
+            keywords = <"kopitall", "variasjon", "genetikk", "genom", "mutasjon", "nukleotide", "CNV", "kopitallsavvik", "Copy Number", "DNA", "kromosom">
+            use = <"Brukes til å registrere detaljene om en kopitallsvariant (CNV) i humant DNA, funnet i en genomisk sekvens.
+
+Denne arketypen har blitt laget for å brukes i SLOT'et \"'Strukturert variantbeskrivelse'\" i arketypen CLUSTER.genomic_variant_result. Den kan også brukes i andre ENTRY- eller CLUSTER-arketyper der det er klinisk hensiktsmessig.
+
+Alle definisjoner og eksempler i denne arketypen følger HGVS-nomenklaturen.">
+            misuse = <"Skal ikke brukes til å registrere informasjon om varianter av ikke-humant DNA, eller noen form for RNA eller protein.
+
+Skal ikke brukes til å registrere informasjon om tandem-repeterte sekvenser, bruk arketypen CLUSTER.repeated_sequence_variant til dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the details about a copy number variant of human DNA, observed in a genomic sequence.">
+            keywords = <"copy number", "variation", "genetic", "genomic", "variant", "DNA", "chromosome", "mutation", "nucleotide">
+            use = <"Use to record the details about a copy number variant of human DNA, observed in a genomic sequence.
+
+This archetype has been specifically designed to be used in the 'Structured variant' SLOT within the CLUSTER.genomic_variant_result archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+All definitions and examples in this archetype follow the HGVS nomenclature.">
+            misuse = <"Not to be used to record information about variants of non-human DNA, or any kind of RNA or protein.
+
+Not to be used to record information about tandem repeats. Use the CLUSTER.genomic_repeated_sequence_variant archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Genomic copy number variant
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Start
+                value matches {
+                    DV_COUNT[at9001]
+                    DV_INTERVAL<DV_COUNT>[at9002]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- End
+                value matches {
+                    DV_COUNT[at9003]
+                    DV_INTERVAL<DV_COUNT>[at9004]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Total copy number
+                value matches {
+                    DV_COUNT[at9005] matches {
+                        magnitude matches {|>=0|}
+                    }
+                    DV_QUANTITY[at9008] matches {
+                        property matches {[at9007]}    -- Qualified real
+                        units matches {"1"}
+                    }
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Copy number change type
+                value matches {
+                    DV_CODED_TEXT[at9006] matches {
+                        defining_code matches {[ac9000]}    -- Copy number change type (synthesised)
+                    }
+                }
+            }
+            allow_archetype CLUSTER[at0004] matches {    -- Reference sequence
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.reference_sequence(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Genomic copy number variant">
+                description = <"Eine menschliche genetische Sequenzänderung, bei der im Vergleich zu einer genomischen Referenzsequenz ein DNA-Segment, das normalerweise größer als 1 Kilobase (kb) ist, gelöscht oder dupliziert wurde.">
+            >
+            ["at0001"] = <
+                text = <"Start">
+                description = <"Position or range of possible positions of the first nucleotide of the CNV.">
+            >
+            ["at0002"] = <
+                text = <"End">
+                description = <"Position or range of possible positions of the last nucleotide of the CNV.">
+            >
+            ["at0003"] = <
+                text = <"Total copy number">
+                description = <"Number of appearance of the allele.">
+            >
+            ["at0004"] = <
+                text = <"Reference sequence">
+                description = <"The sequence file used as a reference to describe this variant.">
+                comment = <"Should be a specific chromosome most of the time.">
+            >
+            ["at0005"] = <
+                text = <"Copy number change type">
+                description = <"Type of sequence alteration.">
+                comment = <"Different type of impact, such as low-level amplification or whole gene deletion, should be recorded using the Reported impact Cluster within the CLUSTER.genomic_variant_result archetype.">
+            >
+            ["at0006"] = <
+                text = <"Gain">
+                description = <"A sequence alteration whereby the copy number of a given region is greater than the reference sequence.">
+            >
+            ["at0007"] = <
+                text = <"Loss">
+                description = <"A sequence alteration whereby the copy number of a given region is less than the reference sequence.">
+            >
+            ["at9007"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9000"] = <
+                text = <"Copy number change type (synthesised)">
+                description = <"Type of sequence alteration. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Genetisk variant - kopitall">
+                description = <"En endring av gensekvensen til et menneske hvor et DNA-segment, vanligvis større enn 1 kilobaser (kb), blir slettet eller duplisert, sammenliknet med referansesekvensen. Også kalt CNV. Engelsk: copy number.">
+            >
+            ["at0001"] = <
+                text = <"Start">
+                description = <"Startposisjon eller området til mulige posisjoner til det første nukleotidet av kopitallvarianten (CNV).">
+            >
+            ["at0002"] = <
+                text = <"Slutt">
+                description = <"Sluttposisjonen eller området til mulige posisjoner til det siste nukleotidet av kopitallvarianten (CNV).">
+            >
+            ["at0003"] = <
+                text = <"Totalt kopitall">
+                description = <"Antall ganger allelet forekommer (antall kopier).">
+            >
+            ["at0004"] = <
+                text = <"Referansesekvens">
+                description = <"Sekvensfilen som har blitt brukt som en referanse for å beskrive varianten.">
+                comment = <"Vanligvis vil dette være et spesifikt kromosom.">
+            >
+            ["at0005"] = <
+                text = <"Kopitall endringstype">
+                description = <"Type sekvensendring.">
+                comment = <"Ulike typer betydning (impact), for eksempel lav-nivå forsterkning eller sletting av hele genet, skal registreres ved hjelp av Clusteret \"Funksjonell betydning\" i arketypen genomic_variant_result (Genetisk variant resultat).">
+            >
+            ["at0006"] = <
+                text = <"Tillegg">
+                description = <"En sekvensendring der kopitallet til en gitt region er større enn referansesekvensen.">
+            >
+            ["at0007"] = <
+                text = <"Tap">
+                description = <"En sekvensendring der kopitallet til en gitt region er mindre enn referansesekvensen.">
+            >
+            ["at9007"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9000"] = <
+                text = <"Kopitall endringstype (synthesised)">
+                description = <"Type sekvensendring. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Genomic copy number variant">
+                description = <"A human genetic sequence change where, compared to a genomic reference sequence, a DNA segment, usually larger than 1 kilobase (kb), was deleted or duplicated.">
+            >
+            ["at0001"] = <
+                text = <"Start">
+                description = <"Position or range of possible positions of the first nucleotide of the CNV.">
+            >
+            ["at0002"] = <
+                text = <"End">
+                description = <"Position or range of possible positions of the last nucleotide of the CNV.">
+            >
+            ["at0003"] = <
+                text = <"Total copy number">
+                description = <"Number of appearance of the allele.">
+            >
+            ["at0004"] = <
+                text = <"Reference sequence">
+                description = <"The sequence file used as a reference to describe this variant.">
+                comment = <"Should be a specific chromosome most of the time.">
+            >
+            ["at0005"] = <
+                text = <"Copy number change type">
+                description = <"Type of sequence alteration.">
+                comment = <"Different types of impact, such as low-level amplification or whole gene deletion, should be recorded using the 'Functional impact' Cluster within the CLUSTER.genomic_variant_result archetype.">
+            >
+            ["at0006"] = <
+                text = <"Gain">
+                description = <"A sequence alteration whereby the copy number of a given region is greater than the reference sequence.">
+            >
+            ["at0007"] = <
+                text = <"Loss">
+                description = <"A sequence alteration whereby the copy number of a given region is less than the reference sequence.">
+            >
+            ["at9007"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+            ["ac9000"] = <
+                text = <"Copy number change type (synthesised)">
+                description = <"Type of sequence alteration. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9007"] = <http://openehr.org/id/380>
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0006", "at0007">
+        >
+    >

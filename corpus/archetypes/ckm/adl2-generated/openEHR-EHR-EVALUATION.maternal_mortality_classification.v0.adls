@@ -1,0 +1,139 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=5b0055ba-75ed-42f9-b3d2-78da53882278; build_uid=2922f6af-b8af-411c-b85a-c8de649047d8)
+    openEHR-EHR-EVALUATION.maternal_mortality_classification.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-06-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"F9C24CA623EA5CDB0F88B2D4F23DC61A">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the final death-related classification at the conclusion of a maternal mortality case investigation.">
+            use = <"Use to record the final death-related classification at the conclusion of a maternal mortality case investigation.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Maternal mortality classification
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Cause classification
+                        value matches {
+                            DV_CODED_TEXT[at9002] matches {
+                                defining_code matches {[ac9000]}    -- Cause classification (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Timing classification
+                        value matches {
+                            DV_CODED_TEXT[at9003] matches {
+                                defining_code matches {[ac9001]}    -- Timing classification (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0010] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0011] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9004]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Maternal mortality classification">
+                description = <"Death classification at the conclusion of a maternal mortality case investigation.">
+            >
+            ["at0007"] = <
+                text = <"Timing classification">
+                description = <"Determination of the timing of the maternal death in relation to the pregnancy and postnatal period.">
+            >
+            ["at0008"] = <
+                text = <"Maternal death">
+                description = <"Death of a woman from direct or indirect causes, during pregnancy, childbirth or within 42 days of the end of the pregnancy, irrespective of the duration and site of the pregnancy.">
+            >
+            ["at0009"] = <
+                text = <"Late maternal death">
+                description = <"Death of a woman from direct or indirect causes, more than 42 days but less than one year after the end of a pregnancy.">
+            >
+            ["at0002"] = <
+                text = <"Cause classification">
+                description = <"Determination of the role of antenatal, labour and postnatal factors in causing death.">
+            >
+            ["at0003"] = <
+                text = <"Direct">
+                description = <"Death of a pregnant woman resulting from obstetric complications of pregnancy or its management.">
+            >
+            ["at0004"] = <
+                text = <"Indirect">
+                description = <"Death of a pregnant woman resulting from diseases or conditions that were not due to a direct obstetric cause, but were aggravated by the physiologic effects of pregnancy.">
+            >
+            ["at0005"] = <
+                text = <"Coincidental">
+                description = <"Death of a pregnant woman considered to be causally unrelated to pregnancy.">
+            >
+            ["at0006"] = <
+                text = <"Indeterminate">
+                description = <"Not able to determine a classification for the death of the pregnant woman.">
+            >
+            ["at0011"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0012"] = <
+                text = <"Last updated">
+                description = <"The date when this maternal mortality classification was last updated.">
+            >
+            ["ac9000"] = <
+                text = <"Cause classification (synthesised)">
+                description = <"Determination of the role of antenatal, labour and postnatal factors in causing death. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Timing classification (synthesised)">
+                description = <"Determination of the timing of the maternal death in relation to the pregnancy and postnatal period. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0008", "at0009">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0003", "at0004", "at0005", "at0006">
+        >
+    >

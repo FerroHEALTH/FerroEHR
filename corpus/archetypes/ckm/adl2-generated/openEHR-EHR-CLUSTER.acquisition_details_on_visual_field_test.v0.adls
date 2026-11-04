@@ -1,0 +1,584 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=fb892f3a-eaeb-4542-a1c6-37321b5874b8; build_uid=7412cfa6-8f41-41fc-bb42-af6fda0ae8bf)
+    openEHR-EHR-CLUSTER.acquisition_details_on_visual_field_test.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2015-06-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Jose Andonegui Navarro, Complejo Hospitalario de Navarra, Spain", "Luis Serrano Arriezu, Institute of Smart Cities & Universidad Pública de Navarra, Spain", "Gustavo Bacelar-Silva, Healthcare Designs, Brazil", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"A80A335A1AA8C976026DB3C58B2973BB">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Register settings specified to carry out a specific perimetry study.">
+            keywords = <"perimetry details", "visual field test">
+            use = <"To specify the strategy concerning the visual field test, either planning the study or recording a test already carried out.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Acquisition details on visual field test
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Laterality
+                value matches {
+                    DV_CODED_TEXT[at9010] matches {
+                        defining_code matches {[ac9000]}    -- Laterality (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Method
+                value matches {
+                    DV_CODED_TEXT[at9011] matches {
+                        defining_code matches {[ac9001]}    -- Method (synthesised)
+                    }
+                }
+            }
+            CLUSTER[at0013] occurrences matches {0..1} matches {    -- Test Parameters
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0078] occurrences matches {0..1} matches {    -- Automated test
+                        value matches {
+                            DV_BOOLEAN[at9012] matches {
+                                value matches {True, False; True}
+                            }
+                        }
+                    }
+                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Test pattern
+                        value matches {
+                            DV_CODED_TEXT[at9013] matches {
+                                defining_code matches {[ac9002]}    -- Test pattern (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Test strategy
+                        value matches {
+                            DV_CODED_TEXT[at9014] matches {
+                                defining_code matches {[ac9003]}    -- Test strategy (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0054] occurrences matches {0..1} matches {    -- Screening test mode
+                        value matches {
+                            DV_CODED_TEXT[at9015] matches {
+                                defining_code matches {[ac9004]}    -- Screening test mode (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0062] occurrences matches {0..1} matches {    -- Device configuration
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0063] occurrences matches {0..1} matches {    -- Fixation monitoring strategy
+                        value matches {
+                            DV_CODED_TEXT[at9016] matches {
+                                defining_code matches {[ac9005]}    -- Fixation monitoring strategy (synthesised)
+                            }
+                        }
+                    }
+                    CLUSTER[at0069] occurrences matches {0..1} matches {    -- Stimulus
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0070] occurrences matches {0..1} matches {    -- Stimulus area
+                                value matches {
+                                    DV_CODED_TEXT[at9017] matches {
+                                        defining_code matches {[ac9006]}    -- Stimulus area (synthesised)
+                                    }
+                                    DV_QUANTITY[at9018] matches {
+                                        property matches {[at9007]}    -- Angle, plane
+                                        magnitude matches {|>=0.0|}
+                                        units matches {"deg"}
+                                        precision matches {2}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0079] occurrences matches {0..1} matches {    -- Stimulus colour
+                                value matches {
+                                    DV_CODED_TEXT[at9019] matches {
+                                        defining_code matches {[ac2]}    -- Visual field illumination colours
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0080] occurrences matches {0..1} matches {    -- Background
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0081] occurrences matches {0..1} matches {    -- Background luminance
+                                value matches {
+                                    DV_CODED_TEXT[at9020] matches {
+                                        defining_code matches {[ac9008]}    -- Background luminance (synthesised)
+                                    }
+                                    DV_QUANTITY[at9021] matches {
+                                        property matches {[at9009]}    -- Luminous flux
+                                        units matches {"asb"}
+                                        precision matches {1}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0086] occurrences matches {0..1} matches {    -- Background illumination colour
+                                value matches {
+                                    DV_CODED_TEXT[at9022] matches {
+                                        defining_code matches {[ac3]}    -- Visual field illumination colours
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Acquisition details on visual field test">
+                description = <"Defines specific details about perimetry studies.">
+            >
+            ["at0001"] = <
+                text = <"Laterality">
+                description = <"Eye/s included in the study.">
+            >
+            ["at0002"] = <
+                text = <"Left eye">
+                description = <"Left eye observation.">
+            >
+            ["at0003"] = <
+                text = <"Right eye">
+                description = <"Right eye observation.">
+            >
+            ["at0004"] = <
+                text = <"Both eyes">
+                description = <"Test acquired on both eyes of the patient.">
+            >
+            ["at0005"] = <
+                text = <"Method">
+                description = <"Method chosen to study patient's visual field.">
+            >
+            ["at0006"] = <
+                text = <"Goldman">
+                description = <"Goldman perimetry was used to measure the visual fields.">
+            >
+            ["at0007"] = <
+                text = <"Dicon">
+                description = <"The Dicon device was used to measure the visual fields.">
+            >
+            ["at0008"] = <
+                text = <"Henson">
+                description = <"A Henson device was used to measure the visual fields.">
+            >
+            ["at0009"] = <
+                text = <"Octopus">
+                description = <"An Octopus device was used to measure the visual fields.">
+            >
+            ["at0010"] = <
+                text = <"Humphrey">
+                description = <"A Humphrey device was used to measure the visual fields.">
+            >
+            ["at0011"] = <
+                text = <"FDP">
+                description = <"Frequency Doubling Perimetry was used to measure the visual fields.">
+            >
+            ["at0012"] = <
+                text = <"FASTPAC">
+                description = <"FASTPAC automated standard perimetry was used to measure the visual fields.">
+            >
+            ["at0013"] = <
+                text = <"Test Parameters">
+                description = <"Describe the settings parameters chosen for the test.">
+            >
+            ["at0014"] = <
+                text = <"Test pattern">
+                description = <"Test pattern used to distribute visual field measurements during a perimetry study.">
+            >
+            ["at0015"] = <
+                text = <"Test strategy">
+                description = <"Threshold test algorithm chosen to determine patient's sensitivity at each point tested on the visual field.">
+            >
+            ["at0016"] = <
+                text = <"24-2">
+                description = <"Visual field test pattern, nominally covering an area within 24° of fixation. Consists of 54 test points a minimum of 3° from each meridian and placed 6° apart. Corresponds to DICOM Code value 111800.">
+            >
+            ["at0017"] = <
+                text = <"10-2">
+                description = <"Visual field test pattern, nominally covering an area within 10° of fixation.  Consists of 68 test points a minimum of 1° from each meridian and placed 2° apart. Corresponds to DICOM Code value 111801.">
+            >
+            ["at0018"] = <
+                text = <"30-2">
+                description = <"Visual field test pattern consisting of test point locations within 30° of fixation. Consists of 76 test points a minimum of 3° from each meridian and placed 6° apart. Corresponds to DICOM Code value 111802.">
+            >
+            ["at0019"] = <
+                text = <"60-4">
+                description = <"Visual field test pattern consisting of 60 test point locations between 30° and 60° of fixation a minimum of 6° from each meridian and placed 12° apart. Corresponds to DICOM Code value 111803.">
+            >
+            ["at0020"] = <
+                text = <"Macula">
+                description = <"Visual field test pattern consisting of 16 test point locations within 10° of fixation a minimum of 1° from each meridian and placed 2° apart. Corresponds to DICOM Code value 111804.">
+            >
+            ["at0021"] = <
+                text = <"Central 40 Point">
+                description = <"Visual field test pattern consisting of 40 test point locations within 30° of fixation that spread out radially from fixation. Corresponds to DICOM Code value 111805.">
+            >
+            ["at0022"] = <
+                text = <"Central 76 Point">
+                description = <"Visual field test pattern consisting of 76 test point locations within 30° of fixation a minimum of 3° from each meridian and placed 6° apart. Corresponds to DICOM Code value 111806.">
+            >
+            ["at0023"] = <
+                text = <"Peripheral 60 Point">
+                description = <"Visual field test pattern consisting of 60 test point locations between 30° and 60° of fixation a minimum of 6° from each meridian and placed 12° apart. Corresponds to DICOM Code value 111807.">
+            >
+            ["at0024"] = <
+                text = <"Full Field 81 Point">
+                description = <"Visual field test pattern consisting of 81 test point locations within 60° of fixation that spread out radially from fixation. Corresponds to DICOM Code value 111808.">
+            >
+            ["at0025"] = <
+                text = <"Full Field 120 Point">
+                description = <"Visual field test pattern consisting of 120 test point locations within 60° of fixation that spread out radially from fixation, concentrated in the nasal hemisphere. Corresponds to DICOM Code value 111809.">
+            >
+            ["at0026"] = <
+                text = <"Glaucoma (G)">
+                description = <"Visual field test pattern for glaucoma and general visual field assessment with 59 test locations of which 16 test locations are in the macular area (up to 10° eccentricity) and where the density of test location is reduced with eccentricity. The test can be extended with the inclusion of 14 test locations between 30° and 60° eccentricity, 6 of which are located at the nasal step. Corresponds to DICOM Code value 111810.">
+            >
+            ["at0027"] = <
+                text = <"M">
+                description = <"Visual field test pattern for the macular area. Orthogonal test pattern with 0.7° spacing within the central 4° of eccentricity and reduced density of test locations between 4 and 10,5° of eccentricity. 81 test locations over all. The test can be extended to include the test locations of the Visual Field G Test Pattern between 10,5° and 60°. Corresponds to DICOM Code value 111811.">
+            >
+            ["at0028"] = <
+                text = <"07">
+                description = <"Full visual field test pattern with 48 test locations from 0-30° and 82 test locations from 30-70°. Reduced test point density with increased eccentricity. Can be combined with screening and threshold strategies. Corresponds to DICOM Code value 111812.">
+            >
+            ["at0029"] = <
+                text = <"Low Vision Centra (LVC)">
+                description = <"Visual field low vision central test pattern. Orthogonal off-center test pattern with 6° spacing. 75 test locations within the central 30°. Corresponds with the 32/30-2 excluding the 2 locations at the blind spot, including a macular test location. The LVC is linked with a staircase threshold strategy starting at 0 dB intensity and applies stimulus area V. Corresponds to DICOM Code value 111813.">
+            >
+            ["at0030"] = <
+                text = <"Central">
+                description = <"Visual field central test pattern. General test corresponding to the 30-2 but excluding the 2 test locations in the blind spot area, hence with 74 instead of 76 test locations. Corresponds to DICOM Code value 111814.">
+            >
+            ["at0031"] = <
+                text = <"SITA-Standard">
+                description = <"Swedish Interactive Thresholding Algorithm (SITA) test strategy. Strategy gains testing efficiency through use of visual field and information theory models. Corresponds to DICOM Code value 111815.">
+            >
+            ["at0032"] = <
+                text = <"SITA-SWAP">
+                description = <"Adaptation of SITA testing methods to Blue-Yellow testing. Corresponds to DICOM Code value 111816.">
+            >
+            ["at0033"] = <
+                text = <"SITA-Fast">
+                description = <"Similar to SITA-Standard test strategy but with less strict criteria for closing test points. Intended for patients who must be tested in the shortest possible time. Corresponds to DICOM Code value 111817.">
+            >
+            ["at0034"] = <
+                text = <"Full Threshold (FT)">
+                description = <"Threshold test strategy algorithm that determines a patient’s sensitivity at each test point in the threshold test pattern by adjusting intensity by 4 dB steps until the patient changes their response, and then adjusts the intensity in the opposite direction by 2 dB steps until the patient changes their response again. The last stimulus seen by the patient is recognized as the threshold for that point. The starting values are determined by first thresholding a “primary” point in each quadrant then using the results of each primary point to determine the starting values for neighboring points. Corresponds to DICOM Code value 111818.">
+            >
+            ["at0035"] = <
+                text = <"FastPac">
+                description = <"Similar to the Full Threshold algorithm except that it steps by 3 dB and only crosses the threshold only once. Corresponds to DICOM Code value 111819.">
+            >
+            ["at0036"] = <
+                text = <"Full From Prior">
+                description = <"Identical to Full Threshold  test strategy except that starting values are determined by the results of a previous test performed using the same test pattern and the Full Threshold test strategy. Corresponds to DICOM Code value 111820.">
+            >
+            ["at0037"] = <
+                text = <"Optima">
+                description = <"Similar to FastPac test strategy except that the steps are pseudo-dynamic (differ based on the intensity of the last presentation). Corresponds to DICOM Code value 111821.">
+            >
+            ["at0038"] = <
+                text = <"Two-Zone">
+                description = <"Suprathreshold testing strategy, in which each point is initially tested using stimulus that is 6 dB brighter than the expected hill of vision. If the patient does not respond, the stimulus is presented a second time at the same brightness. If the patient sees either presentation, the point is marked as “seen”; otherwise it is marked as “not seen”. Corresponds to DICOM Code value 111822.">
+            >
+            ["at0039"] = <
+                text = <"Three-Zone">
+                description = <"An extension of the two-zone test strategy in which test points where the second stimulus is not seen are presented with a third stimulus at maximum brightness. Corresponds to DICOM Code value 111823.">
+            >
+            ["at0040"] = <
+                text = <"Quantify-Defects">
+                description = <"An extension of the two-zone test strategy, in which test points where the second stimulus is not seen receive threshold testing to quantify the depth of any detected scotomoas. Corresponds to DICOM Code value 111824.">
+            >
+            ["at0041"] = <
+                text = <"TOP">
+                description = <"Tendency Oriented Perimetry (TOP) test strategy. Fast thresholding algorithm. Test strategy makes use of the interaction between neighboring test locations to reduce the test time compared to normal full threshold strategy by 60-80%. Corresponds to DICOM Code value 111825.">
+            >
+            ["at0042"] = <
+                text = <"Dynamic">
+                description = <"Dynamic test strategy is a fast thresholding strategy reducing test duration by adapting the dB step sizes according to the frequency-of-seeing curve of the threshold. Reduction of test time compared to normal full threshold strategy 30-50%. Corresponds to DICOM Code value 111826.">
+            >
+            ["at0043"] = <
+                text = <"Normal">
+                description = <"Traditional full threshold staircase test strategy. Initial intensities are presented, based on anchor point sensitivities in each quadrant and based on already known neighboring sensitivities. In a first run, thresholds are changed in 4dB steps until the first response reversal. Then the threshold is changed in 2 dB steps until the second response reversal. The threshold is calculated as the average between the last seen and last not-seen stimulus, supposed to correspond with the 50% point in the frequency-of-seeing curve. Corresponds to DICOM Code value 111827.">
+            >
+            ["at0044"] = <
+                text = <"1-LT">
+                description = <"One level screening test strategy: Each test location is tested with a single intensity. The result is shown as seen or not-seen. The intensity can either be a 0 dB stimulus or a predefined intensity. Corresponds to DICOM Code value 111828.">
+            >
+            ["at0045"] = <
+                text = <"2-LT">
+                description = <"Two level screening test strategy: Each test location is initially tested 6 dB brighter than the age corrected normal value. Corresponds to DICOM Code value 111829.">
+            >
+            ["at0046"] = <
+                text = <"LVS">
+                description = <"Low Vision Strategy (LVS) is a full threshold normal strategy with the exception that it starts at 0 dB intensity and applies stimulus area V. Corresponds to DICOM Code value 111830.">
+            >
+            ["at0047"] = <
+                text = <"GATE">
+                description = <"German Adaptive Threshold Estimation (GATE) is a fast test strategy based on a modified 4-2 staircase algorithm, using prior visual fields to calculate the starting intensity. Corresponds to DICOM Code value 111831.">
+            >
+            ["at0048"] = <
+                text = <"GATEi">
+                description = <"Similar to GATE test strategy. The i stands for initial. If there was no prior visual field test to calculate the starting values, an anchor point method is used to define the local start values. Corresponds to DICOM Code value 111832.">
+            >
+            ["at0049"] = <
+                text = <"2LT-Dynamic">
+                description = <"A test started as two level screening test strategy. In the course of the test, the threshold of relative defects and/or normal test locations has been quantified using the dynamic threshold strategy. Corresponds to DICOM Code value 111833.">
+            >
+            ["at0050"] = <
+                text = <"2LT-Normal">
+                description = <"A test started as two level screening test strategy. In the course of the test, the threshold of relative defects and/or normal test locations has been quantified using the normal full threshold strategy. Corresponds to DICOM Code value 111834.">
+            >
+            ["at0051"] = <
+                text = <"Fast Threshold">
+                description = <"This test strategy takes neighbourhood test point results into account and offers stimuli with an adapted value to save time. Corresponds to DICOM Code value 111835.">
+            >
+            ["at0052"] = <
+                text = <"CLIP">
+                description = <"Continuous Luminance Incremental Perimetry (CLIP) test strategy which measures at first the individual reaction time of the patient and threshold values in every quadrant. The starting value for the main test is slightly below in individual threshold. Corresponds to DICOM Code value 111836.">
+            >
+            ["at0053"] = <
+                text = <"CLASS Strategy">
+                description = <"A supra threshold screening strategy. The starting stimuli intensities depend on the classification of the patient’s visual hill by measuring the central (fovea) or peripheral (15° meridian) threshold. The result of each dot slightly underestimates the sensitivity value (within 5 dB). Corresponds to DICOM Code value 111837.">
+            >
+            ["at0054"] = <
+                text = <"Screening test mode">
+                description = <"Mode for determining the starting luminance for screening test points.">
+            >
+            ["at0056"] = <
+                text = <"Age corrected">
+                description = <"The starting luminance s is chosen based on the age of the patient. Corresponds to DICOM Code value 111838.">
+            >
+            ["at0057"] = <
+                text = <"Threshold related">
+                description = <"The starting luminance is chosen based on the results of thresholding a set of “primary” test points (one in each quadrant). Corresponds to DICOM Code value 111839.">
+            >
+            ["at0058"] = <
+                text = <"Single luminance">
+                description = <"All starting luminance is set to the same value. Corresponds to DICOM Code value 111840.">
+            >
+            ["at0059"] = <
+                text = <"Foveal sensitivity related">
+                description = <"The starting luminance is chosen based on the result of the foveal threshold value. Corresponds to DICOM Code value 111841.">
+            >
+            ["at0060"] = <
+                text = <"Related to non macular sensitivity">
+                description = <"The starting luminance is chosen based on the result of four threshold values measured near the 15° meridian (one in each quadrant). Corresponds to DICOM Code value 111842.">
+            >
+            ["at0061"] = <
+                text = <"User chosen value">
+                description = <"Observation value selected by user for further processing or use, or as most representative. Corresponds to DICOM Code value 121410.">
+            >
+            ["at0062"] = <
+                text = <"Device configuration">
+                description = <"Configuration of the perimeter during the visual field test.">
+            >
+            ["at0063"] = <
+                text = <"Fixation monitoring strategy">
+                description = <"Configuration used to monitor the patient's fixation.">
+            >
+            ["at0064"] = <
+                text = <"Automated Optical">
+                description = <"Real time evaluation of the camera image to recognize blinks and fixation losses with influence on the test procedure. Blinks that interfere with stimuli presentation cause the automated repetition of such stimulus presentations. Fixation losses can be used to delay the stimulus presentation until correct fixation is regained. Corresponds to DICOM Code value 111843.">
+            >
+            ["at0065"] = <
+                text = <"Blind Spot Monitoring">
+                description = <"A method of monitoring the patient’s fixation by periodically presenting stimulus in a location on the background surface that corresponds to the patient’s blind spot. Corresponds to DICOM Code value 111844.">
+            >
+            ["at0066"] = <
+                text = <"Macular Fixation Testing">
+                description = <"A method of monitoring the patient’s fixation by presenting the stimulus to the patient’s macula. Corresponds to DICOM Code value 111845.">
+            >
+            ["at0067"] = <
+                text = <"Observation by Examiner">
+                description = <"A method of monitoring the patient’s fixation by observation from the examiner of the patient. Corresponds to DICOM Code value 111846.">
+            >
+            ["at0068"] = <
+                text = <"None">
+                description = <"Corresponds to DICOM Code value R-40775.">
+            >
+            ["at0069"] = <
+                text = <"Stimulus">
+                description = <"Properties of the light chosen to stimulate patients.">
+            >
+            ["at0070"] = <
+                text = <"Stimulus area">
+                description = <"Area of light stimulus presented to the patient.">
+            >
+            ["at0071"] = <
+                text = <"Goldmann size I">
+                description = <"Goldmann I target size was used (0.25 mm2).">
+            >
+            ["at0072"] = <
+                text = <"Goldmann size II">
+                description = <"Goldmann II target size was used (1 mm2).">
+            >
+            ["at0073"] = <
+                text = <"Goldmann size III">
+                description = <"Goldmann III target size was used (4 mm2).">
+            >
+            ["at0074"] = <
+                text = <"Goldmann size IV">
+                description = <"Goldmann IV target size was used (16 mm2).">
+            >
+            ["at0075"] = <
+                text = <"Goldmann size V">
+                description = <"Goldmann V target size was used (64 mm2).">
+            >
+            ["at0078"] = <
+                text = <"Automated test">
+                description = <"Automated perimetry or manual test chosen instead.">
+            >
+            ["at0079"] = <
+                text = <"Stimulus colour">
+                description = <"Colour of light stimulus presented to the patient.">
+            >
+            ["at0080"] = <
+                text = <"Background">
+                description = <"Properties of the background chosen for the test.">
+            >
+            ["at0081"] = <
+                text = <"Background luminance">
+                description = <"Background luminance of the device, in candelas per square meter (cd/m²) or apostilbs (ASB).">
+            >
+            ["at0082"] = <
+                text = <"4 ASB">
+                description = <"Background illuminated with 4 ASB.">
+            >
+            ["at0083"] = <
+                text = <"31.5 ASB">
+                description = <"Background illuminated with 31.5 ASB.">
+            >
+            ["at0084"] = <
+                text = <"100 ASB">
+                description = <"Background illuminated with 100 ASB.">
+            >
+            ["at0085"] = <
+                text = <"1000 ASB">
+                description = <"Background illuminated with 1000 ASB.">
+            >
+            ["at0086"] = <
+                text = <"Background illumination colour">
+                description = <"Colour chosen to illuminate the background of the visual field device so as to make the light stimulus contrast optimal.">
+            >
+            ["ac2"] = <
+                text = <"Visual field illumination colours">
+                description = <"List of colours specifically used for illumination in the visual field test (DICOM Table CID 4255).">
+            >
+            ["ac3"] = <
+                text = <"Visual field illumination colours">
+                description = <"List of colours specifically used for illumination in the visual field test (DICOM Table CID 4255).">
+            >
+            ["at9007"] = <
+                text = <"Angle, plane">
+                description = <"Angle, plane">
+            >
+            ["at9009"] = <
+                text = <"Luminous flux">
+                description = <"Luminous flux">
+            >
+            ["ac9000"] = <
+                text = <"Laterality (synthesised)">
+                description = <"Eye/s included in the study. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Method (synthesised)">
+                description = <"Method chosen to study patient's visual field. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Test pattern (synthesised)">
+                description = <"Test pattern used to distribute visual field measurements during a perimetry study. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Test strategy (synthesised)">
+                description = <"Threshold test algorithm chosen to determine patient's sensitivity at each point tested on the visual field. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Screening test mode (synthesised)">
+                description = <"Mode for determining the starting luminance for screening test points. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Fixation monitoring strategy (synthesised)">
+                description = <"Configuration used to monitor the patient's fixation. (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Stimulus area (synthesised)">
+                description = <"Area of light stimulus presented to the patient. (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"Background luminance (synthesised)">
+                description = <"Background luminance of the device, in candelas per square meter (cd/m²) or apostilbs (ASB). (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9007"] = <http://openehr.org/id/497>
+            ["at9009"] = <http://openehr.org/id/504>
+        >
+        ["SNOMED-CT"] = <
+            ["at0001"] = <http://snomed.info/id/272741003>
+            ["at0002"] = <http://snomed.info/id/362503005>
+            ["at0003"] = <http://snomed.info/id/362502000>
+            ["at0004"] = <http://snomed.info/id/362508001>
+            ["at0006"] = <http://snomed.info/id/423553008>
+            ["at0008"] = <http://snomed.info/id/252811007>
+            ["at0010"] = <http://snomed.info/id/252806005>
+            ["at0011"] = <http://snomed.info/id/392017002>
+            ["at0012"] = <http://snomed.info/id/392132006>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0016", "at0017", "at0018", "at0019", "at0020", "at0021", "at0022", "at0023", "at0024", "at0025", "at0026", "at0027", "at0028", "at0029", "at0030">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0006", "at0007", "at0008", "at0009", "at0010", "at0011", "at0012">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0002", "at0003", "at0004">
+        >
+        ["ac9006"] = <
+            id = <"ac9006">
+            members = <"at0071", "at0072", "at0073", "at0074", "at0075">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0064", "at0065", "at0066", "at0067", "at0068">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0056", "at0057", "at0058", "at0059", "at0060", "at0061">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0031", "at0032", "at0033", "at0034", "at0035", "at0036", "at0037", "at0038", "at0039", "at0040", "at0041", "at0042", "at0043", "at0044", "at0045", "at0046", "at0047", "at0048", "at0049", "at0050", "at0051", "at0052", "at0053">
+        >
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0082", "at0083", "at0084", "at0085">
+        >
+    >

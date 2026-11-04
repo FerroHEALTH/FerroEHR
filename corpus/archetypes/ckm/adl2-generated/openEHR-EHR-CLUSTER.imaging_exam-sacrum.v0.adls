@@ -1,0 +1,199 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c9928add-490a-405c-a0c3-62465ace96e4; build_uid=942ac3e3-f872-4513-b11c-3cab98162cdd)
+    openEHR-EHR-CLUSTER.imaging_exam-sacrum.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-CLUSTER.imaging_exam.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen, John Tore Valand">
+                ["organisation"] = <"Oslo University Hospital, Helse Bergen">
+                ["email"] = <"varntzen@ous-hf.no, john.tore.valand@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-11-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Andreas Abildgaard, OUS, Norway", "Marit Alice Venheim, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Randi Brendberg, Helse Nord RHF, Norway", "Gunn Elin Blakkisrud, DIPS ASA, Norway", "Peter Fedorcsak, University of Oslo, Norway (openEHR Editor)", "Kåre Flø, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Kija Indrearne, Helse Bergen, Norway", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (Nasjonal IKT redaktør)", "Aud Jorunn Mjelstad, Helse Bergen, Norway", "Anjali Kulkarni, Karkinos, India", "Kanika Kuwelker, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Svenne Naumann, Finnmarkssykehuset, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Burtsev, A. V., et al. \"Clinical issues of the sagittal balance in adults.\" Genij Ortopedii 23.2 (2017): 228-35. Retrieved  January 6, 2023 from, https://www.researchgate.net/figure/Parameters-of-the-sagittal-vertical-axis-SVA-relative-to-the-S7PL-line-10-47_fig5_324164580">
+        ["2"] = <"\"Sagittal Balance.\" Radiopedia.Org, 22 Apr. 2021, https://radiopaedia.org/articles/sagittal-balance. Accessed 6 Jan. 2023.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"EDC304DE09D4FC5F3A5975625CA5CAB3">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To record the findings on radiological examination of the pelvis, and their interpretation. (en)">
+            keywords = <"Befund, Ergebnis, Bildgebung, Körper, Organ, System, Struktur, Region, Beobachtung, Diagnostik, Radiologie, Bild", ...>
+            use = <"*Use to record the findings on radiological examinations of the pelvis, and their interpretation.
+
+The intended scope for this archetype is to eventually record all detailed findings on radiological examination of the pelvis using any modality. It is anticipated that further data elements may be added as requirements are identified and confirmed.
+
+This archetype and its related family of specialisations are designed to be nested within the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or within the 'Additional details' SLOT in other relevant CLUSTER.imaging_exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. If this archetype or its specialisations need to be extended with further levels of detailed findings, additional instances of the CLUSTER.imaging_exam or its specialisations can be nested in the 'Additional details' SLOT. (en)">
+            misuse = <"*Not to be used to record imaging examination findings for any body structure or region other than the sacrum. Use other archetypes from the CLUSTER.imaging_exam family for this purpose.
+
+Not to be used to record details related to the overall findings, context or technical details related to a complete imaging examination test result. Use the OBSERVATION.imaging_exam_result for this purpose. For example, comments on the study quality, differential diagnoses, and overall impression. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere funn eller observasjoner ved radiologisk undersøkelse av sakrum">
+            keywords = <"funn", "observasjon", "bildediagnostikk", "kropp", "organ", "kroppsstruktur", "diagnostisk", "radiologi", "bilde">
+            use = <"Brukes for å registrere funn eller observasjoner ved radiologisk undersøkelse av sakrum.
+
+Det tiltenkte omfanget for denne CLUSTER.imaging_exam (Bildediagnostisk undersøkelse) - arketypen er til slutt å kunne registrere alle detaljerte funn ved bildediagnostisk undersøkelse av pelvis uavhengig av modalitet. Det er forventet at flere dataelementer kan bli lagt til når krav til slike er identifisert og bekreftet.
+
+Denne arketypen er utformet for å bli nøstet i SLOT'et \"Ytterligere detaljer\" i SLOT'et \"Strukturerte funn\" i OBSERVATION.imaging_exam_result (Bildediagnostisk svar) eller i andre relevante Bildediagnostisk svar-arketyper, men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende. Hvis denne arketypen, eller en spesialisering av denne, må utvides med flere nivåer med detaljerte funn eller observasjoner, kan flere forekomster av arketypen eller dens spesialiseringer nøstes i SLOT'et \"Ytterligere detaljer\".">
+            misuse = <"Skal ikke brukes til å registrere funn som er gjort utenom det definerte organet eller den definerte kroppsdelen. Bruk en egen instans av en eller flere arketyper innen gruppen av CLUSTER.imaging_exam - arketyper (Undersøkelsesfunn) for dette formålet.
+
+Skal ikke brukes til å registrere overordnede undersøkelsesfunn, kontekst eller tekniske detaljer relatert til bildeundersøkelsen. Bruk arketypen OBSERVATION.imaging_exam_result (Bildediagnostisk svar) for å registrere for eksempel kommentar om undersøkelseskvalitet, differensialdiagnose og overordnet konklusjon.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the findings on radiological examination of the pelvis, and their interpretation.">
+            keywords = <"finding, imaging, body, system, structure, region, observation, diagnostic, radiology, image", ...>
+            use = <"Use to record the findings on radiological examinations of the pelvis, and their interpretation.
+
+The intended scope for this archetype is to eventually record all detailed findings on radiological examination of the pelvis using any modality. It is anticipated that further data elements may be added as requirements are identified and confirmed.
+
+This archetype and its related family of specialisations are designed to be nested within the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or within the 'Additional details' SLOT in other relevant CLUSTER.imaging_exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. If this archetype or its specialisations need to be extended with further levels of detailed findings, additional instances of the CLUSTER.imaging_exam or its specialisations can be nested in the 'Additional details' SLOT.">
+            misuse = <"Not to be used to record imaging examination findings for any body structure or region other than the sacrum. Use other archetypes from the CLUSTER.imaging_exam family for this purpose.
+
+Not to be used to record details related to the overall findings, context or technical details related to a complete imaging examination test result. Use the OBSERVATION.imaging_exam_result for this purpose. For example, comments on the study quality, differential diagnoses, and overall impression.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Imaging examination of the sacrum
+        items matches {
+            ELEMENT[at0001.1] matches {    -- Body structure
+                value matches {
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code matches {[at0.1]}    -- Sacrum
+                    }
+                }
+            }
+            ELEMENT[at0.2] occurrences matches {0..1} matches {    -- Sacral slope
+                value matches {
+                    DV_QUANTITY[at0.9002] matches {
+                        property matches {[at0.9000]}    -- Angle, plane
+                        magnitude matches {|0.0..360.0|}
+                        units matches {"deg"}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"*Imaging examination of the sacrum (en)">
+                description = <"*Findings on radiological examination of the sacrum. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"Körperstruktur">
+                description = <"Identifizierung der untersuchten Körperstruktur oder Region.">
+                comment = <"*For example: 'Liver', 'Right ankle' or 'Lymph node group'. Coding of the body structure with an appropriate terminology, such as SNOMED CT, is recommended. If the body structure has been fully identified in this 'Body structure' element, then the 'Body site' data element and 'Structured body site' SLOT become redundant. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Sacrum (en)">
+                description = <"">
+            >
+            ["at0.2"] = <
+                text = <"*Sacral slope (en)">
+                description = <"*The measured angle between a line parallel to the sacral endplate and a horizontal reference line. (en)">
+            >
+            ["at0.9000"] = <
+                text = <"* Angle, plane (en)">
+                description = <"* Angle, plane (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0.1"] = <
+                text = <"Sakrum">
+                description = <"">
+            >
+            ["at0.2"] = <
+                text = <"Sacral slope">
+                description = <"Målt vinkel mellom en horisontal linje og vinkelen mot dekkplaten av S1. 
+">
+            >
+            ["at0000.1"] = <
+                text = <"Bildediagnostisk undersøkelse - sakrum">
+                description = <"Funn eller observasjoner ved radiologisk undersøkelse av sakrum">
+            >
+            ["at0001.1"] = <
+                text = <"Kroppsstruktur">
+                description = <"Identifisering av organet eller kroppsdelen som svaret gjelder.">
+                comment = <"For eksempel \"Lever\", \"Høyre ankel\" eller \"Lymfeknutegruppe\". Det er anbefalt å kode kroppsstruktur med en passende terminologi, som SNOMED CT. Dersom den aktuelle strukturen i kroppen er fullt ut angitt i dette \"Kroppsstruktur\"-elementet er det ikke nødvendig å bruke \"Anatomisk lokalisasjon\" eller \"Strukturert anatomisk lokalisasjon\".">
+            >
+            ["at0.9000"] = <
+                text = <"* Angle, plane (en)">
+                description = <"* Angle, plane (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Imaging examination of the sacrum">
+                description = <"Findings on radiological examination of the sacrum.">
+            >
+            ["at0001.1"] = <
+                text = <"Body structure">
+                description = <"Identification of the body structure or region examined.">
+                comment = <"For example: 'Liver', 'Right ankle' or 'Lymph node group'. Coding of the body structure with an appropriate terminology, such as SNOMED CT, is recommended. If the body structure has been fully identified in this 'Body structure' element, then the 'Body site' data element and 'Structured body site' SLOT become redundant.">
+            >
+            ["at0.1"] = <
+                text = <"Sacrum">
+                description = <"">
+            >
+            ["at0.2"] = <
+                text = <"Sacral slope">
+                description = <"The measured angle between a line parallel to the sacral endplate and a horizontal reference line.">
+            >
+            ["at0.9000"] = <
+                text = <"Angle, plane">
+                description = <"Angle, plane">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at0.9000"] = <http://openehr.org/id/497>
+        >
+        ["SNOMED-CT"] = <
+            ["at0.1"] = <http://snomed.info/id/264186006>
+        >
+    >

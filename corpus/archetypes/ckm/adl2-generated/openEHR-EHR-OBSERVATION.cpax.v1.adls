@@ -1,0 +1,951 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=e829956d-b6f5-45c7-9236-5461231f55da; build_uid=ebf538e3-dc93-4772-b1d4-53d3b1d26e8e)
+    openEHR-EHR-OBSERVATION.cpax.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Charlotte Marie Schanke, Stein Arne Rimehaug, Silje Ljosland Bakke">
+                ["organisation"] = <"Sunnaas Hospital, Helse Vest IKT AS">
+                ["email"] = <"Charlotte.Marie.Schanke@sunnaas.no, sterim@sunnaas.no, silje.ljosland.bakke@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Silje Ljosland Bakke">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no">
+        ["date"] = <"2023-04-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, varntzen@ous-hf.no", ...>
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Corner EJ, Wood H, Englebretsen C, Thomas A, Grant RL, Nikoletou D, Soni N. The Chelsea critical care physical assessment tool (CPAx): validation of an innovative new tool to measure physical morbidity in the general adult critical care population; an observational proof-of-concept pilot study. Physiotherapy. 2013 Mar;99(1):33-41. doi: 10.1016/j.physio.2012.01.003. Epub 2012 Mar 30. PubMed PMID: 23219649.">
+        ["2"] = <"Norwegian Version of the Chelsea Critical Care Physical Assessment Tool (CPAx-NOR): Translation, Face Validity, Cross-Cultural Adaptation and Inter-Rater Reliability - PubMed (nih.gov). https://pubmed.ncbi.nlm.nih.gov/37568435/">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"C4FD37293618CD1876B8BEB9B27BCA30">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere resultatene for hver enkel delfunksjon og deres totale sumskår for Chelsea Critical Care Physical Assessment Tool (CPAx).">
+            use = <"Brukes for å registrere resultatene for hver enkel delfunksjon og deres totale sumskår for Chelsea Critical Care Physical Assessment Tool (CPAx).">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter for the Chelsea Critical Care Physical Assessment Tool (CPAx).">
+            use = <"Use to record the results for each component parameter for the Chelsea Critical Care Physical Assessment Tool (CPAx).">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Chelsea Critical Care Physical Assessment (CPAx) tool
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Respiratory function
+                                        value matches {
+                                            DV_ORDINAL[at9010] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- Complete ventilator dependence. Mandatory breaths only. May be fully sedated/ paralysed
+                                                    [{1}, {[at0006]}],    -- Ventilator dependence. Mandatory breaths with some spontaneous effort
+                                                    [{2}, {[at0007]}],    -- Spontaneously breathing with continuous invasive or non-invasive ventilatory support
+                                                    [{3}, {[at0008]}],    -- Spontaneously breathing with intermittent invasive or non-invasive ventilatory supportor continuous high flow oxygen (>15 L)
+                                                    [{4}, {[at0009]}],    -- Receiving standardoxygen therapy (<15L)
+                                                    [{5}, {[at0010]}]    -- Self-ventilating with no oxygen therapy
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Cough
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0021]}],    -- Absent cough, may be fully sedated or paralysed
+                                                    [{1}, {[at0022]}],    -- Cough stimulated on deep suctioning only
+                                                    [{2}, {[at0023]}],    -- Weak ineffective voluntary cough, unable to clear independently (e.g. requires deep suction)
+                                                    [{3}, {[at0024]}],    -- Weak, partially effective voluntary cough, sometimes able to clear secretions (e.g. requires Yankauer suctioning)
+                                                    [{4}, {[at0025]}],    -- Effective cough, clearing secretions with airways clearance techniques
+                                                    [{5}, {[at0026]}]    -- Consistent effective voluntary cough, clearing secretions independently
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Moving within the bed (e.g. rolling)
+                                        value matches {
+                                            DV_ORDINAL[at9012] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0027]}],    -- Unable, maybe fully sedated/ paralysed
+                                                    [{1}, {[at0028]}],    -- Initiates movement. Requires assistance of two or more people (maximal)
+                                                    [{2}, {[at0029]}],    -- Initiates movement. Requires assistance of at least one person (moderate)
+                                                    [{3}, {[at0030]}],    -- Initiates movement. Requires assistance of one person (minimal)
+                                                    [{4}, {[at0031]}],    -- Independent in ≥3 seconds
+                                                    [{5}, {[at0032]}]    -- Independent in <3 seconds
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Supine to sitting on the edge of the bed
+                                        value matches {
+                                            DV_ORDINAL[at9013] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0033]}],    -- Unable/unstable
+                                                    [{1}, {[at0034]}],    -- Initiates movement. Requires assistance of two or more people (maximal)
+                                                    [{2}, {[at0035]}],    -- Initiates movement. Requires assistance of at least one person (moderate)
+                                                    [{3}, {[at0036]}],    -- Initiates movement. Requires assistance of one person (minimal)
+                                                    [{4}, {[at0037]}],    -- Independent in ≥3 seconds
+                                                    [{5}, {[at0038]}]    -- Independent in <3 seconds
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Dynamic sitting (i.e. when sitting on the edge of the bed/unsupported sitting)
+                                        value matches {
+                                            DV_ORDINAL[at9014] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0039]}],    -- Unable/unstable
+                                                    [{1}, {[at0040]}],    -- Requires assistance of two or more people (maximal)
+                                                    [{2}, {[at0041]}],    -- Requires assistance of at least one person (moderate)
+                                                    [{3}, {[at0042]}],    -- Requires assistance of one person (minimal)
+                                                    [{4}, {[at0043]}],    -- Independent with some dynamic sitting balance (i.e. able to alter trunk position within base of support)
+                                                    [{5}, {[at0044]}]    -- Independent with full dynamic sitting balance (i.e. able to reach out of base of support)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Standing balance
+                                        value matches {
+                                            DV_ORDINAL[at9015] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0045]}],    -- Unable/unstable/bedbound
+                                                    [{1}, {[at0046]}],    -- Tilt table or similar
+                                                    [{2}, {[at0047]}],    -- Standing hoist or similar
+                                                    [{3}, {[at0048]}],    -- Dependent on frame, crutches or similar
+                                                    [{4}, {[at0049]}],    -- Independent without aids
+                                                    [{5}, {[at0050]}]    -- Independent without aids and full dynamic standing balance (i.e. able to reach out of base of support)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Sit to stand (starting position: ≤90º hip flexion)
+                                        value matches {
+                                            DV_ORDINAL[at9016] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0051]}],    -- Unable/unstable
+                                                    [{1}, {[at0052]}],    -- Sit to stand with maximal assistance (standing hoist or similar)
+                                                    [{2}, {[at0053]}],    -- Sit to stand with moderate assistance (e.g. one or two people)
+                                                    [{3}, {[at0054]}],    -- Sit to stand with minimal assistance (e.g. one person)
+                                                    [{4}, {[at0055]}],    -- Sit to stand independently pushing through arms of the chair
+                                                    [{5}, {[at0056]}]    -- Sit to stand independently without upper limb involvement
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Transferring from bed to chair
+                                        value matches {
+                                            DV_ORDINAL[at9017] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0057]}],    -- Unable/unstable
+                                                    [{1}, {[at0058]}],    -- Full hoist
+                                                    [{2}, {[at0059]}],    -- Standing hoist or similar
+                                                    [{3}, {[at0060]}],    -- Pivot transfer (no stepping) with mobility aid or physical assistance
+                                                    [{4}, {[at0061]}],    -- Stand and step transfer with mobility aid or physical assistance
+                                                    [{5}, {[at0062]}]    -- Independent transfer without equipment
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Stepping
+                                        value matches {
+                                            DV_ORDINAL[at9018] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0063]}],    -- Unable/unstable
+                                                    [{1}, {[at0064]}],    -- Using a standing hoist or similar
+                                                    [{2}, {[at0065]}],    -- Using mobility aids and assistance of at least one person (moderate)
+                                                    [{3}, {[at0066]}],    -- Using mobility aid and assistance of one person (minimal)
+                                                    [{4}, {[at0067]}],    -- Using mobility aid or assistance of one person (minimal)
+                                                    [{5}, {[at0068]}]    -- Independent without aid
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Grip strength (predicted mean for age and gender on the strongest hand)
+                                        value matches {
+                                            DV_ORDINAL[at9019] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0069]}],    -- Unable to assess
+                                                    [{1}, {[at0070]}],    -- <20%
+                                                    [{2}, {[at0071]}],    -- <40%
+                                                    [{3}, {[at0072]}],    -- <60%
+                                                    [{4}, {[at0073]}],    -- <80%
+                                                    [{5}, {[at0074]}]    -- ≥80%
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0076] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9020] matches {
+                                                magnitude matches {|0..50|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0077] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0078] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Chelsea Critical Care Physical Assessment Tool (CPAx)">
+                description = <"Kartleggingsverktøy for fysisk og respiratorisk funksjon hos kritisk og alvorlig syke voksne.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard uspesifisert tidspunkt- eller intervallhendelse som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Respiratorisk funksjon">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Fullstendig avhengig av respirator. Kontrollert modus. Kan være helt sedert/muskelrelaksert">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Avhengig av respirator. Kontrollert modus med noen spontane pust">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Puster selv med kontinuerlig invasiv eller non-invasiv ventilasjonsstøtte">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Puster selv med intermitterende invasiv eller noninvasiv ventilasjonsstøtte ELLER «High-flow» oksygentilskudd (> 15 liter)">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Får oksygentilskudd (< 15 liter)">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Selvpustende uten oksygentilskudd">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Hoste">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Gripestyrke (predikert gjennomsnitt for alder og kjønn for den sterkeste hånden)">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Forflytning i seng f.eks. snu seg">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Liggende til sittende på sengekant">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Sittebalanse (dvs. sitter på sengekanten/ sitter uten støtte)">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Stående balanse">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Sittende til stående (Utgangsstilling: ≤90 grader hoftefleksjon)">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Forflytning fra seng til stol">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Gange">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Ingen hoste, kan være helt sedert/muskelrelaksert">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Hoste stimuleres kun av dyp suging">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Svak ineffektiv hoste, uten evne til sekretevakuering, f.eks. behov for dyp suging">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Svak, delvis effektiv hoste, med sporadisk evne til sekretevakuering, f.eks. behov for sug i munn/svelg">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Effektiv hoste, sekretevakuering ved hjelp av sekretmobiliserende teknikker">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Effektiv hoste, fjerner sekret selvstendig">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Kan ikke, kan være helt sedert/muskelrelaksert">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Initierer bevegelsen. Må ha hjelp av ≥2 personer (maksimal)">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Initierer bevegelsen. Må ha hjelp av ≥1 person (moderat)">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Initierer bevegelsen. Må ha hjelp av 1 person (minimal)">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Selvstendig på ≥3 sekunder">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Selvstendig på <3 sekunder">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Kan ikke/ustabil">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Initierer bevegelsen. Må ha hjelp av ≥ 2 personer (maksimal)">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Initierer bevegelsen. Må ha hjelp av ≥1 person (moderat)">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Initierer bevegelsen. Må ha hjelp av 1 person (minimal)">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Selvstendig på ≥3 sekunder">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Selvstendig på <3 sekunder">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Kan ikke/ustabil">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Må ha hjelp av ≥2 personer (maksimal)">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Må ha hjelp av ≥1 person (moderat)">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Må ha hjelp av 1 person (minimal)">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Selvstendig med noe dynamisk sittebalanse, dvs. kan endre overkroppens stilling innenfor understøttelsesflaten">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Selvstendig med full dynamisk sittebalanse, dvs. kan strekke seg ut over understøttelsesflaten.">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Kan ikke/ustabil/sengeleie">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Ståseng eller lignende">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Ståheis eller lignende">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Avhengig av prekestol, rullator, krykker eller lignende">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Selvstendig uten hjelpemidler">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Selvstendig uten hjelpemidler og full dynamisk stående balanse, dvs. kan strekke seg ut over understøttelsesflaten">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Kan ikke/ustabil">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Sittende til stående med maksimal hjelp, f.eks. ståheis eller lignende">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Sittende til stående med moderat hjelp, f. eks. 1-2 personer">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Sittende til stående med minimal hjelp, f. eks. 1 person">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"Selvstendig fra sittende til stående ved å skyve fra mot armlenene på stolen">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"Selvstendig fra sittende til stående uten armbruk">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"Kan ikke/ustabil">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"Heis">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Ståheis eller lignende">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Lav forflytning (ingen skritt) med forflytningshjelpemiddel eller fysisk hjelp">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Stående forflytning med skritt med forflytningshjelpemiddel ELLER fysisk hjelp">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"Selvstendig forflytning uten utstyr">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"Kan ikke/ustabil">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"Bruker ståheis eller lignende">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Bruker forflytningshjelpemidler OG hjelp av >1 person (moderat)">
+                description = <"">
+            >
+            ["at0066"] = <
+                text = <"Bruker forflytningshjelpemidler OG hjelp av 1 person (minimal)">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"Bruker forflytningshjelpemiddel ELLER hjelp av 1 person (minimal)">
+                description = <"">
+            >
+            ["at0068"] = <
+                text = <"Selvstendig uten hjelp">
+                description = <"">
+            >
+            ["at0069"] = <
+                text = <"Kan ikke testes">
+                description = <"">
+            >
+            ["at0070"] = <
+                text = <"<20%">
+                description = <"">
+            >
+            ["at0071"] = <
+                text = <"<40%">
+                description = <"">
+            >
+            ["at0072"] = <
+                text = <"<60%">
+                description = <"">
+            >
+            ["at0073"] = <
+                text = <"<80%">
+                description = <"">
+            >
+            ["at0074"] = <
+                text = <"≥80%">
+                description = <"">
+            >
+            ["at0076"] = <
+                text = <"Sumskår">
+                description = <"Summen av poeng for hver enkelt delfunksjon i Chelsea Critical Care Physical Assessment Tool.">
+            >
+            ["at0078"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["ac9019"] = <
+                text = <"Respiratorisk funksjon (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"Hoste (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Forflytning i seng f.eks. snu seg (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"Liggende til sittende på sengekant (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Sittebalanse (dvs. sitter på sengekanten/ sitter uten støtte) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"Stående balanse (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"Sittende til stående (Utgangsstilling: ≤90 grader hoftefleksjon) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"Forflytning fra seng til stol (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Gange (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9028"] = <
+                text = <"Gripestyrke (predikert gjennomsnitt for alder og kjønn for den sterkeste hånden) (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Chelsea Critical Care Physical Assessment (CPAx) tool">
+                description = <"A scoring system to measure physical morbidity in critical care.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Respiratory function">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Complete ventilator dependence. Mandatory breaths only. May be fully sedated/ paralysed">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Ventilator dependence. Mandatory breaths with some spontaneous effort">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Spontaneously breathing with continuous invasive or non-invasive ventilatory support">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Spontaneously breathing with intermittent invasive or non-invasive ventilatory supportor continuous high flow oxygen (>15 L)">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Receiving standardoxygen therapy (<15L)">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Self-ventilating with no oxygen therapy">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Cough">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Grip strength (predicted mean for age and gender on the strongest hand)">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Moving within the bed (e.g. rolling)">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Supine to sitting on the edge of the bed">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Dynamic sitting (i.e. when sitting on the edge of the bed/unsupported sitting)">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Standing balance">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Sit to stand (starting position: ≤90º hip flexion)">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Transferring from bed to chair">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Stepping">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Absent cough, may be fully sedated or paralysed">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Cough stimulated on deep suctioning only">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Weak ineffective voluntary cough, unable to clear independently (e.g. requires deep suction)">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Weak, partially effective voluntary cough, sometimes able to clear secretions (e.g. requires Yankauer suctioning)">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Effective cough, clearing secretions with airways clearance techniques">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Consistent effective voluntary cough, clearing secretions independently">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Unable, maybe fully sedated/ paralysed">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Initiates movement. Requires assistance of two or more people (maximal)">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Initiates movement. Requires assistance of at least one person (moderate)">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Initiates movement. Requires assistance of one person (minimal)">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Independent in ≥3 seconds">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Independent in <3 seconds">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Unable/unstable">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Initiates movement. Requires assistance of two or more people (maximal)">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Initiates movement. Requires assistance of at least one person (moderate)">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Initiates movement. Requires assistance of one person (minimal)">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Independent in ≥3 seconds">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Independent in <3 seconds">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Unable/unstable">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Requires assistance of two or more people (maximal)">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Requires assistance of at least one person (moderate)">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Requires assistance of one person (minimal)">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Independent with some dynamic sitting balance (i.e. able to alter trunk position within base of support)">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Independent with full dynamic sitting balance (i.e. able to reach out of base of support)">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Unable/unstable/bedbound">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Tilt table or similar">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Standing hoist or similar">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Dependent on frame, crutches or similar">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Independent without aids">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Independent without aids and full dynamic standing balance (i.e. able to reach out of base of support)">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Unable/unstable">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Sit to stand with maximal assistance (standing hoist or similar)">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Sit to stand with moderate assistance (e.g. one or two people)">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Sit to stand with minimal assistance (e.g. one person)">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"Sit to stand independently pushing through arms of the chair">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"Sit to stand independently without upper limb involvement">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"Unable/unstable">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"Full hoist">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Standing hoist or similar">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Pivot transfer (no stepping) with mobility aid or physical assistance">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Stand and step transfer with mobility aid or physical assistance">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"Independent transfer without equipment">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"Unable/unstable">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"Using a standing hoist or similar">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Using mobility aids and assistance of at least one person (moderate)">
+                description = <"">
+            >
+            ["at0066"] = <
+                text = <"Using mobility aid and assistance of one person (minimal)">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"Using mobility aid or assistance of one person (minimal)">
+                description = <"">
+            >
+            ["at0068"] = <
+                text = <"Independent without aid">
+                description = <"">
+            >
+            ["at0069"] = <
+                text = <"Unable to assess">
+                description = <"">
+            >
+            ["at0070"] = <
+                text = <"<20%">
+                description = <"">
+            >
+            ["at0071"] = <
+                text = <"<40%">
+                description = <"">
+            >
+            ["at0072"] = <
+                text = <"<60%">
+                description = <"">
+            >
+            ["at0073"] = <
+                text = <"<80%">
+                description = <"">
+            >
+            ["at0074"] = <
+                text = <"≥80%">
+                description = <"">
+            >
+            ["at0076"] = <
+                text = <"Total score">
+                description = <"The total sum of each component variable for the Chelsea Critical Care Physical Tool.">
+            >
+            ["at0078"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9019"] = <
+                text = <"Respiratory function (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"Cough (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Moving within the bed (e.g. rolling) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"Supine to sitting on the edge of the bed (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Dynamic sitting (i.e. when sitting on the edge of the bed/unsupported sitting) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"Standing balance (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"Sit to stand (starting position: ≤90º hip flexion) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"Transferring from bed to chair (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Stepping (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9028"] = <
+                text = <"Grip strength (predicted mean for age and gender on the strongest hand) (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9020"] = <
+            id = <"ac9020">
+            members = <"at0021", "at0022", "at0023", "at0024", "at0025", "at0026">
+        >
+        ["ac9024"] = <
+            id = <"ac9024">
+            members = <"at0045", "at0046", "at0047", "at0048", "at0049", "at0050">
+        >
+        ["ac9023"] = <
+            id = <"ac9023">
+            members = <"at0039", "at0040", "at0041", "at0042", "at0043", "at0044">
+        >
+        ["ac9022"] = <
+            id = <"ac9022">
+            members = <"at0033", "at0034", "at0035", "at0036", "at0037", "at0038">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0027", "at0028", "at0029", "at0030", "at0031", "at0032">
+        >
+        ["ac9028"] = <
+            id = <"ac9028">
+            members = <"at0069", "at0070", "at0071", "at0072", "at0073", "at0074">
+        >
+        ["ac9027"] = <
+            id = <"ac9027">
+            members = <"at0063", "at0064", "at0065", "at0066", "at0067", "at0068">
+        >
+        ["ac9026"] = <
+            id = <"ac9026">
+            members = <"at0057", "at0058", "at0059", "at0060", "at0061", "at0062">
+        >
+        ["ac9025"] = <
+            id = <"ac9025">
+            members = <"at0051", "at0052", "at0053", "at0054", "at0055", "at0056">
+        >
+        ["ac9019"] = <
+            id = <"ac9019">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009", "at0010">
+        >
+    >

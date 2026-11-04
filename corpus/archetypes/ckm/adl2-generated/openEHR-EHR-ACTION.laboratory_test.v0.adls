@@ -1,0 +1,497 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7ca6804b-966d-469d-b21f-7246ad739fb0; build_uid=0bfd9d44-0788-4933-87c3-0bd9631c12fd)
+    openEHR-EHR-ACTION.laboratory_test.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics, Australia">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2007-03-12">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"B57A070B23A6181E288B899E79EE6F39">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record information about the activities required to carry out a laboratory test, including the planning, scheduling, performance, suspension, cancellation, documentation and completion.">
+            keywords = <"laboratory", "test", "diagnostic", "evaluation", "investigation", "screening">
+            use = <"Use to record information about the activities required to carry out a laboratory test, including the planning, scheduling, performance, suspension, cancellation, documentation and completion. This is done by the recording of data against specific activities, as defined by the 'Pathway' careflow steps in this archetype.
+
+The scope of this archetype encompasses activities for a broad range of clinical laboratory tests performed for screening or diagnostic purposes. 
+
+Additional structured and detailed information about the laboratory test can be captured using purpose-specific archetypes inserted into the 'Test detail' slot, where required.
+
+Timings related to a laboratory test can be managed in one of two ways:
+- Using the reference model - the time for performance of any pathway step will use the ACTION time attribute for each step.
+- Archetyped data elements:
+--- the 'Scheduled date/time' data element is intended to record the precise time when the laboratory test is planned. Note: the corresponding ACTION time attribute for the Scheduled pathway step will record the time that the laboratory test was scheduled into a system, not the intended date/time on which the laboratory test is intended to be carried out; and
+--- the 'Final end date/time' is intended to record the precise time when the entire testing process was completed. It can be used to document the complex laboratory tests with multiple components such as a Glucose challenge test. Note: the corresponding ACTION time attribute for the 'Test performed' will document the time each component performed was commenced. This 'Final end date/time' data element will record the date/time of the final active component of the test process. This will enable a full duration of the active laboratory test to be calculated, if required.
+
+In practice, many test specimens (for example, in ambulatory care) will be collected without a corresponding order (using an INSTRUCTION archetype) once and not be ordered in advance. The details about the laboratory test will be added against the pathway step, 'Specimen collected'. In point of care testing, the specimen may be collected and the test recorded as completed against the 'Test completed' pathway step without an order or recording of data against any other pathway steps.
+
+In some cases a recurring laboratory test will be ordered, and in this situation data against the 'Test performed' step will be recorded on each occasion, leaving the instruction in the active state. When the last occurrence is recorded the 'laboratory test completed' action is recorded showing that this order is now in the completed state.
+
+In other situations, such as secondary care, there may be a formal order for a laboratory test using a corresponding INSTRUCTION archetype. This ACTION archetype can then be used to record the workflow of when and how the order has been carried out.
+
+Recording information using this ACTION archetype indicates that some sort of activity has actually occurred; this will usually be the laboratory test itself but may be a failed attempt or another activity such as postponing the laboratory test. If there is a formal order for the laboratory test, the state of this order is represented by the Pathway step against which the data is recorded. For example, using this archetype the progressing state of a pre-operative blood test order may be recorded through separate entries in the EHR progress notes at each 'Pathway' step:
+- record the scheduled Start date/time for the test (Test scheduled); and
+- record that the laboratory test has been completed, including information about the laboratory test details (Test completed).
+
+Please note that in the openEHR Reference Model there is a 'Time' attribute, which is intended to record the date and time at which each pathway step of the Action was performed. This is the attribute to use to record the start of the laboratory test (using the 'Test performed' pathway step) or the time that the laboratory test was aborted (using the 'Test aborted' pathway step).">
+            misuse = <"Not to be used to record details about the test result - use the OBSERVATION.laboratory_test_result archetype for this purpose.
+
+Not to be used to record details about administrative activities - use specific ADMIN archetypes for this purpose.
+
+Not to be used to record details about related activities such as medication administered as part of the laboratory test or when imaging guidance is used during the laboratory test - use separate and specific ACTION archetypes within the same template for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ACTION[at0000] matches {    -- Laboratory test
+        ism_transition matches {
+            ISM_TRANSITION[at0004] matches {    -- Test planned
+                current_state matches {
+                    DV_CODED_TEXT[at9009] matches {
+                        defining_code matches {[at9000]}    -- planned
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9010] matches {
+                        defining_code matches {[at0004]}    -- Test planned
+                    }
+                }
+            }
+            ISM_TRANSITION[at0007] matches {    -- Test request sent
+                current_state matches {
+                    DV_CODED_TEXT[at9011] matches {
+                        defining_code matches {[at9001]}    -- initial
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9012] matches {
+                        defining_code matches {[at0007]}    -- Test request sent
+                    }
+                }
+            }
+            ISM_TRANSITION[at0038] matches {    -- Test postponed
+                current_state matches {
+                    DV_CODED_TEXT[at9013] matches {
+                        defining_code matches {[at9002]}    -- postponed
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9014] matches {
+                        defining_code matches {[at0038]}    -- Test postponed
+                    }
+                }
+            }
+            ISM_TRANSITION[at0039] matches {    -- Test cancelled
+                current_state matches {
+                    DV_CODED_TEXT[at9015] matches {
+                        defining_code matches {[at9003]}    -- cancelled
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9016] matches {
+                        defining_code matches {[at0039]}    -- Test cancelled
+                    }
+                }
+            }
+            ISM_TRANSITION[at0036] matches {    -- Test scheduled
+                current_state matches {
+                    DV_CODED_TEXT[at9017] matches {
+                        defining_code matches {[at9004]}    -- scheduled
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9018] matches {
+                        defining_code matches {[at0036]}    -- Test scheduled
+                    }
+                }
+            }
+            ISM_TRANSITION[at0068] matches {    -- Test commenced
+                current_state matches {
+                    DV_CODED_TEXT[at9019] matches {
+                        defining_code matches {[at9005]}    -- active
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9020] matches {
+                        defining_code matches {[at0068]}    -- Test commenced
+                    }
+                }
+            }
+            ISM_TRANSITION[at0072] matches {    -- Specimen collected
+                current_state matches {
+                    DV_CODED_TEXT[at9021] matches {
+                        defining_code matches {[at9005]}    -- active
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9022] matches {
+                        defining_code matches {[at0072]}    -- Specimen collected
+                    }
+                }
+            }
+            ISM_TRANSITION[at0073] matches {    -- Specimen received by laboratory
+                current_state matches {
+                    DV_CODED_TEXT[at9023] matches {
+                        defining_code matches {[at9005]}    -- active
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9024] matches {
+                        defining_code matches {[at0073]}    -- Specimen received by laboratory
+                    }
+                }
+            }
+            ISM_TRANSITION[at0074] matches {    -- Specimen processed
+                current_state matches {
+                    DV_CODED_TEXT[at9025] matches {
+                        defining_code matches {[at9005]}    -- active
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9026] matches {
+                        defining_code matches {[at0074]}    -- Specimen processed
+                    }
+                }
+            }
+            ISM_TRANSITION[at0047] matches {    -- Test performed
+                current_state matches {
+                    DV_CODED_TEXT[at9027] matches {
+                        defining_code matches {[at9005]}    -- active
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9028] matches {
+                        defining_code matches {[at0047]}    -- Test performed
+                    }
+                }
+            }
+            ISM_TRANSITION[at0043] matches {    -- Test completed
+                current_state matches {
+                    DV_CODED_TEXT[at9029] matches {
+                        defining_code matches {[at9006]}    -- complete
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9030] matches {
+                        defining_code matches {[at0043]}    -- Test completed
+                    }
+                }
+            }
+            ISM_TRANSITION[at0040] matches {    -- Test suspended
+                current_state matches {
+                    DV_CODED_TEXT[at9031] matches {
+                        defining_code matches {[at9007]}    -- suspended
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9032] matches {
+                        defining_code matches {[at0040]}    -- Test suspended
+                    }
+                }
+            }
+            ISM_TRANSITION[at0041] matches {    -- Test abandoned
+                current_state matches {
+                    DV_CODED_TEXT[at9033] matches {
+                        defining_code matches {[at9008]}    -- aborted
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9034] matches {
+                        defining_code matches {[at0041]}    -- Test abandoned
+                    }
+                }
+            }
+        }
+        description matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {1} matches {    -- Test name
+                        value matches {
+                            DV_TEXT[at9035]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0071] matches {    -- Specimen
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.specimen\.v1\..*/}
+                    }
+                    ELEMENT[at0049] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9036]
+                        }
+                    }
+                    ELEMENT[at0070] matches {    -- Indication
+                        value matches {
+                            DV_TEXT[at9037]
+                        }
+                    }
+                    ELEMENT[at0065] matches {    -- Method
+                        value matches {
+                            DV_TEXT[at9038]
+                        }
+                    }
+                    ELEMENT[at0058] occurrences matches {0..1} matches {    -- Urgency
+                        value matches {
+                            DV_TEXT[at9039]
+                        }
+                    }
+                    ELEMENT[at0063] matches {    -- Body site
+                        value matches {
+                            DV_TEXT[at9040]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0003] matches {    -- Laboratory test detail
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_circle(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_relative(-[a-zA-Z0-9_]+)*\.v2\..*/}
+                    }
+                    ELEMENT[at0066] occurrences matches {0..1} matches {    -- Scheduled date/time
+                        value matches {
+                            DV_DATE_TIME[at9041]
+                        }
+                    }
+                    ELEMENT[at0014] matches {    -- Reason
+                        value matches {
+                            DV_TEXT[at9042]
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9043]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0053] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0054] occurrences matches {0..1} matches {    -- Requestor order identifier
+                        value matches {
+                            DV_TEXT[at9044]
+                            DV_IDENTIFIER[at9045]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0055] occurrences matches {0..1} matches {    -- Requestor
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0056] occurrences matches {0..1} matches {    -- Receiver order identifier
+                        value matches {
+                            DV_TEXT[at9046]
+                            DV_IDENTIFIER[at9047]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0057] matches {    -- Receiver
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    allow_archetype CLUSTER[at0064] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Laboratory test">
+                description = <"A clinical laboratory or point-of-care test carried out on a biological sample for screening or diagnostic purposes.">
+            >
+            ["at0002"] = <
+                text = <"Test name">
+                description = <"Identification of the laboratory test by name.">
+                comment = <"Coding of the specific laboratory test with a terminology is preferred, where possible.">
+            >
+            ["at0003"] = <
+                text = <"Laboratory test detail">
+                description = <"Structured information about the laboratory test.">
+                comment = <"Use to capture detailed, structured information about anatomical location, method & technique, equipment used, devices implanted, results, findings etc.">
+            >
+            ["at0004"] = <
+                text = <"Test planned">
+                description = <"The laboratory test to be undertaken is planned.">
+            >
+            ["at0005"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the activity or care pathway step not captured in other fields.">
+            >
+            ["at0007"] = <
+                text = <"Test request sent">
+                description = <"Request for laboratory test sent.">
+            >
+            ["at0014"] = <
+                text = <"Reason">
+                description = <"Reason that the activity or care pathway step for the identified laboratory test was carried out.">
+                comment = <"For example: the reason for the cancellation or suspension of the laboratory test.">
+            >
+            ["at0036"] = <
+                text = <"Test scheduled">
+                description = <"The laboratory test has been scheduled.">
+            >
+            ["at0038"] = <
+                text = <"Test postponed">
+                description = <"The laboratory test has been postponed.">
+            >
+            ["at0039"] = <
+                text = <"Test cancelled">
+                description = <"The planned laboratory test has been cancelled prior to commencement.">
+            >
+            ["at0040"] = <
+                text = <"Test suspended">
+                description = <"The laboratory test has been suspended.">
+            >
+            ["at0041"] = <
+                text = <"Test abandoned">
+                description = <"The laboratory test has been aborted.">
+            >
+            ["at0043"] = <
+                text = <"Test completed">
+                description = <"The laboratory test has been performed and all associated clinical activities completed.">
+            >
+            ["at0047"] = <
+                text = <"Test performed">
+                description = <"The laboratory test, or sublaboratory test in a multicomponent laboratory test, has been performed.">
+            >
+            ["at0049"] = <
+                text = <"Description">
+                description = <"Narrative description about the laboratory test, as appropriate for the pathway step.">
+                comment = <"For example: description about the performance and findings from the the laboratory test, the aborted attempt or the cancellation of the laboratory test.">
+            >
+            ["at0054"] = <
+                text = <"Requestor order identifier">
+                description = <"The local ID assigned to the order by the healthcare provider or organisation requesting the test.">
+                comment = <"This is equivalent to Placer Order Number in HL7 v2 specifications.">
+            >
+            ["at0055"] = <
+                text = <"Requestor">
+                description = <"Details about the healthcare provider or organisation requesting the test.">
+            >
+            ["at0056"] = <
+                text = <"Receiver order identifier">
+                description = <"The ID assigned to the order by the healthcare provider or organisation receiving the request for the test. This is also referred to as Filler Order Identifier.">
+                comment = <"This is equivalent to Filler Order Number in HL7 v2 specifications.">
+            >
+            ["at0057"] = <
+                text = <"Receiver">
+                description = <"Details about the healthcare provider or organisation receiving the request for the test.">
+            >
+            ["at0058"] = <
+                text = <"Urgency">
+                description = <"Urgency of the laboratory test.">
+                comment = <"Coding with a terminology is preferred, where possible.">
+            >
+            ["at0063"] = <
+                text = <"Body site">
+                description = <"Identification of the body site for the laboratory test.">
+                comment = <"Occurrences for this data element are unbounded to allow for clinical scenarios such as removing multiple skin lesions in different places, but where all of the other attributes are identical. Use this data element to record simple terms or precoordinated anatomical locations. If the requirements for recording the anatomical location are determined at run-time by the application or require more complex modelling such as relative locations then use the CLUSTER.anatomical_location or CLUSTER.relative_location within the 'laboratory test detail' SLOT in this archetype. If the anatomical location is included in the 'laboratory test name' via precoordinated codes, this data element becomes redundant.">
+            >
+            ["at0064"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0065"] = <
+                text = <"Method">
+                description = <"Identification of specific method or technique for the laboratory test.">
+                comment = <"Use this data element to record simple terms or a narrative description. If the requirements for recording the method require more complex modelling then this can be represented by additional archetypes within the 'laboratory test detail' SLOT in this archetype. If the method is included in the 'laboratory test name' via precoordinated codes, this data element becomes redundant.">
+            >
+            ["at0066"] = <
+                text = <"Scheduled date/time">
+                description = <"The date and/or time on which the laboratory test is intended to be performed.">
+                comment = <"Only for use in association with the 'laboratory test scheduled' pathway step.">
+            >
+            ["at0068"] = <
+                text = <"Test commenced">
+                description = <"The laboratory test, or sublaboratory test in a multicomponent laboratory test, has been commenced.">
+            >
+            ["at0070"] = <
+                text = <"Indication">
+                description = <"The clinical or process-related reason for the laboratory test.">
+                comment = <"Coding of the indication with a terminology is preferred, where possible. This data element allows multiple occurrences. For example: 'Failed bowel preparation' or 'Bowel cancer screening'.">
+            >
+            ["at0071"] = <
+                text = <"Specimen">
+                description = <"">
+            >
+            ["at0072"] = <
+                text = <"Specimen collected">
+                description = <"The laboratory test is identified as a future activity.">
+            >
+            ["at0073"] = <
+                text = <"Specimen received by laboratory">
+                description = <"">
+            >
+            ["at0074"] = <
+                text = <"Specimen processed">
+                description = <"">
+            >
+            ["at9000"] = <
+                text = <"planned">
+                description = <"planned">
+            >
+            ["at9001"] = <
+                text = <"initial">
+                description = <"initial">
+            >
+            ["at9002"] = <
+                text = <"postponed">
+                description = <"postponed">
+            >
+            ["at9003"] = <
+                text = <"cancelled">
+                description = <"cancelled">
+            >
+            ["at9004"] = <
+                text = <"scheduled">
+                description = <"scheduled">
+            >
+            ["at9005"] = <
+                text = <"active">
+                description = <"active">
+            >
+            ["at9006"] = <
+                text = <"complete">
+                description = <"complete">
+            >
+            ["at9007"] = <
+                text = <"suspended">
+                description = <"suspended">
+            >
+            ["at9008"] = <
+                text = <"aborted">
+                description = <"aborted">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/526>
+            ["at9001"] = <http://openehr.org/id/524>
+            ["at9002"] = <http://openehr.org/id/527>
+            ["at9003"] = <http://openehr.org/id/528>
+            ["at9004"] = <http://openehr.org/id/529>
+            ["at9005"] = <http://openehr.org/id/245>
+            ["at9006"] = <http://openehr.org/id/532>
+            ["at9007"] = <http://openehr.org/id/530>
+            ["at9008"] = <http://openehr.org/id/531>
+        >
+    >

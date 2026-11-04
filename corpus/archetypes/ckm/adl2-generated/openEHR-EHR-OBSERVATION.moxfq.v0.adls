@@ -1,0 +1,908 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=cd1e2a90-7923-4faa-8cd2-be5c63aa7291; build_uid=c2f53ad9-2ae5-4612-bb9b-897e08bc8b7d)
+    openEHR-EHR-OBSERVATION.moxfq.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Hildegard Franke">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"hildi@freshehr.com">
+        ["date"] = <"2017-10-08">
+    >
+    original_namespace = <"uk.org.clinicalmodels">
+    original_publisher = <"UK Clinical Models">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"uk.org.clinicalmodels">
+    custodian_organisation = <"UK Clinical Models">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"https://innovation.ox.ac.uk/outcome-measures/manchester-oxford-foot-questionnaire-moxfq/ cited 08-Oct-2017.">
+    >
+    other_details = <
+        ["current_contact"] = <"Hildegard Franke, freshEHR Clinical Informatics Ltd.<hildi@freshehr.com>">
+        ["MD5-CAM-1.0.1"] = <"30D115BB23C9B34F1AA7DE771807F723">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Use to capture and report Manchester Oxford Foot Questionnaire (MOXFQ) score details.">
+            use = <"Use to record the details of the Manchester Oxford Foot Questionnaire score.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this archetype may be copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners where a copyright exists.">
+            misuse = <"Not to be used unless the terms of copyright have been observed (if a copyright exists).">
+            copyright = <"© Clinical Models UK">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- MOXFQ
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Point in time
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- 1 Pain in foot or ankle
+                                        value matches {
+                                            DV_ORDINAL[at9016] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0013]}],    -- All of the time
+                                                    [{1}, {[at0012]}],    -- Most of the time
+                                                    [{2}, {[at0011]}],    -- Some of the time
+                                                    [{3}, {[at0010]}],    -- Rarely
+                                                    [{4}, {[at0009]}]    -- None of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- 2 Avoid walking long distances
+                                        value matches {
+                                            DV_ORDINAL[at9017] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0015]}],    -- All of the time
+                                                    [{1}, {[at0016]}],    -- Most of the time
+                                                    [{2}, {[at0017]}],    -- Some of the time
+                                                    [{3}, {[at0018]}],    -- Rarely
+                                                    [{4}, {[at0019]}]    -- None of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- 3 Change way of walking
+                                        value matches {
+                                            DV_ORDINAL[at9018] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0021]}],    -- All of the time
+                                                    [{1}, {[at0022]}],    -- Most of the time
+                                                    [{2}, {[at0023]}],    -- Some of the time
+                                                    [{3}, {[at0024]}],    -- Rarely
+                                                    [{4}, {[at0025]}]    -- None of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- 4 Walk slowly
+                                        value matches {
+                                            DV_ORDINAL[at9019] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0027]}],    -- All of the time
+                                                    [{1}, {[at0028]}],    -- Most of the time
+                                                    [{2}, {[at0029]}],    -- Some of the time
+                                                    [{3}, {[at0030]}],    -- Rarely
+                                                    [{4}, {[at0031]}]    -- None of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0032] occurrences matches {0..1} matches {    -- 5 Stop and rest
+                                        value matches {
+                                            DV_ORDINAL[at9020] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0033]}],    -- All of the time
+                                                    [{1}, {[at0034]}],    -- Most of the time
+                                                    [{2}, {[at0035]}],    -- Some of the time
+                                                    [{3}, {[at0036]}],    -- Rarely
+                                                    [{4}, {[at0037]}]    -- None of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0038] occurrences matches {0..1} matches {    -- 6 Avoid hard or rough surfaces
+                                        value matches {
+                                            DV_ORDINAL[at9021] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0039]}],    -- All of the time
+                                                    [{1}, {[at0040]}],    -- Most of the time
+                                                    [{2}, {[at0041]}],    -- Some of the time
+                                                    [{3}, {[at0042]}],    -- Rarely
+                                                    [{4}, {[at0043]}]    -- None of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0044] occurrences matches {0..1} matches {    -- 7 Avoid standing for long time
+                                        value matches {
+                                            DV_ORDINAL[at9022] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0045]}],    -- All of the time
+                                                    [{1}, {[at0046]}],    -- Most of the time
+                                                    [{2}, {[at0047]}],    -- Some of the time
+                                                    [{3}, {[at0048]}],    -- Rarely
+                                                    [{4}, {[at0049]}]    -- None of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0050] occurrences matches {0..1} matches {    -- 8 Use bus or car instead of walking
+                                        value matches {
+                                            DV_ORDINAL[at9023] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0051]}],    -- All of the time
+                                                    [{1}, {[at0052]}],    -- Most of the time
+                                                    [{2}, {[at0053]}],    -- Some of the time
+                                                    [{3}, {[at0054]}],    -- Rarely
+                                                    [{4}, {[at0055]}]    -- None of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0056] occurrences matches {0..1} matches {    -- 9 Feel self-conscious
+                                        value matches {
+                                            DV_ORDINAL[at9024] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0057]}],    -- All of the time
+                                                    [{1}, {[at0058]}],    -- Most of the time
+                                                    [{2}, {[at0059]}],    -- Some of the time
+                                                    [{3}, {[at0060]}],    -- Rarely
+                                                    [{4}, {[at0061]}]    -- None of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0062] occurrences matches {0..1} matches {    -- 10 Feel self-conscious about shoes
+                                        value matches {
+                                            DV_ORDINAL[at9025] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0063]}],    -- All of the time
+                                                    [{1}, {[at0064]}],    -- Most of the time
+                                                    [{2}, {[at0065]}],    -- Some of the time
+                                                    [{3}, {[at0066]}],    -- Rarely
+                                                    [{4}, {[at0067]}]    -- None of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0068] occurrences matches {0..1} matches {    -- 11 Pain is more painful in the evening
+                                        value matches {
+                                            DV_ORDINAL[at9026] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0069]}],    -- All of the time
+                                                    [{1}, {[at0070]}],    -- Most of the time
+                                                    [{2}, {[at0071]}],    -- Some of the time
+                                                    [{3}, {[at0072]}],    -- Rarely
+                                                    [{4}, {[at0073]}]    -- None of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0074] occurrences matches {0..1} matches {    -- 12 Shooting pains
+                                        value matches {
+                                            DV_ORDINAL[at9027] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0075]}],    -- All of the time
+                                                    [{1}, {[at0076]}],    -- Most of the time
+                                                    [{2}, {[at0077]}],    -- Some of the time
+                                                    [{3}, {[at0078]}],    -- Rarely
+                                                    [{4}, {[at0079]}]    -- None of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0080] occurrences matches {0..1} matches {    -- 13 Pain prevents activities
+                                        value matches {
+                                            DV_ORDINAL[at9028] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0081]}],    -- All of the time
+                                                    [{1}, {[at0082]}],    -- Most of the time
+                                                    [{2}, {[at0083]}],    -- Some of the time
+                                                    [{3}, {[at0084]}],    -- Rarely
+                                                    [{4}, {[at0085]}]    -- None of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0086] occurrences matches {0..1} matches {    -- 14 Unable to do all social or recreational activities
+                                        value matches {
+                                            DV_ORDINAL[at9029] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0087]}],    -- All of the time
+                                                    [{1}, {[at0088]}],    -- Most of the time
+                                                    [{2}, {[at0089]}],    -- Some of the time
+                                                    [{3}, {[at0090]}],    -- Rarely
+                                                    [{4}, {[at0091]}]    -- None of the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0092] occurrences matches {0..1} matches {    -- 15 Pain severity
+                                        value matches {
+                                            DV_ORDINAL[at9030] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0093]}],    -- Severe
+                                                    [{1}, {[at0094]}],    -- Moderate
+                                                    [{2}, {[at0095]}],    -- Mild
+                                                    [{3}, {[at0096]}],    -- Very mild
+                                                    [{4}, {[at0097]}]    -- None
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0098] occurrences matches {0..1} matches {    -- 16 Pain at night
+                                        value matches {
+                                            DV_ORDINAL[at9031] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0099]}],    -- Every night
+                                                    [{1}, {[at0100]}],    -- Most nights
+                                                    [{2}, {[at0101]}],    -- Some nights
+                                                    [{3}, {[at0102]}],    -- Only 1 or 2 nights
+                                                    [{4}, {[at0103]}]    -- No nights
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0104] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9032] matches {
+                                                magnitude matches {|0..300|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0105] occurrences matches {0..1} matches {    -- Average score
+                                        value matches {
+                                            DV_COUNT[at9033] matches {
+                                                magnitude matches {|0..100|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0106] occurrences matches {0..1} matches {    -- Pain score
+                                        value matches {
+                                            DV_COUNT[at9034]
+                                        }
+                                    }
+                                    ELEMENT[at0107] occurrences matches {0..1} matches {    -- Walking and standing score
+                                        value matches {
+                                            DV_COUNT[at9035] matches {
+                                                magnitude matches {|0..100|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0108] occurrences matches {0..1} matches {    -- Social interaction score
+                                        value matches {
+                                            DV_COUNT[at9036] matches {
+                                                magnitude matches {|0..100|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0004] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0007] matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9037]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0005] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0006] occurrences matches {0..1} matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"MOXFQ">
+                description = <"Manchester Oxford Foot Questionnaire (MOXFQ).">
+            >
+            ["at0002"] = <
+                text = <"Point in time">
+                description = <"A specific date and/or time which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0006"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"e.g. Local hospital departmental infomation or additional metadata to align with HL7 or CDISC equivalents.">
+            >
+            ["at0007"] = <
+                text = <"Confounding factors">
+                description = <"Record any issues or factors that may impact on the score or interpretation.">
+            >
+            ["at0008"] = <
+                text = <"1 Pain in foot or ankle">
+                description = <"Patient-reported extent of pain in foot or ankle during past 4 weeks.">
+                comment = <"Questionnaire wording: 
+
+I have pain in my foot/ankle.">
+            >
+            ["at0009"] = <
+                text = <"None of the time">
+                description = <"The patient has not experienced any pain in foot or ankle during past 4 weeks.">
+            >
+            ["at0010"] = <
+                text = <"Rarely">
+                description = <"The patient has rarely experienced pain in foot or ankle during past 4 weeks.">
+            >
+            ["at0011"] = <
+                text = <"Some of the time">
+                description = <"The patient has experienced pain in foot or ankle some of the time during past 4 weeks.">
+            >
+            ["at0012"] = <
+                text = <"Most of the time">
+                description = <"The patient has experienced pain in foot or ankle most of the time during past 4 weeks.">
+            >
+            ["at0013"] = <
+                text = <"All of the time">
+                description = <"The patient has experienced pain in foot or ankle all of the time during past 4 weeks.">
+            >
+            ["at0014"] = <
+                text = <"2 Avoid walking long distances">
+                description = <"Patient-reported extent of avoiding walking long distances because of pain in foot or ankle.">
+                comment = <"Questionnaire wording: 
+
+I avoid walking long distances because of pain in my foot/ankle.">
+            >
+            ["at0015"] = <
+                text = <"All of the time">
+                description = <"The patient has avoided all of the time walking long distances during past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0016"] = <
+                text = <"Most of the time">
+                description = <"The patient has avoided most of the time walking long distances during past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0017"] = <
+                text = <"Some of the time">
+                description = <"The patient has avoided some of the time walking long distances during past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0018"] = <
+                text = <"Rarely">
+                description = <"The patient has avoided rarely walking long distances during past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0019"] = <
+                text = <"None of the time">
+                description = <"The patient has not avoided walking long distances during past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0020"] = <
+                text = <"3 Change way of walking">
+                description = <"Patient-reported extent to which they have changed the way they walk due to pain in foot or ankle.">
+                comment = <"Questionnaire wording:
+I change the way I walk due to pain in my foot/ankle.">
+            >
+            ["at0021"] = <
+                text = <"All of the time">
+                description = <"The patient has changed the way they walk all of the time during past 4 weeks due to pain in foot or ankle.">
+            >
+            ["at0022"] = <
+                text = <"Most of the time">
+                description = <"The patient has changed the way they walk most of the time during past 4 weeks due to pain in foot or ankle.">
+            >
+            ["at0023"] = <
+                text = <"Some of the time">
+                description = <"The patient has changed the way they walk some of the time during past 4 weeks due to pain in foot or ankle.">
+            >
+            ["at0024"] = <
+                text = <"Rarely">
+                description = <"The patient has changed the way they walk rarely during past 4 weeks due to pain in foot or ankle.">
+            >
+            ["at0025"] = <
+                text = <"None of the time">
+                description = <"The patient has not changed the way they walk during past 4 weeks due to pain in foot or ankle.">
+            >
+            ["at0026"] = <
+                text = <"4 Walk slowly">
+                description = <"Patient-reported extent to which they have walked slowly because of pain in foot or ankle during past 4 weeks.">
+                comment = <"Questionnaire wording:
+I walk slowly because of pain in my foot/ankle.">
+            >
+            ["at0027"] = <
+                text = <"All of the time">
+                description = <"The patient has walked slowly all of the time during past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0028"] = <
+                text = <"Most of the time">
+                description = <"The patient has walked slowly most of the time during past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0029"] = <
+                text = <"Some of the time">
+                description = <"The patient has walked slowly some of the time during past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0030"] = <
+                text = <"Rarely">
+                description = <"The patient has walked slowly rarely during past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0031"] = <
+                text = <"None of the time">
+                description = <"The patient has not walked slowly during past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0032"] = <
+                text = <"5 Stop and rest">
+                description = <"Patient-reported extent to which they have had to stop and rest foot or ankle because of pain in past 4 weeks.">
+                comment = <"Questionnaire wording:
+I have to stop and rest my foot/ankle because of pain.">
+            >
+            ["at0033"] = <
+                text = <"All of the time">
+                description = <"The patient has had to stop and rest foot or ankle because of pain all of the time during past 4 weeks.">
+            >
+            ["at0034"] = <
+                text = <"Most of the time">
+                description = <"The patient has had to stop and rest foot or ankle because of pain most of the time during past 4 weeks.">
+            >
+            ["at0035"] = <
+                text = <"Some of the time">
+                description = <"The patient has had to stop and rest foot or ankle because of pain some of the time during past 4 weeks.">
+            >
+            ["at0036"] = <
+                text = <"Rarely">
+                description = <"The patient has had to stop and rest foot or ankle because of pain rarely during past 4 weeks.">
+            >
+            ["at0037"] = <
+                text = <"None of the time">
+                description = <"The patient has not had to stop and rest foot or ankle because of pain during past 4 weeks.">
+            >
+            ["at0038"] = <
+                text = <"6 Avoid hard or rough surfaces">
+                description = <"Patient-reported extent to which they have avoided hard or rough surfaces because of pain in foot or ankle in past 4 weeks.">
+                comment = <"Questionnaire wording:
+I have to stop and rest my foot/ankle because of pain.">
+            >
+            ["at0039"] = <
+                text = <"All of the time">
+                description = <"The patient has avoided hard or rough surfaces all of the time in past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0040"] = <
+                text = <"Most of the time">
+                description = <"The patient has avoided hard or rough surfaces most of the time in past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0041"] = <
+                text = <"Some of the time">
+                description = <"The patient has avoided hard or rough surfaces some of the time in past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0042"] = <
+                text = <"Rarely">
+                description = <"The patient has avoided hard or rough surfaces rarely in past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0043"] = <
+                text = <"None of the time">
+                description = <"The patient has not avoided hard or rough surfaces in past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0044"] = <
+                text = <"7 Avoid standing for long time">
+                description = <"Patient-reported extent to which they have avoided standing for a long time because of pain in foot or ankle during past 4 weeks.">
+                comment = <"Questionnaire wording:
+I avoid standing for a long time because of pain in my foot/ankle.">
+            >
+            ["at0045"] = <
+                text = <"All of the time">
+                description = <"The patient has avoided standing for a long time all of the time in past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0046"] = <
+                text = <"Most of the time">
+                description = <"The patient has avoided standing for a long time most of the time in past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0047"] = <
+                text = <"Some of the time">
+                description = <"The patient has avoided standing for a long time some of the time in past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0048"] = <
+                text = <"Rarely">
+                description = <"The patient has avoided standing for a long time rarely in past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0049"] = <
+                text = <"None of the time">
+                description = <"The patient has not avoided standing for a long time in past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0050"] = <
+                text = <"8 Use bus or car instead of walking">
+                description = <"Patient-reported extent to which they have caught a bus or used the car instead of walking because of pain in foot or ankle during past 4 weeks.">
+                comment = <"Questionnaire wording:
+I catch the bus or use the car instead of walking, because of pain in my foot/ankle.">
+            >
+            ["at0051"] = <
+                text = <"All of the time">
+                description = <"The patient has caught a bus or used the car instead of walking all of the time in past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0052"] = <
+                text = <"Most of the time">
+                description = <"The patient has caught a bus or used the car instead of walking most of the time in past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0053"] = <
+                text = <"Some of the time">
+                description = <"The patient has caught a bus or used the car instead of walking some of the time in past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0054"] = <
+                text = <"Rarely">
+                description = <"The patient has caught a bus or used the car instead of walking rarely in past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0055"] = <
+                text = <"None of the time">
+                description = <"The patient has not caught a bus or used the car instead of walking in past 4 weeks because of pain in foot or ankle.">
+            >
+            ["at0056"] = <
+                text = <"9 Feel self-conscious">
+                description = <"Patient-reported extent to which they have felt self-conscious about foot or ankle during past 4 weeks.">
+                comment = <"Questionnaire wording:
+I feel self-conscious about my foot/ankle.">
+            >
+            ["at0057"] = <
+                text = <"All of the time">
+                description = <"The patient has felt self-conscious about foot or ankle all of the time in past 4 weeks.">
+            >
+            ["at0058"] = <
+                text = <"Most of the time">
+                description = <"The patient has felt self-conscious about foot or ankle most of the time in past 4 weeks.">
+            >
+            ["at0059"] = <
+                text = <"Some of the time">
+                description = <"The patient has felt self-conscious about foot or ankle some of the time in past 4 weeks.">
+            >
+            ["at0060"] = <
+                text = <"Rarely">
+                description = <"The patient has felt self-conscious about foot or ankle rarely in past 4 weeks.">
+            >
+            ["at0061"] = <
+                text = <"None of the time">
+                description = <"The patient has not felt self-conscious about foot or ankle in past 4 weeks.">
+            >
+            ["at0062"] = <
+                text = <"10 Feel self-conscious about shoes">
+                description = <"Patient-report extent to which they have felt self-conscious about shoes they have to wear during past 4 weeks.">
+                comment = <"Questionnaire wording:
+I feel self-conscious about the shoes I have to wear.">
+            >
+            ["at0063"] = <
+                text = <"All of the time">
+                description = <"The patient has felt self-conscious about the shoes they have to wear all of the time in past 4 weeks.">
+            >
+            ["at0064"] = <
+                text = <"Most of the time">
+                description = <"The patient has felt self-conscious about the shoes they have to wear most of the time in past 4 weeks.">
+            >
+            ["at0065"] = <
+                text = <"Some of the time">
+                description = <"The patient has felt self-conscious about the shoes they have to wear some of the time in past 4 weeks.">
+            >
+            ["at0066"] = <
+                text = <"Rarely">
+                description = <"The patient has felt self-conscious about the shoes they have to wear rarely in past 4 weeks.">
+            >
+            ["at0067"] = <
+                text = <"None of the time">
+                description = <"The patient has not felt self-conscious about the shoes they have to wear in past 4 weeks.">
+            >
+            ["at0068"] = <
+                text = <"11 Pain is more painful in the evening">
+                description = <"Patient-reported extent to which pain in foot or ankle has been more painful in the evening during past 4 weeks.">
+                comment = <"Questionnaire wording:
+The pain in my foot/ankle is more painful in the evening.">
+            >
+            ["at0069"] = <
+                text = <"All of the time">
+                description = <"The patient reports that the pain in foot or ankle has been more painful in the evening all of the time in last 4 weeks.">
+            >
+            ["at0070"] = <
+                text = <"Most of the time">
+                description = <"The patient reports that the pain in foot or ankle has been more painful in the evening most of the time in last 4 weeks.">
+            >
+            ["at0071"] = <
+                text = <"Some of the time">
+                description = <"The patient reports that the pain in foot or ankle has been more painful in the evening some of the time in last 4 weeks.">
+            >
+            ["at0072"] = <
+                text = <"Rarely">
+                description = <"The patient reports that the pain in foot or ankle has been more painful in the evening rarely in last 4 weeks.">
+            >
+            ["at0073"] = <
+                text = <"None of the time">
+                description = <"The patient reports that the pain in foot or ankle has not been more painful in the evening in last 4 weeks.">
+            >
+            ["at0074"] = <
+                text = <"12 Shooting pains">
+                description = <"Patient-reported extent of shooting pains in foot or ankle during past 4 weeks.">
+                comment = <"Questionnaire wording:
+I get shooting pains in my foot/ankle.">
+            >
+            ["at0075"] = <
+                text = <"All of the time">
+                description = <"The patient has experienced shooting pains in foot or ankle all of the time in past 4 weeks.">
+            >
+            ["at0076"] = <
+                text = <"Most of the time">
+                description = <"The patient has experienced shooting pains in foot or ankle most of the time in past 4 weeks.">
+            >
+            ["at0077"] = <
+                text = <"Some of the time">
+                description = <"The patient has experienced shooting pains in foot or ankle some of the time in past 4 weeks.">
+            >
+            ["at0078"] = <
+                text = <"Rarely">
+                description = <"The patient has experienced shooting pains in foot or ankle rarely in past 4 weeks.">
+            >
+            ["at0079"] = <
+                text = <"None of the time">
+                description = <"The patient has not experienced shooting pains in foot or ankle in past 4 weeks.">
+            >
+            ["at0080"] = <
+                text = <"13 Pain prevents activities">
+                description = <"Patient-reported extent to which pain in foot or ankle has prevented them from carrying out work or everyday activities during past 4 weeks.">
+                comment = <"Questionnaire wording:
+The pain in my foot/ankle prevents me from carrying out my work/everyday activities.">
+            >
+            ["at0081"] = <
+                text = <"All of the time">
+                description = <"The patient reports that the pain in foot or ankle has prevented them from carrying out work or everyday activities all of the time in past 4 weeks.">
+            >
+            ["at0082"] = <
+                text = <"Most of the time">
+                description = <"The patient reports that the pain in foot or ankle has prevented them from carrying out work or everyday activities most of the time in past 4 weeks.">
+            >
+            ["at0083"] = <
+                text = <"Some of the time">
+                description = <"The patient reports that the pain in foot or ankle has prevented them from carrying out work or everyday activities some of the time in past 4 weeks.">
+            >
+            ["at0084"] = <
+                text = <"Rarely">
+                description = <"The patient reports that the pain in foot or ankle has prevented them from carrying out work or everyday activities rarely in past 4 weeks.">
+            >
+            ["at0085"] = <
+                text = <"None of the time">
+                description = <"The patient reports that the pain in foot or ankle has not prevented them from carrying out work or everyday activities in past 4 weeks.">
+            >
+            ["at0086"] = <
+                text = <"14 Unable to do all social or recreational activities">
+                description = <"Patient-reported extent to which they have been unable to do all their social or recreational activities due to pain in foot or ankle during past 4 weeks.">
+                comment = <"Questionnaire wording:
+I am unable to do all my social or recreational activities because of pain in my foot/ankle.">
+            >
+            ["at0087"] = <
+                text = <"All of the time">
+                description = <"The patient has been unable to do all their social or recreational activities due to pain in foot or ankle all of the time in past 4 weeks.">
+            >
+            ["at0088"] = <
+                text = <"Most of the time">
+                description = <"The patient has been unable to do all their social or recreational activities due to pain in foot or ankle most of the time in past 4 weeks.">
+            >
+            ["at0089"] = <
+                text = <"Some of the time">
+                description = <"The patient has been unable to do all their social or recreational activities due to pain in foot or ankle some of the time in past 4 weeks.">
+            >
+            ["at0090"] = <
+                text = <"Rarely">
+                description = <"The patient has been unable to do all their social or recreational activities due to pain in foot or ankle rarely in past 4 weeks.">
+            >
+            ["at0091"] = <
+                text = <"None of the time">
+                description = <"The patient has been able to do all their social or recreational activities due to pain in foot or ankle in past 4 weeks.">
+            >
+            ["at0092"] = <
+                text = <"15 Pain severity">
+                description = <"Patient-reported estimation of usual pain severity in foot or ankle during past 4 weeks.">
+                comment = <"Questionnaire wording:
+During the past 4 weeks how would you describe the pain you usually have in your foot/ankle?">
+            >
+            ["at0093"] = <
+                text = <"Severe">
+                description = <"Patient reports usual pain during past 4 weeks to have been severe.">
+            >
+            ["at0094"] = <
+                text = <"Moderate">
+                description = <"Patient reports usual pain during past 4 weeks to have been moderate.">
+            >
+            ["at0095"] = <
+                text = <"Mild">
+                description = <"Patient reports usual pain during past 4 weeks to have been mild.">
+            >
+            ["at0096"] = <
+                text = <"Very mild">
+                description = <"Patient reports usual pain during past 4 weeks to have been very mild.">
+            >
+            ["at0097"] = <
+                text = <"None">
+                description = <"Patient reports no pain during past 4 weeks.">
+            >
+            ["at0098"] = <
+                text = <"16 Pain at night">
+                description = <"Patient-reported extent of being troubled by pain from foot or ankle at night during past 4 weeks.">
+                comment = <"Questionnaire wording:
+During the past 4 weeks have you been troubled by pain from your foot/ankle in bed at night?">
+            >
+            ["at0099"] = <
+                text = <"Every night">
+                description = <"Patient has been troubled by pain from foot or ankle every night in past 4 weeks.">
+            >
+            ["at0100"] = <
+                text = <"Most nights">
+                description = <"Patient has been troubled by pain from foot or ankle most nights in past 4 weeks.">
+            >
+            ["at0101"] = <
+                text = <"Some nights">
+                description = <"Patient has been troubled by pain from foot or ankle some nights in past 4 weeks.">
+            >
+            ["at0102"] = <
+                text = <"Only 1 or 2 nights">
+                description = <"Patient has been troubled by pain from foot or ankle only 1 or 2 nights in past 4 weeks.">
+            >
+            ["at0103"] = <
+                text = <"No nights">
+                description = <"Patient has not been troubled by pain from foot or ankle at night in past 4 weeks.">
+            >
+            ["at0104"] = <
+                text = <"Total score">
+                description = <"Total score from Questions 1 to 16, weighted according to these rules: sum of Questions 1,11,12,15 and 16 multiplied by 5 PLUS sum of Questions 2-8 multiplied by 3.57 PLUS sum of Questions 9, 10, 13 and 14 multiplied by 6.25 rounded to nearest integer.">
+            >
+            ["at0105"] = <
+                text = <"Average score">
+                description = <"Average score from Questions 1-16, weighted according to these rules: sum of Questions 1,11,12,15 and 16 multiplied by 5 PLUS sum of Questions 2-8 multiplied by 3.57 PLUS sum of Questions 9, 10, 13 and 14 multiplied by 6.25, rounded to nearest integer.">
+            >
+            ["at0106"] = <
+                text = <"Pain score">
+                description = <"Total pain score calculated from Questions 1, 11,12,15 and 16 multiplied by 5 rounded to nearest integer.">
+            >
+            ["at0107"] = <
+                text = <"Walking and standing score">
+                description = <"Total score from questions 2-8 multiplied by 3.57 and rounded to nearest integer.">
+            >
+            ["at0108"] = <
+                text = <"Social interaction score">
+                description = <"Total score from questions 9, 10, 13 and 14 multiplied by 6.25 and rounded to nearest integer.">
+            >
+            ["ac9037"] = <
+                text = <"1 Pain in foot or ankle (synthesised)">
+                description = <"Patient-reported extent of pain in foot or ankle during past 4 weeks. (synthesised)">
+            >
+            ["ac9038"] = <
+                text = <"2 Avoid walking long distances (synthesised)">
+                description = <"Patient-reported extent of avoiding walking long distances because of pain in foot or ankle. (synthesised)">
+            >
+            ["ac9039"] = <
+                text = <"3 Change way of walking (synthesised)">
+                description = <"Patient-reported extent to which they have changed the way they walk due to pain in foot or ankle. (synthesised)">
+            >
+            ["ac9040"] = <
+                text = <"4 Walk slowly (synthesised)">
+                description = <"Patient-reported extent to which they have walked slowly because of pain in foot or ankle during past 4 weeks. (synthesised)">
+            >
+            ["ac9041"] = <
+                text = <"5 Stop and rest (synthesised)">
+                description = <"Patient-reported extent to which they have had to stop and rest foot or ankle because of pain in past 4 weeks. (synthesised)">
+            >
+            ["ac9042"] = <
+                text = <"6 Avoid hard or rough surfaces (synthesised)">
+                description = <"Patient-reported extent to which they have avoided hard or rough surfaces because of pain in foot or ankle in past 4 weeks. (synthesised)">
+            >
+            ["ac9043"] = <
+                text = <"7 Avoid standing for long time (synthesised)">
+                description = <"Patient-reported extent to which they have avoided standing for a long time because of pain in foot or ankle during past 4 weeks. (synthesised)">
+            >
+            ["ac9044"] = <
+                text = <"8 Use bus or car instead of walking (synthesised)">
+                description = <"Patient-reported extent to which they have caught a bus or used the car instead of walking because of pain in foot or ankle during past 4 weeks. (synthesised)">
+            >
+            ["ac9045"] = <
+                text = <"9 Feel self-conscious (synthesised)">
+                description = <"Patient-reported extent to which they have felt self-conscious about foot or ankle during past 4 weeks. (synthesised)">
+            >
+            ["ac9046"] = <
+                text = <"10 Feel self-conscious about shoes (synthesised)">
+                description = <"Patient-report extent to which they have felt self-conscious about shoes they have to wear during past 4 weeks. (synthesised)">
+            >
+            ["ac9047"] = <
+                text = <"11 Pain is more painful in the evening (synthesised)">
+                description = <"Patient-reported extent to which pain in foot or ankle has been more painful in the evening during past 4 weeks. (synthesised)">
+            >
+            ["ac9048"] = <
+                text = <"12 Shooting pains (synthesised)">
+                description = <"Patient-reported extent of shooting pains in foot or ankle during past 4 weeks. (synthesised)">
+            >
+            ["ac9049"] = <
+                text = <"13 Pain prevents activities (synthesised)">
+                description = <"Patient-reported extent to which pain in foot or ankle has prevented them from carrying out work or everyday activities during past 4 weeks. (synthesised)">
+            >
+            ["ac9050"] = <
+                text = <"14 Unable to do all social or recreational activities (synthesised)">
+                description = <"Patient-reported extent to which they have been unable to do all their social or recreational activities due to pain in foot or ankle during past 4 weeks. (synthesised)">
+            >
+            ["ac9051"] = <
+                text = <"15 Pain severity (synthesised)">
+                description = <"Patient-reported estimation of usual pain severity in foot or ankle during past 4 weeks. (synthesised)">
+            >
+            ["ac9052"] = <
+                text = <"16 Pain at night (synthesised)">
+                description = <"Patient-reported extent of being troubled by pain from foot or ankle at night during past 4 weeks. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9052"] = <
+            id = <"ac9052">
+            members = <"at0099", "at0100", "at0101", "at0102", "at0103">
+        >
+        ["ac9051"] = <
+            id = <"ac9051">
+            members = <"at0093", "at0094", "at0095", "at0096", "at0097">
+        >
+        ["ac9050"] = <
+            id = <"ac9050">
+            members = <"at0087", "at0088", "at0089", "at0090", "at0091">
+        >
+        ["ac9039"] = <
+            id = <"ac9039">
+            members = <"at0021", "at0022", "at0023", "at0024", "at0025">
+        >
+        ["ac9038"] = <
+            id = <"ac9038">
+            members = <"at0015", "at0016", "at0017", "at0018", "at0019">
+        >
+        ["ac9037"] = <
+            id = <"ac9037">
+            members = <"at0013", "at0012", "at0011", "at0010", "at0009">
+        >
+        ["ac9042"] = <
+            id = <"ac9042">
+            members = <"at0039", "at0040", "at0041", "at0042", "at0043">
+        >
+        ["ac9041"] = <
+            id = <"ac9041">
+            members = <"at0033", "at0034", "at0035", "at0036", "at0037">
+        >
+        ["ac9040"] = <
+            id = <"ac9040">
+            members = <"at0027", "at0028", "at0029", "at0030", "at0031">
+        >
+        ["ac9046"] = <
+            id = <"ac9046">
+            members = <"at0063", "at0064", "at0065", "at0066", "at0067">
+        >
+        ["ac9045"] = <
+            id = <"ac9045">
+            members = <"at0057", "at0058", "at0059", "at0060", "at0061">
+        >
+        ["ac9044"] = <
+            id = <"ac9044">
+            members = <"at0051", "at0052", "at0053", "at0054", "at0055">
+        >
+        ["ac9043"] = <
+            id = <"ac9043">
+            members = <"at0045", "at0046", "at0047", "at0048", "at0049">
+        >
+        ["ac9049"] = <
+            id = <"ac9049">
+            members = <"at0081", "at0082", "at0083", "at0084", "at0085">
+        >
+        ["ac9048"] = <
+            id = <"ac9048">
+            members = <"at0075", "at0076", "at0077", "at0078", "at0079">
+        >
+        ["ac9047"] = <
+            id = <"ac9047">
+            members = <"at0069", "at0070", "at0071", "at0072", "at0073">
+        >
+    >

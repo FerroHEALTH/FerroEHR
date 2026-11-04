@@ -1,0 +1,377 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=cafde604-487e-4fbd-8510-365714f3102f; build_uid=539583cf-a309-46cf-a60b-c0985c4d4045)
+    openEHR-EHR-EVALUATION.infectious_investigation_classification.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-06-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Nicola Ewen, SERHA/Ministry of Health and Wellness, Jamaica", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Yohann White, Ministry of Health and Wellness, Jamaica">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"D4970E7A16E4271217061006FEBC0135">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the disease classification for an identified infectious disease as part of a disease surveillance investigation.">
+            use = <"Use to record the disease for an identified infectious disease as part of a disease surveillance investigation, most commonly the final determination at the completion of a case investigation but may also record initial classification as a suspected infection.
+
+Use a separate instance of this archetype to record the conclusion for each suspected 'Index disease'. For example in a fever & rash investigation, considering Measles and Rubella as the potential causes, use one instance of this archetype to record the conclusion, rationale, evidence etc related to Measles, and another to carry the information related to Rubella.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation, Ministry of Health and Wellness Jamaica">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Infectious disease investigation classification
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0007] occurrences matches {1} matches {    -- Index disease
+                        value matches {
+                            DV_TEXT[at9005]
+                        }
+                    }
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Initial classification
+                        value matches {
+                            DV_CODED_TEXT[at9006] matches {
+                                defining_code matches {[ac9000]}    -- Initial classification (synthesised)
+                            }
+                            DV_TEXT[at9007]
+                        }
+                    }
+                    ELEMENT[at0060] occurrences matches {0..1} matches {    -- Final classification
+                        value matches {
+                            DV_CODED_TEXT[at9008] matches {
+                                defining_code matches {[ac9001]}    -- Final classification (synthesised)
+                            }
+                            DV_TEXT[at9009]
+                        }
+                    }
+                    ELEMENT[at0008] matches {    -- Reason for classification
+                        value matches {
+                            DV_TEXT[at9010]
+                        }
+                    }
+                    ELEMENT[at0009] matches {    -- Reason description
+                        value matches {
+                            DV_TEXT[at9011]
+                        }
+                    }
+                    ELEMENT[at0054] occurrences matches {0..1} matches {    -- Epidemiological link
+                        value matches {
+                            DV_TEXT[at9012]
+                            DV_CODED_TEXT[at9013] matches {
+                                defining_code matches {[ac9002]}    -- Epidemiological link (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Aetiology category
+                        value matches {
+                            DV_TEXT[at9014]
+                            DV_CODED_TEXT[at9015] matches {
+                                defining_code matches {[ac9003]}    -- Aetiology category (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0036] occurrences matches {0..1} matches {    -- Aetiology description
+                        value matches {
+                            DV_TEXT[at9016]
+                        }
+                    }
+                    ELEMENT[at0021] matches {    -- Source country
+                        value matches {
+                            DV_TEXT[at9017]
+                        }
+                    }
+                    ELEMENT[at0051] occurrences matches {0..1} matches {    -- Endemic source category
+                        value matches {
+                            DV_TEXT[at9018]
+                        }
+                    }
+                    ELEMENT[at0052] occurrences matches {0..1} matches {    -- Endemic source description
+                        value matches {
+                            DV_TEXT[at9019]
+                        }
+                    }
+                    ELEMENT[at0068] occurrences matches {0..1} matches {    -- Contribution to death
+                        value matches {
+                            DV_TEXT[at9020]
+                            DV_CODED_TEXT[at9021] matches {
+                                defining_code matches {[ac9023]}    -- Contribution to death (synthesised)
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0016] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.drug_resistance_profile(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.clinical_evidence\.v1\..*/}
+                    }
+                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9022]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0013] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0014] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9023]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Infectious disease investigation classification">
+                description = <"Classification for an identified infectious disease as part of a disease surveillance investigation.">
+            >
+            ["at0002"] = <
+                text = <"Initial classification">
+                description = <"Classification of the likelihood of the 'Index disease' as causal at the initiation of a case investigation.">
+                comment = <"Not to be used to record the 'Final classification' after completion of a case investigation.">
+            >
+            ["at0003"] = <
+                text = <"Probable">
+                description = <"A case is 'Probable' when common, relevant symptoms and/or signs are exhibited and there is an epidemiological link.">
+            >
+            ["at0004"] = <
+                text = <"Not suspected">
+                description = <"A case is 'Not suspected' if the clinical or laboratory findings do not meet the criteria to suspect disease.">
+            >
+            ["at0007"] = <
+                text = <"Index disease">
+                description = <"The name of the infectious disease under investigation.">
+                comment = <"This data element may be redundant if the index disease has been identified elsewhere within a template.">
+            >
+            ["at0008"] = <
+                text = <"Reason for classification">
+                description = <"The broad category of the reason for the classification.">
+                comment = <"For example: lost to follow-up, child of an infected mother.">
+            >
+            ["at0009"] = <
+                text = <"Reason description">
+                description = <"Narrative description about the reason for the classification.">
+                comment = <"For example: description of clinical findings and/or conclusive laboratory test results; or alternate diagnosis made.">
+            >
+            ["at0011"] = <
+                text = <"Aetiology category">
+                description = <"The category for the cause of infection.">
+                comment = <"For example: imported, import-related, endemic, vaccine-associated, congenital or unknown.">
+            >
+            ["at0014"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0015"] = <
+                text = <"Last updated">
+                description = <"The date when this infectious disease investigation classification was last updated.">
+            >
+            ["at0016"] = <
+                text = <"Additional details">
+                description = <"Additional structured details about the classification.">
+                comment = <"For example: details about the clinical evidenct confirming or excluding this disease as the cause of the infection">
+            >
+            ["at0017"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the classification, not captured in other fields.">
+            >
+            ["at0021"] = <
+                text = <"Source country">
+                description = <"Country identified as the (likely or probable) source for an imported or import-related case.">
+            >
+            ["at0035"] = <
+                text = <"Suspected">
+                description = <"A case is 'Suspected' when common, relevant symptoms and/or signs are exhibited.">
+            >
+            ["at0036"] = <
+                text = <"Aetiology description">
+                description = <"Narrative description about the cause of infection.">
+            >
+            ["at0045"] = <
+                text = <"Imported case">
+                description = <"Exposure occurred outside of the country.">
+            >
+            ["at0046"] = <
+                text = <"Import-related case">
+                description = <"Exposure occurred locally, but is directly associated to an imported case.">
+            >
+            ["at0047"] = <
+                text = <"Endemic case">
+                description = <"Exposure occurred locally, as part of a chain of endemic transmission.">
+            >
+            ["at0048"] = <
+                text = <"Vaccine-associated case">
+                description = <"Exposure occurred as an adverse event following exposure to a vaccine.">
+            >
+            ["at0049"] = <
+                text = <"Congenital case">
+                description = <"Exposure occurred during pregnancy.">
+            >
+            ["at0050"] = <
+                text = <"Unknown">
+                description = <"The exposure event has not been identified.">
+            >
+            ["at0051"] = <
+                text = <"Endemic source category">
+                description = <"The category for the source of an endemic case.">
+                comment = <"For example: household contact, community, or unknown.">
+            >
+            ["at0052"] = <
+                text = <"Endemic source description">
+                description = <"Narrative description about the source of an endemic case.">
+                comment = <"For example: identification of the reservoir or carrier.">
+            >
+            ["at0054"] = <
+                text = <"Epidemiological link">
+                description = <"Identification of the cause or source of transmission.">
+            >
+            ["at0055"] = <
+                text = <"Animal to human transmission">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"Exposure to a common source">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"Exposure to contaminated food/drinking water">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"Environmental exposure">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Laboratory exposure">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Final classification">
+                description = <"Classification of the likelihood of the 'Index disease' as causal after completion of a case investigation.">
+                comment = <"Not to be used to record the 'Initial classification' at the initiation of a case investigation.">
+            >
+            ["at0061"] = <
+                text = <"Pending">
+                description = <"A case is 'Pending' at the completion of an adequate investigation when it is not possible to confirm or discard due to inadequate information, and further information is anticipated. It is usually a temporary classification.">
+            >
+            ["at0062"] = <
+                text = <"Probable">
+                description = <"A case is 'Probable' at the completion of an adequate investigation when clinical evidence criteria are met and/or an epidemiological link has been identified, with laboratory test results suggesting causality rather than being conclusive.">
+            >
+            ["at0063"] = <
+                text = <"Laboratory confirmed">
+                description = <"A case is 'Laboratory confirmed' at the completion of an adequate investigation when positive laboratory test results confirm the clinical evidence and/or epidemiological link.">
+            >
+            ["at0064"] = <
+                text = <"Discarded">
+                description = <"A case is 'Discarded' or 'Excluded' at the completion of an adequate investigation due to negative laboratory test results that exclude causality.">
+            >
+            ["at0065"] = <
+                text = <"Inconclusive">
+                description = <"A case is 'Inconclusive' at the completion of an adequate investigation when it is not possible to confirm or discard due to inadequate information, and no further information is anticipated. It is not a temporary classification.">
+            >
+            ["at0066"] = <
+                text = <"Clinically confirmed">
+                description = <"A case is 'Clinically confirmed' at the completion of an adequate investigation on the basis of clinical evidence alone.">
+            >
+            ["at0067"] = <
+                text = <"Human to human transmission">
+                description = <"">
+            >
+            ["at0068"] = <
+                text = <"Contribution to death">
+                description = <"Assessment of the relationship between the index disease and the death of the individual.">
+            >
+            ["at0072"] = <
+                text = <"Confirmed">
+                description = <"It has been confirmed that the index disease is related to the death of the infected individual.">
+            >
+            ["at0073"] = <
+                text = <"Probable">
+                description = <"It is probable that the index disease is related to the death of the infected individual.">
+            >
+            ["at0074"] = <
+                text = <"Suspected">
+                description = <"It is suspected that the index disease is related to the death of the infected individual.">
+            >
+            ["at0075"] = <
+                text = <"Discarded">
+                description = <"It has been determined that the index disease is not related to the death of the infected individual.">
+            >
+            ["at0076"] = <
+                text = <"Under investigation">
+                description = <"It is not yet known whether the index disease is related to the death of the infected individual.">
+            >
+            ["at0077"] = <
+                text = <"Cannot be classified">
+                description = <"It is not possible to determine whether the index disease was related to the death of the infected individual.">
+            >
+            ["ac9000"] = <
+                text = <"Initial classification (synthesised)">
+                description = <"Classification of the likelihood of the 'Index disease' as causal at the initiation of a case investigation. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Final classification (synthesised)">
+                description = <"Classification of the likelihood of the 'Index disease' as causal after completion of a case investigation. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Epidemiological link (synthesised)">
+                description = <"Identification of the cause or source of transmission. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Aetiology category (synthesised)">
+                description = <"The category for the cause of infection. (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Contribution to death (synthesised)">
+                description = <"Assessment of the relationship between the index disease and the death of the individual. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0055", "at0056", "at0057", "at0058", "at0059", "at0067">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0061", "at0062", "at0063", "at0066", "at0064", "at0065">
+        >
+        ["ac9023"] = <
+            id = <"ac9023">
+            members = <"at0072", "at0073", "at0074", "at0075", "at0076", "at0077">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0035", "at0003", "at0004">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0045", "at0046", "at0047", "at0048", "at0049", "at0050">
+        >
+    >

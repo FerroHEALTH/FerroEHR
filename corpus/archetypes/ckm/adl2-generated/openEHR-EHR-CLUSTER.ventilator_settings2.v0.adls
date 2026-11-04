@@ -1,0 +1,1262 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=4a8641af-8623-4cee-9b2c-2fc254e5833f; build_uid=4cb7bcf3-d6c9-431d-8bb0-767b57cce7e6)
+    openEHR-EHR-CLUSTER.ventilator_settings2.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, United Kingdom">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"25/10/2010">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Biljana Prinčič, Marand d.o.o., Slovenia", "Uroš Rajkovič, Faculty of Organizational Sciences, University of Maribor, Slovenia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"7DAD1A985BE65C90AF32047DDF325CFA">
+    >
+    details = <
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            purpose = <"To ecord details of assisted ventilation parameters.">
+            keywords = <"ventilator", "assisted", "respiration", "mechanical">
+            use = <"May be used both on the context of instructing these parameters to be set and in recording the parameters actualy in use either manually or direct from the device.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details of ventilator settings, such as ventilation type, volume, frequencies and pressures.">
+            keywords = <"ventilator", "assisted">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Ventilator settings/findings
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0144] occurrences matches {0..1} matches {    -- Type of ventilation
+                value matches {
+                    DV_CODED_TEXT[at9014] matches {
+                        defining_code matches {[ac9000]}    -- Type of ventilation (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Ventilation mode
+                value matches {
+                    DV_CODED_TEXT[at9015] matches {
+                        defining_code matches {[ac9001]}    -- Ventilation mode (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0114] matches {    -- Ventilation submode
+                value matches {
+                    DV_CODED_TEXT[at9016] matches {
+                        defining_code matches {[ac9002]}    -- Ventilation submode (synthesised)
+                    }
+                }
+            }
+            allow_archetype CLUSTER[at0056] occurrences matches {0..1} matches {    -- Ventilation device
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0051] occurrences matches {0..1} matches {    -- Oxygen delivery
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.gas_delivery-oxygen(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0055] occurrences matches {0..1} matches {    -- Heater used
+                value matches {
+                    DV_BOOLEAN[at9017] matches {
+                        value matches {True, False}
+                    }
+                }
+            }
+            ELEMENT[at0007] matches {    -- Frequency
+                name matches {
+                    DV_CODED_TEXT[at9018] matches {
+                        defining_code matches {[ac9003]}    -- Frequency (synthesised)
+                    }
+                }
+                value matches {
+                    DV_QUANTITY[at9019] matches {
+                        property matches {[at9004]}    -- Frequency
+                        [magnitude, units, precision] matches {
+                            [{|0.0..500.0|}, {"/min"}, {0}],
+                            [{|0.0..500.0|}, {"Hz"}, {0}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0015] matches {    -- Pressure
+                name matches {
+                    DV_CODED_TEXT[at9020] matches {
+                        defining_code matches {[ac9005]}    -- Pressure (synthesised)
+                    }
+                }
+                value matches {
+                    DV_QUANTITY[at9021] matches {
+                        property matches {[at9006]}    -- Pressure
+                        [magnitude, units, precision] matches {
+                            [{|0.0..200.0|}, {"mbar"}, {1}],
+                            [{|>=0.0|}, {"cm[H20]"}, {|>=0|}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0031] matches {    -- Volume
+                name matches {
+                    DV_CODED_TEXT[at9022] matches {
+                        defining_code matches {[ac9007]}    -- Volume (synthesised)
+                    }
+                }
+                value matches {
+                    DV_QUANTITY[at9023] matches {
+                        property matches {[at9008]}    -- Volume
+                        [magnitude, units, precision] matches {
+                            [{|0.0..2000.0|}, {"ml"}, {1}],
+                            [{|0.0..200.0|}, {"l"}, {1}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0060] matches {    -- Flow rate
+                name matches {
+                    DV_CODED_TEXT[at9024] matches {
+                        defining_code matches {[ac9009]}    -- Flow rate (synthesised)
+                    }
+                }
+                value matches {
+                    DV_QUANTITY[at9025] matches {
+                        property matches {[at9010]}    -- Flow rate, volume
+                        magnitude matches {|>=0.0|}
+                        units matches {"l/min"}
+                        precision matches {1}
+                    }
+                }
+            }
+            ELEMENT[at0038] matches {    -- Timing
+                name matches {
+                    DV_CODED_TEXT[at9026] matches {
+                        defining_code matches {[ac9011]}    -- Timing (synthesised)
+                    }
+                }
+                value matches {
+                    DV_DURATION[at9027] matches {
+                        value matches {PTS/|PT0S..PT16M40S|}
+                    }
+                }
+            }
+            ELEMENT[at0045] matches {    -- Trigger value
+                name matches {
+                    DV_CODED_TEXT[at9028] matches {
+                        defining_code matches {[ac9012]}    -- Trigger value (synthesised)
+                    }
+                }
+                value matches {
+                    DV_COUNT[at9029] matches {
+                        magnitude matches {|0..100|}
+                    }
+                    DV_QUANTITY[at9030] matches {
+                        property matches {[at9010]}    -- Flow rate, volume
+                        magnitude matches {|0.0..100.0|}
+                        units matches {"l/min"}
+                        precision matches {1}
+                    }
+                }
+            }
+            ELEMENT[at0087] matches {    -- Trigger type
+                value matches {
+                    DV_TEXT[at9031]
+                }
+            }
+            ELEMENT[at0043] occurrences matches {0..1} matches {    -- I:E Inspiration/expiration
+                value matches {
+                    DV_PROPORTION[at9032] matches {
+                        numerator matches {|1.0..99.0|}
+                        is_integral matches {False}
+                        type matches {0}
+                    }
+                }
+            }
+            ELEMENT[at0044] occurrences matches {0..1} matches {    -- I:T Inspiratory/Total
+                value matches {
+                    DV_PROPORTION[at9033] matches {
+                        numerator matches {|0.0..100.0|}
+                        type matches {2}
+                    }
+                }
+            }
+            ELEMENT[at0095] occurrences matches {0..1} matches {    -- Artificial airway compensation
+                value matches {
+                    DV_PROPORTION[at9034] matches {
+                        numerator matches {|>=0.0|}
+                        is_integral matches {False}
+                        type matches {2}
+                    }
+                }
+            }
+            ELEMENT[at0053] occurrences matches {0..1} matches {    -- NO delivered
+                value matches {
+                    DV_QUANTITY[at9035] matches {
+                        property matches {[at9013]}    -- Proportion
+                        magnitude matches {|0.0..500.0|}
+                        units matches {"[ppb]"}
+                        precision matches {0}
+                    }
+                }
+            }
+            ELEMENT[at0054] occurrences matches {0..1} matches {    -- NO2 removed
+                value matches {
+                    DV_QUANTITY[at9036] matches {
+                        property matches {[at9013]}    -- Proportion
+                        magnitude matches {|0.0..5.0|}
+                        units matches {"[ppb]"}
+                        precision matches {0}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Ventilator settings/findings">
+                description = <"Details of ventilator settings and reported findings">
+            >
+            ["at0001"] = <
+                text = <"Ventilation mode">
+                description = <"The mode of mechanical ventilation used.    ">
+            >
+            ["at0007"] = <
+                text = <"Frequency">
+                description = <"A ventilator frequency setting.    ">
+            >
+            ["at0008"] = <
+                text = <"Min respiratory rate">
+                description = <"Minimum  respiratory rate.
+">
+            >
+            ["at0009"] = <
+                text = <"Safe respiratory rate">
+                description = <"Safe respiratory rate.
+">
+            >
+            ["at0010"] = <
+                text = <"Respiratory rate (f) ">
+                description = <"Respiratory rate,  frequency or BPM breaths per minute.">
+            >
+            ["at0015"] = <
+                text = <"Pressure">
+                description = <"A ventilator pressure setting.    ">
+            >
+            ["at0016"] = <
+                text = <"CPAP">
+                description = <"Continuous positive airway pressure.">
+            >
+            ["at0017"] = <
+                text = <"Positive End Expiratory Pressure (PEEP)">
+                description = <"Positive End Expiratory Pressure (PEEP)">
+            >
+            ["at0018"] = <
+                text = <"IPAP">
+                description = <"Inspiratory positive airway pressure.">
+            >
+            ["at0019"] = <
+                text = <"EPAP">
+                description = <"Expiratory positive airway pressure.">
+            >
+            ["at0020"] = <
+                text = <"Hi (PEEP)">
+                description = <"High level positive expiratory end pressure.">
+            >
+            ["at0021"] = <
+                text = <"Lo (PEEP)">
+                description = <"Low level positive expiratory end pressure.">
+            >
+            ["at0024"] = <
+                text = <"Maximum inspiratory pressure (P max)">
+                description = <"Maximum inspiratory pressure (P max)">
+            >
+            ["at0025"] = <
+                text = <"Inspiratory pressure">
+                description = <"inspiratory pressure">
+            >
+            ["at0026"] = <
+                text = <"Mean airway pressure (P mean)">
+                description = <"Mean airway pressure (P mean)">
+            >
+            ["at0027"] = <
+                text = <"Delta pressure">
+                description = <"Pressure difference / delta pressure">
+            >
+            ["at0028"] = <
+                text = <"Support Pressure (PS)">
+                description = <"Support Pressure (PS)">
+            >
+            ["at0031"] = <
+                text = <"Volume">
+                description = <"A ventilator volume setting.  ">
+            >
+            ["at0032"] = <
+                text = <"Tidal volume (V te)">
+                description = <"Tidal volume (V te)">
+            >
+            ["at0033"] = <
+                text = <"Target inspiratory volume">
+                description = <"Target inspiratory volume.">
+            >
+            ["at0038"] = <
+                text = <"Timing">
+                description = <"A ventilator duration or timing setting.   ">
+            >
+            ["at0039"] = <
+                text = <"Inspiratory time (T i)">
+                description = <"Inspiratory time (T i)">
+            >
+            ["at0040"] = <
+                text = <"Apneoa time">
+                description = <"Apnoea time">
+            >
+            ["at0041"] = <
+                text = <"Inspiratory rise time">
+                description = <"Inspiratory rise time / inspiratory ramp">
+            >
+            ["at0043"] = <
+                text = <"I:E Inspiration/expiration">
+                description = <"Ration of inspiratory phase to expiratory phase.">
+            >
+            ["at0044"] = <
+                text = <"I:T Inspiratory/Total">
+                description = <"Ratio of inspiratory phase to total phase.">
+            >
+            ["at0045"] = <
+                text = <"Trigger value">
+                description = <"The trigger value setting.">
+            >
+            ["at0046"] = <
+                text = <"No trigger">
+                description = <"A trigger is not in use.">
+            >
+            ["at0047"] = <
+                text = <"Flow sensor">
+                description = <"Flow sensor.">
+            >
+            ["at0048"] = <
+                text = <"Inspiratory">
+                description = <"Inspiratory trigger.">
+            >
+            ["at0049"] = <
+                text = <"PTV sensitivity">
+                description = <"PTV sensitivity trigger.">
+            >
+            ["at0050"] = <
+                text = <"Gastric sonde">
+                description = <"Gastric sonde trigger.">
+            >
+            ["at0051"] = <
+                text = <"Oxygen delivery">
+                description = <"Details of oxygen delivery.">
+            >
+            ["at0053"] = <
+                text = <"NO delivered">
+                description = <"Amount of Nitrogen monoxide delivered.">
+            >
+            ["at0054"] = <
+                text = <"NO2 removed">
+                description = <"Amount of Nitrogen monoxide removed.">
+            >
+            ["at0055"] = <
+                text = <"Heater used">
+                description = <"If true a heater should be used/ is used.">
+            >
+            ["at0056"] = <
+                text = <"Ventilation device">
+                description = <"Details of the ventilation device.">
+            >
+            ["at0060"] = <
+                text = <"Flow rate">
+                description = <"A ventilator flow rate parameter.       ">
+            >
+            ["at0065"] = <
+                text = <"SPONTANEOUS">
+                description = <"Patient is breathing spontaneously.
+">
+            >
+            ["at0070"] = <
+                text = <"CPAP">
+                description = <"Pressure support / Continous positive airway pressure.
+">
+            >
+            ["at0072"] = <
+                text = <"CMV ">
+                description = <"Controlled mandatory ventilation ">
+            >
+            ["at0073"] = <
+                text = <"HFO">
+                description = <" High frequency oscillation ventilation.
+">
+            >
+            ["at0075"] = <
+                text = <"PTV">
+                description = <"Patient triggered ventilation.
+">
+            >
+            ["at0076"] = <
+                text = <"IPPV">
+                description = <"Intermittent positive pressure ventilation.
+">
+            >
+            ["at0077"] = <
+                text = <"MMV">
+                description = <"Mandatory minute ventilation.
+">
+            >
+            ["at0079"] = <
+                text = <"BIPAP">
+                description = <"Biphasic positive airway pressure.
+">
+            >
+            ["at0080"] = <
+                text = <"PSV ">
+                description = <"Pressure support ventilation.
+">
+            >
+            ["at0083"] = <
+                text = <"PCV">
+                description = <"Pressure controlled ventilation.
+">
+            >
+            ["at0084"] = <
+                text = <"S/T">
+                description = <"Spontaneous timed breathing.
+">
+            >
+            ["at0085"] = <
+                text = <"PAV/T">
+                description = <"Proportional assist ventilation/Time.
+">
+            >
+            ["at0087"] = <
+                text = <"Trigger type">
+                description = <"Type of trigger applied.">
+            >
+            ["at0089"] = <
+                text = <"Airway pressure">
+                description = <"Airway pressure.">
+            >
+            ["at0090"] = <
+                text = <"Intrinsic PEEP">
+                description = <"Intrinsic PEEP.">
+            >
+            ["at0091"] = <
+                text = <"Peak airway pressure (P peak)">
+                description = <"Peak airway pressure (P peak)">
+            >
+            ["at0092"] = <
+                text = <"Plateau airway pressure (P plateau)">
+                description = <"Plateau airway pressure (P plateau)">
+            >
+            ["at0095"] = <
+                text = <"Artificial airway compensation">
+                description = <"Artificial airway compensation. ">
+            >
+            ["at0096"] = <
+                text = <"Intermittent PEEP">
+                description = <"Intermittent PEEP.">
+            >
+            ["at0097"] = <
+                text = <"Sigh">
+                description = <"Sigh.">
+            >
+            ["at0098"] = <
+                text = <"Inspired tidal volume">
+                description = <"Inspired tidal volume.">
+            >
+            ["at0099"] = <
+                text = <"Inspiratory flow">
+                description = <"Inspiratory flow.">
+            >
+            ["at0100"] = <
+                text = <"Expiratory flow">
+                description = <"Expiratory flow.">
+            >
+            ["at0104"] = <
+                text = <"A/C">
+                description = <"Assist-control ventilation">
+            >
+            ["at0105"] = <
+                text = <"BILEVEL">
+                description = <"BILEVEL">
+            >
+            ["at0106"] = <
+                text = <"PS">
+                description = <"Pressure support ">
+            >
+            ["at0108"] = <
+                text = <"SIMV ">
+                description = <"Synchronised intermittent mandatory ventilation.">
+            >
+            ["at0111"] = <
+                text = <"Total respiration rate (f tot)">
+                description = <"Total respiration rate">
+            >
+            ["at0112"] = <
+                text = <"Minute volume (Ve tot)">
+                description = <"Minute volume (Ve tot)">
+            >
+            ["at0113"] = <
+                text = <"Plateau time (T pl)">
+                description = <"Plateau time (T pl)">
+            >
+            ["at0114"] = <
+                text = <"Ventilation submode">
+                description = <"Ventilation submode     ">
+            >
+            ["at0115"] = <
+                text = <"PC">
+                description = <"Pressure controlled.">
+            >
+            ["at0116"] = <
+                text = <"VC">
+                description = <"Volume controlled">
+            >
+            ["at0117"] = <
+                text = <"PC/PS">
+                description = <"PC/PS">
+            >
+            ["at0118"] = <
+                text = <"PC/TC">
+                description = <" PC/TC">
+            >
+            ["at0119"] = <
+                text = <"VC/PS">
+                description = <"VC/PS">
+            >
+            ["at0120"] = <
+                text = <"VC/TC">
+                description = <"VC/TC">
+            >
+            ["at0122"] = <
+                text = <"TS">
+                description = <"TS">
+            >
+            ["at0124"] = <
+                text = <"PS">
+                description = <"Pressure support">
+            >
+            ["at0129"] = <
+                text = <"CV">
+                description = <"CV">
+            >
+            ["at0131"] = <
+                text = <"CMV">
+                description = <"Controlled mechanical ventilation.">
+            >
+            ["at0135"] = <
+                text = <"ASB">
+                description = <"Assisted spontaneous breathing.">
+            >
+            ["at0138"] = <
+                text = <"Assist">
+                description = <"Assist">
+            >
+            ["at0139"] = <
+                text = <"ST">
+                description = <"ST">
+            >
+            ["at0140"] = <
+                text = <"PS/CPAP">
+                description = <" PS/CPAP">
+            >
+            ["at0141"] = <
+                text = <"CPAP/APRV">
+                description = <"CPAP/APRV">
+            >
+            ["at0142"] = <
+                text = <"ASB/Assist">
+                description = <"ASB/Assist">
+            >
+            ["at0143"] = <
+                text = <"VS+">
+                description = <"VS+">
+            >
+            ["at0144"] = <
+                text = <"Type of ventilation">
+                description = <"Type of ventilation of patient ">
+            >
+            ["at0145"] = <
+                text = <"INVASIVE">
+                description = <"Invasive type of ventilation">
+            >
+            ["at0146"] = <
+                text = <"NON-INVASIVE">
+                description = <"Non-invasive type of ventilation">
+            >
+            ["at0147"] = <
+                text = <"VS">
+                description = <"VS">
+            >
+            ["at0149"] = <
+                text = <"Peak inspiratory flow (V max)">
+                description = <"Peak inspiratory flow (V max)">
+            >
+            ["at0150"] = <
+                text = <"End Inspiratory Pressure (P i)">
+                description = <"End Inspiratory Pressure (P i)">
+            >
+            ["at0151"] = <
+                text = <"TC">
+                description = <"TC">
+            >
+            ["at0152"] = <
+                text = <"SIMV / ASB">
+                description = <"SIMV / ASB">
+            >
+            ["at0153"] = <
+                text = <"BIPAP / ASB">
+                description = <"BIPAP / ASB">
+            >
+            ["at0154"] = <
+                text = <"Assisted Spontaneous Breath Setting (PEEP asb)">
+                description = <"Assisted Spontaneous Breath Setting (PEEP asb)">
+            >
+            ["at0155"] = <
+                text = <"HFO + CMV">
+                description = <"HFO + CMV mode">
+            >
+            ["at0156"] = <
+                text = <"Mandatory raspiration rate">
+                description = <"Mandatory raspiration rate">
+            >
+            ["at0158"] = <
+                text = <"High inspiratory pressure ">
+                description = <"High inspiratory pressure ">
+            >
+            ["at0159"] = <
+                text = <"HFV Mean airway pressure ">
+                description = <"HFV Mean airway pressure ">
+            >
+            ["at0160"] = <
+                text = <"HFV Inspiratory pressure ">
+                description = <"HFV Inspiratory pressure ">
+            >
+            ["at0161"] = <
+                text = <"HFV Frequency ">
+                description = <"HFV Frequency ">
+            >
+            ["at0162"] = <
+                text = <"Peak inspiratory pressure">
+                description = <"Peak inspiratory pressure">
+            >
+            ["at0163"] = <
+                text = <"HFV Amplitude">
+                description = <"HFV Amplitude">
+            >
+            ["at9004"] = <
+                text = <"Frequency">
+                description = <"Frequency">
+            >
+            ["at9006"] = <
+                text = <"Pressure">
+                description = <"Pressure">
+            >
+            ["at9008"] = <
+                text = <"Volume">
+                description = <"Volume">
+            >
+            ["at9010"] = <
+                text = <"Flow rate, volume">
+                description = <"Flow rate, volume">
+            >
+            ["at9013"] = <
+                text = <"Proportion">
+                description = <"Proportion">
+            >
+            ["ac9000"] = <
+                text = <"Type of ventilation (synthesised)">
+                description = <"Type of ventilation of patient  (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Ventilation mode (synthesised)">
+                description = <"The mode of mechanical ventilation used.     (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Ventilation submode (synthesised)">
+                description = <"Ventilation submode      (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Frequency (synthesised)">
+                description = <"A ventilator frequency setting.     (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Pressure (synthesised)">
+                description = <"A ventilator pressure setting.     (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"Volume (synthesised)">
+                description = <"A ventilator volume setting.   (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Flow rate (synthesised)">
+                description = <"A ventilator flow rate parameter.        (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Timing (synthesised)">
+                description = <"A ventilator duration or timing setting.    (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Trigger value (synthesised)">
+                description = <"The trigger value setting. (synthesised)">
+            >
+        >
+        ["sl"] = <
+            ["at0000"] = <
+                text = <"Nastavitve ventilatorja">
+                description = <"Podatki o nastavitvah ventilatorja">
+            >
+            ["at0001"] = <
+                text = <"Vrsta umetnega predihavanja">
+                description = <"Vrsta umetnega predihavanja ">
+            >
+            ["at0007"] = <
+                text = <"Frekvenca">
+                description = <"Frekvenca dihanja">
+            >
+            ["at0008"] = <
+                text = <"Minimalna frekvenca dihanja">
+                description = <"Minimalna frekvenca dihanja">
+            >
+            ["at0009"] = <
+                text = <"Varnostna frekvenca dihanja">
+                description = <"Varnostna frekvenca dihanja">
+            >
+            ["at0010"] = <
+                text = <"Frekvenca dihanja (f) ">
+                description = <"Frekvenca dihanja (f) ">
+            >
+            ["at0015"] = <
+                text = <"Tlak">
+                description = <"Tlak ">
+            >
+            ["at0016"] = <
+                text = <"CPAP">
+                description = <"Kontinuirani pozitivni zračni tlak">
+            >
+            ["at0017"] = <
+                text = <"Pozitivni tlak na koncu izdiha (PEEP)">
+                description = <"Pozitivni tlak na koncu izdiha (PEEP)">
+            >
+            ["at0018"] = <
+                text = <"IPAP">
+                description = <"Inspiratory positive airway pressure">
+            >
+            ["at0019"] = <
+                text = <"EPAP">
+                description = <"Expiratory positive airway pressure">
+            >
+            ["at0020"] = <
+                text = <"Vsok PEEP (PEEP h)">
+                description = <"Vsok PEEP (PEEP h)">
+            >
+            ["at0021"] = <
+                text = <"Nizek PEEP (PEEP l)">
+                description = <"Nizek PEEP (PEEP l)">
+            >
+            ["at0024"] = <
+                text = <"Maximum inspiratory pressure (P max)">
+                description = <"Maximum inspiratory pressure (P max)">
+            >
+            ["at0025"] = <
+                text = <"Inspiratory pressure">
+                description = <"inspiratory pressure">
+            >
+            ["at0026"] = <
+                text = <"Srednji tlak (P mean)">
+                description = <"Srednji tlak (P mean)">
+            >
+            ["at0027"] = <
+                text = <"Delta pressure">
+                description = <"Pressure difference / delta pressure">
+            >
+            ["at0028"] = <
+                text = <"Podporni tlak (PS)">
+                description = <"Podporni tlak (PS)">
+            >
+            ["at0031"] = <
+                text = <"Volumen">
+                description = <"Nastavitev ključnega tlaka">
+            >
+            ["at0032"] = <
+                text = <"Dihalni volumen  (V te)">
+                description = <"Dihalni volumen (V te)">
+            >
+            ["at0033"] = <
+                text = <"Tarčni volumen vdiha">
+                description = <"Tarčni volumen vdiha">
+            >
+            ["at0038"] = <
+                text = <"Trajanje">
+                description = <"Trajanje nastavitev">
+            >
+            ["at0039"] = <
+                text = <"Inspiratorni čas (T i)">
+                description = <"Inspiratorni čas (T i)">
+            >
+            ["at0040"] = <
+                text = <"Čas apnee ">
+                description = <"Čas apnee ">
+            >
+            ["at0041"] = <
+                text = <"Inspiratorni čas \"rise\"">
+                description = <"Inspiratorni čas \"rise\"">
+            >
+            ["at0043"] = <
+                text = <"I:E razmerje">
+                description = <"Inspiration/expiration">
+            >
+            ["at0044"] = <
+                text = <"I:T razmerje">
+                description = <"Inispiratory/Total">
+            >
+            ["at0045"] = <
+                text = <"Trigger vrednost">
+                description = <"Trigger vrednost">
+            >
+            ["at0046"] = <
+                text = <"Trriger ni prisoten">
+                description = <"Trriger se ne uporablja">
+            >
+            ["at0047"] = <
+                text = <"Senzor pretoka">
+                description = <"Senzor pretoka">
+            >
+            ["at0048"] = <
+                text = <"Dihalen">
+                description = <"Dihalni trigger">
+            >
+            ["at0049"] = <
+                text = <"PTV občutljivost">
+                description = <"PTV občutljivost trigger-ja">
+            >
+            ["at0050"] = <
+                text = <"Gastrična sonda">
+                description = <"Trigger je gastrična sonda">
+            >
+            ["at0051"] = <
+                text = <"Dovajanje kisika">
+                description = <"Podatki o dovajanju kisika">
+            >
+            ["at0053"] = <
+                text = <"Vnos NO">
+                description = <"Količina vnošenega NO ">
+            >
+            ["at0054"] = <
+                text = <"Iznos NO2">
+                description = <"Količina NO2 iznosa">
+            >
+            ["at0055"] = <
+                text = <"Grelec">
+                description = <"Če je DA, je uporabljen grelec">
+            >
+            ["at0056"] = <
+                text = <"Ventilator">
+                description = <"Podatki o napravi za ventilacijo">
+            >
+            ["at0060"] = <
+                text = <"Pretok">
+                description = <"Parameter za pretok">
+            >
+            ["at0065"] = <
+                text = <"SPONTANEOUS">
+                description = <"Patient is breathing spontaneously.">
+            >
+            ["at0070"] = <
+                text = <"CPAP">
+                description = <"Pressure support / Continous positive airway pressure.">
+            >
+            ["at0072"] = <
+                text = <"CMV ">
+                description = <"Controlled mandatory ventilation ">
+            >
+            ["at0073"] = <
+                text = <"HFO">
+                description = <"High frequency oscillation ventilation">
+            >
+            ["at0075"] = <
+                text = <"PTV">
+                description = <"Patient triggered ventilation.
+">
+            >
+            ["at0076"] = <
+                text = <"IPPV">
+                description = <"Intermittent positive pressure ventilation.
+">
+            >
+            ["at0077"] = <
+                text = <"MMV">
+                description = <"Mandatory minute ventilation.
+">
+            >
+            ["at0079"] = <
+                text = <"BIPAP">
+                description = <"Biphasic positive airway pressure">
+            >
+            ["at0080"] = <
+                text = <"PSV ">
+                description = <"Pressure support ventilation.
+">
+            >
+            ["at0083"] = <
+                text = <"PCV">
+                description = <"Pressure controlled ventilation.
+">
+            >
+            ["at0084"] = <
+                text = <"S/T">
+                description = <"Spontaneous timed breathing.
+">
+            >
+            ["at0085"] = <
+                text = <"PAV/T">
+                description = <"Proportional assist ventilation/Time.
+">
+            >
+            ["at0087"] = <
+                text = <"Trigger tip">
+                description = <"Trigger type">
+            >
+            ["at0089"] = <
+                text = <"Airway pressure">
+                description = <"Airway pressure.">
+            >
+            ["at0090"] = <
+                text = <"Intrinsic PEEP">
+                description = <"Intrinsic PEEP">
+            >
+            ["at0091"] = <
+                text = <"Inspiratorni tlak (P peak)">
+                description = <"Inspiratorni tlak (P peak)">
+            >
+            ["at0092"] = <
+                text = <"Plateau airway pressure (P plateau)">
+                description = <"Plateau airway pressure (P plateau)">
+            >
+            ["at0095"] = <
+                text = <"Umetna podpora dihanju">
+                description = <"Artificial airway compensation.">
+            >
+            ["at0096"] = <
+                text = <"Intermittent PEEP">
+                description = <"Intermittent PEEP">
+            >
+            ["at0097"] = <
+                text = <"Sigh">
+                description = <"Sigh">
+            >
+            ["at0098"] = <
+                text = <"Inspired tidal volume">
+                description = <"Inspired tidal volume">
+            >
+            ["at0099"] = <
+                text = <"Inspiratory flow">
+                description = <"Inspiratory flow">
+            >
+            ["at0100"] = <
+                text = <"Expiratory flow">
+                description = <"Expiratory flow">
+            >
+            ["at0104"] = <
+                text = <"A/C">
+                description = <"Assist-control ventilation">
+            >
+            ["at0105"] = <
+                text = <"BILEVEL">
+                description = <"BILEVEL">
+            >
+            ["at0106"] = <
+                text = <"PS">
+                description = <"Pressure support">
+            >
+            ["at0108"] = <
+                text = <"SIMV ">
+                description = <"Synchronised intermittent mandatory ventilation.">
+            >
+            ["at0111"] = <
+                text = <"Celokupna frekvenca dihanja (f tot)">
+                description = <"Celokupna frekvenca dihanja (f tot)">
+            >
+            ["at0112"] = <
+                text = <"Minutni volumen (Ve tot)">
+                description = <"Minutni volumen (Ve tot)">
+            >
+            ["at0113"] = <
+                text = <"Čas plateau (T pl)">
+                description = <"Čas plateau (T pl)">
+            >
+            ["at0114"] = <
+                text = <"Tip umetnega predihavanja">
+                description = <"Tip umetnega predihavanja">
+            >
+            ["at0115"] = <
+                text = <"PC">
+                description = <"Pressure controlled.">
+            >
+            ["at0116"] = <
+                text = <"VC">
+                description = <"Volume controlled">
+            >
+            ["at0117"] = <
+                text = <"PC/PS">
+                description = <"PC/PS">
+            >
+            ["at0118"] = <
+                text = <"PC/TC">
+                description = <" PC/TC">
+            >
+            ["at0119"] = <
+                text = <"VC/PS">
+                description = <"VC/PS">
+            >
+            ["at0120"] = <
+                text = <"VC/TC">
+                description = <"VC/TC">
+            >
+            ["at0122"] = <
+                text = <"TS">
+                description = <"TS">
+            >
+            ["at0124"] = <
+                text = <"PS">
+                description = <"Pressure support">
+            >
+            ["at0129"] = <
+                text = <"CV">
+                description = <"CV">
+            >
+            ["at0131"] = <
+                text = <"CMV">
+                description = <"Controlled mechanical ventilation.">
+            >
+            ["at0135"] = <
+                text = <"ASB">
+                description = <"Assisted spontaneous breathing">
+            >
+            ["at0138"] = <
+                text = <"Assist">
+                description = <"Assist">
+            >
+            ["at0139"] = <
+                text = <"ST">
+                description = <"ST">
+            >
+            ["at0140"] = <
+                text = <"PS/CPAP">
+                description = <"PS/CPAP">
+            >
+            ["at0141"] = <
+                text = <"CPAP/APRV">
+                description = <"CPAP/APRV">
+            >
+            ["at0142"] = <
+                text = <"ASB/Assist">
+                description = <"ASB/Assist">
+            >
+            ["at0143"] = <
+                text = <"VS+">
+                description = <"VS+">
+            >
+            ["at0144"] = <
+                text = <"Način umetnega predihavanja">
+                description = <"Način umetnega predihavanja">
+            >
+            ["at0145"] = <
+                text = <"INVAZIVNO">
+                description = <"Invazivno umetno predihavanje">
+            >
+            ["at0146"] = <
+                text = <"NEINVAZIVNO">
+                description = <"Neinvazivno umetno predihavanje">
+            >
+            ["at0147"] = <
+                text = <"VS">
+                description = <"VS">
+            >
+            ["at0149"] = <
+                text = <"Pretok (V max)">
+                description = <"Pretok (V max)">
+            >
+            ["at0150"] = <
+                text = <"Inspiratorni tlak (P i)">
+                description = <"Inspiratorni tlak (P i)">
+            >
+            ["at0151"] = <
+                text = <"TC">
+                description = <"TC">
+            >
+            ["at0152"] = <
+                text = <"SIMV / ASB">
+                description = <"SIMV / ASB">
+            >
+            ["at0153"] = <
+                text = <"BIPAP / ASB">
+                description = <"BIPAP / ASB">
+            >
+            ["at0154"] = <
+                text = <"Podpora dihanju (PEEP asb)">
+                description = <"Podpora dihanju (PEEP asb)">
+            >
+            ["at0155"] = <
+                text = <"HFO + CMV">
+                description = <"HFO + CMV mode">
+            >
+            ["at0156"] = <
+                text = <"Mandatorna frekvenca dihanja">
+                description = <"Mandatorna frekvenca dihanja">
+            >
+            ["at0158"] = <
+                text = <"Zgornji inspiratorni tlak">
+                description = <"Zgornji inspiratorni tlak">
+            >
+            ["at0159"] = <
+                text = <"HFV srednji tlak">
+                description = <"HFV srednji tlak">
+            >
+            ["at0160"] = <
+                text = <"HFV inspiratorni tlak">
+                description = <"HFV inspiratorni tlak">
+            >
+            ["at0161"] = <
+                text = <"HFV frekvenca dihanja">
+                description = <"HFV frekvenca dihanja">
+            >
+            ["at0162"] = <
+                text = <"PIP">
+                description = <"Peak inspiratory pressure">
+            >
+            ["at0163"] = <
+                text = <"HFV amplituda">
+                description = <"HFV amplituda">
+            >
+            ["at9004"] = <
+                text = <"* Frequency (en)">
+                description = <"* Frequency (en)">
+            >
+            ["at9006"] = <
+                text = <"* Pressure (en)">
+                description = <"* Pressure (en)">
+            >
+            ["at9008"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["at9010"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+            ["at9013"] = <
+                text = <"* Proportion (en)">
+                description = <"* Proportion (en)">
+            >
+            ["ac9000"] = <
+                text = <"Način umetnega predihavanja (synthesised)">
+                description = <"Način umetnega predihavanja (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Vrsta umetnega predihavanja (synthesised)">
+                description = <"Vrsta umetnega predihavanja  (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Tip umetnega predihavanja (synthesised)">
+                description = <"Tip umetnega predihavanja (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Frekvenca (synthesised)">
+                description = <"Frekvenca dihanja (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Tlak (synthesised)">
+                description = <"Tlak  (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"Volumen (synthesised)">
+                description = <"Nastavitev ključnega tlaka (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Pretok (synthesised)">
+                description = <"Parameter za pretok (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Trajanje (synthesised)">
+                description = <"Trajanje nastavitev (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Trigger vrednost (synthesised)">
+                description = <"Trigger vrednost (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9004"] = <http://openehr.org/id/382>
+            ["at9006"] = <http://openehr.org/id/125>
+            ["at9008"] = <http://openehr.org/id/129>
+            ["at9010"] = <http://openehr.org/id/126>
+            ["at9013"] = <http://openehr.org/id/507>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0151", "at0147", "at0124", "at0143", "at0117", "at0118", "at0119", "at0120", "at0129", "at0131", "at0116", "at0122", "at0115", "at0135", "at0138", "at0139", "at0140", "at0141", "at0142">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0104", "at0108", "at0105", "at0065", "at0106", "at0077", "at0152", "at0076", "at0070", "at0072", "at0079", "at0153", "at0073", "at0075", "at0080", "at0083", "at0084", "at0085", "at0097", "at0155">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0047", "at0048", "at0049", "at0050", "at0046">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0145", "at0146">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0039", "at0113", "at0040", "at0041">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0091", "at0026", "at0092", "at0017", "at0154", "at0024", "at0150", "at0028", "at0020", "at0021", "at0025", "at0016", "at0018", "at0019", "at0027", "at0089", "at0090", "at0096", "at0158", "at0159", "at0160", "at0163", "at0162">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0010", "at0111", "at0008", "at0009", "at0156", "at0161">
+        >
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0149", "at0099", "at0100">
+        >
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at0032", "at0112", "at0033", "at0098">
+        >
+    >

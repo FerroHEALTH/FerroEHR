@@ -1,0 +1,226 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-CLUSTER.photocoagulation_details.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2014-05-23">
+    >
+    lifecycle_state = <"AuthorDraft">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"5DEB5263C2CADF8B8A5C981852B95CF1">
+    >
+    details = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registro de detalles específicos acerca del procedimiento de fotocoagulación cuando éste se utiliza para tratar una enfermedad oftálmica concreta.">
+            use = <"*(en)">
+            misuse = <"*(en)">
+            copyright = <"*(en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Registering specific details about photocoagulation procedure when used to treat a specific ophthalmic disease.">
+            keywords = <"Photocoagulation", ...>
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Photocoagulation details
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Laterality
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9000]}    -- Laterality (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Photocoagulation method
+                value matches {
+                    DV_CODED_TEXT[at9004] matches {
+                        defining_code matches {[ac9001]}    -- Photocoagulation method (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Type of laser
+                value matches {
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[ac9002]}    -- Type of laser (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Photocoagulation details">
+                description = <"Specific details concerning ophthalmic treatments using photocoagulation.">
+            >
+            ["at0001"] = <
+                text = <"Laterality">
+                description = <"Eyes in which the treatment by photocoagulation is applied.">
+            >
+            ["at0002"] = <
+                text = <"Left eye">
+                description = <"Left eye observation.">
+            >
+            ["at0003"] = <
+                text = <"Right eye">
+                description = <"Right eye observation.">
+            >
+            ["at0004"] = <
+                text = <"Both eyes">
+                description = <"Treatment performed on both eyes of the patient.">
+            >
+            ["at0005"] = <
+                text = <"Photocoagulation method">
+                description = <"Method chosen to perform the treatment by photocoagulation within the retina.">
+            >
+            ["at0006"] = <
+                text = <"Panretinal photocoagulation">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Macular laser">
+                description = <"Photocoagulation of macular drusen.">
+            >
+            ["at0008"] = <
+                text = <"Type of laser">
+                description = <"Identifies the type of laser device needed to perform the treatment.">
+            >
+            ["at0009"] = <
+                text = <"Dye laser device">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Gas laser device">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"Diode pumped laser device">
+                description = <"*">
+            >
+            ["ac9000"] = <
+                text = <"Laterality (synthesised)">
+                description = <"Eyes in which the treatment by photocoagulation is applied. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Photocoagulation method (synthesised)">
+                description = <"Method chosen to perform the treatment by photocoagulation within the retina. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Type of laser (synthesised)">
+                description = <"Identifies the type of laser device needed to perform the treatment. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Detalles acerca de fotocoagulación">
+                description = <"Define los detalles específicos relativos a tratamientos oftálmicos que impliquen fotocoagulación.">
+            >
+            ["at0001"] = <
+                text = <"Lateralidad">
+                description = <"Ojos en los cuales se aplica el tratamiento por fotocoagulación.">
+            >
+            ["at0002"] = <
+                text = <"Ojo izquierdo">
+                description = <"Se observa el ojo izquierdo.">
+            >
+            ["at0003"] = <
+                text = <"Ojo derecho">
+                description = <"Se observa el ojo derecho.">
+            >
+            ["at0004"] = <
+                text = <"Ambos ojos">
+                description = <"La intervención se realiza en ambos ojos del paciente.">
+            >
+            ["at0005"] = <
+                text = <"Método fotocoagulación">
+                description = <"Método elegido para llevar a cabo la intervención por fotocoagulación en la retina.">
+            >
+            ["at0006"] = <
+                text = <"Fotocoagulación panretiniana">
+                description = <"**(en)">
+            >
+            ["at0007"] = <
+                text = <"Laser macular">
+                description = <"Fotocoagulación de drusas maculares.">
+            >
+            ["at0008"] = <
+                text = <"Tipo de láser">
+                description = <"Identifica el láser requerido para llevar a cabo la intervención.">
+            >
+            ["at0009"] = <
+                text = <"Láser de colorante">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Láser de gas">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"Láser de diodo">
+                description = <"*">
+            >
+            ["ac9000"] = <
+                text = <"Lateralidad (synthesised)">
+                description = <"Ojos en los cuales se aplica el tratamiento por fotocoagulación. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Método fotocoagulación (synthesised)">
+                description = <"Método elegido para llevar a cabo la intervención por fotocoagulación en la retina. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Tipo de láser (synthesised)">
+                description = <"Identifica el láser requerido para llevar a cabo la intervención. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0001"] = <http://snomed.info/id/272741003>
+            ["at0002"] = <http://snomed.info/id/362503005>
+            ["at0003"] = <http://snomed.info/id/362502000>
+            ["at0004"] = <http://snomed.info/id/362508001>
+            ["at0005"] = <http://snomed.info/id/231762005>
+            ["at0006"] = <http://snomed.info/id/312713003>
+            ["at0007"] = <http://snomed.info/id/440578004>
+            ["at0008"] = <http://snomed.info/id/122456005>
+            ["at0009"] = <http://snomed.info/id/118298002>
+            ["at0010"] = <http://snomed.info/id/118295004>
+            ["at0011"] = <http://snomed.info/id/118342000>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0009", "at0011", "at0010">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0006", "at0007">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0002", "at0003", "at0004">
+        >
+    >

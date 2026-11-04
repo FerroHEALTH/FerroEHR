@@ -1,0 +1,560 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=2cf8a52d-0cff-48d5-86bc-8022fe025bce; build_uid=0a4e8502-08d3-4c8f-8aa5-c747e61f60d1)
+    openEHR-EHR-CLUSTER.birth_detail.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Laura Moral Lopez">
+                ["organisation"] = <"Sistema de Salut de Catalunya">
+                ["email"] = <"lmorallopez@gmail.com, lauramoral@catsalut.cat">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Laura Moral Lopez">
+                ["organisation"] = <"Sistema de Salut de Catalunya">
+                ["email"] = <"lauramoral@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-04-08">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"EBF2A000675EEDFA66A181F184241DE7">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a subset of persistent or summary information about the pregnancy and birth of an infant, that may be used within both the mother's and infant's health record.">
+            keywords = <"birth", "pregnancy", "infant", "newborn">
+            use = <"Use to record a subset of persistent or summary information about the pregnancy and birth of an infant, usually recorded as part of a maternal health record or birth report, but also able to be shared and reused to provide context about the pregnancy and birth within the newborn's health record.
+
+This archetype has been designed to be nested:
+- in the 'Birth detail' SLOT within the EVALUATION.pregnancy_summary archetype, to capture details about an infant born to the mother; and
+- in the 'Birth detail' SLOT within the EVALUATION.birth_summary archetype, to capture or reuse details about the birth of the individual.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar un subconjunto de información persistente o resumida sobre el embarazo y el nacimiento de un bebé, que puede usarse tanto en el registro de salud de la madre como del bebé.">
+            keywords = <"nacimiento", "embarazo", "niño", "bebé", "infante", "recién nacido">
+            use = <"Se utiliza para registrar un subconjunto de información persistente o resumida sobre el embarazo y el nacimiento de un bebé, generalmente registrada como parte de un registro de salud materna o un informe de nacimiento, pero que también se puede compartir y reutilizar para proporcionar un contexto sobre el embarazo y el nacimiento dentro del contexto. Historial de salud del recién nacido.
+
+Este arquetipo ha sido diseñado para ser anidado:
+- en el nodo 'Detalle del nacimiento' dentro del arquetipo EVALUATION.pregnancy_summary, para capturar detalles sobre un bebé nacido de la madre; y
+- en el nodo 'Detalle de nacimiento' dentro del arquetipo EVALUATION.birth_summary, para capturar o reutilizar detalles sobre el nacimiento del individuo.">
+            misuse = <"">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Per registrar un subconjunt d'informació persistent o resumida sobre l'embaràs i el naixement d'un nadó, que es pot utilitzar tant al registre de salut de la mare com del nadó.">
+            keywords = <"naixement", "embaràs", "infant", "nounat">
+            use = <"S'utilitza per registrar un subconjunt d'informació persistent o resumida sobre l'embaràs i el naixement d'un nadó, normalment registrada com a part d'un registre de salut materna o d'un informe de naixement, però que també es pot compartir i reutilitzar per proporcionar context sobre l'embaràs i el part dins de l'historial de salut del nounat.
+
+Aquest arquetip ha estat dissenyat per anidar:
+- al node (SLOT) 'Detall de naixement' dins de l'arquetip EVALUATION.pregnancy_summary, per captar detalls sobre un nadó nascut de la mare; i
+- al node (SLOT) \"Detall de naixement\" dins de l'arquetip EVALUATION.birth_summary, per capturar o reutilitzar detalls sobre el naixement de l'individu.">
+            misuse = <"">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Birth detail
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0027] occurrences matches {0..1} matches {    -- Birth outcome
+                value matches {
+                    DV_CODED_TEXT[at9011] matches {
+                        defining_code matches {[ac9009]}    -- Birth outcome (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Birth order
+                value matches {
+                    DV_COUNT[at9002]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Gestation
+                value matches {
+                    DV_DURATION[at9003] matches {
+                        value matches {PW/|P0D..P364D|}
+                    }
+                }
+            }
+            ELEMENT[at0018] occurrences matches {0..1} matches {    -- Gestational maturity
+                value matches {
+                    DV_DURATION[at9004] matches {
+                        value matches {PW/|P0D..P364D|}
+                    }
+                }
+            }
+            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Birth category by gestation
+                value matches {
+                    DV_CODED_TEXT[at9012] matches {
+                        defining_code matches {[ac9010]}    -- Birth category by gestation (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Method of delivery
+                value matches {
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[ac9000]}    -- Method of delivery (synthesised)
+                    }
+                    DV_TEXT[at9006]
+                }
+            }
+            ELEMENT[at0019] occurrences matches {0..1} matches {    -- Delivery urgency
+                value matches {
+                    DV_CODED_TEXT[at9007] matches {
+                        defining_code matches {[ac9006]}    -- Delivery urgency (synthesised)
+                    }
+                    DV_TEXT[at9008]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Birth detail">
+                description = <"A subset of persistent or summary information about the pregnancy and birth of an infant, selected for utility of use within both the maternal and infant health records.">
+            >
+            ["at0001"] = <
+                text = <"Description">
+                description = <"Narrative description of the newborn, including observed congenital abnormalities.">
+            >
+            ["at0003"] = <
+                text = <"Birth order">
+                description = <"The sequential order of the birth of the infant within a multiple birth pregnancy.">
+                comment = <"For example: singleton or first of a multiple birth; second; third etc.">
+            >
+            ["at0004"] = <
+                text = <"Gestation">
+                description = <"The length of the pregnancy at the time of delivery of the infant.">
+                comment = <"The value for this data element will usually, but not always, be identical to the 'Pregnancy duration' data element within the EVALUATION.pregnancy_summary in the maternal record. It may also be derived using the 'Agreed date' data element within the EVALUATION.estimated_date_delivery archetype in the maternal record. Usually estimated by Naegele's rule or by ultrasound scan.">
+            >
+            ["at0005"] = <
+                text = <"Method of delivery">
+                description = <"Method by which the newborn was delivered.">
+                comment = <"For example: vaginal; forceps rotation; or Caesarean Section.">
+            >
+            ["at0006"] = <
+                text = <"Unassisted">
+                description = <"Normal, non-instrumental vaginal delivery.">
+            >
+            ["at0007"] = <
+                text = <"Assisted breech delivery">
+                description = <"Vaginal delivery assisted by maneuvers in the delivery of the remainder of the body, arms, and head.">
+            >
+            ["at0008"] = <
+                text = <"Total breech extraction">
+                description = <"Vaginal delivery, by which the fetal feet are grasped, and the entire fetus is extracted.">
+            >
+            ["at0009"] = <
+                text = <"Vacuum extraction">
+                description = <"Vaginal delivery assisted by the use of vacuum extraction.">
+            >
+            ["at0010"] = <
+                text = <"Vacuum extraction with rotation">
+                description = <"Vaginal delivery assisted by the use of vacuum extraction.">
+            >
+            ["at0011"] = <
+                text = <"Lift-out forceps">
+                description = <"Vaginal delivery assisted by the use of lift-out forceps.">
+            >
+            ["at0012"] = <
+                text = <"Low forceps">
+                description = <"Vaginal delivery assisted by the use of low forceps.">
+            >
+            ["at0013"] = <
+                text = <"High forceps">
+                description = <"Vaginal delivery assisted by the use of high forceps.">
+            >
+            ["at0014"] = <
+                text = <"High forceps with rotation">
+                description = <"Vaginal delivery assisted by the use of high forceps with rotation.">
+            >
+            ["at0015"] = <
+                text = <"Caesarean - lower uterine segment">
+                description = <"Surgical delivery by a transverse approach in the lower uterine segment (LUSCS).">
+            >
+            ["at0016"] = <
+                text = <"Caesarean - upper uterine segment">
+                description = <"Surgical delivery by an approach in the upper uterine segment.">
+            >
+            ["at0018"] = <
+                text = <"Gestational maturity">
+                description = <"The estimated gestational maturity of the newborn at, or very near, birth.">
+                comment = <"Usually estimated by physical examination and/or neuromuscular assessment of the newborn.">
+            >
+            ["at0019"] = <
+                text = <"Delivery urgency">
+                description = <"The level of urgency identified at or around the time of delivery.">
+            >
+            ["at0020"] = <
+                text = <"Routine/Elective">
+                description = <"The delivery, induction or Caesarean Section did not require any unexpected or urgent intervention.">
+            >
+            ["at0022"] = <
+                text = <"Emergency">
+                description = <"Recognition of a high risk situation required the delivery to be expedited as an emergency.">
+            >
+            ["at0021"] = <
+                text = <"Urgent">
+                description = <"Recognition of an increasing risk situation required the delivery to be expedited.">
+            >
+            ["at0023"] = <
+                text = <"Birth category by gestation">
+                description = <"Category of birth based on the duration of the pregnancy at birth.">
+            >
+            ["at0024"] = <
+                text = <"Pre-term">
+                description = <"Premature; delivered before 37 weeks of gestation.">
+            >
+            ["at0025"] = <
+                text = <"Term">
+                description = <"Delivered between 37 and 42 weeks of gestation.">
+            >
+            ["at0026"] = <
+                text = <"Post-term">
+                description = <"Post-mature; delivered beyond 42 weeks of gestation.">
+            >
+            ["at0027"] = <
+                text = <"Birth outcome">
+                description = <"Outcome of the pregnancy for the identified infant or fetus.">
+            >
+            ["at0028"] = <
+                text = <"Live birth">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Still birth">
+                description = <"">
+            >
+            ["ac9009"] = <
+                text = <"Birth outcome (synthesised)">
+                description = <"Outcome of the pregnancy for the identified infant or fetus. (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Birth category by gestation (synthesised)">
+                description = <"Category of birth based on the duration of the pregnancy at birth. (synthesised)">
+            >
+            ["ac9000"] = <
+                text = <"Method of delivery (synthesised)">
+                description = <"Method by which the newborn was delivered. (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Delivery urgency (synthesised)">
+                description = <"The level of urgency identified at or around the time of delivery. (synthesised)">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Detall del naixement">
+                description = <"Subconjunt d'informació persistent o resumida sobre l'embaràs i el naixement d'un nadó, seleccionada per a la utilitat d'ús tant als registres de salut materna com infantil.">
+            >
+            ["at0001"] = <
+                text = <"Descripció">
+                description = <"Descripció narrativa del nounat, incloses les anomalies congènites observades.">
+            >
+            ["at0003"] = <
+                text = <"Ordre de naixement">
+                description = <"L'ordre seqüencial del naixement del nadó dins d'un part d'embaràs múltiple.">
+                comment = <"Per exemple: part únic o primer d'un part múltiple; segon; tercer, etc.">
+            >
+            ["at0004"] = <
+                text = <"Gestació">
+                description = <"La durada de l'embaràs en el moment del part del nadó.">
+                comment = <"El valor d'aquest element de dades normalment, però no sempre, serà idèntic a l'element de dades \"Durada de l'embaràs\" dins de l'EVALUATION.pregnancy_summary del registre matern. També es pot derivar mitjançant l'element de dades \"Data acordada\" dins de l'arquetip EVALUATION.estimated_date_delivery del registre matern. Normalment estimat per la regla de Naegele o per ecografia.">
+            >
+            ["at0005"] = <
+                text = <"Mètode de deslliurament">
+                description = <"Mètode pel qual va néixer el nounat.">
+                comment = <"Per exemple: vaginal; rotació de fòrceps; o cesària.">
+            >
+            ["at0006"] = <
+                text = <"No assistida">
+                description = <"Normal, part vaginal no instrumentalitzat.">
+            >
+            ["at0007"] = <
+                text = <"Deslliurament de natges assistit">
+                description = <"Part vaginal assistit per maniobres en el deslliurament de la resta del cos, braços i cap.">
+            >
+            ["at0008"] = <
+                text = <"Extracció total de natges">
+                description = <"Part vaginal, mitjançant el qual s'agafen els peus fetals i s'extreu tot el fetus.">
+            >
+            ["at0009"] = <
+                text = <"Extracció amb ventosa">
+                description = <"Part vaginal assistit per l'ús d'extracció amb ventosa.">
+            >
+            ["at0010"] = <
+                text = <"Extracció amb ventosa amb rotació">
+                description = <"Part vaginal assistit per l'ús de l'extracció amb ventosa.">
+            >
+            ["at0011"] = <
+                text = <"Fòrceps d'elevació">
+                description = <"Part vaginal assistit per l'ús de fòrceps d'elevació.">
+            >
+            ["at0012"] = <
+                text = <"Fòrceps baix">
+                description = <"Part vaginal assistit amb l'ús de fòrceps baix.">
+            >
+            ["at0013"] = <
+                text = <"Fòrceps alt">
+                description = <"Part vaginal assistit amb l'ús de fòrceps alt.">
+            >
+            ["at0014"] = <
+                text = <"Fòrceps alt amb rotació">
+                description = <"Part vaginal assistit per l'ús de fòrceps alt amb rotació.">
+            >
+            ["at0015"] = <
+                text = <"Cesària - segment uterí inferior">
+                description = <"Part quirúrgic per abordatge transversal del segment uterí inferior.">
+            >
+            ["at0016"] = <
+                text = <"Cesària - segment uterí superior">
+                description = <"Part quirúrgic per abordatge del segment uterí superior.">
+            >
+            ["at0018"] = <
+                text = <"Edad gestacional">
+                description = <"La maduresa gestacional estimada del nounat al moment del naixement o molt a prop del naixement.">
+                comment = <"Normalment, s'estima mitjançant exploració física i/o valoració neuromuscular del nounat.">
+            >
+            ["at0019"] = <
+                text = <"Urgència del part">
+                description = <"Nivell d'urgència identificat en o al voltant del moment del lliurament.">
+            >
+            ["at0020"] = <
+                text = <"Rutinària/Electiva">
+                description = <"El part, la inducció o la cesària no van requerir cap intervenció inesperada o urgent.">
+            >
+            ["at0021"] = <
+                text = <"Urgent">
+                description = <"El reconeixement d'una situació de risc creixent va obligar a accelerar el deslliurament.">
+            >
+            ["at0022"] = <
+                text = <"Emergència">
+                description = <"Reconeixement d'una situació d'alt risc va obligar a accelerar el deslliurament com a emergència.">
+            >
+            ["at0023"] = <
+                text = <"Categoria de naixement per gestació">
+                description = <"Categoria de part en funció de la durada de l'embaràs al néixer.">
+            >
+            ["at0024"] = <
+                text = <"Preterme">
+                description = <"Prematur; part abans de les 37 setmanes de gestació.">
+            >
+            ["at0025"] = <
+                text = <"A terme">
+                description = <"Part entre les 37 i 42 setmanes de gestació.">
+            >
+            ["at0026"] = <
+                text = <"Postterme">
+                description = <"Postmaduració; part més enllà de les 42 setmanes de gestació.">
+            >
+            ["at0027"] = <
+                text = <"Resultat del naixement">
+                description = <"Resultat de l'embaràs per al nadó o fetus identificat.">
+            >
+            ["at0028"] = <
+                text = <"Nascut viu">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Mort fetal">
+                description = <"">
+            >
+            ["ac9009"] = <
+                text = <"Resultat del naixement (synthesised)">
+                description = <"Resultat de l'embaràs per al nadó o fetus identificat. (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Categoria de naixement per gestació (synthesised)">
+                description = <"Categoria de part en funció de la durada de l'embaràs al néixer. (synthesised)">
+            >
+            ["ac9000"] = <
+                text = <"Mètode de deslliurament (synthesised)">
+                description = <"Mètode pel qual va néixer el nounat. (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Urgència del part (synthesised)">
+                description = <"Nivell d'urgència identificat en o al voltant del moment del lliurament. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Detalles del nacimiento">
+                description = <"Subconjunto de información persistente o resumida sobre el embarazo y el nacimiento de un bebé, seleccionada para su utilidad dentro de los registros de salud maternoinfantil.">
+            >
+            ["at0001"] = <
+                text = <"Descripción">
+                description = <"Descripción narrativa del recién nacido, incluidas las anomalías congénitas observadas.">
+            >
+            ["at0003"] = <
+                text = <"Orden de nacimiento">
+                description = <"El orden secuencial del nacimiento del bebé dentro de un embarazo de parto múltiple.">
+                comment = <"Por ejemplo: hijo único o primero de un parto múltiple; segundo; tercero, etc.">
+            >
+            ["at0004"] = <
+                text = <"Gestación">
+                description = <"Duración del embarazo en el momento del parto del recién nacido.">
+                comment = <"El valor de este elemento de datos generalmente, aunque no siempre, será idéntico al elemento de datos \"Duración del embarazo\" dentro de EVALUATION.pregnancy_summary en el registro materno. También se puede derivar utilizando el elemento de datos 'Fecha acordada' dentro del arquetipo EVALUATION.estimated_date_delivery en el registro materno. Generalmente, se estima mediante la regla de Naegele o mediante ecografía.">
+            >
+            ["at0005"] = <
+                text = <"Método de alumbramiento">
+                description = <"Método por el cual el recién nacido es alumbrado.">
+                comment = <"Por ejemplo: vaginal; rotación de fórceps; o cesárea.">
+            >
+            ["at0006"] = <
+                text = <"No asistido">
+                description = <"Normal, parto vaginal no instrumentalizado.">
+            >
+            ["at0007"] = <
+                text = <"Parto de nalgas asistido">
+                description = <"Parto vaginal asistido por maniobras en la salida del resto del cuerpo, brazos y cabeza.">
+            >
+            ["at0008"] = <
+                text = <"Extracción total de nalgas">
+                description = <"Parto vaginal, mediante el cual se agarran los pies del feto y se extrae el feto completo.">
+            >
+            ["at0009"] = <
+                text = <"Extracción con ventosa">
+                description = <"Parto vaginal asistido mediante el uso de extracción con ventosa.">
+            >
+            ["at0010"] = <
+                text = <"Extracción con ventosa con rotación">
+                description = <"Parto vaginal asistido mediante el uso de extracción con ventosa.">
+            >
+            ["at0011"] = <
+                text = <"Fórceps elevador">
+                description = <"Parto vaginal asistido mediante el uso de fórceps elevadores.">
+            >
+            ["at0012"] = <
+                text = <"Fórceps bajo">
+                description = <"Parto vaginal asistido mediante el uso de fórceps bajos.">
+            >
+            ["at0013"] = <
+                text = <"Fórceps alto">
+                description = <"Parto vaginal asistido mediante el uso de fórceps altos.">
+            >
+            ["at0014"] = <
+                text = <"Fórceps alto con rotación.">
+                description = <"Parto vaginal asistido mediante el uso de fórceps altos con rotación.">
+            >
+            ["at0015"] = <
+                text = <"Cesárea - segmento uterino inferior">
+                description = <"Parto quirúrgico por abordaje transversal en el segmento uterino inferior (LSCS).">
+            >
+            ["at0016"] = <
+                text = <"Cesárea - segmento uterino superior">
+                description = <"Parto quirúrgico mediante abordaje en el segmento uterino superior.">
+            >
+            ["at0018"] = <
+                text = <"Edad gestacional">
+                description = <"La madurez gestacional estimada del recién nacido en el momento del nacimiento o muy cerca del mismo.">
+                comment = <"Generalmente se estima mediante examen físico y/o evaluación neuromuscular del recién nacido.">
+            >
+            ["at0019"] = <
+                text = <"*Delivery urgency (en)">
+                description = <"El nivel de urgencia identificado en el momento de la entrega o alrededor del tiempo de la entrega.">
+            >
+            ["at0020"] = <
+                text = <"Rutina/Electivo">
+                description = <"El parto, inducción o cesárea no requirió ninguna intervención inesperada o urgente.">
+            >
+            ["at0021"] = <
+                text = <"Urgente">
+                description = <"Reconocimiento de una situación de riesgo creciente requirió que se acelerara la entrega.">
+            >
+            ["at0022"] = <
+                text = <"Emergente">
+                description = <"Reconocimiento de una situación de alto riesgo requirió que la entrega se acelerara como una emergencia.">
+            >
+            ["at0023"] = <
+                text = <"*Birth category by gestation (en)">
+                description = <"*Category of birth based on the duration of the pregnancy at birth. (en)">
+            >
+            ["at0024"] = <
+                text = <"*Pre-term (en)">
+                description = <"*Premature; delivered before 37 weeks of gestation. (en)">
+            >
+            ["at0025"] = <
+                text = <"*Term (en)">
+                description = <"*Delivered between 37 and 42 weeks of gestation. (en)">
+            >
+            ["at0026"] = <
+                text = <"*Post-term (en)">
+                description = <"*Post-mature; delivered beyond 42 weeks of gestation. (en)">
+            >
+            ["at0027"] = <
+                text = <"*Birth outcome (en)">
+                description = <"*Outcome of the pregnancy for the identified infant or fetus. (en)">
+            >
+            ["at0028"] = <
+                text = <"*Live birth (en)">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"*Still birth (en)">
+                description = <"">
+            >
+            ["ac9009"] = <
+                text = <"*Birth outcome (en) (synthesised)">
+                description = <"*Outcome of the pregnancy for the identified infant or fetus. (en) (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"*Birth category by gestation (en) (synthesised)">
+                description = <"*Category of birth based on the duration of the pregnancy at birth. (en) (synthesised)">
+            >
+            ["ac9000"] = <
+                text = <"Método de alumbramiento (synthesised)">
+                description = <"Método por el cual el recién nacido es alumbrado. (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"*Delivery urgency (en) (synthesised)">
+                description = <"El nivel de urgencia identificado en el momento de la entrega o alrededor del tiempo de la entrega. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0028", "at0029">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0006", "at0007", "at0008", "at0009", "at0010", "at0011", "at0012", "at0013", "at0014", "at0015", "at0016">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0024", "at0025", "at0026">
+        >
+        ["ac9006"] = <
+            id = <"ac9006">
+            members = <"at0020", "at0021", "at0022">
+        >
+    >

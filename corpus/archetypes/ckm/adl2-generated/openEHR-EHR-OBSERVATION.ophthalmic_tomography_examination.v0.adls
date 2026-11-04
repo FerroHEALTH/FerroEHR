@@ -1,0 +1,1164 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=78ac5c3d-9e2c-4cce-89a8-4d4fe9046202; build_uid=c38cd23c-dbf9-4989-841f-fcaeb2b31660)
+    openEHR-EHR-OBSERVATION.ophthalmic_tomography_examination.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2015-06-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"33DBFA0E999AE69E58C22EE92971FCD4">
+    >
+    details = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar los detalles durante los estudios oftálmicos de la prueba de tomografía de coherencia óptica.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Register details about ophthalmic studies with regard to the ophthalmic tomography test.">
+            keywords = <"ophthalmic", "coherence", "tomography", "OCT">
+            use = <"This archetype can be used for the following:
+- Register the protocol/strategy used to conduct ophthalmic tomography test.
+- Review with diagnostic purposes, the studies acquired using ophthalmic tomography, looking for clinically relevant findings on eye fundus.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Ophthalmic tomography examination
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0008] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0038] occurrences matches {0..1} matches {    -- Clinical description
+                                        value matches {
+                                            DV_TEXT[at9027]
+                                        }
+                                    }
+                                    CLUSTER[at0039] occurrences matches {0..2} matches {    -- Test result
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0040] occurrences matches {0..1} matches {    -- Side
+                                                value matches {
+                                                    DV_CODED_TEXT[at9028] matches {
+                                                        defining_code matches {[ac9000]}    -- Side (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0045] occurrences matches {0..1} matches {    -- Structure analyzed
+                                                value matches {
+                                                    DV_CODED_TEXT[at9029] matches {
+                                                        defining_code matches {[ac2]}    -- Anatomic structures of eye
+                                                    }
+                                                }
+                                            }
+                                            CLUSTER[at0090] occurrences matches {0..1} matches {    -- Reference image
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0091] occurrences matches {0..1} matches {    -- Acquisition method
+                                                        value matches {
+                                                            DV_CODED_TEXT[at9030] matches {
+                                                                defining_code matches {[ac4]}    -- Ophthalmic photography devices
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0046] matches {    -- Image type
+                                                        value matches {
+                                                            DV_CODED_TEXT[at9031] matches {
+                                                                defining_code matches {[ac9072]}    -- Image type (synthesised)
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0093] occurrences matches {0..1} matches {    -- Comment
+                                                        value matches {
+                                                            DV_TEXT[at9034]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0204] occurrences matches {0..1} matches {    -- Reference image
+                                                        value matches {
+                                                            DV_MULTIMEDIA[at9033] matches {
+                                                                media_type matches {[ac9011]}    -- Reference image (synthesised)
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            CLUSTER[at0047] matches {    -- Multiframe properties
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0048] occurrences matches {0..1} matches {    -- Number of frames
+                                                        value matches {
+                                                            DV_COUNT[at9035] matches {
+                                                                magnitude matches {|>=1|}
+                                                            }
+                                                        }
+                                                    }
+                                                    CLUSTER[at0277] matches {    -- OCT slice analysis
+                                                        items cardinality matches {1..*; unordered} matches {
+                                                            ELEMENT[at0049] occurrences matches {0..1} matches {    -- Frame pointer
+                                                                value matches {
+                                                                    DV_COUNT[at9073] matches {
+                                                                        magnitude matches {|>=1|}
+                                                                    }
+                                                                }
+                                                            }
+                                                            ELEMENT[at0054] occurrences matches {0..1} matches {    -- OCT slice
+                                                                value matches {
+                                                                    DV_MULTIMEDIA[at9074] matches {
+                                                                        media_type matches {[ac9011]}    -- Reference image (synthesised)
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0270] occurrences matches {0..1} matches {    -- Comment
+                                                        value matches {
+                                                            DV_TEXT[at9075]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            CLUSTER[at0055] matches {    -- Reports
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0056] occurrences matches {0..1} matches {    -- Report type
+                                                        value matches {
+                                                            DV_CODED_TEXT[at9038] matches {
+                                                                defining_code matches {[ac9012]}    -- Report type (synthesised)
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0253] matches {    -- Report content
+                                                        value matches {
+                                                            DV_CODED_TEXT[at9076] matches {
+                                                                defining_code matches {[ac9073]}    -- Report content (synthesised)
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0269] occurrences matches {0..1} matches {    -- Comment
+                                                        value matches {
+                                                            DV_TEXT[at9077]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0088] occurrences matches {0..1} matches {    -- Report
+                                                        value matches {
+                                                            DV_MULTIMEDIA[at9054] matches {
+                                                                media_type matches {[ac9014]}    -- Report (synthesised)
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            CLUSTER[at0186] occurrences matches {0..1} matches {    -- Retinal thickness
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    allow_archetype CLUSTER[at0094] matches {    -- Ophthalmic thickness details
+                                                        include
+                                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.ophthalmic_thickness_details(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                                                        exclude
+                                                            archetype_id/value matches {/.*/}
+                                                    }
+                                                    ELEMENT[at0272] occurrences matches {0..1} matches {    -- Comment
+                                                        value matches {
+                                                            DV_TEXT[at9078]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0271] occurrences matches {0..1} matches {    -- Clinical findings
+                                                value matches {
+                                                    DV_CODED_TEXT[at9079] matches {
+                                                        defining_code matches {[ac3]}    -- Findings on the posterior chamber of the eye
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0115] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9062]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0134] matches {    -- Refraction details
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.refraction_details(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                        exclude
+                                            archetype_id/value matches {/.*/}
+                                    }
+                                    allow_archetype CLUSTER[at0251] matches {    -- Mydriasis Details
+                                        include
+                                            archetype_id/value matches {/.*/}
+                                    }
+                                    ELEMENT[at0123] occurrences matches {0..1} matches {    -- Intraocular pressure
+                                        value matches {
+                                            DV_QUANTITY[at9067] matches {
+                                                property matches {[at9019]}    -- Pressure
+                                                magnitude matches {|0.0..90.0|}
+                                                units matches {"mm[Hg]"}
+                                                precision matches {1}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0124] occurrences matches {0..1} matches {    -- Axial length of the eye
+                                        value matches {
+                                            DV_QUANTITY[at9068] matches {
+                                                property matches {[at9017]}    -- Length
+                                                magnitude matches {|>=0.0|}
+                                                units matches {"mm"}
+                                                precision matches {1}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0125] occurrences matches {0..1} matches {    -- Horizontal field of view
+                                        value matches {
+                                            DV_QUANTITY[at9069] matches {
+                                                property matches {[at9020]}    -- Angle, plane
+                                                units matches {"deg"}
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0130] occurrences matches {0..1} matches {    -- Contrast/Bolus
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0131] occurrences matches {0..1} matches {    -- Contrast/bolus agent
+                                                value matches {
+                                                    DV_CODED_TEXT[at9070] matches {
+                                                        defining_code matches {[ac9021]}    -- Contrast/bolus agent (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0132] occurrences matches {0..1} matches {    -- Contrast/bolus volume
+                                                value matches {
+                                                    DV_QUANTITY[at9071] matches {
+                                                        property matches {[at9022]}    -- Volume
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"ml"}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0133] occurrences matches {0..1} matches {    -- Contrast/bolus volume ingredient concentration
+                                                value matches {
+                                                    DV_QUANTITY[at9072] matches {
+                                                        property matches {[at9023]}    -- Concentration
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"mg/ml"}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0004] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0011] matches {    -- Device details
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.device_details(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0252] matches {    -- Acquisition details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Ophthalmic tomography examination">
+                description = <"Record of clinical findings using optical coherence tomography with ophthalmic purposes.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0011"] = <
+                text = <"Device details">
+                description = <"Details of the device used to acquire OCT images.">
+            >
+            ["at0038"] = <
+                text = <"Clinical description">
+                description = <"A term, commonly coded, expressing an overall interpretation of the OCT test.">
+            >
+            ["at0039"] = <
+                text = <"Test result">
+                description = <"Details of the ophthalmic tomography examination test result for each eye.">
+            >
+            ["at0040"] = <
+                text = <"Side">
+                description = <"Determines the eye on which the test was performed.Matches to DICOM Laterality (0020,0060) attribute.">
+                comment = <"Matches to DICOM Laterality (0020,0060) attribute.">
+            >
+            ["at0045"] = <
+                text = <"Structure analyzed">
+                description = <"The anatomic structure analyzed in this study.">
+                comment = <"Matches to DICOM Anatomic Region Sequence (0008,2218) attribute. Values permitted are defined by DICOM standard (PS 3.16) inside the table with Context ID 4211 (Ophthalmic OCT Anatomic Structure Imaged).">
+            >
+            ["at0046"] = <
+                text = <"Image type">
+                description = <"Identifies the fundus imaging modalities obtained from the acquisition of the reference image.">
+                comment = <"Corresponds to the value 4 of the DICOM image type attribute (0008,0008). ">
+            >
+            ["at0047"] = <
+                text = <"Multiframe properties">
+                description = <"Information about the slices of the retina obtained by OCT the test.">
+            >
+            ["at0048"] = <
+                text = <"Number of frames">
+                description = <"Number of slices in the study (from 1 to n).">
+                comment = <"Matches to DICOM (0028,0008) attribute. ">
+            >
+            ["at0049"] = <
+                text = <"Frame pointer">
+                description = <"Number identifying a frame among the rest in the study, to highlight its relevance on diagnosis.">
+                comment = <"Matches to DICOM (0028,0009) attribute. ">
+            >
+            ["at0054"] = <
+                text = <"OCT slice">
+                description = <"Current slice of the retina regarding the image of reference.">
+            >
+            ["at0055"] = <
+                text = <"Reports">
+                description = <"Information about image reports related to the current OCT study.">
+            >
+            ["at0056"] = <
+                text = <"Report type">
+                description = <"Defines the purpose of the report built from data acquired on the OCT device.">
+            >
+            ["at0088"] = <
+                text = <"Report">
+                description = <"Report related to the current OCT study.">
+            >
+            ["at0090"] = <
+                text = <"Reference image">
+                description = <"Information about the image on which the position of OCT acquisitions/slices will be referenced.">
+            >
+            ["at0091"] = <
+                text = <"Acquisition method">
+                description = <"Ophthalmic photography acquisition method chosen to obtain the reference image.">
+                comment = <"Matches to DICOM Anatomic Region Sequence (0022,0015) attribute. Values permitted are defined by DICOM standard (PS 3.16) inside the table with Context ID 4202 (Ophthalmic Photography Acquisition Device).">
+            >
+            ["at0093"] = <
+                text = <"Comment">
+                description = <"Narrative description of clinically relevant information identifiable on the reference image.">
+            >
+            ["at0094"] = <
+                text = <"Ophthalmic thickness details">
+                description = <"Details about a study of thickness of ophthalmic structures.">
+            >
+            ["at0115"] = <
+                text = <"Confounding factors">
+                description = <"Patient circumstances which may affect interpretation of the result.">
+            >
+            ["at0123"] = <
+                text = <"Intraocular pressure">
+                description = <"Value of intraocular pressure in mmHg.">
+                comment = <"Matches to DICOM (0022,000B) attribute.">
+            >
+            ["at0124"] = <
+                text = <"Axial length of the eye">
+                description = <"Axial length of the eye in mm.">
+                comment = <"Matches to DICOM (0022,0030) attribute.">
+            >
+            ["at0125"] = <
+                text = <"Horizontal field of view">
+                description = <"The horizontal field of view in degrees.">
+                comment = <"Matches to DICOM (0022,000C) attribute.">
+            >
+            ["at0130"] = <
+                text = <"Contrast/Bolus">
+                description = <"Information about the contrast agents administered prior to or during the acquisition.">
+                comment = <"Matches to DICOM (0018,0012) attribute.">
+            >
+            ["at0131"] = <
+                text = <"Contrast/bolus agent">
+                description = <"Identification of the contrast agent.">
+                comment = <"Matches to DICOM (0018,0012) attribute. Values permitted are defined by DICOM standard (PS 3.16) inside the table with Context ID 4200 (Ophthalmic Imaging Agent).">
+            >
+            ["at0132"] = <
+                text = <"Contrast/bolus volume">
+                description = <"Volume injected in milliliters of diluted contrast agent.">
+                comment = <"Matches to DICOM (0018,1041) attribute.">
+            >
+            ["at0133"] = <
+                text = <"Contrast/bolus volume ingredient concentration">
+                description = <"Milligrams of active ingredient per milliliter of (diluted) agent.">
+                comment = <"Matches to DICOM (0018,1049) attribute.">
+            >
+            ["at0134"] = <
+                text = <"Refraction details">
+                description = <"Details of refractive correction applied to each eye.">
+            >
+            ["at0135"] = <
+                text = <"Left eye">
+                description = <"The left eye was examined.">
+            >
+            ["at0136"] = <
+                text = <"Right eye">
+                description = <"The right eye was examined.">
+            >
+            ["at0186"] = <
+                text = <"Retinal thickness">
+                description = <"Information related to retinal thickness measurement.">
+            >
+            ["at0187"] = <
+                text = <"FA">
+                description = <"Fluorescein Angiography.">
+            >
+            ["at0188"] = <
+                text = <"ICGA">
+                description = <"Indocyanine green angiography.">
+            >
+            ["at0190"] = <
+                text = <"AF">
+                description = <"BluePeak blue laser autofluorescence imaging.">
+            >
+            ["at0191"] = <
+                text = <"IR">
+                description = <"Infrared reflectance imaging.">
+            >
+            ["at0192"] = <
+                text = <"RF">
+                description = <"Red-free imaging.">
+            >
+            ["at0204"] = <
+                text = <"Reference image">
+                description = <"Image on which the position of OCT acquisitions/slices will be referenced.">
+            >
+            ["at0205"] = <
+                text = <"OCT overview">
+                description = <"Details about slice/s of the retina regarding its/their position in the reference image.">
+            >
+            ["at0206"] = <
+                text = <"Retina exam">
+                description = <"Study of a slice of the retina and measurement of its thickness profile.">
+            >
+            ["at0207"] = <
+                text = <"Retina change">
+                description = <"Measurement of the thickness profile for each slice of retina in study and comparison of thickness progression in time during a follow-up.">
+            >
+            ["at0208"] = <
+                text = <"3D view">
+                description = <"Study of a 3D recontruction of the retina.">
+            >
+            ["at0209"] = <
+                text = <"Thickness map exam">
+                description = <"Thickness study over the image of reference for multi-frame acquisition.">
+            >
+            ["at0210"] = <
+                text = <"Thickness map change">
+                description = <"Thickness progression study between several images of reference using different multi-frame acquisitions taken along time.">
+            >
+            ["at0211"] = <
+                text = <"RNFL thickness exam">
+                description = <"Measurement of thickness for retinal nerve fiber layer and comparison regarding the values from an age-adjusted normative database.">
+            >
+            ["at0212"] = <
+                text = <"RNFL thickness change">
+                description = <"Measurement of thickness for retinal nerve fiber layer and comparison regarding other measures obtained during a follow-up process.">
+            >
+            ["at0213"] = <
+                text = <"RNFL thickness trend">
+                description = <"Trend study for the evolution of retinal nerve fiber layer thickness.">
+            >
+            ["at0214"] = <
+                text = <"Asymmetry analysis">
+                description = <"Study of difference in thickness comparing: values in different eyes (OD-OS), and superior-inferior hemispheres of the same eye.">
+            >
+            ["at0215"] = <
+                text = <"RNFL & asymmetry analysis">
+                description = <"Study centered in retinal nerve fiber layer thickness and asymmetry of the retina.">
+            >
+            ["at0216"] = <
+                text = <"Posterior pole assessment">
+                description = <"Study centered in thickness around the optic nerve and macula.">
+            >
+            ["at0217"] = <
+                text = <"Other">
+                description = <"Other type of report.">
+            >
+            ["at0230"] = <
+                text = <"Fluorescein">
+                description = <"Corresponds to DICOM Code value C-B02CC.">
+            >
+            ["at0231"] = <
+                text = <"Indocyanine green">
+                description = <"Corresponds to DICOM Code value C-B0156.">
+            >
+            ["at0232"] = <
+                text = <"Rose Bengal">
+                description = <"Corresponds to DICOM Code value C-B0295.">
+            >
+            ["at0233"] = <
+                text = <"Trypan blue">
+                description = <"Corresponds to DICOM Code value C-22853.">
+            >
+            ["at0234"] = <
+                text = <"Methylene blue">
+                description = <"Corresponds to DICOM Code value C-B02C5.">
+            >
+            ["at0251"] = <
+                text = <"Mydriasis Details">
+                description = <"Details of any mydriatic procedure carried out whenever necessary.">
+            >
+            ["at0252"] = <
+                text = <"Acquisition details">
+                description = <"Details about the strategy to conduct acquisitions using ophthalmic tomography.">
+            >
+            ["at0253"] = <
+                text = <"Report content">
+                description = <"Which kind of graphs are included in the report.">
+            >
+            ["at0254"] = <
+                text = <"Reference image">
+                description = <"The image of the retina used to indicate the position of OCT slices.">
+            >
+            ["at0255"] = <
+                text = <"Single OCT scan">
+                description = <"Report including a specific OCT scan.">
+            >
+            ["at0256"] = <
+                text = <"OCT volume scan">
+                description = <"A 3D reconstruction of eye structure using several OCT frames.">
+            >
+            ["at0257"] = <
+                text = <"Retinal thickness profile">
+                description = <"Graph showing the thickness of retina for a specific OCT scan.">
+            >
+            ["at0258"] = <
+                text = <"Retinal thickness map">
+                description = <"Coloured map showing the thickness of retina over the reference image.">
+            >
+            ["at0259"] = <
+                text = <"RNFL thickness profile">
+                description = <"Graph representing the thickness of the retinal nerve fiber layer around the optic nerve.">
+            >
+            ["at0260"] = <
+                text = <"RNFL thickness map">
+                description = <"Retinal nerve fiber layer thickness profile measured, compared to normal thickness values for different sections around the optic nerve.">
+            >
+            ["at0262"] = <
+                text = <"Thickness profile change">
+                description = <"Graph showing the thickness of retina from a specific OCT slice and compares them to values obtained in different acquisitions during a follow-up.">
+            >
+            ["at0263"] = <
+                text = <"Thickness map change">
+                description = <"Retinal thickness map obtained from the comparison of thickness values obtained in different acquisitions during a follow-up.">
+            >
+            ["at0264"] = <
+                text = <"Periapillary RNFL thickness classification">
+                description = <"Classification of total thickness measured for different sections around the papilla according to an age-adjusted normative database.">
+            >
+            ["at0265"] = <
+                text = <"Retinal average thickness">
+                description = <"Average thickness values in sections of retina located close to the macula.">
+            >
+            ["at0266"] = <
+                text = <"Asymmetry OD-OS">
+                description = <"Asymmetry map comparing thickness values from different eyes in the same locations.">
+            >
+            ["at0267"] = <
+                text = <"Hemisphere asymmetry">
+                description = <"Asymmetry map comparing thickness at superior and inferior hemispheres in retina.">
+            >
+            ["at0268"] = <
+                text = <"RNFL thickness trend">
+                description = <"Graph that represents the evolution along time of the thickness in retinal nerve fiber layer.">
+            >
+            ["at0269"] = <
+                text = <"Comment">
+                description = <"Narrative description of clinically relevant information identifiable on the current report.">
+            >
+            ["at0270"] = <
+                text = <"Comment">
+                description = <"Narrative description of clinically relevant information identifiable on the specific frames selected from the acquisition.">
+            >
+            ["at0271"] = <
+                text = <"Clinical findings">
+                description = <"Every finding considered clinically relevant, found on posterior chamber of the eye.">
+            >
+            ["at0272"] = <
+                text = <"Comment">
+                description = <"Narrative description of clinically relevant information identifiable on the analysis of ophthalmic thickness measurements.">
+            >
+            ["at0277"] = <
+                text = <"OCT slice analysis">
+                description = <"Analysis of OCT slices considered relevant in the study.">
+            >
+            ["ac2"] = <
+                text = <"Anatomic structures of eye">
+                description = <"List of regions of interest in the study of eye.">
+            >
+            ["ac3"] = <
+                text = <"Findings on the posterior chamber of the eye">
+                description = <"List of possible clinical findings on posterior chamber of the eye.">
+            >
+            ["ac4"] = <
+                text = <"Ophthalmic photography devices">
+                description = <"List of ophthalmic photography acquisition devices.">
+            >
+            ["at9005"] = <
+                text = <"image/cgm">
+                description = <"image/cgm">
+            >
+            ["at9006"] = <
+                text = <"image/gif">
+                description = <"image/gif">
+            >
+            ["at9007"] = <
+                text = <"image/png">
+                description = <"image/png">
+            >
+            ["at9008"] = <
+                text = <"image/tiff">
+                description = <"image/tiff">
+            >
+            ["at9009"] = <
+                text = <"image/jpeg">
+                description = <"image/jpeg">
+            >
+            ["at9013"] = <
+                text = <"application/pdf">
+                description = <"application/pdf">
+            >
+            ["at9010"] = <
+                text = <"application/dicom">
+                description = <"application/dicom">
+            >
+            ["at9023"] = <
+                text = <"Concentration">
+                description = <"Concentration">
+            >
+            ["at9017"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["at9019"] = <
+                text = <"Pressure">
+                description = <"Pressure">
+            >
+            ["at9022"] = <
+                text = <"Volume">
+                description = <"Volume">
+            >
+            ["at9020"] = <
+                text = <"Angle, plane">
+                description = <"Angle, plane">
+            >
+            ["ac9000"] = <
+                text = <"Side (synthesised)">
+                description = <"Determines the eye on which the test was performed.Matches to DICOM Laterality (0020,0060) attribute. (synthesised)">
+            >
+            ["ac9072"] = <
+                text = <"Image type (synthesised)">
+                description = <"Identifies the fundus imaging modalities obtained from the acquisition of the reference image. (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Reference image (synthesised)">
+                description = <"Image on which the position of OCT acquisitions/slices will be referenced. (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Report type (synthesised)">
+                description = <"Defines the purpose of the report built from data acquired on the OCT device. (synthesised)">
+            >
+            ["ac9073"] = <
+                text = <"Report content (synthesised)">
+                description = <"Which kind of graphs are included in the report. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Report (synthesised)">
+                description = <"Report related to the current OCT study. (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Contrast/bolus agent (synthesised)">
+                description = <"Identification of the contrast agent. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Ophthalmic tomography examination">
+                description = <"Registra los hallazgos clínicos utilizando la tomografía de coherencia óptica con fines oftálmicos.">
+            >
+            ["at0002"] = <
+                text = <"Cualquier evento">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"*Cluster(es)">
+                description = <"**(es)">
+            >
+            ["at0038"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0039"] = <
+                text = <"*New cluster(es)">
+                description = <"**(es)">
+            >
+            ["at0040"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0045"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0046"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0047"] = <
+                text = <"*New cluster(es)">
+                description = <"**(es)">
+            >
+            ["at0048"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0049"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0054"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0055"] = <
+                text = <"*New cluster(es)">
+                description = <"**(es)">
+            >
+            ["at0056"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0088"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0090"] = <
+                text = <"*New cluster(es)">
+                description = <"**(es)">
+            >
+            ["at0091"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0093"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0094"] = <
+                text = <"*Cluster(es)">
+                description = <"**(es)">
+            >
+            ["at0115"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0123"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0124"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0125"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0130"] = <
+                text = <"*New cluster(es)">
+                description = <"**(es)">
+            >
+            ["at0131"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0132"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0133"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0134"] = <
+                text = <"*Cluster(es)">
+                description = <"**(es)">
+            >
+            ["at0135"] = <
+                text = <"*Left(es)">
+                description = <"*The left eye was examined.(es)">
+            >
+            ["at0136"] = <
+                text = <"*Right(es)">
+                description = <"*The right eye was examined.(es)">
+            >
+            ["at0186"] = <
+                text = <"*New cluster(es)">
+                description = <"**(es)">
+            >
+            ["at0187"] = <
+                text = <"*FA(es)">
+                description = <"*Fluorescein Angiography(es)">
+            >
+            ["at0188"] = <
+                text = <"*ICG(es)">
+                description = <"**(es)">
+            >
+            ["at0190"] = <
+                text = <"*BLUE(es)">
+                description = <"**(es)">
+            >
+            ["at0191"] = <
+                text = <"*RED(es)">
+                description = <"**(es)">
+            >
+            ["at0192"] = <
+                text = <"*REDFREE(es)">
+                description = <"**(es)">
+            >
+            ["at0204"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0205"] = <
+                text = <"*OCT overview(es)">
+                description = <"**(es)">
+            >
+            ["at0206"] = <
+                text = <"*Retina exam(es)">
+                description = <"**(es)">
+            >
+            ["at0207"] = <
+                text = <"*Retina change(es)">
+                description = <"**(es)">
+            >
+            ["at0208"] = <
+                text = <"*3D view(es)">
+                description = <"**(es)">
+            >
+            ["at0209"] = <
+                text = <"*Thickness map exam(es)">
+                description = <"**(es)">
+            >
+            ["at0210"] = <
+                text = <"*Thickness map change(es)">
+                description = <"**(es)">
+            >
+            ["at0211"] = <
+                text = <"*RNFL exam(es)">
+                description = <"**(es)">
+            >
+            ["at0212"] = <
+                text = <"*RNFL change(es)">
+                description = <"**(es)">
+            >
+            ["at0213"] = <
+                text = <"*RNFL thickness trend(es)">
+                description = <"**(es)">
+            >
+            ["at0214"] = <
+                text = <"*Asymmetry analysis(es)">
+                description = <"**(es)">
+            >
+            ["at0215"] = <
+                text = <"*RNFL & asymmetry analysis(es)">
+                description = <"**(es)">
+            >
+            ["at0216"] = <
+                text = <"*Posterior pole assessment(es)">
+                description = <"**(es)">
+            >
+            ["at0217"] = <
+                text = <"*Other(es)">
+                description = <"**(es)">
+            >
+            ["at0230"] = <
+                text = <"*Fluorescein(es)">
+                description = <"**(es)">
+            >
+            ["at0231"] = <
+                text = <"*Indocyanine green(es)">
+                description = <"**(es)">
+            >
+            ["at0232"] = <
+                text = <"*Rose Bengal(es)">
+                description = <"**(es)">
+            >
+            ["at0233"] = <
+                text = <"*Trypan blue(es)">
+                description = <"**(es)">
+            >
+            ["at0234"] = <
+                text = <"*Methylene blue(es)">
+                description = <"**(es)">
+            >
+            ["at0251"] = <
+                text = <"*Cluster(en)">
+                description = <"**(en)">
+            >
+            ["at0252"] = <
+                text = <"*Cluster(en)">
+                description = <"**(en)">
+            >
+            ["at0253"] = <
+                text = <"*New element(en)">
+                description = <"**(en)">
+            >
+            ["at0254"] = <
+                text = <"*Reference image(en)">
+                description = <"**(en)">
+            >
+            ["at0255"] = <
+                text = <"*OCT slice(en)">
+                description = <"**(en)">
+            >
+            ["at0256"] = <
+                text = <"*OCT volume(en)">
+                description = <"**(en)">
+            >
+            ["at0257"] = <
+                text = <"*Retinal thickness profile(en)">
+                description = <"**(en)">
+            >
+            ["at0258"] = <
+                text = <"*Retinal thickness map(en)">
+                description = <"**(en)">
+            >
+            ["at0259"] = <
+                text = <"*RNFL thickness profile(en)">
+                description = <"**(en)">
+            >
+            ["at0260"] = <
+                text = <"*RNFL thickness map(en)">
+                description = <"**(en)">
+            >
+            ["at0262"] = <
+                text = <"*Thickness profile change(en)">
+                description = <"**(en)">
+            >
+            ["at0263"] = <
+                text = <"*Thickness map change(en)">
+                description = <"**(en)">
+            >
+            ["at0264"] = <
+                text = <"*Periapillary RNFL thickness classification(en)">
+                description = <"**(en)">
+            >
+            ["at0265"] = <
+                text = <"*Retinal average thickness(en)">
+                description = <"**(en)">
+            >
+            ["at0266"] = <
+                text = <"*Asymmetry OD-OS(en)">
+                description = <"**(en)">
+            >
+            ["at0267"] = <
+                text = <"*Hemisphere asymmetry(en)">
+                description = <"**(en)">
+            >
+            ["at0268"] = <
+                text = <"*RNFL thickness trend(en)">
+                description = <"**(en)">
+            >
+            ["at0269"] = <
+                text = <"*New element(en)">
+                description = <"**(en)">
+            >
+            ["at0270"] = <
+                text = <"*New element(en)">
+                description = <"**(en)">
+            >
+            ["at0271"] = <
+                text = <"*New element(en)">
+                description = <"**(en)">
+            >
+            ["at0272"] = <
+                text = <"*New element(en)">
+                description = <"**(en)">
+            >
+            ["at0277"] = <
+                text = <"*New cluster(en)">
+                description = <"**(en)">
+            >
+            ["ac2"] = <
+                text = <"*New constraint(en)">
+                description = <"**(en)">
+            >
+            ["ac3"] = <
+                text = <"*New constraint(en)">
+                description = <"**(en)">
+            >
+            ["ac4"] = <
+                text = <"*New constraint(en)">
+                description = <"**(en)">
+            >
+            ["at9005"] = <
+                text = <"image/cgm">
+                description = <"image/cgm">
+            >
+            ["at9006"] = <
+                text = <"image/gif">
+                description = <"image/gif">
+            >
+            ["at9007"] = <
+                text = <"image/png">
+                description = <"image/png">
+            >
+            ["at9008"] = <
+                text = <"image/tiff">
+                description = <"image/tiff">
+            >
+            ["at9009"] = <
+                text = <"image/jpeg">
+                description = <"image/jpeg">
+            >
+            ["at9013"] = <
+                text = <"application/pdf">
+                description = <"application/pdf">
+            >
+            ["at9010"] = <
+                text = <"application/dicom">
+                description = <"application/dicom">
+            >
+            ["at9023"] = <
+                text = <"Concentración">
+                description = <"Concentración">
+            >
+            ["at9017"] = <
+                text = <"Longitud">
+                description = <"Longitud">
+            >
+            ["at9019"] = <
+                text = <"Presión">
+                description = <"Presión">
+            >
+            ["at9022"] = <
+                text = <"Volumen">
+                description = <"Volumen">
+            >
+            ["at9020"] = <
+                text = <"Ángulo, plano">
+                description = <"Ángulo, plano">
+            >
+            ["ac9000"] = <
+                text = <"*Nuevo elemento(es) (synthesised)">
+                description = <"**(es) (synthesised)">
+            >
+            ["ac9072"] = <
+                text = <"*Nuevo elemento(es) (synthesised)">
+                description = <"**(es) (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"*Nuevo elemento(es) (synthesised)">
+                description = <"**(es) (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"*Nuevo elemento(es) (synthesised)">
+                description = <"**(es) (synthesised)">
+            >
+            ["ac9073"] = <
+                text = <"*New element(en) (synthesised)">
+                description = <"**(en) (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"*Nuevo elemento(es) (synthesised)">
+                description = <"**(es) (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"*Nuevo elemento(es) (synthesised)">
+                description = <"**(es) (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9023"] = <http://openehr.org/id/119>
+            ["at9017"] = <http://openehr.org/id/122>
+            ["at9019"] = <http://openehr.org/id/125>
+            ["at9022"] = <http://openehr.org/id/129>
+            ["at9020"] = <http://openehr.org/id/497>
+        >
+        ["openEHR"] = <
+            ["at9005"] = <http://openehr.org/id/425>
+            ["at9006"] = <http://openehr.org/id/426>
+            ["at9007"] = <http://openehr.org/id/427>
+            ["at9008"] = <http://openehr.org/id/428>
+            ["at9009"] = <http://openehr.org/id/429>
+            ["at9013"] = <http://openehr.org/id/518>
+            ["at9010"] = <http://openehr.org/id/637>
+        >
+        ["SNOMED-CT"] = <
+            ["at0135"] = <http://snomed.info/id/362503005>
+            ["at0136"] = <http://snomed.info/id/362502000>
+        >
+    >
+    value_sets = <
+        ["ac9073"] = <
+            id = <"ac9073">
+            members = <"at0254", "at0255", "at0256", "at0257", "at0258", "at0259", "at0260", "at0262", "at0263", "at0264", "at0265", "at0266", "at0267", "at0268">
+        >
+        ["ac9072"] = <
+            id = <"ac9072">
+            members = <"at0192", "at0191", "at0190", "at0187", "at0188">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0205", "at0206", "at0207", "at0208", "at0209", "at0210", "at0211", "at0212", "at0213", "at0214", "at0215", "at0216", "at0217">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at9005", "at9006", "at9007", "at9008", "at9009", "at9010">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at9005", "at9006", "at9007", "at9008", "at9009", "at9013", "at9010">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0135", "at0136">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0230", "at0231", "at0232", "at0233", "at0234">
+        >
+    >

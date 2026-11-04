@@ -1,0 +1,101 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=4d75f8ee-a5c6-4001-bcf2-ebc76b2cd2d3; build_uid=21cda611-56ed-464c-adef-534297ed5e43)
+    openEHR-EHR-ADMIN_ENTRY.contact_tracing.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-09-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"24F06B1434511A66FAB70729CEDC92BC">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ADMIN_ENTRY[at0000] matches {    -- Contact tracing
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Tracing status
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Consent status
+                        value matches {
+                            DV_CODED_TEXT[at9001] matches {
+                                defining_code matches {[ac9000]}    -- Consent status (synthesised)
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0006] matches {    -- Consent provider
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Contact tracing">
+                description = <"Contact tracing">
+            >
+            ["at0002"] = <
+                text = <"Consent status">
+                description = <"">
+            >
+            ["at0003"] = <
+                text = <"Consent provided">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Consent provided - partners only">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Consent refused">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Consent provider">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Tracing status">
+                description = <"">
+            >
+            ["ac9000"] = <
+                text = <"Consent status (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0003", "at0004", "at0005">
+        >
+    >

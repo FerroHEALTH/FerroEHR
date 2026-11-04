@@ -1,0 +1,97 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=cd59f72b-b235-4071-af1b-655287ccc10b; build_uid=28355f87-ffec-4df0-9cb8-4acd58bb36e3)
+    openEHR-EHR-EVALUATION.container.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Gabriela Alves, Adriana Kitajima, Marivan Abrahao, Maria Angela Scatena">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"contato@coreconsulting.com.br">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2015-07-13">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics<heather.leslie@oceaninformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"138C7B5341B04AAF8E455C6D14D5FDC6">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To enable the clinical content held within existing CLUSTER archetypes to be represented as standalone data in the health record.">
+            keywords = <"generic", "container", "slot">
+            use = <"Use to enable the clinical content held within existing CLUSTER archetypes, and usually represented within the context of other archetypes, to be represented as standalone data in the health record when clinically appropriate. 
+
+This archetype is intended only to act as a container archetype that supports flexible expression of existing CLUSTER archetypes. It is not intended to hold any content other than the unconstrained SLOT.
+
+For example, the CLUSTER.nyha_heart_failure archetype is most commonly used to provide a standardised assessment of heart failure with EVALUATION.problem_diagnosis archetypes, but by inserting it within this EVALUATION allows it to be recorded as data outside the context of a Diagnosis, if clinically appropriate. Similarly CLUSTER.tos is usually recorded by ENT specialists in the context of an examination using CLUSTER.exam_tympanic_membrane, but by inserting it into this archetype, it allows it to be recorded outside the context of examination findings, if clinically appropriate.">
+            misuse = <"Not to be used to represent specific clinical content defined within this archetype.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Possibilita que o conteúdo clínico de um arquétipo CLUSTER existente seja representado como um dado independente em um registro de saúde.">
+            keywords = <"genérico", "conteiner", "slot">
+            use = <"Permite que o conteúdo de um arquétipo CLUSTER existente e geralmente representado dentro do contéudo de outros arquétipos seja representado como dado independente em um registro de saúde quando clinicamente apropriado.
+
+Este arquétipo deve ser utilizado apenas como um arquétipo container para flexibilizar o uso de um arquétipo CLUSTER existente. Ele não se destina a ser usado para representar qualquer conteúdo que não venha via seu SLOT irrestrito.
+
+Por exemplo, o arquétipo CLUSTER.nyha_heart_failure é geralmente usado para fornecer uma avaliação padronizada sobre insuficiência cardíaca com o arquétipo EVALUATION.problem_diagnosis, mas inserindo-o dentro de EVALUATION possiblita-se que ele seja registrado como dados fora do contexto de um Diagnóstico, se clinicamente apropriado. Da mesma forma, CLUSTER.tos é geralmente registrado por otorrinolaringologistas no contexto de um exame usando CLUSTER.exam_tympanic_membrane, mas inserindo-o neste arquétipo, possibilita-se que ele seja registrado fora do contexto dos achados clinicos, se clinicamente apropriado.">
+            misuse = <"Não deve ser usado para representar conteúdo clínico específico definido dentro deste arquétipo.">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Container
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0004] matches {    -- Detail
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.asa_status(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.nyha_heart_failure(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.sade_classification(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.tos_classification(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Conteiner">
+                description = <"Arquétipo genérico usado para conter arquétipos CLUSTER existentes que precisam ser representados como um dado independente.">
+            >
+            ["at0004"] = <
+                text = <"Detalhe">
+                description = <"Detalhes clínicos mantidos dentro de arquétipos CLUSTER.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Container">
+                description = <"Generic archetype to contain existing CLUSTER archetypes which need to be represented as standalone data.">
+            >
+            ["at0004"] = <
+                text = <"Detail">
+                description = <"Clinical details held within CLUSTER archetypes.">
+            >
+        >
+    >

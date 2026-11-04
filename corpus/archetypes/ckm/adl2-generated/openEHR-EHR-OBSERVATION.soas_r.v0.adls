@@ -1,0 +1,875 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1b32a490-367d-4aa8-a75e-d2670ac55f9a; build_uid=b411e1e4-1973-42f4-a91a-a595c7021dfe)
+    openEHR-EHR-OBSERVATION.soas_r.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Marit Alice Venheim">
+                ["organisation"] = <"Helse Vest IKT">
+                ["email"] = <"marit.alice.venheim@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Marit Alice Venheim">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["date"] = <"2021-04-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Palmstierna, T. and Wistedt, B. (1987), Staff observation aggression scale, SOAS: Presentation and evaluation. Acta Psychiatrica Scandinavica, 76: 657-663. https://doi.org/10.1111/j.1600-0447.1987.tb02936.x">
+        ["2"] = <"Nijman, H.L., Muris, P., Merckelbach, H.L., Palmstierna, T., Wistedt, B., Vos, A., van Rixtel, A. and Allertz, W. (1999), The staff observation aggression scale–revised (SOAS‐R). Aggr. Behav., 25: 197-209. https://doi.org/10.1002/(SICI)1098-2337(1999)25:3<197::AID-AB4>3.0.CO;2-C">
+        ["3"] = <"Nijman, H.L.I., Palmstierna, T., Almvik, R. and Stolker, J.J. (2005), Fifteen years of research with the Staff Observation Aggression Scale: a review. Acta Psychiatrica Scandinavica, 111: 12-21. https://doi.org/10.1111/j.1600-0447.2004.00417.x">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"00D86A9B39347DBBE6CF58296575464E">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere hyppigheten, karakteren og alvorlighetsgraden av aggressive hendelser.
+">
+            keywords = <"verbal, fysisk, angrep, voldelig, oppførsel", ...>
+            use = <"Brukes for å registrere hyppigheten, karakteren og alvorlighetsgraden av aggressive hendelser.
+
+openEHR-arketyper er fritt tilgjengelige under en åpen lisens, men det spesifikke innholdet i denne Staff Observation Aggression Scale – Revised – Emergency primary care-arketypen er opphavsrettslig beskyttet. All bruk av denne arketypen i implementasjoner må gjøres i henhold til vilkår gitt av innehaverne av opphavsretten.
+Erklæring om opphavsrett: ©Henk Nijman, Tom Palmstierna1999 –Not to be copied without express written permission by one of the author or Frenzs B.V.
+Informasjon om opphavsretten: https://www.frenzs.org/soas-r/.">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the frequency, nature, and severity of aggressive incidents.">
+            keywords = <"verbal, physical, attacking, violent, behaviour", ...>
+            use = <"Use to record the frequency, nature, and severity of aggressive incidents.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this Staff Observation Aggression Scale – Revised archetype is copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners. Copyright statement: ©Henk Nijman, Tom Palmstierna1999 –Not to be copied without express written permission by one of the author or Frenzs B.V. Copyright information: https://www.frenzs.org/soas-r/.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Staff Observation Aggression Scale - Revised (SOAS-R)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Incident number
+                                        value matches {
+                                            DV_TEXT[at9033]
+                                        }
+                                    }
+                                    CLUSTER[at0009] occurrences matches {0..1} matches {    -- Provocation
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- No understandle provocation
+                                                value matches {
+                                                    DV_BOOLEAN[at9013] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0015] matches {    -- Provoked by
+                                                value matches {
+                                                    DV_CODED_TEXT[at9014] matches {
+                                                        defining_code matches {[ac9000]}    -- Provoked by (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0021] occurrences matches {0..1} matches {    -- Other named provocations
+                                                value matches {
+                                                    DV_TEXT[at9015]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0011] occurrences matches {0..1} matches {    -- Means used by the patient
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Verbal aggression
+                                                value matches {
+                                                    DV_BOOLEAN[at9016] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0023] matches {    -- Ordinary objects
+                                                value matches {
+                                                    DV_CODED_TEXT[at9017] matches {
+                                                        defining_code matches {[ac9001]}    -- Ordinary objects (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0027] occurrences matches {0..1} matches {    -- Other named objects
+                                                value matches {
+                                                    DV_TEXT[at9018]
+                                                }
+                                            }
+                                            ELEMENT[at0028] matches {    -- Parts of the body
+                                                value matches {
+                                                    DV_CODED_TEXT[at9019] matches {
+                                                        defining_code matches {[ac9002]}    -- Parts of the body (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0033] occurrences matches {0..1} matches {    -- Other
+                                                value matches {
+                                                    DV_TEXT[at9020]
+                                                }
+                                            }
+                                            ELEMENT[at0034] matches {    -- Dangerous objects or methods
+                                                value matches {
+                                                    DV_CODED_TEXT[at9021] matches {
+                                                        defining_code matches {[ac9003]}    -- Dangerous objects or methods (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0038] occurrences matches {0..1} matches {    -- Other objects or methods
+                                                value matches {
+                                                    DV_TEXT[at9022]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0010] occurrences matches {0..1} matches {    -- Target of aggression
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0039] occurrences matches {0..1} matches {    -- Nothing/nobody
+                                                value matches {
+                                                    DV_BOOLEAN[at9023] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0040] matches {    -- Target
+                                                value matches {
+                                                    DV_CODED_TEXT[at9024] matches {
+                                                        defining_code matches {[ac9004]}    -- Target (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0046] occurrences matches {0..1} matches {    -- Other persons
+                                                value matches {
+                                                    DV_TEXT[at9025]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0012] occurrences matches {0..1} matches {    -- Consequence(s) for victim(s)
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0047] occurrences matches {0..1} matches {    -- No
+                                                value matches {
+                                                    DV_BOOLEAN[at9026] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0048] matches {    -- Objects
+                                                value matches {
+                                                    DV_CODED_TEXT[at9027] matches {
+                                                        defining_code matches {[ac9005]}    -- Objects (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0051] matches {    -- Persons
+                                                value matches {
+                                                    DV_CODED_TEXT[at9028] matches {
+                                                        defining_code matches {[ac9006]}    -- Persons (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0059] occurrences matches {0..1} matches {    -- Other, namely
+                                                value matches {
+                                                    DV_TEXT[at9029]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0013] occurrences matches {0..1} matches {    -- Measures to stop aggression
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0060] occurrences matches {0..1} matches {    -- None
+                                                value matches {
+                                                    DV_BOOLEAN[at9030] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0061] matches {    -- Measures
+                                                value matches {
+                                                    DV_CODED_TEXT[at9031] matches {
+                                                        defining_code matches {[ac9007]}    -- Measures (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0070] occurrences matches {0..1} matches {    -- Other measures
+                                                value matches {
+                                                    DV_TEXT[at9032]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0073] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0074] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Staff Observation Aggression Scale - Revised (SOAS-R)">
+                description = <"Et instrument for å overvåke hyppigheten, karakteren og alvorlighetsgraden av aggressive hendelser.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0005"] = <
+                text = <"Hendelse nummer">
+                description = <"Et tall som kan brukes som referanse. For eksempel et referansenummer registrert i et avviksystem.">
+            >
+            ["at0009"] = <
+                text = <"Provokasjon">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Mål for aggresjon">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Hva brukte pasienten">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Følge(r) for offer/ofre">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Tiltak for å stoppe aggresjon">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Ingen observerbar provokasjon">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Provosert av">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Andre pasienter">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Hjelp i daglige gjøremål">
+                description = <"For eksempel mat, hygiene o.l.">
+            >
+            ["at0018"] = <
+                text = <"Pasienten nektes noe">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Krav om å ta medisiner">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Annet">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Andre provokasjoner">
+                description = <"Relatert til \"Annet\" valget fra \"Provosert av\" elementet.">
+            >
+            ["at0022"] = <
+                text = <"Verbal aggresjon">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Vanlige gjenstander">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Stol(er)">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Glass">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Andre, oppgi">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Andre objekter">
+                description = <"Relatert til \"Andre, oppgi\" valget fra \"Vanlige gjenstander\" elementet.">
+            >
+            ["at0028"] = <
+                text = <"Kroppsdeler">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Hånd">
+                description = <"Slag etc.">
+            >
+            ["at0030"] = <
+                text = <"Fot">
+                description = <"Sparking.">
+            >
+            ["at0031"] = <
+                text = <"Tenner">
+                description = <"Biting.">
+            >
+            ["at0032"] = <
+                text = <"Andre, oppgi">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Andre">
+                description = <"Relatert til \"Andre, oppgi\" valget fra \"Kroppsdeler\" elementet.">
+            >
+            ["at0034"] = <
+                text = <"Farlige gjenstander eller metoder">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Kniv">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Kvelningsforsøk">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Andre, oppgi">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Andre gjenstander eller metoder">
+                description = <"Relatert til \"Andre, oppgi\" valget fra \"Farlige gjenstander eller metoder\" elementet.">
+            >
+            ["at0039"] = <
+                text = <"Ingen">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Mål">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Ting">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Andre pasienter">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Pasienten selv">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Personell">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Andre personer, oppgi">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Andre personer">
+                description = <"Relatert til \"Andre personer\" valget fra \"Mål\" elementet.">
+            >
+            ["at0047"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Gjenstander">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Skadet, men brukbart">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Skadet, må kasseres">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Personer">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Opplevde sin sikkerhet truet">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Smerte < 10 min">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Smerte > 10 min">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"Synlig skade">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"Behandlingsbehov">
+                description = <"Lettere behov.">
+            >
+            ["at0057"] = <
+                text = <"Behov for legebehandling">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"Andre, oppgi">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Andre">
+                description = <"Relatert til \"Andre, oppgi\" valget fra \"Personer\" elementet.">
+            >
+            ["at0060"] = <
+                text = <"Ingen">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Tiltak">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"Snakket med pasienten">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"Ble rolig tatt til side">
+                description = <"Til et eget rom eller lignende.">
+            >
+            ["at0064"] = <
+                text = <"Medikasjon, tabletter/flytende">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Medikasjon, injeksjon">
+                description = <"">
+            >
+            ["at0066"] = <
+                text = <"Holdt med makt">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"Bruk av isolat">
+                description = <"Låst dør.">
+            >
+            ["at0068"] = <
+                text = <"Bruk av mekanisk tvangsmiddel">
+                description = <"">
+            >
+            ["at0069"] = <
+                text = <"Andre tiltak, oppgi">
+                description = <"">
+            >
+            ["at0070"] = <
+                text = <"Andre tiltak">
+                description = <"Relatert til \"Andre tiltak\" valget fra \"Tiltak\" elementet.">
+            >
+            ["at0074"] = <
+                text = <"Tileggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["ac9000"] = <
+                text = <"Provosert av (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Vanlige gjenstander (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Kroppsdeler (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Farlige gjenstander eller metoder (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Mål (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Gjenstander (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Personer (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"Tiltak (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Staff Observation Aggression Scale - Revised (SOAS-R)">
+                description = <"An instrument for monitoring the frequency, nature, and severity of aggressive incidents.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Incident number">
+                description = <"A number that can be used as a refrence. For exsample a refrence number recorded in a incident reporting system.">
+            >
+            ["at0009"] = <
+                text = <"Provocation">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Target of aggression">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Means used by the patient">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Consequence(s) for victim(s)">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Measures to stop aggression">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"No understandle provocation">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Provoked by">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Other patient(s)">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Help with ADL">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Patient being denied something">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Staff requiering patient to take medication">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Other provocations, namely">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Other named provocations">
+                description = <"Related to the 'Other, provocations, namely:' option from the 'Provocation' element.">
+            >
+            ["at0022"] = <
+                text = <"Verbal aggression">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Ordinary objects">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Chari(s)">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Glass(ware)">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Other, namely">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Other named objects">
+                description = <"Related to the 'Other, objects:' option from the 'Ordinary objects' element.">
+            >
+            ["at0028"] = <
+                text = <"Parts of the body">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Hand">
+                description = <"Hitting, puncing etc.">
+            >
+            ["at0030"] = <
+                text = <"Foot">
+                description = <"Kicking.">
+            >
+            ["at0031"] = <
+                text = <"Teeth">
+                description = <"Biting.">
+            >
+            ["at0032"] = <
+                text = <"Other, namely">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Other">
+                description = <"Related to the 'Other, namely:' option from the 'Parts of the body' element.">
+            >
+            ["at0034"] = <
+                text = <"Dangerous objects or methods">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Knife">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Strangulation">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Other, namely">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Other objects or methods">
+                description = <"Related to the 'Other, namely:' option from the 'Dangerous objects or methods' element.">
+            >
+            ["at0039"] = <
+                text = <"Nothing/nobody">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Target">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Objetc(s)">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Other patient(s)">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Patient self">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Staff member(s)">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Other persons, namely">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Other persons">
+                description = <"Related to the 'Other, persons:' option from the 'Target' element.">
+            >
+            ["at0047"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Objects">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Damaged, replacement not necessary">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Damaged, replacement necessary">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Persons">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Felt threatened">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Pain < 10 min">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Pain > 10 min">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"Visible injury">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"Need for treatment">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"Need for treatment by a physician">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"Other, namely">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Other, namely">
+                description = <"Related to the 'Other, namely:' option from the 'Persons' element.">
+            >
+            ["at0060"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Measures">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"Talk to patient">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"Calmly brought away">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"Peroral medication">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Parenteral medication">
+                description = <"">
+            >
+            ["at0066"] = <
+                text = <"Held with force">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"Seclusion/isolation">
+                description = <"Locked door.">
+            >
+            ["at0068"] = <
+                text = <"Mechanical restraints">
+                description = <"">
+            >
+            ["at0069"] = <
+                text = <"Other measures, namely">
+                description = <"">
+            >
+            ["at0070"] = <
+                text = <"Other measures">
+                description = <"Related to the 'Other, measures:' option from the 'Measures' element.">
+            >
+            ["at0074"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9000"] = <
+                text = <"Provoked by (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Ordinary objects (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Parts of the body (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Dangerous objects or methods (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Target (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Objects (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Persons (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"Measures (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0029", "at0030", "at0031", "at0032">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0024", "at0025", "at0026">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0016", "at0017", "at0018", "at0019", "at0020">
+        >
+        ["ac9006"] = <
+            id = <"ac9006">
+            members = <"at0052", "at0053", "at0054", "at0055", "at0056", "at0057", "at0058">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0049", "at0050">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0041", "at0042", "at0043", "at0044", "at0045">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0035", "at0036", "at0037">
+        >
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at0062", "at0063", "at0064", "at0065", "at0066", "at0067", "at0068", "at0069">
+        >
+    >

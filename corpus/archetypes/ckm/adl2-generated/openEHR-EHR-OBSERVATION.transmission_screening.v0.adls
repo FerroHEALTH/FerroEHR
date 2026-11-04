@@ -1,0 +1,442 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c54a7e33-5789-44b1-9256-58b889dd07fa; build_uid=df32e513-a0ac-4130-ab88-16bf344e39aa)
+    openEHR-EHR-OBSERVATION.transmission_screening.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch, Alina Rehberg, Nina Schewe">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de, rehberg.alina@mh-hannover.de, schewe.nina@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke, Marit Alice Venheim, John Tore Valand">
+                ["organisation"] = <"Helse Vest IKT AS, Helse Bergen">
+                ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no, marit.alice.venheim@helse-vest-ikt.no, john.tore.valand@helse-bergen.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-10-31">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"5901BE97B4230FC305D0AE39F0B5577A">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To record the responses to a screening questionnaire about situations or events where the index individual may have transmitted an infectious disease to others. (en)">
+            use = <"*Use to record the responses to a screening questionnaire about situations or events where the index individual may have transmitted an infectious disease to others.
+
+Common use cases include, but are not limited to:
+- Systematic questioning in any consultation; or
+- Specific questioning related to infectious disease surveillance, such as contact with a pregnant woman.
+	
+In order to record the response at a specific point in time or within an interval of time, use the EVENT RM attribute.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry. (en)">
+            misuse = <"*Not to be used to record persistent details about a known or identified exposure that may cause harm to the index individual. Use the EVALUATION.exposure archetype for this purpose.
+
+Not to be used to record screening information about potentially harmful exposure to the index patient. Use the OBSERVATION.exposure_screening archetype for this purpose. (en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"*To record the responses to a screening questionnaire about situations or events where the index individual may have transmitted an infectious disease to others. (en)">
+            use = <"*Use to record the responses to a screening questionnaire about situations or events where the index individual may have transmitted an infectious disease to others.
+
+Common use cases include, but are not limited to:
+- Systematic questioning in any consultation; or
+- Specific questioning related to infectious disease surveillance, such as contact with a pregnant woman.
+	
+In order to record the response at a specific point in time or within an interval of time, use the EVENT RM attribute.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry. (en)">
+            misuse = <"*Not to be used to record persistent details about a known or identified exposure that may cause harm to the index individual. Use the EVALUATION.exposure archetype for this purpose.
+
+Not to be used to record screening information about potentially harmful exposure to the index patient. Use the OBSERVATION.exposure_screening archetype for this purpose. (en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the responses to a screening questionnaire about situations or events where the index individual may have transmitted an infectious disease to others.">
+            use = <"Use to record the responses to a screening questionnaire about situations or events where the index individual may have transmitted an infectious disease to others.
+
+Common use cases include, but are not limited to:
+- Systematic questioning in any consultation; or
+- Specific questioning related to infectious disease surveillance, such as contact with a pregnant woman.
+	
+In order to record the response at a specific point in time or within an interval of time, use the EVENT RM attribute.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry.">
+            misuse = <"Not to be used to record persistent details about a known or identified exposure that may cause harm to the index individual. Use the EVALUATION.exposure archetype for this purpose.
+
+Not to be used to record screening information about potentially harmful exposure to the index patient. Use the OBSERVATION.exposure_screening archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Infection transmission screening questionnaire
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Screening purpose
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Any transmission opportunities?
+                                        value matches {
+                                            DV_CODED_TEXT[at9003] matches {
+                                                defining_code matches {[ac9000]}    -- Any transmission opportunities? (synthesised)
+                                            }
+                                            DV_TEXT[at9004]
+                                            DV_BOOLEAN[at9005]
+                                        }
+                                    }
+                                    CLUSTER[at0009] matches {    -- Specific exposure
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0010] occurrences matches {1} matches {    -- Exposure event
+                                                value matches {
+                                                    DV_TEXT[at9006]
+                                                }
+                                            }
+                                            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Potential transmission?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9007] matches {
+                                                        defining_code matches {[ac9001]}    -- Potential transmission? (synthesised)
+                                                    }
+                                                    DV_TEXT[at9008]
+                                                    DV_BOOLEAN[at9009]
+                                                }
+                                            }
+                                            ELEMENT[at0015] matches {    -- Timing
+                                                value matches {
+                                                    DV_DATE_TIME[at9010]
+                                                    DV_INTERVAL<DV_DATE_TIME>[at9011]
+                                                    DV_TEXT[at9012]
+                                                    DV_DURATION[at9013]
+                                                    DV_INTERVAL<DV_DURATION>[at9014]
+                                                }
+                                            }
+                                            allow_archetype CLUSTER[at0016] matches {    -- Additional details
+                                                include
+                                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                            }
+                                            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Comment
+                                                value matches {
+                                                    DV_TEXT[at9015]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0018] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0019] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"*Infection transmission screening questionnaire (en)">
+                description = <"*An individual- or self-reported questionnaire screening for potential onward transmission of a diagnosed infectious disease from the index individual to others. (en)">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardwert, ein undefinierter/s Zeitpunkt oder Intervallereignis, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Zweck des Screenings">
+                description = <"Der Name des chemischen, physikalischen oder biologischen Stoffes, dem eine Person ausgesetzt gewesen sein könnte.">
+                comment = <"Die Codierung von \"Stoff\" mit einer Terminologie wird bevorzugt, wenn möglich. Freitext sollte nur verwendet werden, wenn keine geeignete Terminologie zur Verfügung steht. Zum Beispiel: 2019-nCoV oder HIV.">
+            >
+            ["at0005"] = <
+                text = <"*Any transmission opportunities? (en)">
+                description = <"Vorhandensein einer relevanten Exposition.">
+            >
+            ["at0006"] = <
+                text = <"Ja">
+                description = <"Die Person ist dem Schadstoff ausgesetzt gewesen.">
+            >
+            ["at0007"] = <
+                text = <"Nein">
+                description = <"Die Person ist dem Schadstoff nicht ausgesetzt gewesen.">
+            >
+            ["at0008"] = <
+                text = <"Unbekannt">
+                description = <"Es ist nicht bekannt, ob die Person dem Schadstoff ausgesetzt war.">
+            >
+            ["at0009"] = <
+                text = <"Spezifische Exposition">
+                description = <"*Details about a possible specific exposure situation. (en)">
+            >
+            ["at0010"] = <
+                text = <"*Exposure event (en)">
+                description = <"*The situation oractivity where exposure may have occurred. (en)">
+                comment = <"*For example: Travel; close contact with a pregnant woman; or worked as a dental technician. Coding of 'Exposure situation' with a terminology is preferred, where possible. (en)">
+            >
+            ["at0011"] = <
+                text = <"*Potential transmission? (en)">
+                description = <"Vorhandensein der Expositionssituation.">
+            >
+            ["at0012"] = <
+                text = <"Ja">
+                description = <"Die betreffende Person wurde exponiert oder könnte exponiert worden sein.">
+            >
+            ["at0013"] = <
+                text = <"Nein">
+                description = <"Die betreffende Person wurde nicht exponiert.">
+            >
+            ["at0014"] = <
+                text = <"Unbekannt">
+                description = <"Es ist nicht bekannt, ob die betreffende Person exponiert wurde.">
+            >
+            ["at0015"] = <
+                text = <"*Timing (en)">
+                description = <"Das Datum/die Daten, an dem/denen die Person dem Stoff ausgesetzt war.">
+                comment = <"Kann ein Zeitraum sein, zum Beispiel nur ein Jahr.">
+            >
+            ["at0016"] = <
+                text = <"*Additional details (en)">
+                description = <"*Additional details about the specific exposure event or identification of contacts. (en)">
+            >
+            ["at0017"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Informationen über das spezifische Expositionsereignis, die nicht in anderen Feldern erfasst werden.">
+            >
+            ["at0019"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+            ["ac9000"] = <
+                text = <"*Any transmission opportunities? (en) (synthesised)">
+                description = <"Vorhandensein einer relevanten Exposition. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"*Potential transmission? (en) (synthesised)">
+                description = <"Vorhandensein der Expositionssituation. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"*Infection transmission screening questionnaire (en)">
+                description = <"*An individual- or self-reported questionnaire screening for potential onward transmission of a diagnosed infectious disease from the index individual to others. (en)">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Registreringsformål">
+                description = <"Navnet på den kjemiske, fysiske eller biologiske agensen som et individ kan ha blitt utsatt for.">
+                comment = <"Koding av \"Agens\" med en terminologi er å foretrekke, der det er mulig. Fritekst skal bare brukes hvis det ikke er noen passende terminologi tilgjengelig. For eksempel: 2019-nCoV; eller HIV.">
+            >
+            ["at0009"] = <
+                text = <"Spesifikk eksponeringsmåte">
+                description = <"*Details about a possible specific exposure situation. (en)">
+            >
+            ["at0010"] = <
+                text = <"*Exposure event (en)">
+                description = <"*The situation oractivity where exposure may have occurred. (en)">
+                comment = <"*For example: Travel; close contact with a pregnant woman; or worked as a dental technician. Coding of 'Exposure situation' with a terminology is preferred, where possible. (en)">
+            >
+            ["at0011"] = <
+                text = <"*Potential transmission? (en)">
+                description = <"Tilstedeværelse av eksponeringsforhold.">
+            >
+            ["at0012"] = <
+                text = <"*Yes (en)">
+                description = <"*The individual has been or may have been, exposed. (en)">
+            >
+            ["at0014"] = <
+                text = <"Ukjent">
+                description = <"*It is not known whether the the individual has been exposed or not. (en)">
+            >
+            ["at0013"] = <
+                text = <"*No (en)">
+                description = <"*The individual has not been exposed. (en)">
+            >
+            ["at0017"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om den spesifikke eskponeringshendelsen som ikke er omfattet av andre felt.">
+            >
+            ["at0019"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0005"] = <
+                text = <"*Any transmission opportunities? (en)">
+                description = <"Individet er eller har blitt eksponert for relevant agens.">
+            >
+            ["at0006"] = <
+                text = <"*Yes (en)">
+                description = <"*The individual has been exposed to the harmful agent. (en)">
+            >
+            ["at0007"] = <
+                text = <"*No (en)">
+                description = <"*The individual has not been exposed to the harmful agent. (en)">
+            >
+            ["at0008"] = <
+                text = <"Ukjent">
+                description = <"*It is not known whether the individual has been exposed to the harmful agent. (en)">
+            >
+            ["at0016"] = <
+                text = <"*Additional details (en)">
+                description = <"*Additional details about the specific exposure event or identification of contacts. (en)">
+            >
+            ["at0015"] = <
+                text = <"*Timing (en)">
+                description = <"Dato(er) da individet ble eksponert for agensen.">
+                comment = <"Kan være en deldato, for eksempel kun et årstall.">
+            >
+            ["ac9000"] = <
+                text = <"*Any transmission opportunities? (en) (synthesised)">
+                description = <"Individet er eller har blitt eksponert for relevant agens. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"*Potential transmission? (en) (synthesised)">
+                description = <"Tilstedeværelse av eksponeringsforhold. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Infection transmission screening questionnaire">
+                description = <"An individual- or self-reported questionnaire screening for potential onward transmission of a diagnosed infectious disease from the index individual to others.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Screening purpose">
+                description = <"The name of the chemical, physical or biological agent to which an individual may have been exposed.">
+                comment = <"Coding of 'Agent' with a terminology is preferred, where possible. Free text should be used only if there is no appropriate terminology available. For example: 2019-nCoV; or HIV.">
+            >
+            ["at0009"] = <
+                text = <"Specific exposure">
+                description = <"Details about a possible specific exposure situation.">
+            >
+            ["at0010"] = <
+                text = <"Exposure event">
+                description = <"The situation oractivity where exposure may have occurred.">
+                comment = <"For example: Travel; close contact with a pregnant woman; or worked as a dental technician. Coding of 'Exposure situation' with a terminology is preferred, where possible.">
+            >
+            ["at0011"] = <
+                text = <"Potential transmission?">
+                description = <"Presence of the exposure situation.">
+            >
+            ["at0012"] = <
+                text = <"Yes">
+                description = <"The individual has been or may have been, exposed.">
+            >
+            ["at0014"] = <
+                text = <"Unknown">
+                description = <"It is not known whether the the individual has been exposed or not.">
+            >
+            ["at0013"] = <
+                text = <"No">
+                description = <"The individual has not been exposed.">
+            >
+            ["at0017"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the specific exposure event, not captured in other fields.">
+            >
+            ["at0019"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0005"] = <
+                text = <"Any transmission opportunities?">
+                description = <"Presence of any relevant exposure.">
+            >
+            ["at0006"] = <
+                text = <"Yes">
+                description = <"The individual has been exposed to the harmful agent.">
+            >
+            ["at0007"] = <
+                text = <"No">
+                description = <"The individual has not been exposed to the harmful agent.">
+            >
+            ["at0008"] = <
+                text = <"Unknown">
+                description = <"It is not known whether the individual has been exposed to the harmful agent.">
+            >
+            ["at0016"] = <
+                text = <"Additional details">
+                description = <"Additional details about the specific exposure event or identification of contacts.">
+            >
+            ["at0015"] = <
+                text = <"Timing">
+                description = <"The date/s when the individual was exposed to the agent.">
+                comment = <"Can be a partial date, for example, only a year.">
+            >
+            ["ac9000"] = <
+                text = <"Any transmission opportunities? (synthesised)">
+                description = <"Presence of any relevant exposure. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Potential transmission? (synthesised)">
+                description = <"Presence of the exposure situation. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0014"] = <http://snomed.info/id/261665006>
+            ["at0012"] = <http://snomed.info/id/410515003>
+            ["at0013"] = <http://snomed.info/id/410516002>
+            ["at0008"] = <http://snomed.info/id/261665006>
+            ["at0006"] = <http://snomed.info/id/24932003>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0012", "at0013", "at0014">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0006", "at0007", "at0008">
+        >
+    >

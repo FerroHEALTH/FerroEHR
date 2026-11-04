@@ -103,7 +103,7 @@ fn artifacts_root() -> PathBuf {
 }
 
 /// Every file with `ext` under `dir`, recursively, sorted.
-fn files_with_extension(dir: &Path, ext: &str) -> Vec<PathBuf> {
+pub(crate) fn files_with_extension(dir: &Path, ext: &str) -> Vec<PathBuf> {
     let mut out = Vec::new();
     let mut stack = vec![dir.to_path_buf()];
     while let Some(d) = stack.pop() {
@@ -123,7 +123,7 @@ fn files_with_extension(dir: &Path, ext: &str) -> Vec<PathBuf> {
     out
 }
 
-fn file_name(path: &Path) -> String {
+pub(crate) fn file_name(path: &Path) -> String {
     path.file_name()
         .and_then(std::ffi::OsStr::to_str)
         .unwrap_or("?")
@@ -348,7 +348,7 @@ fn ckm_adl14_pack_is_resource_meta_clean() {
 /// own upload path (`POST /definition/template/adl2`) refuses them with `422`
 /// on exactly these codes, so the sandbox seed's pinned accepted/refused split
 /// has this table as its authority.
-type ValidityRefusal = (&'static str, ValidationCode, &'static str);
+pub(crate) type ValidityRefusal = (&'static str, ValidationCode, &'static str);
 
 /// The adjudicated validity refusals over the 2013 CKM ADL 2 export.
 const ADJUDICATED_ADL2_VALIDITY: &[ValidityRefusal] = &[
@@ -800,15 +800,15 @@ const ADJUDICATED_ADL2_VALIDITY: &[ValidityRefusal] = &[
 ];
 
 /// The outcome of validating a whole pack the way the CDR validates an upload.
-struct ValidityOutcome {
+pub(crate) struct ValidityOutcome {
     /// Files refused with no adjudication covering them (`name: CODE message`).
-    failures: Vec<String>,
+    pub(crate) failures: Vec<String>,
     /// Adjudications that no longer describe reality.
-    broken_adjudications: Vec<String>,
+    pub(crate) broken_adjudications: Vec<String>,
     /// Files validating with no error-severity issue.
-    clean: usize,
+    pub(crate) clean: usize,
     /// Adjudicated refusals that carried exactly the expected code.
-    refused: usize,
+    pub(crate) refused: usize,
 }
 
 /// The specialisation depth an ADL 2 id states in its concept segment
@@ -836,7 +836,7 @@ fn parents_first(files: &[PathBuf]) -> Vec<PathBuf> {
 /// repository holding only the archetypes ACCEPTED so far — a refused parent is
 /// never a flat parent, and a child whose parent is absent is VASID. External
 /// term bindings (VETDF) are asked of `resolver`.
-fn validate_all(
+pub(crate) fn validate_all(
     files: &[PathBuf],
     adjudicated: &[ValidityRefusal],
     resolver: &dyn TerminologyResolver,
@@ -961,7 +961,7 @@ const ADJUDICATED_ADL2_LOINC: &[ValidityRefusal] = &[
 /// unless it is the mistyped `LA9605-4` or lacks the check digit every LOINC
 /// code carries after its hyphen (the apgar sources bind `LA6713` to `LA6727`
 /// so); any other terminology is unverifiable.
-struct LoincServed;
+pub(crate) struct LoincServed;
 
 impl TerminologyResolver for LoincServed {
     fn code_exists(&self, terminology_id: &str, code: &str) -> Option<bool> {

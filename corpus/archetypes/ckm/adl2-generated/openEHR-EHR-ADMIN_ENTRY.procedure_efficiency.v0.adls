@@ -1,0 +1,172 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=9bf000b4-2b1f-49b4-9812-e3127d681005; build_uid=f14f95a0-b91f-4ac9-a47e-0128353a94cc)
+    openEHR-EHR-ADMIN_ENTRY.procedure_efficiency.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2015-07-15">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Aitor Eguzkitza, Universidad Pública de Navarra - Complejo Hospitalario de Navarra<aitor.eguzkiza@unavarra.es>">
+        ["MD5-CAM-1.0.1"] = <"A181ADC42EB4FE8B8B2D7EDDADCD9190">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Register objective parameters with regard to efficiency of specific healthcare procedures.">
+            keywords = <"efficiency", "healthcare resources">
+            use = <"An objective comparison of efficiency among similar healthcare procedures. 
+It can be used as well to analyse efficiency for a healthcare procedure before and after applying specific changes.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ADMIN_ENTRY[at0000] matches {    -- Efficiency of healthcare procedure
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {2..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {1} matches {    -- Procedure type
+                        value matches {
+                            DV_TEXT[at9000]
+                        }
+                    }
+                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9008]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0019] matches {    -- Specific details
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0017] occurrences matches {1} matches {    -- Start date
+                        value matches {
+                            DV_DATE_TIME[at9007] matches {
+                                value
+                            }
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Duration
+                        value matches {
+                            DV_DURATION[at9001] matches {
+                                value
+                            }
+                        }
+                    }
+                    CLUSTER[at0009] occurrences matches {0..1} matches {    -- Resource usage
+                        items cardinality matches {1..*; unordered} matches {
+                            CLUSTER[at0015] occurrences matches {0..1} matches {    -- Human
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0011] matches {    -- Personnel type
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Staff quantity
+                                        value matches {
+                                            DV_COUNT[at9003]
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Fixed assets
+                                value matches {
+                                    DV_TEXT[at9004]
+                                }
+                            }
+                            CLUSTER[at0012] matches {    -- Fungible/Medication
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Resource type
+                                        value matches {
+                                            DV_TEXT[at9005]
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Quantity expent
+                                        value matches {
+                                            DV_COUNT[at9006]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Efficiency of healthcare procedure">
+                description = <"Parameters of interest for an objective study of the efficiency for a specific healthcare procedure.">
+            >
+            ["at0002"] = <
+                text = <"Procedure type">
+                description = <"Identifies the type of clinical encounter or healthcare procedure analysed. Specially useful when different types are compared.">
+            >
+            ["at0003"] = <
+                text = <"Duration">
+                description = <"Time how long it takes to complete the encounter or healthcare procedure analysed.">
+            >
+            ["at0008"] = <
+                text = <"Quantity expent">
+                description = <"Number of fungible or medication units expent in the procedure.">
+            >
+            ["at0009"] = <
+                text = <"Resource usage">
+                description = <"Parameters about the use of healthcare resources in the procedure analysed.">
+            >
+            ["at0011"] = <
+                text = <"Personnel type">
+                description = <"Identification of categories of the clinical personnel engaged in the healthcare procedure analized.">
+            >
+            ["at0012"] = <
+                text = <"Fungible/Medication">
+                description = <"Identification of any dispensation of fungible metrials and medications.">
+            >
+            ["at0013"] = <
+                text = <"Resource type">
+                description = <"Type of fungible or medication dispensed.">
+            >
+            ["at0014"] = <
+                text = <"Fixed assets">
+                description = <"Identification of fixed assets required to conduct the healthcare procedure analysed.">
+            >
+            ["at0015"] = <
+                text = <"Human">
+                description = <"Quantification of human resources in the healthcare procedure analysed.">
+            >
+            ["at0016"] = <
+                text = <"Staff quantity">
+                description = <"Number of paticipants in the healthcare procedure for the category defined above.">
+            >
+            ["at0017"] = <
+                text = <"Start date">
+                description = <"Date/time of onset of the encounter or healthcare procedure analysed.">
+            >
+            ["at0019"] = <
+                text = <"Specific details">
+                description = <"Additional differentiating details used later to compare clinical encounters or healthcare procedures on equal terms.">
+            >
+            ["at0020"] = <
+                text = <"Description">
+                description = <"Narrative description of the clinical encounter or healthcare procedure analysed.">
+            >
+        >
+    >

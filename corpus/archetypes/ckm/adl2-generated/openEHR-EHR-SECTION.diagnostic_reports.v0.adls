@@ -1,0 +1,112 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7b461706-fbc4-4009-ae85-a8f6710de64c; build_uid=fb64dfbe-3ac5-444e-80b2-368695b42d66)
+    openEHR-EHR-SECTION.diagnostic_reports.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ru"] = <
+            language = <[ISO_639-1::ru]>
+            author = <
+                ["name"] = <"Art Latyp Латыпов Артур Шамилевич">
+                ["organisation"] = <"RusBITech РусБИТех, Москва">
+            >
+            accreditation = <"hmm">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2010-03-07">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Ian McNicoll, freshEHR Clinical Informatics, UK", "Heath Frankel, Ocean Informatics, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"9EF496CE2674C98DB69128A66A43D030">
+    >
+    details = <
+        ["ru"] = <
+            language = <[ISO_639-1::ru]>
+            purpose = <"Дизайн представления списка обоснования диагнозов">
+            keywords = <"диагностический", "список", "обоснование", "уточненный", "лаборатория", "визуализация", "радиология", "патоморфология", "диагноз", "окончательный", "предварительный", "рабочий">
+            use = <"Используется для поддержки представления списка обоснований диагноза">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To provide a framework and design guidance for consistent modelling of diagnostic test resultswithin a template.">
+            keywords = <"diagnostic", "report", "laboratory", "imaging", "radiology", "pathology", "list">
+            use = <"Use to provide a framework and design guidance for consistent modelling of a diagnostic test results within a template.
+
+This archetype is intended to be used as one component of complex COMPOSITION archetypes. For example: documents such as a discharge summary or referral.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Diagnostic test results
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype OBSERVATION[at0001] matches {    -- Laboratory test results
+                include
+                    archetype_id/value matches {/openEHR-EHR-OBSERVATION\.laboratory_test_result(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype OBSERVATION[at0002] matches {    -- Imaging test results
+                include
+                    archetype_id/value matches {/openEHR-EHR-OBSERVATION\.imaging_exam_result(-[a-zA-Z0-9_]+)*\.v0\..*/}
+            }
+            allow_archetype EVALUATION[at0003] matches {    -- Report synopsis
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.clinical_synopsis(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["ru"] = <
+            ["at0000"] = <
+                text = <"*Diagnostic test results(en)">
+                description = <"*Suggested design pattern for including diagnostic test results in a template.(en)">
+            >
+            ["at0001"] = <
+                text = <"*Laboratory test results(en)">
+                description = <"*The results of laboratory tests.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Imaging test results(en)">
+                description = <"*The results of imaging tests.(en)">
+            >
+            ["at0003"] = <
+                text = <"*Report synopsis(en)">
+                description = <"*Slot constrained to include archetypes representing narrative synopses of laboratory and/or imaging test results.(en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Diagnostic test results">
+                description = <"Suggested design pattern for including diagnostic test results in a template.">
+            >
+            ["at0001"] = <
+                text = <"Laboratory test results">
+                description = <"The results of laboratory tests.">
+            >
+            ["at0002"] = <
+                text = <"Imaging test results">
+                description = <"The results of imaging tests.">
+            >
+            ["at0003"] = <
+                text = <"Report synopsis">
+                description = <"Slot constrained to include archetypes representing narrative synopses of laboratory and/or imaging test results.">
+            >
+        >
+    >

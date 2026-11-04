@@ -1,0 +1,610 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7e565c4c-201e-4d27-8dde-b4490ea52ca0; build_uid=9f76c087-f922-47ae-a3fe-0cc828e98e9c)
+    openEHR-EHR-OBSERVATION.axial_ocular_biometry.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Lars Fuhrmann">
+        ["organisation"] = <"German Society of ophthalmology (DOG">
+        ["email"] = <"lars.fuhrmann@dog.org">
+        ["date"] = <"2026-06-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Lars Fuhrmann, Germany", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"DICOM Working Group 9. Supplement 144: Ophthalmic Axial Measurements Storage SOP Classes. National Electrical Manufacturers Association; 2010. Available from: https://www.dicomstandard.org/supplements">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"598C2DFE93A4CAC36B7F08633C9FB528">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record measurements of the axial dimensions of the eye obtained by ocular biometry, including axial length, anterior chamber depth, and lens thickness.">
+            keywords = <"biometry", "axial length", "anterior chamber depth", "lens thickness", "IOL", "cataract", "ophthalmology", "ocular", "eye", "optical biometry", "ultrasound biometry", "A-scan">
+            use = <"Use to record the results of axial ocular biometry performed using optical coherence-based methods (e.g. partial coherence interferometry, optical low coherence reflectometry) or ultrasound (A-scan). Typically used in the pre-operative assessment for cataract surgery and intraocular lens (IOL) power calculation.
+
+Individual measurement cycles can be recorded in the 'By measurement cycle' cluster to allow review of repeatability and selection of the cycles used to derive the final averaged result.
+
+Record one instance of this archetype per eye examined. Use the 'Eye examined' element to identify the laterality.">
+            misuse = <"Not to be used to record corneal topography or keratometry measurements — use a dedicated keratometry or corneal topography archetype for this purpose.
+Not to be used to record refraction data.
+Not to be used to record intraocular lens (IOL) power calculation results — use a dedicated IOL calculation archetype.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Axial ocular biometry
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Eye examined
+                                        value matches {
+                                            DV_CODED_TEXT[at9010] matches {
+                                                defining_code matches {[ac9000]}    -- Eye examined (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Axial length
+                                        value matches {
+                                            DV_QUANTITY[at9011] matches {
+                                                property matches {[at9001]}    -- Length
+                                                magnitude matches {|>0.0..99.0|}
+                                                units matches {"mm"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0048] occurrences matches {0..1} matches {    -- Axial length modified
+                                        value matches {
+                                            DV_BOOLEAN[at9012]
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Anterior chamber depth
+                                        value matches {
+                                            DV_QUANTITY[at9013] matches {
+                                                property matches {[at9001]}    -- Length
+                                                magnitude matches {|1.0..6.0|}
+                                                units matches {"mm"}
+                                                precision matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0050] occurrences matches {0..1} matches {    -- Front of cornea to front of lens
+                                        value matches {
+                                            DV_QUANTITY[at9014]
+                                        }
+                                    }
+                                    ELEMENT[at0056] occurrences matches {0..1} matches {    -- Inter-lens distance
+                                        value matches {
+                                            DV_QUANTITY[at9015]
+                                        }
+                                    }
+                                    ELEMENT[at0057] occurrences matches {0..1} matches {    -- Vitreous cavity length
+                                        value matches {
+                                            DV_QUANTITY[at9016]
+                                        }
+                                    }
+                                    CLUSTER[at0051] occurrences matches {0..1} matches {    -- By lens
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Lens thickness
+                                                value matches {
+                                                    DV_QUANTITY[at9017] matches {
+                                                        property matches {[at9001]}    -- Length
+                                                        magnitude matches {|1.0..8.0|}
+                                                        units matches {"mm"}
+                                                        precision matches {2}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0052] occurrences matches {0..1} matches {    -- Lens name
+                                                value matches {
+                                                    DV_CODED_TEXT[at9018]
+                                                }
+                                            }
+                                            ELEMENT[at0053] occurrences matches {0..1} matches {    -- Anteroposterior position
+                                                value matches {
+                                                    DV_CODED_TEXT[at9019] matches {
+                                                        defining_code matches {[ac9002]}    -- Anteroposterior position (synthesised)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Warnings or errors
+                                        value matches {
+                                            DV_TEXT[at9020]
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9021]
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Interpretation
+                                        value matches {
+                                            DV_TEXT[at9022]
+                                        }
+                                    }
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Ultrasound interfacing method
+                                        value matches {
+                                            DV_CODED_TEXT[at9023] matches {
+                                                defining_code matches {[ac9003]}    -- Ultrasound interfacing method (synthesised)
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0014] occurrences matches {0..1} matches {    -- By measurement cycle
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0031] occurrences matches {0..1} matches {    -- Cycle identifier
+                                                value matches {
+                                                    DV_IDENTIFIER[at9024]
+                                                }
+                                            }
+                                            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Axial length (cycle)
+                                                value matches {
+                                                    DV_QUANTITY[at9025] matches {
+                                                        property matches {[at9001]}    -- Length
+                                                        magnitude matches {|15.0..40.0|}
+                                                        units matches {"mm"}
+                                                        precision matches {2}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Anterior chamber depth (cycle)
+                                                value matches {
+                                                    DV_QUANTITY[at9026] matches {
+                                                        property matches {[at9001]}    -- Length
+                                                        magnitude matches {|1.0..6.0|}
+                                                        units matches {"mm"}
+                                                        precision matches {2}
+                                                    }
+                                                }
+                                            }
+                                            CLUSTER[at0060] occurrences matches {0..1} matches {    -- By lens
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0061] occurrences matches {0..1} matches {    -- Lens thickness (cycle)
+                                                        value matches {
+                                                            DV_QUANTITY[at9027] matches {
+                                                                property matches {[at9001]}    -- Length
+                                                                magnitude matches {|1.0..8.0|}
+                                                                units matches {"mm"}
+                                                                precision matches {2}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0062] occurrences matches {0..1} matches {    -- Lens name
+                                                        value matches {
+                                                            DV_CODED_TEXT[at9028]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0063] occurrences matches {0..1} matches {    -- Anteroposterior position
+                                                        value matches {
+                                                            DV_CODED_TEXT[at9029] matches {
+                                                                defining_code matches {[ac9004]}    -- Anteroposterior position (synthesised)
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0019] occurrences matches {0..1} matches {    -- Used for final result
+                                                value matches {
+                                                    DV_BOOLEAN[at9030]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0012] matches {    -- Reliability parameter details
+                                        include
+                                            archetype_id/value matches {/.*/}
+                                    }
+                                    allow_archetype CLUSTER[at0066] matches {    -- Central corneal thickness
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.corneal_thickness_details\.v0\..*/}
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0020] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9031]
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Pupil state
+                                        value matches {
+                                            DV_CODED_TEXT[at9032] matches {
+                                                defining_code matches {[ac9005]}    -- Pupil state (synthesised)
+                                            }
+                                            DV_TEXT[at9033]
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Assumed state of lens
+                                        value matches {
+                                            DV_CODED_TEXT[at9034] matches {
+                                                defining_code matches {[ac9006]}    -- Assumed state of lens (synthesised)
+                                            }
+                                            DV_TEXT[at9035]
+                                        }
+                                    }
+                                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Assumed state of vitreous
+                                        value matches {
+                                            DV_CODED_TEXT[at9036] matches {
+                                                defining_code matches {[ac9007]}    -- Assumed state of vitreous (synthesised)
+                                            }
+                                            DV_TEXT[at9037]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0013] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Method
+                        value matches {
+                            DV_CODED_TEXT[at9038] matches {
+                                defining_code matches {[ac9008]}    -- Method (synthesised)
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0027] matches {    -- Device details
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device\.v1\..*/}
+                    }
+                    ELEMENT[at0058] occurrences matches {0..1} matches {    -- Assumed axial sound velocity
+                        value matches {
+                            DV_QUANTITY[at9039] matches {
+                                property matches {[at9009]}    -- Velocity
+                                magnitude matches {|>0.0|}
+                                units matches {"m/s"}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Axial ocular biometry">
+                description = <"Measurements of the axial dimensions of the eye, including axial length, anterior chamber depth, and lens thickness, obtained by optical or ultrasound biometry.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"@ internal @">
+            >
+            ["at0004"] = <
+                text = <"Eye examined">
+                description = <"Identification of the eye on which the biometry measurement was performed.">
+            >
+            ["at0005"] = <
+                text = <"Axial length">
+                description = <"The distance from the anterior corneal surface to the retinal pigment epithelium (optical biometry) or to the vitreoretinal interface (ultrasound).
+">
+                comment = <"DICOM tag (0022,1019)">
+            >
+            ["at0006"] = <
+                text = <"Anterior chamber depth">
+                description = <"The distance from the posterior corneal surface (endothelium) to the anterior surface of the crystalline lens (or IOL in pseudophakic eyes) along the measured axis. ">
+                comment = <"Also referred to as aqueous depth. 
+Equivalent to DICOM (0022,1131) if 'Anterior Chamber Depth Definition Code' is 111777, but NOT if it is 111776.">
+            >
+            ["at0007"] = <
+                text = <"Lens thickness">
+                description = <"The axial thickness of the natural or artificial lens, measured from its anterior to posterior surface along the optical axis. ">
+            >
+            ["at0009"] = <
+                text = <"Warnings or errors">
+                description = <"Any instrument-generated warnings or error messages associated with this measurement, such as poor signal quality, low signal-to-noise ratio, or failed cycle acquisition.">
+            >
+            ["at0010"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the measurement, not captured in other fields.">
+            >
+            ["at0011"] = <
+                text = <"Interpretation">
+                description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the physical examination findings.">
+            >
+            ["at0012"] = <
+                text = <"Reliability parameter details">
+                description = <"Structured details about signal quality, noise index, or other reliability parameters provided by the biometry device.">
+            >
+            ["at0014"] = <
+                text = <"By measurement cycle">
+                description = <"Details of an individual measurement cycle acquired by the biometry device. Multiple cycles are typically acquired and averaged to yield the final reported result.">
+            >
+            ["at0015"] = <
+                text = <"Axial length (cycle)">
+                description = <"The axial length value recorded for this individual measurement cycle, prior to averaging across cycles.">
+            >
+            ["at0016"] = <
+                text = <"Anterior chamber depth (cycle)">
+                description = <"The anterior chamber depth value recorded for this individual measurement cycle, prior to averaging across cycles.">
+            >
+            ["at0019"] = <
+                text = <"Used for final result">
+                description = <"Indicates whether this measurement cycle was included in the calculation of the final averaged result. True if the cycle was accepted and used; false if it was rejected or excluded by the operator or instrument.">
+            >
+            ["at0021"] = <
+                text = <"Confounding factors">
+                description = <"Description of any incidental factors related to the state of the subject which may affect clinical interpretation of the measurement.">
+            >
+            ["at0022"] = <
+                text = <"Pupil state">
+                description = <"Statement describing the condition of the individual's pupils during the measurement.">
+                comment = <"Comment: The physical examination of the eye will be recorded using the CLUSTER.exam-eye family of archetypes. Use the 'Clinical evidence' archetype nested within the 'Additional details' SLOT to record structured details about relevant eye examination findings. Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available.">
+            >
+            ["at0024"] = <
+                text = <"Assumed state of lens">
+                description = <"The presumed status of the crystalline lens at the time of measurement, ">
+                comment = <"Coding with a terminology is recommended; free text entry should only be permitted if no appropriate coded value is available.">
+            >
+            ["at0025"] = <
+                text = <"Assumed state of vitreous">
+                description = <"The presumed state of the vitreous cavity, used to contextualise axial length measurements; silicone oil filling or post-vitrectomy status alters acoustic and optical properties and requires adjusted calculation approaches. Coding with a terminology is recommended; free text entry should only be permitted if no appropriate coded value is available.">
+            >
+            ["at0026"] = <
+                text = <"Method">
+                description = <"The physical principle used by the biometry instrument to acquire the axial measurements.">
+            >
+            ["at0027"] = <
+                text = <"Device details">
+                description = <"Structured details about the biometry device used to perform the measurement, including manufacturer, model, and serial number.">
+            >
+            ["at0028"] = <
+                text = <"Ultrasound interfacing method">
+                description = <"The technique used to couple the ultrasound probe to the eye during A-scan biometry. ">
+                comment = <"Applicable only when the method is ultrasound biometry.">
+            >
+            ["at0029"] = <
+                text = <"Immersion">
+                description = <"The ultrasound probe is submerged in a saline-filled shell or cup placed over the eye, avoiding direct corneal contact and providing more accurate axial length measurements.">
+            >
+            ["at0030"] = <
+                text = <"Contact">
+                description = <"The ultrasound probe is placed directly on the corneal surface, which may result in corneal indentation and a slight underestimation of axial length.">
+            >
+            ["at0031"] = <
+                text = <"Cycle identifier">
+                description = <"A unique identifier or sequential number assigned to this individual measurement cycle by the biometry instrument.">
+            >
+            ["at0032"] = <
+                text = <"Left eye">
+                description = <"The measurement was performed on the left eye.">
+            >
+            ["at0033"] = <
+                text = <"Right eye">
+                description = <"The measurement was performed on the right eye.">
+            >
+            ["at0035"] = <
+                text = <"Normal">
+                description = <"The pupil is in its natural physiological state without pharmacological intervention or pathological changes.">
+            >
+            ["at0036"] = <
+                text = <"Medically induced mydriasis">
+                description = <"The pupil was dilated due to prior administration of mydriatic agents.">
+            >
+            ["at0037"] = <
+                text = <"Medically induced miosis">
+                description = <"The pupil was constricted due to prior administration of miotic agents.">
+            >
+            ["at0047"] = <
+                text = <"Pathological pupil state">
+                description = <"The pupil was in an unphysiological state due to disease, trauma, or structural abnormalities.">
+            >
+            ["at0038"] = <
+                text = <"Phakic">
+                description = <"The natural crystalline lens is present in the eye.">
+            >
+            ["at0039"] = <
+                text = <"Pseudophakic with one IOL">
+                description = <"The natural lens has been replaced by a single intraocular lens IOL implant.">
+            >
+            ["at0040"] = <
+                text = <"Aphakic">
+                description = <"The natural lens has been removed and no intraocular lens implant is present.">
+            >
+            ["at0041"] = <
+                text = <"Normal">
+                description = <"The vitreous cavity contains normal vitreous or balanced salt solution, with no prior vitreoretinal intervention.">
+            >
+            ["at0042"] = <
+                text = <"Post-vitrectomy">
+                description = <"The natural vitreous has been removed by vitrectomy and the cavity may contain balanced salt solution, air, or gas tamponade (e.g. SF6, C3F8). Acoustic velocity and optical path length may differ from a phakic eye with normal vitreous.">
+            >
+            ["at0043"] = <
+                text = <"Silicone oil-filled">
+                description = <"The vitreous cavity has been filled with silicone oil following vitreoretinal surgery. This significantly alters acoustic velocity and optical path length and requires specific correction algorithms for IOL power calculation.">
+            >
+            ["at0045"] = <
+                text = <"Optical biometry">
+                description = <"Measurement performed using an optical technique such as partial coherence interferometry (PCI) or optical low-coherence reflectometry (OLCR), e.g. IOLMaster, Lenstar.">
+            >
+            ["at0046"] = <
+                text = <"Ultrasound biometry">
+                description = <"Measurement performed using A-scan ultrasound, applicable when optical biometry is not possible (e.g. dense cataract, corneal opacity).">
+            >
+            ["at0048"] = <
+                text = <"Axial length modified">
+                description = <"Recording of whether the axial length value was manually altered. ">
+            >
+            ["at0050"] = <
+                text = <"Front of cornea to front of lens">
+                description = <"The axial distance from the front of the cornea to the front of the lens. ">
+                comment = <"Anatomically, this is not the anterior chamber depth, but rather the sum of the anterior chamber depth and the central corneal thickness. 
+Beware of DICOM referring to to this as anterior chamber depth anyway, when qualified it with the 111776 code. \"Front Of Cornea To Front Of Lens\".">
+            >
+            ["at0051"] = <
+                text = <"By lens">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Lens name">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Anteroposterior position">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"anterior">
+                description = <"The lens is the anterior one">
+            >
+            ["at0055"] = <
+                text = <"posterior">
+                description = <"The lens is the posterior one">
+            >
+            ["at0056"] = <
+                text = <"Inter-lens distance">
+                description = <"Distance between the posterior surface of the anterior lens and the anterior surface of the posterior lens, along the measured axis. ">
+            >
+            ["at0057"] = <
+                text = <"Vitreous cavity length">
+                description = <"The distance between the posterior surface of the most posterior lens and the posterior end-point of the axial length. ">
+            >
+            ["at0058"] = <
+                text = <"Assumed axial sound velocity">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"By lens">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Lens thickness (cycle)">
+                description = <"The axial thickness of the natural or artificial lens, measured from its anterior to posterior surface along the optical axis. R ecorded for this individual measurement cycle, prior to averaging across cycles.">
+                comment = <"Not applicable in aphakic eyes.">
+            >
+            ["at0062"] = <
+                text = <"Lens name">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"Anteroposterior position">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"anterior">
+                description = <"The lens is the anterior one">
+            >
+            ["at0065"] = <
+                text = <"posterior">
+                description = <"The lens is the posterior one">
+            >
+            ["at0066"] = <
+                text = <"Central corneal thickness">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"Phakic plus phakic IOL">
+                description = <"Also Rephakic intraocular lens">
+            >
+            ["at0068"] = <
+                text = <"Pseudophakic with two IOLs (Piggyback)">
+                description = <"Two intraocular lens impants are present.">
+            >
+            ["at9001"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["at9009"] = <
+                text = <"Velocity">
+                description = <"Velocity">
+            >
+            ["ac9000"] = <
+                text = <"Eye examined (synthesised)">
+                description = <"Identification of the eye on which the biometry measurement was performed. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Anteroposterior position (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Ultrasound interfacing method (synthesised)">
+                description = <"The technique used to couple the ultrasound probe to the eye during A-scan biometry.  (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Anteroposterior position (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Pupil state (synthesised)">
+                description = <"Statement describing the condition of the individual's pupils during the measurement. (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Assumed state of lens (synthesised)">
+                description = <"The presumed status of the crystalline lens at the time of measurement,  (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"Assumed state of vitreous (synthesised)">
+                description = <"The presumed state of the vitreous cavity, used to contextualise axial length measurements; silicone oil filling or post-vitrectomy status alters acoustic and optical properties and requires adjusted calculation approaches. Coding with a terminology is recommended; free text entry should only be permitted if no appropriate coded value is available. (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"Method (synthesised)">
+                description = <"The physical principle used by the biometry instrument to acquire the axial measurements. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/122>
+            ["at9009"] = <http://openehr.org/id/338>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0054", "at0055">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0032", "at0033">
+        >
+        ["ac9006"] = <
+            id = <"ac9006">
+            members = <"at0038", "at0067", "at0039", "at0068", "at0040">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0035", "at0036", "at0037", "at0047">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0064", "at0065">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0029", "at0030">
+        >
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0045", "at0046">
+        >
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at0041", "at0042", "at0043">
+        >
+    >

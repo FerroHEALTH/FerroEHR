@@ -1,0 +1,254 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6be124e0-3759-4c29-9fbb-92159ed1bcbd; build_uid=ee487df4-c94b-4d46-ac32-816de842f37d)
+    openEHR-EHR-ADMIN_ENTRY.legal_authority.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heidi Koikkalainen">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"heidi@freshehr.com">
+        ["date"] = <"2020-03-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Ian McNicoll, freshEHR Clinical Informatics Ltd.", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Appointing a medical treatment decision maker [Internet]. Office of the Public Advocate (Victoria). 2020 [cited 2020 May 11]. Available from: https://www.publicadvocate.vic.gov.au/power-of-attorney/appointing-a-medical-support-person.">
+        ["2"] = <"LegalSituation-v1.0(2019EN) - Zorginformatiebouwstenen [Internet]. Zibs.nl. 2020 [cited 2020 May 11]. Available from: https://zibs.nl/wiki/LegalSituation-v1.0(2019EN).">
+        ["3"] = <"Make, register or end a lasting power of attorney [Internet]. GOV.UK. 2020 [cited 2020 May 11]. Available from: https://www.gov.uk/power-of-attorney.">
+        ["4"] = <"Powers of Attorney [Internet]. Ministry of the Attorney General (Ontario). 2020 [cited 2020 May 11]. Available from: https://www.attorneygeneral.jus.gov.on.ca/english/family/pgt/incapacity/poa.php.">
+        ["5"] = <"What is a Power of Attorney [Internet]. Office of the Public Guardian (Scotland). 2020 [cited 2020 May 11]. Available from: https://www.publicguardian-scotland.gov.uk/power-of-attorney.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heidi Koikkalainen, heidi@freshehr.com">
+        ["MD5-CAM-1.0.1"] = <"95FD4496744415E1A1AFE7C2221771CF">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record information about legal directives or orders that apply to the individual.">
+            keywords = <"legal, power, attorney, welfare, guardian, guardianship, representative, proxy, decision-maker, advocate, intervention, order", ...>
+            use = <"Use to record information about legal directives or orders that apply to the individual, for example, a power of attorney, guardianship order, or mental health detention order.
+
+This archetype has been specifically designed as a framework or structure that can be extended for the complex range of use cases and local requirements by nesting a variety of possible CLUSTER archetypes which will contain specific details as per national or other local requirements.
+
+When used to record details of legally-binding documents, it MUST be ensured that the Legal directive archetype and any nested archetypes adhere to relevant legal requirements.">
+            misuse = <"Not to be used to record information about advance care directives. Use openEHR-EHR-EVALUATION.advance_care_directive.v0 for this purpose.
+
+Not to be used to record details of mental capacity assessments. Use openEHR-EHR-EVALUATION.mental_capacity.v0 for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ADMIN_ENTRY[at0000] matches {    -- Legal authority
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Type
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Status
+                        value matches {
+                            DV_CODED_TEXT[at9002] matches {
+                                defining_code matches {[ac9000]}    -- Status (synthesised)
+                            }
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                    CLUSTER[at0023] matches {    -- Representative
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Role
+                                value matches {
+                                    DV_TEXT[at9005]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0025] occurrences matches {0..1} matches {    -- Representative details
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0042] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Valid period start
+                        value matches {
+                            DV_DATE_TIME[at9006]
+                        }
+                    }
+                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- Valid period end
+                        value matches {
+                            DV_DATE_TIME[at9007]
+                        }
+                    }
+                    CLUSTER[at0034] matches {    -- Certificate location
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0035] occurrences matches {0..1} matches {    -- Location
+                                value matches {
+                                    DV_TEXT[at9008]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0036] occurrences matches {0..1} matches {    -- Copy holder
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                            allow_archetype CLUSTER[at0037] occurrences matches {0..1} matches {    -- Digital representation
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.multimedia\.v0\..*/}
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0045] matches {    -- Authority
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0044] occurrences matches {0..1} matches {    -- Reference number
+                        value matches {
+                            DV_TEXT[at9009]
+                        }
+                    }
+                    ELEMENT[at0039] matches {    -- Mandate
+                        value matches {
+                            DV_TEXT[at9010]
+                            DV_URI[at9011]
+                        }
+                    }
+                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9012]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0040] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Legal authority">
+                description = <"A framework to communicate information about legal directives or orders that apply to the individual, for example, a power of attorney or guardianship order.">
+            >
+            ["at0002"] = <
+                text = <"Type">
+                description = <"The type of legal directive or order that applies to the individual.">
+                comment = <"Coding of the type of legal directive or order with a terminology is preferred, where possible. It is expected that this is largely localised to reflect local policy and legislation. For example, 'Welfare Power of Attorney', 'Welfare Guardianship Order' or 'Emergency Detention Order'.">
+            >
+            ["at0004"] = <
+                text = <"Status">
+                description = <"The status of the legal directive or order.">
+                comment = <"Coding of the legal directive or order status with a terminology is preferred, where possible.">
+            >
+            ["at0005"] = <
+                text = <"Present">
+                description = <"A legal directive or order is present.">
+            >
+            ["at0006"] = <
+                text = <"Absent">
+                description = <"A legal directive or order is absent.">
+            >
+            ["at0007"] = <
+                text = <"Unknown">
+                description = <"It is not known whether a legal directive or order is present or absent.">
+            >
+            ["at0008"] = <
+                text = <"Description">
+                description = <"Narrative description of the legal directive or order that applies to the individual.">
+                comment = <"This data element may be used to capture legacy data that is not available in a structured format.">
+            >
+            ["at0023"] = <
+                text = <"Representative">
+                description = <"Details of a nominated representative who has authority to act and make decisions on behalf of the individual, or who has been appointed to support the individual in decision-making.">
+            >
+            ["at0024"] = <
+                text = <"Role">
+                description = <"Description of the representative's role.">
+                comment = <"For example, 'Welfare Attorney', 'Substitute Welfare Attorney'. or 'Welfare Guardian'.">
+            >
+            ["at0025"] = <
+                text = <"Representative details">
+                description = <"Further information about the representative, including contact details and relationship to the individual.">
+            >
+            ["at0026"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the legal directive not captured in other fields.">
+            >
+            ["at0028"] = <
+                text = <"Valid period start">
+                description = <"The date/time that marks the beginning of the valid period of time for this legal directive or order.">
+            >
+            ["at0029"] = <
+                text = <"Valid period end">
+                description = <"The date/time that marks the conclusion of the valid period of time for this legal directive or order.">
+            >
+            ["at0034"] = <
+                text = <"Certificate location">
+                description = <"Information regarding where the legal directive or order certification is stored and who has a copy of it.">
+            >
+            ["at0035"] = <
+                text = <"Location">
+                description = <"Information regarding where the certificate is stored and how to gain access to it.">
+            >
+            ["at0036"] = <
+                text = <"Copy holder">
+                description = <"Details of a person who has a copy of the certificate.">
+            >
+            ["at0037"] = <
+                text = <"Digital representation">
+                description = <"Digital document or image representing the certificate.">
+            >
+            ["at0039"] = <
+                text = <"Mandate">
+                description = <"Description of any legislation or other authoritative guidance that apply.">
+                comment = <"For example, 'In Scotland, Welfare Power of Attorneys are covered by the Adults with Incapacity (Scotland) Act 2000.  Mandate: http://www.legislation.gov.uk/asp/2000/4/contents'.">
+            >
+            ["at0040"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0042"] = <
+                text = <"Additional details">
+                description = <"Additional details about the legal directive or order.">
+            >
+            ["at0044"] = <
+                text = <"Reference number">
+                description = <"Reference number for the legal directive or order.">
+                comment = <"For example, the court order reference number.">
+            >
+            ["at0045"] = <
+                text = <"Authority">
+                description = <"Details about the authoritative body granting the directive, and/or nominated legal contact for further information about the directive.">
+            >
+            ["ac9000"] = <
+                text = <"Status (synthesised)">
+                description = <"The status of the legal directive or order. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0005", "at0006", "at0007">
+        >
+    >

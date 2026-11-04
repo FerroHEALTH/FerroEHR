@@ -1,0 +1,1434 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=10bbc26f-7da0-4a69-a133-2f298401fa16; build_uid=6defdcd0-ace0-4738-a432-b9d245b86608)
+    openEHR-EHR-CLUSTER.dietary_phytochemicals.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["pt"] = <
+            language = <[ISO_639-1::pt]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Priscila Maranhão; Gustavo Bacelar">
+        ["organisation"] = <"MEDCIDS-FMUP">
+        ["email"] = <"priscilamaranhao@gmail.com; gbacelar@gmail.com">
+        ["date"] = <"2017-03-06">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Ricardo Cruz-Correia, MEDCIDS-FMUP; Portugal", "Pedro Marques, MEDCIDS-FMUP; Portugal", "Duarte Ferreira, MEDCIDS-FMUP; Portugal">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Liu, R.H. Dietary bioactive compounds  and their  health implications. Journal of food science. v.78, 51, 2013.">
+        ["2"] = <"Vergara, C; Baer, D.V; Marcores, C. et al. Stilbene levels in grape came of different cultivars in southern Chile: Determination  by HPLC - DAD -MS /Ms method: Journal of agricultural and food chemistry, 60, 2011.">
+        ["3"] = <"D´Archivio, M; Filesi, C; Benetto, R.D. et al. Polyphenols, dietary source and bioavailability. An n Ist S. Sanitá, v.43, n.4, 2007. ">
+        ["4"] = <"Liu, RH. Potential synergy of phytochemicals in cancer prevention: Mechanism of action. The journal of nutrition. 134: 3479S-3485S,2004.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"1FF050292EC083AE05BF62C52B0DEEB9">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Assessment of dietary phytochemicals. 
+">
+            keywords = <"Bioactive nutrient", "bioactive compounds", "phenolics", "Flavonoids">
+            use = <"To be used to quantify phytochemicals intake in the diet.
+
+To be used in children and adults.
+
+Can be used to phytochemicals intake by supplements.">
+            misuse = <"Not to be used to quantify other supplements. ">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt"] = <
+            language = <[ISO_639-1::pt]>
+            purpose = <"Assessment of dietary phytochemicals. 
+">
+            keywords = <"Bioactive nutrient", "bioactive compounds", "phenolics", "Flavonoids ">
+            use = <"To be used for recording to quantify phytochemicals intake in the diet.
+
+To be used in children and adults.
+
+To be used to quantify phytochemicals in food. ">
+            misuse = <"Not to be used to phytochemicals intake by supplements. ">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Dietary phytochemicals
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Total phytochemicals
+                value matches {
+                    DV_QUANTITY[at9001] matches {
+                        property matches {[at9000]}    -- Mass
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"mg"}],
+                            [{|>=0.0|}, {"ug"}]
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0003] occurrences matches {0..1} matches {    -- Carotenoids
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0048] occurrences matches {0..1} matches {    -- Total carotenoids
+                        value matches {
+                            DV_QUANTITY[at9002] matches {
+                                property matches {[at9000]}    -- Mass
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"mg"}],
+                                    [{|>=0.0|}, {"ug"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Lycopene
+                        value matches {
+                            DV_QUANTITY[at9003] matches {
+                                property matches {[at9000]}    -- Mass
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"mg"}],
+                                    [{|>=0.0|}, {"ug"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Astaxanthin
+                        value matches {
+                            DV_QUANTITY[at9004] matches {
+                                property matches {[at9000]}    -- Mass
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"mg"}],
+                                    [{|>=0.0|}, {"ug"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Zeaxanthin
+                        value matches {
+                            DV_QUANTITY[at9005] matches {
+                                property matches {[at9000]}    -- Mass
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"mg"}],
+                                    [{|>=0.0|}, {"ug"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Lutein
+                        value matches {
+                            DV_QUANTITY[at9006] matches {
+                                property matches {[at9000]}    -- Mass
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"mg"}],
+                                    [{|>=0.0|}, {"ug"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Β-cryptoxanthin
+                        value matches {
+                            DV_QUANTITY[at9007] matches {
+                                property matches {[at9000]}    -- Mass
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"mg"}],
+                                    [{|>=0.0|}, {"ug"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- β-carotene
+                        value matches {
+                            DV_QUANTITY[at9008] matches {
+                                property matches {[at9000]}    -- Mass
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"mg"}],
+                                    [{|>=0.0|}, {"ug"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- α-carotene
+                        value matches {
+                            DV_QUANTITY[at9009] matches {
+                                property matches {[at9000]}    -- Mass
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"mg"}],
+                                    [{|>=0.0|}, {"ug"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Total carotenoids
+                        value matches {
+                            DV_QUANTITY[at9010] matches {
+                                property matches {[at9000]}    -- Mass
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"mg"}],
+                                    [{|>=0.0|}, {"ug"}]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0014] occurrences matches {0..1} matches {    -- Phenolics
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0049] occurrences matches {0..1} matches {    -- Total phenolics
+                        value matches {
+                            DV_QUANTITY[at9011] matches {
+                                property matches {[at9000]}    -- Mass
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"mg"}],
+                                    [{|>=0.0|}, {"ug"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Coumarins
+                        value matches {
+                            DV_QUANTITY[at9012] matches {
+                                property matches {[at9000]}    -- Mass
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"mg"}],
+                                    [{|>=0.0|}, {"ug"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Stibenes
+                        value matches {
+                            DV_QUANTITY[at9013] matches {
+                                property matches {[at9000]}    -- Mass
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"mg"}],
+                                    [{|>=0.0|}, {"ug"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- Tannins
+                        value matches {
+                            DV_QUANTITY[at9014] matches {
+                                property matches {[at9000]}    -- Mass
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"mg"}],
+                                    [{|>=0.0|}, {"ug"}]
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0036] occurrences matches {0..1} matches {    -- Flavonoids
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0050] occurrences matches {0..1} matches {    -- Total flavonoids
+                                value matches {
+                                    DV_QUANTITY[at9015] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        [magnitude, units] matches {
+                                            [{|>=0.0|}, {"mg"}],
+                                            [{|>=0.0|}, {"ug"}]
+                                        }
+                                    }
+                                }
+                            }
+                            CLUSTER[at0066] occurrences matches {0..1} matches {    -- Anthocyanidins
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0092] occurrences matches {0..1} matches {    -- Total anthocyanidins
+                                        value matches {
+                                            DV_QUANTITY[at9016] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0071] occurrences matches {0..1} matches {    -- Malvidin
+                                        value matches {
+                                            DV_QUANTITY[at9017] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0070] occurrences matches {0..1} matches {    -- Peonidin
+                                        value matches {
+                                            DV_QUANTITY[at9018] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0069] occurrences matches {0..1} matches {    -- Delphinidin
+                                        value matches {
+                                            DV_QUANTITY[at9019] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0068] occurrences matches {0..1} matches {    -- Pelargonidin
+                                        value matches {
+                                            DV_QUANTITY[at9020] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0067] occurrences matches {0..1} matches {    -- Cyanidin
+                                        value matches {
+                                            DV_QUANTITY[at9021] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            CLUSTER[at0062] occurrences matches {0..1} matches {    -- Flavanones
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0087] occurrences matches {0..1} matches {    -- Total flavanones
+                                        value matches {
+                                            DV_QUANTITY[at9022] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0065] occurrences matches {0..1} matches {    -- Naringenin
+                                        value matches {
+                                            DV_QUANTITY[at9023] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0064] occurrences matches {0..1} matches {    -- Hesperitin
+                                        value matches {
+                                            DV_QUANTITY[at9024] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0063] occurrences matches {0..1} matches {    -- Friodictyol
+                                        value matches {
+                                            DV_QUANTITY[at9025] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            CLUSTER[at0054] occurrences matches {0..1} matches {    -- Flavanols (Catechins)
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0088] occurrences matches {0..1} matches {    -- Total flavanols (catechins)
+                                        value matches {
+                                            DV_QUANTITY[at9026] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0060] occurrences matches {0..1} matches {    -- Epigallocatechin gallate
+                                        value matches {
+                                            DV_QUANTITY[at9027] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0058] occurrences matches {0..1} matches {    -- Epicatechin gallate
+                                        value matches {
+                                            DV_QUANTITY[at9028] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0057] occurrences matches {0..1} matches {    -- Epigallocatechin
+                                        value matches {
+                                            DV_QUANTITY[at9029] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0056] occurrences matches {0..1} matches {    -- Epicatechin
+                                        value matches {
+                                            DV_QUANTITY[at9030] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0055] occurrences matches {0..1} matches {    -- Catechin
+                                        value matches {
+                                            DV_QUANTITY[at9031] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            CLUSTER[at0043] occurrences matches {0..1} matches {    -- Flavones
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0051] occurrences matches {0..1} matches {    -- Total flavones
+                                        value matches {
+                                            DV_QUANTITY[at9032] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0047] occurrences matches {0..1} matches {    -- Chrysin
+                                        value matches {
+                                            DV_QUANTITY[at9033] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0046] occurrences matches {0..1} matches {    -- Apigenin
+                                        value matches {
+                                            DV_QUANTITY[at9034] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0045] occurrences matches {0..1} matches {    -- Luteolin
+                                        value matches {
+                                            DV_QUANTITY[at9035] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            CLUSTER[at0038] occurrences matches {0..1} matches {    -- Flavonols
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0052] occurrences matches {0..1} matches {    -- Total flavonols
+                                        value matches {
+                                            DV_QUANTITY[at9036] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0042] occurrences matches {0..1} matches {    -- Galagin
+                                        value matches {
+                                            DV_QUANTITY[at9037] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0041] occurrences matches {0..1} matches {    -- Myricetin
+                                        value matches {
+                                            DV_QUANTITY[at9038] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0040] occurrences matches {0..1} matches {    -- Kaempferol
+                                        value matches {
+                                            DV_QUANTITY[at9039] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0039] occurrences matches {0..1} matches {    -- Quercetin
+                                        value matches {
+                                            DV_QUANTITY[at9040] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            CLUSTER[at0072] occurrences matches {0..1} matches {    -- Isoflavonoids
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0089] occurrences matches {0..1} matches {    -- Total isoflavonoids
+                                        value matches {
+                                            DV_QUANTITY[at9041] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0076] occurrences matches {0..1} matches {    -- Formononetin
+                                        value matches {
+                                            DV_QUANTITY[at9042] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0075] occurrences matches {0..1} matches {    -- Glycitein
+                                        value matches {
+                                            DV_QUANTITY[at9043] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0074] occurrences matches {0..1} matches {    -- Daidzein
+                                        value matches {
+                                            DV_QUANTITY[at9044] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0073] occurrences matches {0..1} matches {    -- Genistein
+                                        value matches {
+                                            DV_QUANTITY[at9045] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0015] occurrences matches {0..1} matches {    -- Phenolics acids
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0053] occurrences matches {0..1} matches {    -- Total phenolics acids
+                                value matches {
+                                    DV_QUANTITY[at9046] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        [magnitude, units] matches {
+                                            [{|>=0.0|}, {"mg"}],
+                                            [{|>=0.0|}, {"ug"}]
+                                        }
+                                    }
+                                }
+                            }
+                            CLUSTER[at0017] occurrences matches {0..1} matches {    -- Hydroxycinnamic acids
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0077] occurrences matches {0..1} matches {    -- Total Hydroxynnamic acids
+                                        value matches {
+                                            DV_QUANTITY[at9047] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0091] occurrences matches {0..1} matches {    -- Caffeic
+                                        value matches {
+                                            DV_QUANTITY[at9048] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0090] occurrences matches {0..1} matches {    -- Ferulic
+                                        value matches {
+                                            DV_QUANTITY[at9049] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0031] occurrences matches {0..1} matches {    -- p-Coumaric
+                                        value matches {
+                                            DV_QUANTITY[at9050] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Sinapic
+                                        value matches {
+                                            DV_QUANTITY[at9051] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            CLUSTER[at0016] occurrences matches {0..1} matches {    -- Hydroxybenzoic acids
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0078] occurrences matches {0..1} matches {    -- Total hydroxybenzoic acids
+                                        value matches {
+                                            DV_QUANTITY[at9052] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Syringic
+                                        value matches {
+                                            DV_QUANTITY[at9053] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Vannilic
+                                        value matches {
+                                            DV_QUANTITY[at9054] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Protocatechuie
+                                        value matches {
+                                            DV_QUANTITY[at9055] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Gallic
+                                        value matches {
+                                            DV_QUANTITY[at9056] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [magnitude, units] matches {
+                                                    [{|>=0.0|}, {"mg"}],
+                                                    [{|>=0.0|}, {"ug"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0082] occurrences matches {0..1} matches {    -- Organosulfur compounds
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0083] occurrences matches {0..1} matches {    -- Total organosulfur compounds
+                        value matches {
+                            DV_QUANTITY[at9057] matches {
+                                property matches {[at9000]}    -- Mass
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"mg"}],
+                                    [{|>=0.0|}, {"ug"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0086] occurrences matches {0..1} matches {    -- Allylic sulfur
+                        value matches {
+                            DV_QUANTITY[at9058] matches {
+                                property matches {[at9000]}    -- Mass
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"mg"}],
+                                    [{|>=0.0|}, {"ug"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0085] occurrences matches {0..1} matches {    -- Indoles
+                        value matches {
+                            DV_QUANTITY[at9059] matches {
+                                property matches {[at9000]}    -- Mass
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"mg"}],
+                                    [{|>=0.0|}, {"ug"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0084] occurrences matches {0..1} matches {    -- Isothiocyanates
+                        value matches {
+                            DV_QUANTITY[at9060] matches {
+                                property matches {[at9000]}    -- Mass
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"mg"}],
+                                    [{|>=0.0|}, {"ug"}]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0081] occurrences matches {0..1} matches {    -- Nitrogen-containing compounds
+                value matches {
+                    DV_QUANTITY[at9061] matches {
+                        property matches {[at9000]}    -- Mass
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"mg"}],
+                            [{|>=0.0|}, {"ug"}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0080] occurrences matches {0..1} matches {    -- Alkaloids
+                value matches {
+                    DV_QUANTITY[at9062] matches {
+                        property matches {[at9000]}    -- Mass
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"ug"}],
+                            [{|>=0.0|}, {"mg"}]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt"] = <
+            ["at0000"] = <
+                text = <"Dietary phytochemicals">
+                description = <"To quantify phytochemicals in the diet.">
+            >
+            ["at0003"] = <
+                text = <"Carotenoids">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Total carotenoids">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"Total phytochemicals">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"α-carotene">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"β-carotene">
+                description = <"*">
+            >
+            ["at0008"] = <
+                text = <"Β-cryptoxanthin">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"Lutein">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Zeaxanthin">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"Astaxanthin">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Lycopene">
+                description = <"*">
+            >
+            ["at0014"] = <
+                text = <"Phenolics">
+                description = <"*">
+            >
+            ["at0015"] = <
+                text = <"Phenolics acids">
+                description = <"*">
+            >
+            ["at0016"] = <
+                text = <"Hydroxybenzoic acids">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"Hydroxycinnamic acids">
+                description = <"*">
+            >
+            ["at0021"] = <
+                text = <"Sinapic">
+                description = <"*">
+            >
+            ["at0022"] = <
+                text = <"Gallic">
+                description = <"*">
+            >
+            ["at0023"] = <
+                text = <"Protocatechuie">
+                description = <"*">
+            >
+            ["at0024"] = <
+                text = <"Vannilic">
+                description = <"*">
+            >
+            ["at0025"] = <
+                text = <"Syringic">
+                description = <"*">
+            >
+            ["at0027"] = <
+                text = <"Stibenes">
+                description = <"*">
+            >
+            ["at0028"] = <
+                text = <"Coumarins">
+                description = <"*">
+            >
+            ["at0029"] = <
+                text = <"Tannins">
+                description = <"*">
+            >
+            ["at0031"] = <
+                text = <"p-Coumaric">
+                description = <"*">
+            >
+            ["at0036"] = <
+                text = <"Flavonoids">
+                description = <"*">
+            >
+            ["at0038"] = <
+                text = <"Flavonols">
+                description = <"*">
+            >
+            ["at0039"] = <
+                text = <"Quercetin">
+                description = <"*">
+            >
+            ["at0040"] = <
+                text = <"Kaempferol">
+                description = <"*">
+            >
+            ["at0041"] = <
+                text = <"Myricetin">
+                description = <"*">
+            >
+            ["at0042"] = <
+                text = <"Galagin">
+                description = <"*">
+            >
+            ["at0043"] = <
+                text = <"Flavones">
+                description = <"*">
+            >
+            ["at0045"] = <
+                text = <"Luteolin">
+                description = <"*">
+            >
+            ["at0046"] = <
+                text = <"Apigenin">
+                description = <"*">
+            >
+            ["at0047"] = <
+                text = <"Chrysin">
+                description = <"*">
+            >
+            ["at0048"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0049"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0050"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0051"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0052"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0053"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0054"] = <
+                text = <"*New cluster(pt)">
+                description = <"**(pt)">
+            >
+            ["at0055"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0056"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0057"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0058"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0060"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0062"] = <
+                text = <"*New cluster(pt)">
+                description = <"**(pt)">
+            >
+            ["at0063"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0064"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0065"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0066"] = <
+                text = <"*New cluster(pt)">
+                description = <"**(pt)">
+            >
+            ["at0067"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0068"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0069"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0070"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0071"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0072"] = <
+                text = <"*New cluster(pt)">
+                description = <"**(pt)">
+            >
+            ["at0073"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0074"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0075"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0076"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0077"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0078"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0080"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0081"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0082"] = <
+                text = <"*New cluster(pt)">
+                description = <"**(pt)">
+            >
+            ["at0083"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0084"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0085"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0086"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0087"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0088"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0089"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0090"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0091"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0092"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at9000"] = <
+                text = <"massa">
+                description = <"massa">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Dietary phytochemicals">
+                description = <"To quantify phytochemicals in the diet.">
+            >
+            ["at0003"] = <
+                text = <"Carotenoids">
+                description = <"The quantity of carotenoids.">
+            >
+            ["at0004"] = <
+                text = <"Total carotenoids">
+                description = <"The quantity of a specific carotenoids.">
+            >
+            ["at0005"] = <
+                text = <"Total phytochemicals">
+                description = <"The quantity of a specific organosulfur compounds.">
+            >
+            ["at0006"] = <
+                text = <"α-carotene">
+                description = <"The quantity of a specific carotenoids.">
+            >
+            ["at0007"] = <
+                text = <"β-carotene">
+                description = <"The quantity of a specific carotenoids.">
+            >
+            ["at0008"] = <
+                text = <"Β-cryptoxanthin">
+                description = <"The quantity of a specific carotenoids.">
+            >
+            ["at0009"] = <
+                text = <"Lutein">
+                description = <"The quantity of a specific carotenoids.">
+            >
+            ["at0010"] = <
+                text = <"Zeaxanthin">
+                description = <"The quantity of a specific carotenoids.">
+            >
+            ["at0011"] = <
+                text = <"Astaxanthin">
+                description = <"The quantity of a specific carotenoids.">
+            >
+            ["at0012"] = <
+                text = <"Lycopene">
+                description = <"The quantity of a specific carotenoids.">
+            >
+            ["at0014"] = <
+                text = <"Phenolics">
+                description = <"The quantity of phenolic compounds.">
+            >
+            ["at0015"] = <
+                text = <"Phenolics acids">
+                description = <"The quantity of phenolics acids.">
+            >
+            ["at0016"] = <
+                text = <"Hydroxybenzoic acids">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"Hydroxycinnamic acids">
+                description = <"The quantity of a specific phenolics acids.">
+            >
+            ["at0021"] = <
+                text = <"Sinapic">
+                description = <"The quantity of a specific phenolics acids.">
+            >
+            ["at0022"] = <
+                text = <"Gallic">
+                description = <"The quantity of a specific phenolics acids.">
+            >
+            ["at0023"] = <
+                text = <"Protocatechuie">
+                description = <"The quantity of a specific phenolics acids.">
+            >
+            ["at0024"] = <
+                text = <"Vannilic">
+                description = <"The quantity of a specific phenolics acids.">
+            >
+            ["at0025"] = <
+                text = <"Syringic">
+                description = <"The quantity of a specific phenolics acids.">
+            >
+            ["at0027"] = <
+                text = <"Stibenes">
+                description = <"The quantity of stilbenes.">
+            >
+            ["at0028"] = <
+                text = <"Coumarins">
+                description = <"The quantity of Coumarins.">
+            >
+            ["at0029"] = <
+                text = <"Tannins">
+                description = <"The quantity of Tannins.">
+            >
+            ["at0031"] = <
+                text = <"p-Coumaric">
+                description = <"The quantity of a specific phenolics acids.">
+            >
+            ["at0036"] = <
+                text = <"Flavonoids">
+                description = <"The quantity of flavonoids.">
+            >
+            ["at0038"] = <
+                text = <"Flavonols">
+                description = <"**(pt)">
+            >
+            ["at0039"] = <
+                text = <"Quercetin">
+                description = <"The quantity of flavonols.">
+            >
+            ["at0040"] = <
+                text = <"Kaempferol">
+                description = <"The quantity of flavonols.">
+            >
+            ["at0041"] = <
+                text = <"Myricetin">
+                description = <"The quantity of flavonols.">
+            >
+            ["at0042"] = <
+                text = <"Galagin">
+                description = <"The quantity of flavonols.">
+            >
+            ["at0043"] = <
+                text = <"Flavones">
+                description = <"The quantity of flavones.">
+            >
+            ["at0045"] = <
+                text = <"Luteolin">
+                description = <"The quantity of flavones.">
+            >
+            ["at0046"] = <
+                text = <"Apigenin">
+                description = <"The quantity of flavones.">
+            >
+            ["at0047"] = <
+                text = <"Chrysin">
+                description = <"The quantity of flavones.">
+            >
+            ["at0048"] = <
+                text = <"Total carotenoids">
+                description = <"The quantity of carotenoids phenolics acids.">
+            >
+            ["at0049"] = <
+                text = <"Total phenolics">
+                description = <"The quantity of phenolic compounds.">
+            >
+            ["at0050"] = <
+                text = <"Total flavonoids">
+                description = <"The quantity of flavonoids.">
+            >
+            ["at0051"] = <
+                text = <"Total flavones">
+                description = <"The quantity of flavones.">
+            >
+            ["at0052"] = <
+                text = <"Total flavonols">
+                description = <"The quantity of flavonols.">
+            >
+            ["at0053"] = <
+                text = <"Total phenolics acids">
+                description = <"The quantity of phenolics acids.">
+            >
+            ["at0054"] = <
+                text = <"Flavanols (Catechins)">
+                description = <"*">
+            >
+            ["at0055"] = <
+                text = <"Catechin">
+                description = <"The quantity of flavanols.">
+            >
+            ["at0056"] = <
+                text = <"Epicatechin">
+                description = <"The quantity of flavanols.">
+            >
+            ["at0057"] = <
+                text = <"Epigallocatechin">
+                description = <"The quantity of flavanols.">
+            >
+            ["at0058"] = <
+                text = <"Epicatechin gallate">
+                description = <"The quantity of flavanols.">
+            >
+            ["at0060"] = <
+                text = <"Epigallocatechin gallate">
+                description = <"The quantity of flavanols.">
+            >
+            ["at0062"] = <
+                text = <"Flavanones">
+                description = <"The quantity of flavanones.">
+            >
+            ["at0063"] = <
+                text = <"Friodictyol">
+                description = <"The quantity of flavanones.">
+            >
+            ["at0064"] = <
+                text = <"Hesperitin">
+                description = <"The quantity of flavanones.">
+            >
+            ["at0065"] = <
+                text = <"Naringenin">
+                description = <"The quantity of flavanones.">
+            >
+            ["at0066"] = <
+                text = <"Anthocyanidins">
+                description = <"The quantity of anthrocyanidins.">
+            >
+            ["at0067"] = <
+                text = <"Cyanidin">
+                description = <"The quantity of anthocyanidins.">
+            >
+            ["at0068"] = <
+                text = <"Pelargonidin">
+                description = <"The quantity of anthocyanidins.">
+            >
+            ["at0069"] = <
+                text = <"Delphinidin">
+                description = <"The quantity of anthocyanidins.">
+            >
+            ["at0070"] = <
+                text = <"Peonidin">
+                description = <"The quantity of anthocyanidins.">
+            >
+            ["at0071"] = <
+                text = <"Malvidin">
+                description = <"The quantity of anthocyanidins.">
+            >
+            ["at0072"] = <
+                text = <"Isoflavonoids">
+                description = <"*The quantity of isoflavonoids.">
+            >
+            ["at0073"] = <
+                text = <"Genistein">
+                description = <"The quantity of isoflavonoids.">
+            >
+            ["at0074"] = <
+                text = <"Daidzein">
+                description = <"The quantity of isoflavonoids.">
+            >
+            ["at0075"] = <
+                text = <"Glycitein">
+                description = <"The quantity of isoflavonoids.">
+            >
+            ["at0076"] = <
+                text = <"Formononetin">
+                description = <"The quantity of isoflavonoids.">
+            >
+            ["at0077"] = <
+                text = <"Total Hydroxynnamic acids">
+                description = <"The quantity of a specific phenolics acids.">
+            >
+            ["at0078"] = <
+                text = <"Total hydroxybenzoic acids">
+                description = <"The quantity of a specific phenolics acids.">
+            >
+            ["at0080"] = <
+                text = <"Alkaloids">
+                description = <"The quantity of alkaloids.">
+            >
+            ["at0081"] = <
+                text = <"Nitrogen-containing compounds">
+                description = <"The quantity of nitrogen-containing componds.">
+            >
+            ["at0082"] = <
+                text = <"Organosulfur compounds">
+                description = <"The quantity of organosulfur compounds.">
+            >
+            ["at0083"] = <
+                text = <"Total organosulfur compounds">
+                description = <"The quantity of a specific organosulfur compounds.">
+            >
+            ["at0084"] = <
+                text = <"Isothiocyanates">
+                description = <"The quantity of a specific organosulfur compounds.">
+            >
+            ["at0085"] = <
+                text = <"Indoles">
+                description = <"The quantity of a specific organosulfur compounds.">
+            >
+            ["at0086"] = <
+                text = <"Allylic sulfur">
+                description = <"The quantity of a specific organosulfur compounds.">
+            >
+            ["at0087"] = <
+                text = <"Total flavanones">
+                description = <"The quantity of flavanones.">
+            >
+            ["at0088"] = <
+                text = <"Total flavanols (catechins)">
+                description = <"The quantity of flavanols.">
+            >
+            ["at0089"] = <
+                text = <"Total isoflavonoids">
+                description = <"The quantity of isoflavonoids.">
+            >
+            ["at0090"] = <
+                text = <"Ferulic">
+                description = <"The quantity of a specific phenolics acids.">
+            >
+            ["at0091"] = <
+                text = <"Caffeic">
+                description = <"The quantity of a specific phenolics acids.">
+            >
+            ["at0092"] = <
+                text = <"Total anthocyanidins">
+                description = <"*">
+            >
+            ["at9000"] = <
+                text = <"Mass">
+                description = <"Mass">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/124>
+        >
+    >

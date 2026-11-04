@@ -1,0 +1,63 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=347db5f7-d818-404b-92fc-eb0e000628ac; build_uid=36bd75a2-d41c-4be2-81e8-a98718c1a974)
+    openEHR-EHR-CLUSTER.pp_diagnosis.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-09-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"01671336A989735A2BCCCB365EEF3B05">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Phenopacket diagnosis
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype CLUSTER[at0002] matches {    -- disease
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_disease\.v0\..*/}
+            }
+            allow_archetype CLUSTER[at0003] matches {    -- genomic_interpretations
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_genomic_interpretation\.v0\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Phenopacket diagnosis">
+                description = <"Phenopacket diagnosis">
+            >
+            ["at0002"] = <
+                text = <"disease">
+                description = <"*">
+            >
+            ["at0003"] = <
+                text = <"genomic_interpretations">
+                description = <"*">
+            >
+        >
+    >

@@ -1,0 +1,183 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-EVALUATION.recommendation-DR_treatment.v1.0.0
+
+specialize
+    openEHR-EHR-EVALUATION.recommendation.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2014-12-05">
+    >
+    lifecycle_state = <"AuthorDraft">
+    other_details = <
+        ["current_contact"] = <"Aitor Eguzkitza, Universidad Pública de Navarra - Complejo Hospitalario de Navarra, aitor.eguzkiza@unavarra.es">
+        ["MD5-CAM-1.0.1"] = <"D37C1FBE0C1743344B7E445CDC4ACF22">
+    >
+    details = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar una sugerencia, consejo o propuesta sobre el tratamiento más adecuado para cada paciente con retinopatía diabética.">
+            keywords = <"*advice(en)", "*proposal(en)", "*suggestion(en)", "*diabetic retinopathy(en)", "*treatment(en)">
+            use = <"Se utiliza para registrar una sugerencia, consejo o propuesta sobre el tratamiento de la DR, para un instante específico de su historial clínico.
+
+La declaración se considera sólo en el momento en que se registra. Es decir, el tratamiento puede cambiar con el tiempo en función de la progresión de la enfermedad.
+
+">
+            misuse = <"*(en)">
+            copyright = <"© openEHR Foundation(en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a suggestion, advice or proposal about the most suitable treatment for each patient with diabetic retinopathy.">
+            keywords = <"advice", "proposal", "suggestion", "diabetic retinopathy", "treatment">
+            use = <"Use to record a suggestion, advice or proposal about the treatment of DR, at a specific point in time of its clinical history.
+
+The statement is considered only at the time it is registered. That is to say, the treatment can change over time depending on the progression of the disease.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000.1] matches {    -- Recommendation of treatment for diabetic retinopathy
+        /data[at0001]/items matches {
+            ELEMENT[at0002.1] matches {    -- Therapeutic recommendation
+                value matches {
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code matches {[ac0.9000; at0.4]}    -- Therapeutic recommendation (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0003.1] matches {    -- Rationale
+                value matches {
+                    DV_TEXT[at0.9002]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.10"] = <
+                text = <"Laser treatment: macular drusen photocoagulation">
+                description = <"*">
+            >
+            ["at0.4"] = <
+                text = <"Do not treat">
+                description = <"No treatment is indicated or the afection is not tratable.">
+            >
+            ["at0.5"] = <
+                text = <"Intravitreal injection: antiangiogenics">
+                description = <"*">
+            >
+            ["at0.6"] = <
+                text = <"Intravitreal injection: corticoids">
+                description = <"*">
+            >
+            ["at0.7"] = <
+                text = <"Surgery: vitrectomy">
+                description = <"*">
+            >
+            ["at0.8"] = <
+                text = <"Surgery: cryotherapy to retina">
+                description = <"*">
+            >
+            ["at0.9"] = <
+                text = <"Laser treatment: panretinal photocoagulation for diabetes">
+                description = <"*">
+            >
+            ["at0000.1"] = <
+                text = <"Recommendation of treatment for diabetic retinopathy">
+                description = <"A suggestion, advice or proposal to manage the treatment regarding diabetic retinopathy.">
+            >
+            ["at0002.1"] = <
+                text = <"Therapeutic recommendation">
+                description = <"Narrative description of the most effective treatment based on a previous assessment of DR.">
+            >
+            ["at0003.1"] = <
+                text = <"Rationale">
+                description = <"Justification for the recommendation.">
+            >
+            ["ac0.9000"] = <
+                text = <"Therapeutic recommendation (synthesised)">
+                description = <"Narrative description of the most effective treatment based on a previous assessment of DR. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0.10"] = <
+                text = <"Tratamiento láser: fotocoagulación drusas maculares">
+                description = <"*">
+            >
+            ["at0.4"] = <
+                text = <"No intervenir">
+                description = <"No se indica tratamiento o la afection no es tratable.">
+            >
+            ["at0.5"] = <
+                text = <"Inyección intravítrea de antiangiogénicos">
+                description = <"*">
+            >
+            ["at0.6"] = <
+                text = <"Inyección intravítrea de corticoides">
+                description = <"*">
+            >
+            ["at0.7"] = <
+                text = <"Cirugía: vitrectomía">
+                description = <"*">
+            >
+            ["at0.8"] = <
+                text = <"Cirugía: crioterapia en retina">
+                description = <"*">
+            >
+            ["at0.9"] = <
+                text = <"Tratamiento láser: fotocoagulación panretiniana para diabetes">
+                description = <"*">
+            >
+            ["at0000.1"] = <
+                text = <"Recomendación de tratamiento para la retinopatía diabética">
+                description = <"Una sugerencia, consejo o propuesta para gestionar el tratamiento de la retinopatía diabética.">
+            >
+            ["at0002.1"] = <
+                text = <"Recomendación terapéutica">
+                description = <"Descripción narrativa del tratamiento más eficaz basado en una evaluación previa de DR.">
+            >
+            ["at0003.1"] = <
+                text = <"Justificación">
+                description = <"Justificación o motivo de la recomendación.">
+            >
+            ["ac0.9000"] = <
+                text = <"Recomendación terapéutica (synthesised)">
+                description = <"Descripción narrativa del tratamiento más eficaz basado en una evaluación previa de DR. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0.10"] = <http://snomed.info/id/440578004>
+            ["at0.4"] = <http://snomed.info/id/183964008>
+            ["at0.7"] = <http://snomed.info/id/75732000>
+            ["at0.8"] = <http://snomed.info/id/231760002>
+            ["at0.9"] = <http://snomed.info/id/413180006>
+            ["at0002.1"] = <http://snomed.info/id/118910000>
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.4", "at0.5", "at0.6", "at0.7", "at0.8", "at0.9", "at0.10">
+        >
+    >

@@ -1,0 +1,126 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=e8991bbf-1d16-4e56-83e7-5c0d8cf87d90; build_uid=5fed9102-a584-40ac-8e9c-6ac8088a25b8)
+    openEHR-EHR-CLUSTER.laboratory_stain_findings.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2024-08-29">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"773D883750DDDC21DE1867BAEDBC6860">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Laboratory stain findings
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0004] occurrences matches {1} matches {    -- Stain name
+                value matches {
+                    DV_TEXT[at9002]
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9000]}    -- Stain name (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0009] matches {    -- Finding
+                value matches {
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[ac9001]}    -- Finding (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Laboratory stain findings">
+                description = <"Findings observed from the examination of tissue treated with specialised stains intended to enhance the visibility of tissue structures and cellular details under a microscope.">
+            >
+            ["at0004"] = <
+                text = <"Stain name">
+                description = <"Name of the technique used to stain the specimen.">
+            >
+            ["at0005"] = <
+                text = <"Gram stain">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"India ink stain">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Ziehl-Neelsen stain">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Description">
+                description = <"Narrative description about the findings observed on microscopic inspection of a specimen using the identified stain.">
+            >
+            ["at0009"] = <
+                text = <"Finding">
+                description = <"Microscopic finding observed using the identified stain.">
+            >
+            ["at0010"] = <
+                text = <"Positive">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Negative">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the microscopy findings using the identified stain, not captured in other fields.">
+            >
+            ["ac9000"] = <
+                text = <"Stain name (synthesised)">
+                description = <"Name of the technique used to stain the specimen. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Finding (synthesised)">
+                description = <"Microscopic finding observed using the identified stain. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0010", "at0011">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0005", "at0006", "at0007">
+        >
+    >

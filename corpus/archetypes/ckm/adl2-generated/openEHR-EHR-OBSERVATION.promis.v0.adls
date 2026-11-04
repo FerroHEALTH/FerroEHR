@@ -1,0 +1,224 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=8fdc5e44-8601-4b52-a301-27b1a55b484c; build_uid=73f44864-af55-4f5f-99d0-d1ba366d386f)
+    openEHR-EHR-OBSERVATION.promis.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Sarah Ballout">
+                ["organisation"] = <"MHH-Hannover">
+                ["email"] = <"ballout.sarah@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Elham Gholami">
+                ["organisation"] = <"SLL">
+                ["email"] = <"elham.gholami@sll.se">
+            >
+            accreditation = <"Ackreditering">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Silje Ljosland Bakke">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no">
+        ["date"] = <"2020-06-04">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"https://www.healthmeasures.net/explore-measurement-systems/promis/intro-to-promis">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"C1FD027059D537CD37B69C9FC30EAA00">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zu Repräsentation jeder PROMIS-Messung.">
+            keywords = <"PROMIS", "Messung", "Skala">
+            use = <"Zur Aufzeichnung jeder PROMIS-Maßnahme verwenden.
+
+Dieser Archetyp wurde entwickelt, um als Rahmen für die Erstellung von Templates für bestimmte PROMIS-Messungen, wie z.B. PROMIS-29 oder PROMIS-57, zu dienen. CLUSTER-Archetypen sollten für jede PROMIS-Fragenbank modelliert werden, die innerhalb dieses Archetyps eingeschränkt sind.
+
+Alle openEHR-Archetypen sind zwar unter einer offenen Lizenz frei verfügbar, der spezifische Inhalt dieses Archetyps ist jedoch urheberrechtlich geschützt. Jede Verwendung dieses Archetyps innerhalb von Implementierungen muss in Übereinstimmung mit den von den Urheberrechtsinhabern festgelegten Bedingungen erfolgen.
+
+Erklärung zum Urheberrecht: PROMIS-Tests, Testprotokolle, Testaufgaben, Normen, Normtabellen, Bewertungsprogramme, Bewertungsschlüssel (einschließlich Bewertungsalgorithmen, Skalendefinitionen, Skalenzugehörigkeit und Bewertungsrichtungen), Bewertungsberichte, Software und andere PROMIS-bezogene Materialien sind ©2006-2017 PROMIS Gesundheitsorganisation oder andere Personen/Einrichtungen, die Informationen und Materialien beigetragen haben, und werden mit Genehmigung der Urheberrechtsinhaber verwendet.
+
+Allgemeine Nutzungsbedingungen: https://www.healthmeasures.net/images/PROMIS/Terms_of_Use_HM_approved_1-12-17_-_Updated_Copyright_Notices.pdf.">
+            misuse = <"Nicht zur Repräsentation anderer Messung außer PROMIS zu verwenden.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"För att spela in eventuella PROMIS-mått.">
+            use = <"
+Används för att spela in valfritt PROMIS-mått.
+
+Denna arketyp har utformats för att användas som ett ramverk för att konstruera mallar för specifika PROMIS-mått, till exempel PROMIS-29 eller PROMIS-57. CLUSTER-arketyper bör modelleras för varje PROMIS-frågebank, begränsad inom den här arketypen.
+
+Medan openEHR-arketyper alla är fritt tillgängliga under en öppen licens, är det specifika innehållet i denna arketyp upphovsrättsskyddat. All användning av denna arketyp inom implementeringar måste vara i enlighet med de villkor som fastställts av upphovsrättsinnehavarna.
+
+Upphovsrättsförklaring: PROMIS-tester, testprotokoll, testobjekt, normer, normtabeller, poängsättningsprogram, poängsättningsnycklar (inklusive poängsättningsalgoritmer, skaldefinitioner, skalmedlemskap och poängriktningar), poängrapporter, programvara och annat PROMIS-relaterat material är ©2006-2017 PROMIS Health Organization eller andra individer / enheter som har bidragit med information och material och används med tillstånd av upphovsrättsinnehavarna.
+
+Användarvillkor: https://www.healthmeasures.net/images/PROMIS/Terms_of_Use_HM_approved_1-12-17_-_Updated_Copyright_Notices.pdf">
+            misuse = <"Får inte användas för att registrera andra mått än PROMIS.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record any PROMIS measure.">
+            use = <"Use to record any PROMIS measure.
+
+This archetype has been designed to be used as a framework for constructing templates for specific PROMIS measures, such as PROMIS-29 or PROMIS-57. CLUSTER archetypes should be modeled for each PROMIS question bank, constrained within this archetype.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this archetype is copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners.
+
+Copyright statement: PROMIS tests, test protocols, test items, norms, norms tables, scoring programs, scoring keys (including scoring algorithms, scale definitions, scale membership, and scoring directions), score reports, software, and other PROMIS-related materials are ©2006-2017 PROMIS Health Organization or other individuals/entities that have contributed information and materials, and are being used with the permission of the copyright holders.
+
+Terms and conditions for use: https://www.healthmeasures.net/images/PROMIS/Terms_of_Use_HM_approved_1-12-17_-_Updated_Copyright_Notices.pdf">
+            misuse = <"Not to be used to record any measures other than PROMIS.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- PROMIS
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Assessment or test name
+                                        value matches {
+                                            DV_TEXT[at9000]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0004] matches {    -- PROMIS questions
+                                        include
+                                            archetype_id/value matches {/.*/}
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9001]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0005] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0006] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"PROMIS">
+                description = <"Patient Reported Outcomes Measurement Information System®, ein Satz von über 300 Messungen der physischen, psychischen und sozialen Gesundheit zur Verwendung in der Allgemeinbevölkerung und bei Personen mit chronischen Erkrankungen.">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardmäßiger, nicht näher beschriebener Zeitpunkt oder Intervall Ereignis welches in einem Template oder bei der Anwendung genauer definiert werden kann">
+            >
+            ["at0004"] = <
+                text = <"PROMIS-Fragen">
+                description = <"Spezifische PROMIS-Fragen.">
+                comment = <"Dieser SLOT ist so konzipiert, dass er eine Reihe von Fragebögen der PROMIS-Datenbank CLUSTER akzeptiert, die dann in einer Vorlage auf bestimmte Messungen wie PROMIS-29 eingeschränkt werden können.">
+            >
+            ["at0006"] = <
+                text = <"Erweiterungen">
+                description = <"Zusätzliche Informationen, die zur Erfassung lokaler Inhalte oder zur Anpassung an andere Referenzmodelle/Formalismen erforderlich sind.">
+                comment = <"Zum Beispiel: Lokale Informationsanforderungen oder zusätzliche Metadaten, um Verknüpfungen mit FHIR zu erzielen.">
+            >
+            ["at0007"] = <
+                text = <"Bezeichnung der Bewertung oder des Tests">
+                description = <"Der Name der durchgeführten PROMIS-Bewertung oder des Tests.">
+                comment = <"Zum Beispiel: 'PROMIS-29' oder 'PROMIS-57'.">
+            >
+            ["at0008"] = <
+                text = <"Gesamtergebnis">
+                description = <"Das Gesamtergebnis der PROMIS-Bewertung.">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"PROMIS">
+                description = <"Patient rapporterade resultat mätinformationssystem®, en uppsättning av över 300 mått på fysisk, psykisk och social hälsa för användning med den allmänna befolkningen och med individer som lever med kroniska tillstånd.">
+            >
+            ["at0002"] = <
+                text = <"Alla händelser">
+                description = <"Standardhändelse, ospecificerad tids- eller intervallhändelse som uttryckligen kan definieras i en mall eller vid körning.">
+            >
+            ["at0004"] = <
+                text = <"PROMIS frågor">
+                description = <"Specifika PROMIS-frågor.">
+                comment = <"Den här sloten är utformad för att acceptera en uppsättning PROMIS-frågebanks-KLUSTER-arketyper, som sedan kan begränsas i en mall för att matcha specifika åtgärder som PROMIS-29.">
+            >
+            ["at0006"] = <
+                text = <"Förlängning">
+                description = <"Ytterligare information krävs för att utöka modellen med lokalt innehåll eller för att anpassa sig till andra referensmodeller eller formalismer.">
+                comment = <"Till exempel: lokala informationskrav; eller ytterligare metadata för att anpassa sig till FHIR.">
+            >
+            ["at0007"] = <
+                text = <"Bedömnings- eller testnamn">
+                description = <"Namnet på PROMIS-utvärderingen eller testet som utförts.">
+                comment = <"Till exempel: PROMIS-29 eller \"PROMIS-57\".">
+            >
+            ["at0008"] = <
+                text = <"Totalpoäng">
+                description = <"Promis-bedömningens totala poäng.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"PROMIS">
+                description = <"Patient Reported Outcomes Measurement Information System®, a set of over 300 measures of physical, mental, and social health for use with the general population and with individuals living with chronic conditions.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"PROMIS questions">
+                description = <"Specific PROMIS questions.">
+                comment = <"This SLOT is designed to accept a set of PROMIS question bank CLUSTER archetypes, which can then be constrained in a template to match specific measures such as PROMIS-29.">
+            >
+            ["at0006"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0007"] = <
+                text = <"Assessment or test name">
+                description = <"The name of the PROMIS assessment or test performed.">
+                comment = <"For example: 'PROMIS-29' or 'PROMIS-57'.">
+            >
+            ["at0008"] = <
+                text = <"Total score">
+                description = <"The total score of the PROMIS assessment.">
+            >
+        >
+    >

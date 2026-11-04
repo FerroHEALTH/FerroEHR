@@ -1,0 +1,76 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-CLUSTER.healthcare_professional_parent.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics">
+        ["email"] = <"ian@freshehr.com">
+        ["date"] = <"2014-07-11">
+    >
+    lifecycle_state = <"AuthorDraft">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"27AA4FECE054607F867F11C8498CD34F">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details of a healthcare professional.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Healthcare professional (PARENT)
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype CLUSTER[at0001] occurrences matches {0..1} matches {    -- Professional Name
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0002] matches {    -- Professional Identifier
+                value matches {
+                    DV_IDENTIFIER[at9000]
+                }
+            }
+            allow_archetype CLUSTER[at0003] matches {    -- Provider Organisation
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0004] matches {    -- Contact details
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Healthcare professional (PARENT)">
+                description = <"Details of a healthcare professional.">
+            >
+            ["at0001"] = <
+                text = <"Professional Name">
+                description = <"The healthcare worker's professional name.">
+            >
+            ["at0002"] = <
+                text = <"Professional Identifier">
+                description = <"The healthcare worker's profesional identifier.">
+            >
+            ["at0003"] = <
+                text = <"Provider Organisation">
+                description = <"The healthcare worker's provider organisation.">
+            >
+            ["at0004"] = <
+                text = <"Contact details">
+                description = <"Contact details for the heathcare worker.">
+            >
+        >
+    >

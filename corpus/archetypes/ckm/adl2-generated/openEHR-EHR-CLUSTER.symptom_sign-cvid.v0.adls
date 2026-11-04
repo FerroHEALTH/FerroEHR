@@ -1,0 +1,553 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=58414310-36c9-46a8-861f-604330913760; build_uid=a9d099f1-c9f5-494c-98e7-1f0bf1c2d0b2)
+    openEHR-EHR-CLUSTER.symptom_sign-cvid.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-CLUSTER.symptom_sign.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Jasmin Buck, Sebastian Garde, Kim Sommer">
+                ["organisation"] = <"University of Heidelberg, Central Queensland University, Medizinische Hochschule Hannover">
+            >
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            author = <
+                ["name"] = <"Kalle Vuorinen">
+                ["organisation"] = <"Tieto Healthcare & Welfare Oy">
+                ["email"] = <"kalle.vuorinen@tieto.com">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Kirsi Poikela">
+                ["organisation"] = <"Tieto Sweden AB">
+                ["email"] = <"ext.kirsi.poikela@tieto.com">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Lars Bitsch-Larsen">
+                ["organisation"] = <"Haukeland University Hospital of Bergen, Norway">
+                ["email"] = <"lbla@helse-bergen.no">
+            >
+            accreditation = <"MD, DEAA, MBA, spec in anesthesia, spec in tropical medicine.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Vladimir Pizzo">
+                ["organisation"] = <"Hospital Sirio Libanes - Brazil">
+                ["email"] = <"vladimir.pizzo@hsl.org.br">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            author = <
+                ["name"] = <"Alessandro Sulis/Francesca Frexia/Cecilia Mascia">
+                ["organisation"] = <"CRS4 - Center for advanced studies, research and development in Sardinia, Pula (Cagliari), Italy">
+                ["email"] = <"alessandro.sulis@crs4.it/francesca.frexia@crs4.it/cecilia.mascia@crs4.it">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Tony Shannon">
+        ["organisation"] = <"UK NHS, Connecting for Health">
+        ["email"] = <"tony.shannon@nhs.net">
+        ["date"] = <"2007-02-20">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Tomas Alme, DIPS, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Rong Chen, Cambio Healthcare Systems, Sweden", "Stephen Chu, Queensland Health, Australia", "Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway", "Samuel Frade, Marand, Portugal", "Sebastian Garde, Ocean Informatics, Germany", "Yves Genevier, Privantis SA, Switzerland", "Heather Grain, Llewelyn Grain Informatics, Australia", "Sam Heard, Ocean Informatics, Australia", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Karlsen, DIPS ASA, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Shinji Kobayashi, Kyoto University, Japan", "Sabine Leh, Haukeland University Hospital, Department of Pathology, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hallvard Lærum, Norwegian Directorate of e-health, Norway", "Luis Marco Ruiz, Norwegian Center for Integrated Care and Telemedicine, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Bjoern Naess, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Anoop Shah, University College London, United Kingdom", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "John Tore Valand, Helse Bergen, Norway", "Jon Tysdahl, Norway">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Common Terminology Criteria for Adverse Events (CTCAE) [Internet]. National Cancer Institute, USA. Available from: http://ctep.cancer.gov/protocolDevelopment/electronic_applications/ctc.htm (accessed 2015-07-13).">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"57239DB951E3FAE8CA589E88FA3FE4FB">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Erfassung von Details über eine einzelne Episode eines berichteten Symptoms/Krankheitsanzeichens. Zusammenhänge zu früheren Episoden (ohne Angabe von Details) sollen, wenn angemessen, ebenfalls aufgeführt werden.">
+            keywords = <"Beschwerde", "Symptom", "Störung", "Problem", "gegenwärtige Beschwerde", "gegenwärtiges Symptom", "Zeichen", "Anzeichen", "Krankheitsanzeichen">
+            use = <"Zu Verwenden, um Details über eine einzelne Episode eines Symptoms oder eines berichteten Krankheitsanzeichens einer Person zu dokumentieren, wie es von der Person, dem Elternteil, dem Betreuer oder einer anderen Partei berichtet wurde. Es kann von einem Arzt als Teil einer Krankengeschichte dokumentiert werden, oder wie es dem Arzt berichtet wurde/wie er es beobachtet hat, oder als Teil eines selbst aufgezeichneten klinischen Fragebogens oder einer persönlichen Gesundheitsakte. Eine vollständige Krankengeschichte kann mehrere Episoden eines identifizierten Symptoms/Krankheitsanzeichens, mit variierendem Detaillierungsgrad, sowie mehrere Symptome/Krankheitsanzeichen beinhalten.
+
+Symptome sind subjektive Beobachtungen einer körperlichen oder geistigen Störung und Krankheitsanzeichen sind objektive Beobachtungen dieser Störung, wie sie von einer Person erlebt und dem Dokumentierenden von derselben Person oder einer anderen Partei berichtet werden. Aus dieser Logik folgt, dass zwei Archetypen benötigt werden, um die Krankengeschichte aufzuzeichnen - einen für berichtete Symptome und einen weiteren für berichtete Krankheitsanzeichen. Für die Praxis ist dies ungeeignet, da es die Eingabe klinischer Daten in eines der beiden Modelle erfordert, was den Modellierern und denen, die die Daten eingeben, erheblichen Mehraufwand verursacht. Darüber hinaus gibt es oft Überschneidungen von klinischen Konzepten - z.B. ist vorangegangenes Erbrechen oder sind Blutungen als Symptom oder berichtetes Krankheitsanzeichen zu kategorisieren? Als Antwort darauf wurde dieser Archetyp speziell entwickelt, um ein einziges Informationsmodell zu erproben, das es ermöglicht, das gesamte Spektrum von klar identifizierbaren Symptomen bis hin zu berichteten Krankheitsanzeichen bei der Dokumentation einer Krankengeschichte zu erfassen.
+
+Dieser Archetyp wurde als generisches Muster für alle Symptome und Krankheitsanzeichen entwickelt. Der Slot \"Spezifische Details\" kann verwendet werden, um den Archetyp um zusätzliche, spezifische Datenelemente für komplexere Symptome oder Krankheitsanzeichen zu erweitern. 
+
+Dieser Archetyp wurde speziell für die Verwendung im Slot \"Strukturiertes Detail\" innerhalb des Archetyps OBSERVATION.story entwickelt, kann aber auch in anderen OBSERVATION- oder CLUSTER-Archetypen und in den Slots \"Assoziierte Symptome/Krankheitsanzeichen\" oder \"Vorangegangene Episoden\" in anderen Instanzen dieses CLUSTER.symptom_sign Archetyps verwendet werden.
+
+Ärzte benutzen häufig den Ausdruck \"nicht signifikant\", um festzuhalten, dass sie eine Person bezüglich des Symptoms/Krankheitsanzeichens befragt haben und es nicht berichtet wurde, dass Unannehmlichkeiten oder Störungen vorliegen - es wird also eher wie eine \"normale Aussage\" als wie ein ausdrücklicher Ausschluss verwendet. Das Datenelement \"Nicht signifikant\" wurde bewusst in diesen Archetyp aufgenommen, um Ärzten zu ermöglichen, dieselben Informationen auf einfache und effektive Weise in einem klinischen System zu dokumentieren. Es kann verwendet werden, um eine Benutzeroberfläche zu steuern, z.B. wenn \"Nicht signifikant\" als wahr dokumentiert wird, dann können die restlichen Datenelemente auf einem Dateneingabebildschirm ausgeblendet werden. Dieser pragmatische Ansatz unterstützt die Mehrheit der einfachen Anforderungen an die klinische Aufzeichnung im Bereich der berichteten Symptome/Krankheitsanzeichen. 
+
+Wenn es jedoch klinisch zwingend erforderlich ist, explizit zu erfassen, dass ein Symptom oder Krankheitsanzeichen als nicht vorhanden berichtet wurde, z.B. wenn es zur Unterstützung der klinischen Entscheidung verwendet wird, dann wäre es besser, den Archetyp CLUSTER.exclusion_symptom_sign zu verwenden. Die Verwendung von CLUSTER.exclusion_symptom_sign soll die Komplexität der Template-Modellierung, -Implementierung und -Abfrage erhöhen. Es wird empfohlen, den Archetyp CLUSTER.exclusion_symptom_sign nur dann für die Verwendung in Betracht zu ziehen, wenn in bestimmten Situationen ein klarer Nutzen erkennbar ist, aber nicht für die routinemäßige Aufnahme von Symptomen und Krankheitsanzeichen.">
+            misuse = <"Nicht zu verwenden, um zu dokumentieren, dass ein Symptom oder ein Krankheitsanzeichen explizit als nicht vorhanden berichtet wurde - verwenden Sie CLUSTER.exclusion_symptom_sign sorgfältig für bestimmte Zwecke, bei denen der durch die Aufzeichnung entstehende Mehraufwand die zusätzliche Komplexität rechtfertigt, und nur dann, wenn das \"Nicht signifikant\" in diesem Archetyp nicht spezifisch genug für den Zweck der Dokumentation ist.
+
+Nicht zur Erfassung objektiver Befunde im Rahmen einer körperlichen Untersuchung verwenden - verwenden Sie zu diesem Zweck OBSERVATION.exam und verwandte Untersuchung-CLUSTER-Archetypen.
+
+Nicht für Diagnosen und Probleme, die Teil einer bestehenden Problemliste sind, verwenden - verwenden Sie EVALUATION.problem_diagnosis.
+">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera ett uppvisat symtom eller tecken ifrån en enskild episod, inklusive kontext, men inte detaljer om tidigare episoder, om det är tillämpligt.">
+            keywords = <"besvär", "symtom", "störning", "problem", "obehag", "uppvisar besvär", "uppvisar symtom", "tecken">
+            use = <"Används för att beskriva detaljer för en individs rapporterade symtom eller tecken ifrån en enskild episod, som rapporterats av personen, föräldern, hälso- o sjukvårdspersonal eller annan part. Det kan registreras av hälso- o sjukvårdspersonal som en del av en anamnes som rapporterats till hälso- o sjukvårdspersonalen, observerad av eller registrerats själv av personen som en del av ett kliniskt frågeformulär eller personligt hälsodokument. En komplett anamnes eller patientjournal kan innehålla varierande detaljnivå från flera episoder av ett identifierat symtom eller rapporterade tecken, såväl som multipla symtom och tecken. 
+
+Symtom är subjektiva observationer från en fysisk eller psykisk störning och tecken är objektiva observationer av densamma, upplevda av en individ och rapporteras till journalföraren av samma individ eller annan part. 
+Ur denna logik följer att vi behöver två arketyper för att registrera klinisk anamnes , en för rapporterade symtom och en annan för rapporterade tecken. I verkligheten är detta opraktiskt eftersom det kommer att kräva tillgång till kliniska data i någon av dessa mallar, vilket innebär signifikant merarbete för mallarna och dem som matar in data. Dessutom finns det ofta överlappningar i kliniska koncept, exempevisl är tidigare kräkningar eller blödningar att kategoriserade som ett symtom eller rapporterat tecken? 
+Som svar har denna arketyp utformats specifikt för att möjliggöra registrering av en sammanhängande enhet mellan tydligt identifierbara symtom och rapporterade tecken vid registrering av en klinisk anamnes.
+
+Används som en allmän mall för alla symtom och rapporterade tecken. Fältet \"Specifika detaljer\" kan användas för att utöka arketypen för att inkludera ytterligare, specifika datakomponenter för mer komplexa symtom eller tecken. 
+
+Arketypen är speciellt utformad för att användas i fältet \"Detaljstruktur\" i OBSERVATION.story-arketypen, men kan även användas inom andra OBSERVATION- eller CLUSTER-arketyper och i \"Associerade symtom och tecken\" eller i fältet \"Tidigare episod\" inom andra exempel av denna CLUSTER.symptom_sign arketypen. Hälso- o sjukvårdspersonal registrerar ofta uttrycket \"Används inte för att dokumentera ett symtom eller tecken\" som uttryckligen rapporteras som inte förekommande. 
+
+Använd CLUSTER.exclusion_symptom_sign med försiktighet för specifika ändamål där merarbetet för registreringarna på detta sätt motiverar extra komplexitet och endast om \"Noll signifikanta\" fältet i denna arketyp inte är tillräckligt specifik för syftet för registreringen. Används inte för att dokumentera ett symtom eller tecken som uttryckligen rapporteras som inte förekommande – använd CLUSTER.exclusion_symptom_sign med försiktighet för specifika ändamål där merarbetet för registreringarna på detta sätt motiverar extra komplexitet och endast om \"Noll signifikanta\" fältet i denna arketyp inte är tillräckligt specifik för syftet för registreringen. För specifika symtom eller rapporterade tecken som en effektiv metod för att indikera att individen tillfrågats och det inte rapporterades som obehag eller störning - används mer effektivt som ett \"normalt utlåtande\" snarare än en uttrycklig uteslutning. Det \"Noll signifikanta\" fältet har medvetet inkluderats i denna arketyp för att kliniker kan registrera samma information på ett enkelt och effektivt sätt i ett kliniskt system. Det kan användas för att driva ett användargränssnitt, exempelvis om \"Noll signifikant\" är registrerad som sann kan de återstående fälten döljas på en dataskärm. Denna pragmatiska metod stöder majoriteten av enkla kliniska registreringskrav kring rapporterade symtom och tecken.
+
+Däremot om det finns en klinisk nödvändighet att uttryckligen registrera att ett symtom eller tecken rapporterades som inte förekommande, exempelvis om det kommer att användas som ett kliniskt beslutsstöd, föredras CLUSTER.exclusion_symptom_sign arketypen. Användningen av CLUSTER.exclusion_symptom_sign ökar komplexiteten i mallutformningen, implementeringen och utfrågningen. Det rekommenderas att CLUSTER.exclusion_symptom_sign arketypen endast beaktas för användning om tydlig fördel kan identifieras i specifika situationer, men ska inte användas för rutinmässigt symtom och tecken registrering.
+
+
+">
+            misuse = <"Ska inte användas för att dokumentera ett symtom eller tecken som uttryckligen rapporteras som inte förekommande. Använd CLUSTER.exclusion_symptom_sign med försiktighet för specifika ändamål där merarbetet för registreringarna på detta sätt motiverar extra komplexitet och endast om \"Noll significant\" fältet i denna arketyp inte är tillräckligt specifik för registreringens syfte.
+
+Ska inte användas för att registrera objektiva fynd som en del av en fysisk undersökning . Använd OBSERVATION.exam och relaterad undersökning CLUSTER-arketyper för detta ändamål.
+
+Ska inte användas för diagnoser och problem som ingår i en kvarstående problemlista. Använd då istället EVALUATION.problem_diagnosis.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"*To record details about a single episode of a reported symptom or sign including context, but not details, of previous episodes if appropriate.(en)">
+            keywords = <"*complaint(en)", "*symptom(en)", "*disturbance(en)", "*problem(en)", "*discomfort(en)", "*presenting complaint(en)", "*presenting symptom(en)", "*sign(en)">
+            use = <"*Use to record details about a single episode of a symptom or reported sign in an individual, as reported by the individual, parent, care-giver or other party.  It may be recorded by a clinician as part of a clinical history record as reported to them, observed by the clinician or self-recorded as part of a clinical questionnaire or personal health record. A complete clinical history or patient story may include varying level of details about multiple episodes of an identified symptom or reported sign, as well as multiple symptoms/signs.
+
+In the purest sense, symptoms are subjective observations of a physical or mental disturbance and signs are objective observations of the same, as experienced by an individual and reported to the history taker by the same individual or another party. From this logic it follows that we will need two archetypes to record clinical history - one for reported symptoms and another for reported signs. In reality this is impractical as it will require clinical data entry into either one of these models which adds signficant overheads to modellers and those entering data. In addition, there is often overlap in clinical concepts - for example, is previous vomiting or bleeding to be categorised as a symptom or reported sign? In response, this archetype has been specifically designed to proved a single information model that allows for recording of the entire continuum between clearly identifable symptoms and reported signs when recording a clinical history.
+
+This archetype has been intended to be used as a generic pattern for all symptoms and reported signs. The 'Specific details' SLOT can be used to extend the archetype to include additional, specific data elements for more complex symptoms or signs. 
+
+This archetype has been specifically designed to be used in the 'Structured detail' SLOT within the OBSERVATION.story archetype, but can also be used within other OBSERVATION or CLUSTER archetypes and in the 'Associated symptom/sign' or 'Previous episode' SLOT within other instances of this CLUSTER.symptom_sign archetype.
+
+Clinicians frequently record the phrase 'nil significant' against specific symptoms or reported signs as an efficient method to indicate that they asked the individual and it was not reported as causing any discomfort or disturbance - effectively used more like a 'normal statement' rather than an explicit exclusion. The 'Nil significant' data element has been deliberately included in this archetype to allow clinicians to record this same information in a simple and effective way in a clinical system. It can be used to drive a user interface, for example if 'Nil significant' is recorded as true then the remaining data elements can be hidden on a data entry screen. This pragmatic approach supports the majority of simple clinical recording requirements around reported symptoms and signs. 
+
+However if there is a clinical imperative to explicitly record that a Symptom or Sign was reported as not present, for example if it will be used to drive clinical decision support, then it would be preferable to use the CLUSTER.exclusion_symptom_sign archetype. The use of CLUSTER.exclusion_symptom_sign will increase the complexity of template modelling, implementation and querying. It is recommended that the CLUSTER.exclusion_symptom_sign archetype only be considered for use if clear benefit can be identified in specific situations, but should not be used for routine symptom/sign recording.(en)">
+            misuse = <"*Not to be used to record that a symptom or sign was explicitly reported as not present - use CLUSTER.exclusion_symptom_sign carefully for specific purposes where the overheads of recording in this way warrant the additional complexity, and only if the 'Nil significant' in this archetype is not specific enough for recording purposes.
+
+Not to be used for recording objective findings as part of a physical examination - use OBSERVATION.exam and related examination CLUSTER archetypes for this purpose.
+
+Not to be used for diagnoses and problems that form part of a persisting Problem List - use EVALUATION.problem_diagnosis.(en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljer om en enkeltepisode av et rapportert symptom eller sykdomstegn. Dette kan omfatte kontekst, men ikke detaljer, om tidligere episoder av symptomet/sykdomstegnet.">
+            keywords = <"lidelse", "plage", "problem", "ubehag", "symptom", "sykdomstegn", "lyte", "skavank">
+            use = <"For å registrere detaljer om en enkeltepisode av et rapportert symptom eller sykdomstegn hos et individ, som redegjort av personen selv, foreldre, omsorgsperson eller andre parter. Registrering kan skje i forbindelse med opptak av anamnese, eller som en selvregistrering som en del av et klinisk spørreskjema eller personlig journal. 
+En fullstendig klinisk anamnese eller pasientanamnese kan inneholde beskrivelser med ulikt detaljnivå om flere episoder knyttet til samme symptom eller sykdomstegn, og vil også kunne inneholde flere ulike symptomer eller sykdomstegn.
+
+I egentlig forstand er symptomer subjektive opplevelser av en fysisk eller mental forstyrrelse mens sykdomstegn er objektive observasjoner av det samme, som er erfart av et individ og rapportert til en kliniker av individet eller av andre. Fra denne logikken følger at det burde være to arketyper til å registrere klinisk anamnese; en for rapporterte symptomer og en for rapporterte sykdomstegn. I virkeligheten er dette upraktisk og vil kreve registrering av kliniske data i enten den ene eller den andre av disse modellene. I praksis vil dette øke kompleksitet og tidsbruk knyttet til modellering og registrering av data. I tillegg overlapper ofte de kliniske konseptene, for eksempel: Vil tidligere oppkast eller blødning kategoriseres som et symptom eller som et rapportert sykdomstegn?
+Som svar på dette er arketypen laget for å tillate registrering av hele kontinuumet mellom tydelig definerte symptomer og rapporterte sykdomstegn når en registrerer en klinisk anamnese.
+
+Arketypen er designet for å gi et generisk rammeverk for alle symptomer og rapporterte sykdomstegn. SLOTet \"Spesifikke detaljer\" kan brukes for å utvide arketypen med ytterligere spesifikke dataelementer for komplekse symptomer eller sykdomstegn.
+
+Arketypen skal settes inn i \"Detaljer\"-SLOTet i OBSERVATION.story-arketypen men kan også brukes i en hvilken som helst OBSERVATION eller CLUSTER-arketype. Arketypen kan også gjenbrukes i andre instanser av CLUSTER.symptom_sign-arketypen i SLOTene \"Assosierte symptomer\" eller \"Tidligere detaljer\".
+
+Klinikere registrerer ofte frasen \"Ikke av betydning\" i forbindelse med spesifikke symptomer eller rapporterte tegn for å indikere at det er eksplisitt spurt om det spesifikke symptomet, og at det ble svart at symptomet ikke er tilstede i en slik grad at det påfører pasienten ubehag eller uro. Frasen brukes mer som en normalbeskrivelse enn en eksplisitt eksklusjon. Dataelementet \"Ikke av betydning\" er med hensikt lagt til for å tillate at klinikere enkelt og effektivt kan registrere denne informasjonen i det kliniske systemet. Eksempelvis kan \"Ikke av betydning\" brukes i brukergrensesnittet, er dette registrert som \"Sann\" kan de resterende dataelementene skjules i brukergrensesnittet. Denne pragmatiske tilnærmingen støtter hoveddelen av enkel klinisk journalføring av symptomer og sykdomstegn. 
+
+Imidlertid kan det være fordelaktig å bruke arketypen CLUSTER.exclusion_symptom_sign dersom det er klinisk behov for å eksplisitt registrere at et symptom eller sykdomstegn ikke er tilstede, for eksempel dersom dette skal brukes til klinisk beslutningsstøtte. Bruk av CLUSTER.exclusion_symptom_sign vil øke kompleksiteten i templatmodellering, implementasjon og spørring. Det anbefales at CLUSTER.exclusion_symptom_sign kun vurderes brukt dersom man kan identifisere en klar gevinst, men bør ikke brukes for rutineregistreringer av symptomer eller sykdomstegn.">
+            misuse = <"Brukes ikke til eksplisitt registrering av at et symptom eller sykdomstegn ikke er tilstede. Bruk CLUSTER.exclusion_symptom_sign varsomt da det øker tidsbruk ved registrering og tilfører økt kompleksitet, og bare når dataelementet \"Ikke av betydning\" i denne arketypen ikke er eksplisitt nok for registreringen.
+
+Brukes ikke til registrering av objektive funn som en del av en fysisk undersøkelse. Bruk OBSERVATION.exam og relaterte CLUSTER.exam-arketyper for dette formålet. 
+
+Brukes ikke til registrering av problemer og diagnoser som en del av en persistent problemliste, til dette brukes EVALUATION.problem_diagnosis.
+
+Brukes ikke til å dokumentere tiltak og resultat i løpet av hele perioden individet er under behandling, da arketypen er beregnet til å dokumentere symptomer og sykdomstegn som et øyeblikksbilde.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Registrar detalhes sobre um episódio único de um sinal ou sintoma relatado incluindo contexto, mas não detalhes, de episódios prévios se apropriado.">
+            keywords = <"queixa", "sintoma", "distúrbio", "problema", "desconforto", "queixa atual", "sintoma atual", "sinal">
+            use = <"Usar para relatar detalhes sobre um episódio único de um sintoma ou sinal reportado em um indivíduo, como reportado pelo indivíduo, parente, cuidador ou outra arte. Deve ser registrado por um clínico como parte de um relato de história clínica como reportado por eles, observado pelo clínico ou registrado pelo próprio como parte de um questionário ou relato pessoal de saúde. Uma história clínica completa ou história pessoal deve conter - com variáveis níves de detalhes - múltiplos episódios de um sinal ou sintoma identificado ou reportado assim como múltiplos sinais/sintomas. 
+
+No sentido mais puro, sintomas são observações subjetivas de um distúrbio físico ou mental e sinais são observações objetivas dos mesmos, como experimentado por um indivíduo e reportado para o tomador da história pelo mesmo indivíduo ou outra parte. Por esta lógica segue que serão necessários dois arquétipos para registrar a história clínica - um para sintomas e outro para sinais relatados. Na realidade isto é pouco prático pois vai requerer entrada de dados clínicos em cada um destes modelos o que acrescenta problemas significantes aos modeladores e aqueles que coletam o dado. Em adição, frequentemente há uma interposição entre os conceitos clínicos - por exemplo: vômitos ou sangramentos prévios devem ser considerados sintomas ou sinais reportados? Em resposta, este arquétipo foi especificamente desenhado para prover um modelo de informação único que permita o registro de todo o continuum entre sintomas claramente identificáveis e sinais reportados quando do reistro de uma história clínica. 
+
+Este arquétipo pretende ser utilizado como um padrão genérico para todos os sintomas e sinais reportados. O SLOT 'Detalhes específicos' pode ser utilizado para estender o arquétipo e incluir elementos de dados específicos ou adicionais para sinais e sintomas mais complexos. 
+
+Este arquétipo foi desenhado especificamennte para ser utilizado no SLOT 'Detalhe estruturado' com o arquétipo OBSERVATION.story, mas pode também ser utilizado com outros arquétipos OBSERVATION ou CLUSTER e nos SLOTS 'Sinal/sintoma associado' ou 'Episódio prévio' em outras instâncias deste arquétipo CLUSTER.symptom_sign.
+
+Clínicos frequentemente registram a frase 'não significante' em sintomas específicos ou sinais relatados como um método eficiente de indicar que eles perguntaram ao indivíduo e foi relatado como não causador de desconforto ou distúrbio - efetivamente é utilizado mais como 'referido como normal' do que uma exclusão explícita. O elemento de dado 'não significante' tem sido incluído deliberadamente neste arquétipo para permitir aos clínicos registrarem esta mesma informação de uma maneira simples e efetiva num sistema clínico. Pode ser utilizado para dirigir uma interface de usuário, por exemplo se 'não significante' é registrado como verdadeiro então os demais elementos de dados podem ser ocultos na tela de entrada de dados. Esta abordagem pragmática dá suporte à maioria dos requerimentos de registros clínicos com relação a sinais e sintomas relatados. 
+
+Entretanto se houver um imperativo clínico para explicitar o registro de que um Sintoma ou Sinal foi reportado como ausente, por exemplo se for utilizado para orientar suporte à decisão clínica, então pode ser preferível usar o arquétipo CLUSTER.exclusion_symptom_sign. O uso de CLUSTER.exclusion_symptom_sign vai aumentar a complexidade da modelagem de template, implementação e pesquisa. É recomendado que o arquétipo CLUSTER.exclusion_symptom_sign apenas seja considerado se um benefício claro for identificado em situações específicas e não deve ser utilizado rotineiramente para o registro de sinais/sintomas.">
+            misuse = <"Não deve ser utilizado para registrar que um sintoma ou sinal foi explicitamente relatado como ausente - utilizar CLUSTER.exclusion_symptom_sign cuidadosamente para fins específicos em que os problemas de registro garantam complexidade adicional e apenas se o 'não significante' neste arquétipo não for específico suficiente para fins de registro.
+
+Não deve ser utilizado para registrar achados objetivos como parte de um exame físico - utilizar OBSERVATION.exam e arquétipos do tipo CLUSTER relacionados a exame para esta finalidade.
+
+Não dever ser utilizado para diagnósticos e problemas que fazem parte de uma lista de problemas - utilizar EVALUATION.problem_diagnosis.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about a single episode of a reported symptom or sign including context, but not details, of previous episodes if appropriate.">
+            keywords = <"complaint", "symptom", "disturbance", "problem", "discomfort", "presenting complaint", "presenting symptom", "sign">
+            use = <"Use to record details about a single episode of a symptom or reported sign in an individual, as reported by the individual, parent, care-giver or other party.  It may be recorded by a clinician as part of a clinical history record as reported to them, observed by the clinician or self-recorded as part of a clinical questionnaire or personal health record. A complete clinical history or patient story may include varying level of details about multiple episodes of an identified symptom or reported sign, as well as multiple symptoms/signs.
+
+In the purest sense, symptoms are subjective observations of a physical or mental disturbance and signs are objective observations of the same, as experienced by an individual and reported to the history taker by the same individual or another party. From this logic it follows that we will need two archetypes to record clinical history - one for reported symptoms and another for reported signs. In reality this is impractical as it will require clinical data entry into either one of these models which adds signficant overheads to modellers and those entering data. In addition, there is often overlap in clinical concepts - for example, is previous vomiting or bleeding to be categorised as a symptom or reported sign? In response, this archetype has been specifically designed to proved a single information model that allows for recording of the entire continuum between clearly identifable symptoms and reported signs when recording a clinical history.
+
+This archetype has been intended to be used as a generic pattern for all symptoms and reported signs. The 'Specific details' SLOT can be used to extend the archetype to include additional, specific data elements for more complex symptoms or signs. 
+
+This archetype has been specifically designed to be used in the 'Structured detail' SLOT within the OBSERVATION.story archetype, but can also be used within other OBSERVATION or CLUSTER archetypes and in the 'Associated symptom/sign' or 'Previous episode' SLOT within other instances of this CLUSTER.symptom_sign archetype.
+
+Clinicians frequently record the phrase 'nil significant' against specific symptoms or reported signs as an efficient method to indicate that they asked the individual and it was not reported as causing any discomfort or disturbance - effectively used more like a 'normal statement' rather than an explicit exclusion. The 'Nil significant' data element has been deliberately included in this archetype to allow clinicians to record this same information in a simple and effective way in a clinical system. It can be used to drive a user interface, for example if 'Nil significant' is recorded as true then the remaining data elements can be hidden on a data entry screen. This pragmatic approach supports the majority of simple clinical recording requirements around reported symptoms and signs. 
+
+However if there is a clinical imperative to explicitly record that a Symptom or Sign was reported as not present, for example if it will be used to drive clinical decision support, then it would be preferable to use the CLUSTER.exclusion_symptom_sign archetype. The use of CLUSTER.exclusion_symptom_sign will increase the complexity of template modelling, implementation and querying. It is recommended that the CLUSTER.exclusion_symptom_sign archetype only be considered for use if clear benefit can be identified in specific situations, but should not be used for routine symptom/sign recording.">
+            misuse = <"Not to be used to record that a symptom or sign was explicitly reported as not present - use CLUSTER.exclusion_symptom_sign carefully for specific purposes where the overheads of recording in this way warrant the additional complexity, and only if the 'Nil significant' in this archetype is not specific enough for recording purposes.
+
+Not to be used for recording objective findings as part of a physical examination - use OBSERVATION.exam and related examination CLUSTER archetypes for this purpose.
+
+Not to be used for diagnoses and problems that form part of a persisting Problem List - use EVALUATION.problem_diagnosis.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"*To record detail about a symptom - either self-recorded by an individual or recorded on the behalf of a patient by a clinician. A complete patient history may include varying level of details about a variety of symptoms.(en)">
+            use = <"*Use to record detailed information about a symptom as told to a clinician by a patient or self-recorded by the individual/patient.
+
+This archetype allows a 'nil significant' statement to be explicitly recorded.(en)">
+            misuse = <"*Not to be used to record details about pain. Use the specialisation of this archetype - the CLUSTER.symptom-pain instead.
+
+Not to be used for diagnoses and problems that form part of a persisting Problem List - use EVALUATION.problem_diagnosis.(en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"Registrare i dettagli di un singolo episodio di un sintomo o di un segno riportato, compreso il contesto, ma non i dettagli degli episodi precedenti, se del caso.">
+            keywords = <"lamentela, sintomo, disturbo, problema, disagio, presentare lamentela, presentare sintomo, segno", ...>
+            use = <"Usato per registrare i dettagli di un singolo episodio di un sintomo o di un segno riportato in un individuo, come riportato dall'individuo, dal genitore, dal caregiver o da un'altra figura. Può essere registrato da un clinico come parte di una registrazione dell'anamnesi clinica come riferito, osservato dal clinico o autoregistrato come parte di un questionario clinico o di una cartella clinica personale. Un'anamnesi clinica completa o la storia del paziente può includere vari livelli di dettagli su più episodi di un sintomo o di un segno segnalato, così come su più sintomi/segni.
+
+Nel senso più assoluto, i sintomi sono osservazioni soggettive di un disturbo fisico o mentale e i segni sono osservazioni oggettive dello stesso, così come sono stati vissuti da un individuo e riportati all'anamnesi dallo stesso individuo o da un'altra figura. Da questa logica ne consegue che avremo bisogno di due archetipi per registrare l'anamnesi clinica - uno per i sintomi segnalati e un altro per i segni segnalati. In realtà questo non è pratico, poiché richiederà l'inserimento di dati clinici in ciascuno di questi due modelli, il che aggiungerà costi aggiuntivi significativi per i modellatori e per coloro che inseriscono i dati. Inoltre, vi è spesso una sovrapposizione di concetti clinici - per esempio, il precedente vomito o emorragia deve essere classificato come sintomo o segno segnalato? In risposta, questo archetipo è stato specificamente progettato per dimostrare un unico modello informativo che consente di registrare l'intero continuum tra sintomi chiaramente identificabili e segni segnalati quando si registra un'anamnesi clinica.
+
+Questo archetipo è stato pensato per essere utilizzato come modello generico per tutti i sintomi e i segni riportati. Lo SLOT \"Dettagli specifici\" può essere utilizzato per estendere l'archetipo per includere ulteriori elementi di dati specifici per sintomi o segni più complessi.
+
+Questo archetipo è stato progettato specificamente per essere utilizzato nello SLOT 'Dettagli strutturati' all'interno dell'archetipo di OBSERVATION.story, ma può anche essere utilizzato all'interno di altri archetipi di OBSERVATION o CLUSTER e nello SLOT 'Sintomo/segno associato' o 'Episodio precedente' all'interno di altre istanze di questo archetipo di CLUSTER.symptom_sign.
+
+I clinici spesso registrano la frase 'nil significant' rispetto a sintomi specifici o segni segnalati come un metodo efficace per indicare che hanno chiesto all'individuo e non è stato segnalato come causa di disagio o disturbo - efficacemente usato più come una 'dichiarazione di normalità' piuttosto che come un'esplicita esclusione. L'elemento di dati 'Nil significant' è stato deliberatamente incluso in questo archetipo per consentire ai medici di registrare queste stesse informazioni in modo semplice ed efficace in un sistema clinico. Può essere usato per pilotare un'interfaccia utente, per esempio se 'Nil significant' è registrato come vero, allora gli elementi di dati rimanenti possono essere nascosti in una schermata di inserimento dati. Questo approccio pragmatico supporta la maggior parte dei semplici requisiti di registrazione clinica riguardanti i sintomi e i segni riportati.
+
+Tuttavia, se esiste un imperativo clinico di registrare esplicitamente che un Sintomo o un Segno è stato segnalato come non presente, ad esempio se verrà utilizzato per guidare il supporto alle decisioni cliniche, allora sarebbe preferibile utilizzare l'archetipo CLUSTER.exclusion_symptom_sign. L'uso di CLUSTER.exclusion_symptom_sign aumenterà la complessità della modellazione, dell'implementazione e dell'interrogazione dei template. Si raccomanda di considerare l'uso del CLUSTER.exclusion_symptom_sign archetype solo se è possibile identificare un chiaro beneficio in situazioni specifiche, ma non dovrebbe essere usato per la registrazione di routine di sintomi/segni.">
+            misuse = <"Da non utilizzare per registrare che un sintomo o un segno è stato esplicitamente segnalato come non presente - utilizzare CLUSTER.exclusion_symptom_sign con attenzione per scopi specifici dove lo sforzo di registrazione in questa strategia giustificano l'ulteriore complessità, e solo se il 'Nil significant' in questo archetipo non è abbastanza specifico per scopi di registrazione.
+
+Da non utilizzare per la registrazione di risultati oggettivi nell'ambito di un esame fisico - utilizzare a tal fine gli archetipi CLUSTER di OBSERVATION.exam e i relativi archetipi di esame CLUSTER.
+
+Da non utilizzare per diagnosi e problemi che fanno parte di una lista di problemi persistenti - utilizzare EVALUATION.problem_diagnosis.">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Covid-19 symptom
+        items matches {
+            ELEMENT[at0001.1] matches {    -- Symptom/Sign name
+                value matches {
+                    DV_TEXT[at0.9002]
+                }
+            }
+            ELEMENT[at0186] matches {
+                value matches {
+                    DV_BOOLEAN[at0.9003] matches {
+                        value matches {True}
+                    }
+                }
+            }
+            ELEMENT[at0.1] occurrences matches {0..1} matches {    -- Presence
+                value matches {
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code matches {[ac0.9000]}    -- Presence (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"Symptom/Krankheitsanzeichen">
+                description = <"Festgestellte Beobachtung einer körperlichen oder geistigen Störung bei einer Person.">
+            >
+            ["at0.1"] = <
+                text = <"*DV_TEXT (en)">
+                description = <"*">
+            >
+            ["at0.2"] = <
+                text = <"*Present (en)">
+                description = <"*The symptom is present. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Absent (en)">
+                description = <"*The symptom is absent. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Unknown (en)">
+                description = <"*It is not known if the symptom is present. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"*Symptom/Sign name(en)">
+                description = <"*The name of the reported symptom or sign.(en)">
+                comment = <"*Symptom name should be coded with a terminology, where possible.(en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*DV_TEXT (en) (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+        ["fi"] = <
+            ["at0000.1"] = <
+                text = <"Oire">
+                description = <"Reported observation of a physical or mental disturbance in an individual.(en)">
+            >
+            ["at0.1"] = <
+                text = <"*Presence(en)">
+                description = <"*">
+            >
+            ["at0.2"] = <
+                text = <"Olemassa">
+                description = <"*The symptom is present.(en)">
+            >
+            ["at0.3"] = <
+                text = <"Ei olemassa">
+                description = <"*The symptom is absent.(en)">
+            >
+            ["at0.4"] = <
+                text = <"Tuntematon">
+                description = <"*It is not known if the symptom is present.(en)">
+            >
+            ["at0001.1"] = <
+                text = <"Oireen nimi">
+                description = <"The name of the reported symptom or sign.(en)">
+                comment = <"*Symptom name should be coded with a terminology, where possible.(en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Presence(en) (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000.1"] = <
+                text = <"Symtom och tecken">
+                description = <"Rapporterad observation av en fysisk eller psykisk störning hos en individ.">
+            >
+            ["at0.1"] = <
+                text = <"*DV_TEXT (en)">
+                description = <"*">
+            >
+            ["at0.2"] = <
+                text = <"*Present (en)">
+                description = <"*The symptom is present. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Absent (en)">
+                description = <"*The symptom is absent. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Unknown (en)">
+                description = <"*It is not known if the symptom is present. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"Symtom och teckennamn">
+                description = <"Namnet på det uppvisade symtomet eller tecknet.">
+                comment = <"Symtomnamnet ska kodas med en terminologi, där det är möjligt.">
+            >
+            ["ac0.9000"] = <
+                text = <"*DV_TEXT (en) (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000.1"] = <
+                text = <"Symptom/Sykdomstegn">
+                description = <"Rapportert observasjon av fysiske tegn eller beskrivelse av unormale eller ubehagelige fornemmelser i kropp og/eller sinn.">
+            >
+            ["at0.1"] = <
+                text = <"*DV_TEXT (en)">
+                description = <"*">
+            >
+            ["at0.2"] = <
+                text = <"*Present (en)">
+                description = <"*The symptom is present. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Absent (en)">
+                description = <"*The symptom is absent. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Unknown (en)">
+                description = <"*It is not known if the symptom is present. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"Navn på symptom/sykdomstegn">
+                description = <"Navnet på det rapporterte symptomet eller sykdomstegnet.">
+                comment = <"Navnet på symptom/sykdomstegn bør kodes med en terminologi om mulig.">
+            >
+            ["ac0.9000"] = <
+                text = <"*DV_TEXT (en) (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000.1"] = <
+                text = <"Sintoma/sinal">
+                description = <"Observação de um distúrbio físico ou mental relatada em um indivíduo.">
+            >
+            ["at0.1"] = <
+                text = <"*DV_TEXT (en)">
+                description = <"*">
+            >
+            ["at0.2"] = <
+                text = <"*Present (en)">
+                description = <"*The symptom is present. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Absent (en)">
+                description = <"*The symptom is absent. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Unknown (en)">
+                description = <"*It is not known if the symptom is present. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"Nome do sintoma/sinal">
+                description = <"O nome do sintoma ou sinal relatado.">
+                comment = <"Nome do sintoma deve ser codificado com uma terminologia, se possível.">
+            >
+            ["ac0.9000"] = <
+                text = <"*DV_TEXT (en) (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000.1"] = <
+                text = <"*Symptom/Sign(en)">
+                description = <"*Reported observation of a physical or mental disturbance in an individual.(en)">
+            >
+            ["at0.1"] = <
+                text = <"*DV_TEXT (en)">
+                description = <"*">
+            >
+            ["at0.2"] = <
+                text = <"*Present (en)">
+                description = <"*The symptom is present. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Absent (en)">
+                description = <"*The symptom is absent. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Unknown (en)">
+                description = <"*It is not known if the symptom is present. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"*Symptom/Sign name(en)">
+                description = <"*The name of the reported symptom or sign.(en)">
+                comment = <"*Symptom name should be coded with a terminology, where possible.(en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*DV_TEXT (en) (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Covid-19 symptom">
+                description = <"Symptoms known to be indicators of suspected Covid-19 infection">
+            >
+            ["at0.1"] = <
+                text = <"Presence">
+                description = <"Is the symptom present or not?">
+            >
+            ["at0.2"] = <
+                text = <"Present">
+                description = <"The symptom is present.">
+            >
+            ["at0.3"] = <
+                text = <"Absent">
+                description = <"The symptom is absent.">
+            >
+            ["at0.4"] = <
+                text = <"Unknown">
+                description = <"It is not known if the symptom is present.">
+            >
+            ["at0001.1"] = <
+                text = <"Symptom/Sign name">
+                description = <"The name of the reported symptom or sign.">
+                comment = <"Symptom name should be coded with a terminology, where possible.">
+            >
+            ["ac0.9000"] = <
+                text = <"Presence (synthesised)">
+                description = <"Is the symptom present or not? (synthesised)">
+            >
+        >
+        ["it"] = <
+            ["at0000.1"] = <
+                text = <"Sintomi COVID-19">
+                description = <"Sintomi che risultano essere come indicatori di una probabile infezione da COVID-19">
+            >
+            ["at0.1"] = <
+                text = <"Presenza">
+                description = <"Il sintomo è presente oppure no?">
+            >
+            ["at0.2"] = <
+                text = <"Presente">
+                description = <"Il sintomo è presente.">
+            >
+            ["at0.3"] = <
+                text = <"Assente">
+                description = <"Il sintomo è assente.">
+            >
+            ["at0.4"] = <
+                text = <"Sconosciuto">
+                description = <"Impossibile determinare se il sintomo sia presente o assente.">
+            >
+            ["at0001.1"] = <
+                text = <"Nome Sintomo/Segnale">
+                description = <"Il nome del sintomo o del segnale riscontrato">
+                comment = <"Il nome del sintomo dovrebbe essere codificato tramite utilizzo di una terminologia, ove possibile.">
+            >
+            ["ac0.9000"] = <
+                text = <"Presenza (synthesised)">
+                description = <"Il sintomo è presente oppure no? (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0001.1"] = <http://snomed.info/id/418799008>
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.2", "at0.3", "at0.4">
+        >
+    >

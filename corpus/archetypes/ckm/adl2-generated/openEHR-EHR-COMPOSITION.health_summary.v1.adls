@@ -1,0 +1,274 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=aab23408-3f8d-4bc8-b214-34af97e9abbd; build_uid=f9f7d158-cc9b-4a04-8830-44e60129d110)
+    openEHR-EHR-COMPOSITION.health_summary.v1.0.3
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Elham Gholami, Erik Sundvall, Hans Natvig, Claudia Ehrentraut, Rikard Lövström, Ann-Sofi Avindell">
+                ["organisation"] = <"Karolinska University Hospital (Region Stockholm), Akademiska sjukhuset (Region Uppsala), Region Uppsala, Akademiska sjukhuset, Cambio Healthcare Systems">
+                ["email"] = <"erik.sundvall@regionstockholm.se, claudia.ehrentraut@regionstockholm.se, hans.natvig@akademiska.se, rikard.lovstrom@regionstockholm.se, ann-sofi.avindell@cambio.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand">
+                ["organisation"] = <"Helse Bergen HF">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Adriana Kitajima, Débora Farage, Fernanda Maia, Laíse Figueiredo, Marivan Abrahão">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"contato@coreconsulting.com.br">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Diego Bosca">
+                ["organisation"] = <"VeraTech for Health">
+                ["email"] = <"yampeku@gmail.com">
+            >
+            accreditation = <"English C1, Spanish native">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2015-10-01">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjoern Arntzen, Oslo university hospital, Norway", "Silje Ljosland Bakke, National ICT Norway, Norway (openEHR Editor)", "Sistine Barretto-Daniels, Ocean Informatics, Australia", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Lars Karlsen, DIPS ASA, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Yang Lu, University of Melbourne, Australia", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Andrej Orel, Marand d.o.o., Slovenia">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"B2D87AA57E3D01820E7DAE733A4644F7">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera en sammanfattning av hälsoinformation om en individ, som representerar en delmängd av deras journal vid en angiven tidpunkt.">
+            keywords = <"sammanfattning", "synopsis", "översikt", "status", "ögonblicksbild">
+            use = <"Används som en behållare för att registrera en sammanfattning eller översikt av en patients hälsa eller välbefinnande vid en angiven tidpunkt (en ögonblicksbild).
+
+Författaren till en hälsosammanfattning är vanligtvis en hälso- och sjukvårdpersonal som är bekant med alla relevanta aspekter av individens hälsa som utgör innehållet i sammanfattningen.
+
+Omfattningen av en hälsosammanfattning kan variera i olika sammanhang. Det kan vara allt från en översikt över alla centrala aspekter av individens hälsa eller välbefinnande till en sammanfattning som fokuserar på en begränsad aspekt av individens hälsa.
+
+De avsedda läsarna av hälsosammanfattningen kommer att variera beroende på primärt syfte och fokus för sammanfattningen. De kan vara:
+- eventuella framtida vårdgivare;
+- hälso- och sjukvårdspersonal som inte har någon personlig kännedom om individen men är skyldiga att tillhandahålla hälso- och sjukvård, såsom akutbehandling eller när individen är på resa;
+- hälso- och sjukvårdspersonal som endast hanterar specifika aspekter av individens hälsa, såsom diabetes eller graviditet; och
+- individen själv.
+
+Sections/Content-komponenten har medvetet inte avgränsats. Detta gör att den kan fyllas med alla SECTION- eller ENTRY-arketyper som är lämpliga för det kliniska syftet inom en openEHR-template.
+
+Även om det kliniska innehållet inte är avgränsat, stöder den här arketypen enkla queries efter alla hälsosammanfattningar som kan finnas i en patientjournal.">
+            misuse = <"Får inte användas för att registrera detaljer om en enskild klinisk konsultation, åtgärd, test eller bedömning etc.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere et sammendrag av helseinformasjon om et individ på et spesifisert tidspunkt.">
+            keywords = <"sammendrag", "oversikt", "synopsis", "sammenfatning", "status">
+            use = <"Brukes som en generisk konteiner for et sammendrag eller en oversikt over pasientens helse og/eller omsorgsstatus på et spesifikt tidspunkt.
+
+Forfatteren av helsesammendraget er vanligvis en kliniker som er kjent med alle de relevante aspektene om individets helse som sammendraget består av.
+
+Formålet med helsesammendraget kan variere utfra ulike kontekster, eksempler på helsesammendrag kan være en oversikt over alle relevant viktige aspekter knyttet til pasientens helse og/eller omsorg eller et sammendrag av informasjon fokusert på et begrenset område av individets helse.
+
+Mottakere av helsesammendraget vil variere utfra sammendragets primærfokus og kan være:
+- Framtidige helsetjenesteytere.
+- Klinikere som ikke har noe personlig kjennskap til individet, men som må yte helsetjenester, som akuttbehandling eller behandling når individet er på reise.
+som ved diabetes eller gravidiet.
+- Individet selv.
+
+Det er ikke satt begrensinger på hovedkomponenten Section/content. Dette gjør at man kan legge til hvilken som helst SECTION eller ENTRY arketype som er passende for det kliniske formålet i et templat.
+
+Selv om det kliniske innholdet er ubegrenset, gir denne arketypen muligheter for enkle spørringer etter alle sammendrag av helseinformasjon i en journal.">
+            misuse = <"Brukes ikke for å registrere detaljer om en enkelt klinisk konsultasjon, prosedyre, prøve, vurdering eller lignende.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Gravar um sumário de informações de saúde sobre um indivíduo, representando um subconjunto de seu registro de saúde em um ponto específico no tempo.">
+            keywords = <"sumário", "sinopse", "visão geral", "estado">
+            use = <"Usado como um repositório genérico para gravar um sumário ou visão geral da saúde e/ou situação do bem-estar de um paciente como um retrato da sua saúde em um ponto específico do tempo.
+
+O autor de um sumário de saúde é usualmente um clínico que está familiarizado com todos os aspectos relevantes da saúde do indivíduo, que é o conteúdo do sumário.
+
+O escopo de um sumário de saúde pode variar em diferentes contextos, indo de uma visão geral de todos os aspectos principais da saúde e/ou bem-estar do indivíduo a um sumário de informação focado em um aspecto restrito da saúde do indivíduo.
+
+Os leitores alvo do sumário de saúde irão variar de acordo com o propósito primário e o foco do sumário, e pode incluir:
+- qualquer provedor de saúde futuro;
+- clínicos que não tem nenhum conhecimento pessoal do indivíduo, mas são requeridos a fornecer cuidado em saúde, como no tratamento de emergência ou quando o indivíduo está em trânsito;
+- clínicos que administram apenas aspectos específicos da saúde do indivíduo, como diabetes e gravidez; e
+- os próprios indivíduos.
+
+Os componentes das Seções/Conteúdo principais foram deixados sem restrição deliberadamente. Isso permite que os campos sejam populados com quaisquer arquétipos tipo SECTION ou ENTRY apropriados para o propósito clínico dentro do modelo.
+
+Embora o conteúdo clínico seja irrestrito, este arquétipo suporta buscas simples para todos os sumários de saúde que podem estar contidos dentro de um registro de saúde.">
+            misuse = <"Não deve ser usado para gravar detalhes sobre uma única consulta clínica, procedimento, teste ou avaliação, etc.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a summary of health information about an individual, representing a subset of their health record at a specified point in time.">
+            keywords = <"summary", "synopsis", "overview", "status">
+            use = <"Use as a generic containter to record a summary or overview of a patient's health and/or welfare status as a snapshot of their health at a specified point in time. 
+
+The author of a health summary is usually a clinician who is familiar with the all of the relevant aspects of the individual's health that is the content of the summary.
+
+The scope of a health summary can vary in different contexts, ranging from an overview of all key aspects of the individual's health and/or welfare to a summary of information focused on a limited aspect of the individual's health.
+
+The intended readers of the health summary will vary according to the primary purpose and focus of the summary, and may include:
+- any future healthcare providers;
+- clinicians who have no personal knowledge of the individual but are required to provide healthcare, such as emergency treatment or when the individual is travelling;
+- clinicians managing only specific aspects of the individual's health, such as diabetes or pregnancy; and
+- the individual themselves.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. 
+
+Even though clinical content is unconstrained, this archetype supports simple querying for all Health summaries that might be contained within a health record.">
+            misuse = <"Not to be used to record details about a single clinical consultation, procedure, test or assessment etc.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Para registrar un resumen de información de salud sobre un individuo, que representa un subconjunto de su registro de salud en un momento de tiempo específico.">
+            keywords = <"resumen", "sinopsis", "revisión", "estatus">
+            use = <"Usar como un contenedor genérico para registrar un resumen o revisión de la salud y/o bienestar de un paciente como una instantánea de su salud en un punto especificado en el tiempo.
+
+El autor de un resumen de salud es normalmente un profesional clínico familiar con todos los aspectos relevantes de la salud del individuo que compone el contenido del informe.
+
+El alcance de un resumen de salud puede variar en diferentes contextos, extendiéndose desde una revisión de todos los aspectos claves de la salud y/o bienestar del individuo a un resumen de la información focalizada en un aspecto en concreto de la salud del individuo.
+
+Los destinatarios de un resumen de salud variarán de acuerdo con el propósito principal del resumen, y puede incluir:
+- cualquier proveedor de salud futuro del paciente;
+- personal clínico que no tengan conocimiento personal del individuo pero tengan que proveer cuidados de salud al mismo, como pueden ser cuidados de urgencias o cuando el individuo se encuentra de viaje:
+- personal clínico que gestione solamente aspectos específicos de la salud del individuo, tal como diabetes o embarazos;
+- los propios individuos.
+
+Las secciones y contenidos principales se han dejado deliberadamente sin restringir. Esto permitirá popularlos con cualquier número de arquetipos Sección (SECTION) o Entrada (ENTRY) apropiados para el propósito clínico dentro de una plantilla.
+
+Incluso si el contenido clínico no se ha restringido, este arquetipo soporta consultas sencillas para obtener todos los resúmenes de salud que puedan estar contenidos dentro de un registro de salud">
+            misuse = <"No debe ser usado para registrar detalles sobre una única consulta, procedimiento, prueba o evaluación clínica, etc.">
+        >
+    >
+
+definition
+    COMPOSITION[at0000] matches {    -- Health summary
+        category matches {
+            DV_CODED_TEXT[at9001] matches {
+                defining_code matches {[at9000]}    -- event
+            }
+        }
+        context matches {
+            EVENT_CONTEXT[at9002] matches {
+                other_context matches {
+                    ITEM_TREE[at0001] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            allow_archetype CLUSTER[at0002] matches {    -- Extension
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Hälsosammanfattning">
+                description = <"Dokument som innehåller en sammanfattning av hälsoinformation om en individ.">
+            >
+            ["at0002"] = <
+                text = <"Extension">
+                description = <"Ytterligare information som krävs för lokal kontext eller anpassning till andra referensmodeller eller formella krav.">
+                comment = <"Exempelvis lokala informationskrav eller metadata för anpassning till FHIR- eller CIMI-motsvarigheter.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Sammendrag av helseinformasjon">
+                description = <"Generisk dokument som inneholder sammendrag av helseinformasjon om et individ.">
+            >
+            ["at0002"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som er nødvendig for å registrere lokalt innhold/kontekst, eller for å sammenstille med andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Sumário de saúde">
+                description = <"Documento genérico contendo um sumário das informações de saúde sobre um indivíduo.">
+            >
+            ["at0002"] = <
+                text = <"Extensão">
+                description = <"Informações adicionais necessárias para capturar o conteúdo local ou para alinhar com outros modelos de referência/ formalismo.">
+                comment = <"Por exemplo: requisitos de informação local ou metadados adicionais para alinhar com equivalentes FHIR ou CIMI.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Health summary">
+                description = <"Generic document containing a summary of health information about an individual.">
+            >
+            ["at0002"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at9000"] = <
+                text = <"event">
+                description = <"event">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Resumen de salud">
+                description = <"Documento genérico que contiene un resumen de la información de salud sobre un individuo.">
+            >
+            ["at0002"] = <
+                text = <"Extensión">
+                description = <"Información adicional requerida para capturar contenidos locales o para alinearse con otros modelos de referencia o formalismos.">
+                comment = <"Por ejemplo: requisitos de información locales o metadatos adicionales necesarios para alinearse con FHIR, CIMI o equivalentes.">
+            >
+            ["at9000"] = <
+                text = <"evento">
+                description = <"evento">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/433>
+        >
+    >

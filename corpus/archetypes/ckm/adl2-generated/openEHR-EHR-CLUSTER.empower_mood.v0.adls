@@ -1,0 +1,109 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=8f2d19ff-4c4c-4e5b-b3f9-a261f8827c63; build_uid=f80bfcf1-9665-458e-8027-206d6980bb19)
+    openEHR-EHR-CLUSTER.empower_mood.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ilias Lamprinos">
+        ["organisation"] = <"Intracom Telecom">
+        ["email"] = <"labil@intracom.gr">
+        ["date"] = <"2012-11-28">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Chrysa Papadaki, Intracom Telecom,  chrpapa@intracom.gr", "Hans Demski, Helmholtz Zentrum München GmbH, demski@helmholtz-muenchen.de">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Hans Demski, Helmholtz Zentrum München GmbH, demski@helmholtz-muenchen.de">
+        ["MD5-CAM-1.0.1"] = <"90A42F385EBC2C7064B5945A0466525A">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"This archetype is used to facilitate recording of the self-assesment of the subject's mood. 
+
+Based on the data model developed within the EMPOWER project, www.empower-fp7,eu.">
+            use = <"Self-assesment of the subject's mood, as an observation of daily living.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Mood Level (EMPOWER)
+        items cardinality matches {1; unordered} matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- Mood
+                value matches {
+                    DV_ORDINAL[at9001] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0003]}],    -- Cheerful
+                            [{1}, {[at0004]}],    -- Euthymic
+                            [{2}, {[at0005]}],    -- Indifferent
+                            [{3}, {[at0006]}],    -- Sad
+                            [{4}, {[at0007]}]    -- Depressed
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Mood Level (EMPOWER)">
+                description = <"Mood level provides a description of the mood state.">
+            >
+            ["at0001"] = <
+                text = <"Mood">
+                description = <"Indicates the current mood state of the patient.">
+            >
+            ["at0003"] = <
+                text = <"Cheerful">
+                description = <"Highly pleasant emotion characterized by outward manifestations of gratification; joy.">
+            >
+            ["at0004"] = <
+                text = <"Euthymic">
+                description = <"Euthymic mood.">
+            >
+            ["at0005"] = <
+                text = <"Indifferent">
+                description = <"Lack of emotion or emotional expression; a disorder of motivation that persists over time.">
+            >
+            ["at0006"] = <
+                text = <"Sad">
+                description = <"Feeling sad.">
+            >
+            ["at0007"] = <
+                text = <"Depressed">
+                description = <"Feelings of grief or unhappiness.">
+            >
+            ["ac9001"] = <
+                text = <"Mood (synthesised)">
+                description = <"Indicates the current mood state of the patient. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["MTH"] = <
+            ["at0000"] = <http://MTH.org/id/C0424113>
+            ["at0001"] = <http://MTH.org/id/C0424113>
+            ["at0003"] = <http://MTH.org/id/112080002>
+            ["at0004"] = <http://MTH.org/id/C0233475>
+            ["at0005"] = <http://MTH.org/id/C0085632>
+            ["at0006"] = <http://MTH.org/id/C2987511>
+            ["at0007"] = <http://MTH.org/id/C0344315>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0003", "at0004", "at0005", "at0006", "at0007">
+        >
+    >

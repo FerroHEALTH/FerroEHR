@@ -1,0 +1,209 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=36eeb623-9630-4187-9150-d4b6398ef927; build_uid=521c792e-4323-45e2-84c5-d0f2fd4a5468)
+    openEHR-EHR-CLUSTER.genomic_conversion_variant.v1.0.3
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Aurelie Tomczak, Natalia Strauch">
+                ["organisation"] = <"University Hospital Heidelberg, Germany, Medizinische Hochschule Hannover">
+                ["email"] = <"au.tomczak@yahoo.com, Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Liv Laugen">
+                ["organisation"] = <"OUS, ​Oslo University Hospital, Norway">
+                ["email"] = <"liv.laugen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Cecilia Mascia">
+        ["organisation"] = <"CRS4, Italy">
+        ["email"] = <"cecilia.mascia@crs4.it">
+        ["date"] = <"2017-02-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Christina Jaeger-Schmidt, Heidelberg University Hospital, Germany", "Florian Kaercher, Charité Berlin, Germany", "Francesca Frexia, CRS4, Italy", "Gianluigi Zanetti, CRS4, Italy", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Gideon Giacomelli, Charité Berlin, Germany", "Paolo Uva, CRS4, Italy", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Simon Schumacher, HiGHmed, Germany", "Gunnar Houge, Haukeland University Hospital, Norway", "Gyri Aasland Gradek, Haukeland University Hospital, Norway", "Asbjørg Stray-Pedersen, Oslo University Hospital, Norway", "Toril Fagerheim, University Hospital of North Norway, Norway", "Camilla F. Skjelbred, Telemark HF Hospital, Norway", "Dag Erik Undlien, Oslo University Hospital, Norway", "Rune Østern, St Olavs Hospital, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"den Dunnen JT, Dalgleish R, Maglott DR, Hart RK, Greenblatt MS, McGowan-Jordan J, Roux AF, Smith T, Antonarakis SE, Taschner PE. HGVS Recommendations for the Description of Sequence Variants: 2016 Update. Hum Mutat. 2016 Jun;37(6):564-9. doi: 10.1002/humu.22981. Epub 2016 Mar 25. PubMed PMID: 26931183.">
+        ["2"] = <"Sequence Variant Nomenclature - DNA Recommendations - Conversion Variant [Internet]. Human Genome Variation Society. [2019] - [cited 2020-02-26]. Available from: https://varnomen.hgvs.org/recommendations/DNA/variant/conversion/">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"E8508DA94B907A913D6922DF808858BC">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung der in einer genomischen Sequenz beobachteten \"Conversion Variant\" menschlicher DNA.">
+            keywords = <"Conversion", "Variation", "genetisch", "genomisch", "Variante", "DNA", "Chromosom", "Mutation", "Nukleotid">
+            use = <"Verwenden Sie diesen Archetyp, um die Informationen zu einer \"Conversion Variant\" menschlicher DNA darzustellen, die in einer genomischen Sequenz beobachtet wurden.
+
+Dieser Archetyp wurde speziell für die Verwendung im SLOT \"Structured variant\" innerhalb des Archetyps CLUSTER.genomic_variant_result entwickelt, kann aber gegebenenfalls auch in anderen ENTRY- oder CLUSTER-Archetypen verwendet werden.
+
+Alle Definitionen und Beispiele in diesem Archetyp folgen dem HGVS-Standard.">
+            misuse = <"Nicht zur Darstellung von Informationen über Varianten nicht-menschlicher DNA, oder jeglicher Art von RNA oder Protein.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljene om en genkonversjonvariant i humant DNA, funnet i en genomisk sekvens.">
+            keywords = <"konversjon", "konvertering", "genetisk", "genetikk", "genom", "variant", "kromosom", "mutasjon", "nukleotid", "sekvens", "DNA">
+            use = <"Brukes for å registrere detaljene om en genkonversjonvariant i humant DNA, funnet i en genomisk sekvens.
+
+Denne arketypen har blitt laget for å brukes i SLOT'et \"Strukturert variantbeskrivelse\" i arketypen CLUSTER.genomic_variant_result. Den kan også brukes i andre ENTRY- eller CLUSTER-arketyper der det er klinisk hensiktsmessig.
+
+Alle definisjoner og eksempler i denne arketypen følger HGVS-nomenklaturen.">
+            misuse = <"Skal ikke brukes til å registrere informasjon om varianter av ikke-humant DNA, eller noen form for RNA eller protein.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the details about a conversion variant of human DNA, observed in a genomic sequence.">
+            keywords = <"conversion", "variation", "genetic", "genomic", "variant", "DNA", "chromosome", "mutation", "nucleotide">
+            use = <"Use to record the details about a conversion variant of human DNA, observed in a genomic sequence.
+
+This archetype has been specifically designed to be used in the 'Structured variant' SLOT within the CLUSTER.genomic_variant_result archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+All definitions and examples in this archetype follow the HGVS nomenclature.">
+            misuse = <"Not to be used to record information about variants of non-human DNA, or any kind of RNA or protein.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Genomic conversion variant
+        items cardinality matches {2..*} matches {
+            ELEMENT[at0003] occurrences matches {1} matches {    -- Start converted position
+                value matches {
+                    DV_COUNT[at9000]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {1} matches {    -- End converted position
+                value matches {
+                    DV_COUNT[at9001]
+                }
+            }
+            ELEMENT[at0009] occurrences matches {1} matches {    -- Replacing sequence start position
+                value matches {
+                    DV_COUNT[at9002]
+                }
+            }
+            ELEMENT[at0010] occurrences matches {1} matches {    -- Replacing sequence end position
+                value matches {
+                    DV_COUNT[at9003]
+                }
+            }
+            allow_archetype CLUSTER[at0011] matches {    -- Converted reference sequence
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.reference_sequence(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0012] matches {    -- Replacing reference sequence
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.reference_sequence(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Genomic conversion variant">
+                description = <"Eine menschliche genetische Sequenzänderung, bei der im Vergleich zu einer genomischen Referenzsequenz eine Reihe von Nukleotiden durch eine Sequenz von einer anderen Stelle im Genom ersetzt wird.">
+            >
+            ["at0003"] = <
+                text = <"Start converted position">
+                description = <"The position of the first nucleotide of the converted range.">
+            >
+            ["at0004"] = <
+                text = <"End converted position">
+                description = <"The position of the last nucleotide of the converted range.">
+            >
+            ["at0009"] = <
+                text = <"Replacing sequence start position">
+                description = <"The position of the first nucleotide of the replacing sequence.">
+            >
+            ["at0010"] = <
+                text = <"Replacing sequence end position">
+                description = <"The position of the last nucleotide of the replacing sequence.">
+            >
+            ["at0011"] = <
+                text = <"Converted reference sequence">
+                description = <"The sequence file used as a reference to describe the converted region.">
+            >
+            ["at0012"] = <
+                text = <"Replacing reference sequence">
+                description = <"The sequence file used as a reference to describe the replacing region.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Genetisk variant - genkonversjon">
+                description = <"En endring av human gensekvensen hvor en rekke nukleotider blir erstattes av en sekvens fra andre steder i genomet, sammenliknet med referansesekvensen.">
+            >
+            ["at0003"] = <
+                text = <"Startposisjon til konvertert sekvens">
+                description = <"Posisjonen til det første nukleotidet i det konverterte/erstattede området.">
+            >
+            ["at0004"] = <
+                text = <"Sluttposisjonen til konvertert sekvens">
+                description = <"Posisjonen til det siste nukleotidet i det konverterte/erstattede området.">
+            >
+            ["at0009"] = <
+                text = <"Startposisjon til erstatningssekvensen">
+                description = <"Posisjonen til det første nukleotidet i sekvensen som har erstattet den opprinnelig sekvensen.">
+            >
+            ["at0010"] = <
+                text = <"Sluttposisjon til erstatningssekvensen">
+                description = <"Posisjonen til det siste nukleotidet i sekvensen som har erstattet den opprinnelig sekvensen.">
+            >
+            ["at0011"] = <
+                text = <"Konvertert referansesekvens">
+                description = <"Sekvensfilen som har blitt brukt som en referanse for å beskrive det området som har blitt konvertert (erstattet).">
+            >
+            ["at0012"] = <
+                text = <"Erstatnings referansesekvens">
+                description = <"Sekvensfilen som brukes som referanse for å beskrive det området som har erstattet den opprinnelige sekvensen.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Genomic conversion variant">
+                description = <"A human genetic sequence change where, compared to a genomic reference sequence, a range of nucleotides are replaced by a sequence from elsewhere in the genome.">
+            >
+            ["at0003"] = <
+                text = <"Start converted position">
+                description = <"The position of the first nucleotide of the converted range.">
+            >
+            ["at0004"] = <
+                text = <"End converted position">
+                description = <"The position of the last nucleotide of the converted range.">
+            >
+            ["at0009"] = <
+                text = <"Replacing sequence start position">
+                description = <"The position of the first nucleotide of the replacing sequence.">
+            >
+            ["at0010"] = <
+                text = <"Replacing sequence end position">
+                description = <"The position of the last nucleotide of the replacing sequence.">
+            >
+            ["at0011"] = <
+                text = <"Converted reference sequence">
+                description = <"The sequence file used as a reference to describe the converted region.">
+            >
+            ["at0012"] = <
+                text = <"Replacing reference sequence">
+                description = <"The sequence file used as a reference to describe the replacing region.">
+            >
+        >
+    >

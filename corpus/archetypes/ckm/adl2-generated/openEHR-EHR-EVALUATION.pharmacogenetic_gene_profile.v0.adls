@@ -1,0 +1,118 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=88d12437-d75a-40e7-99ac-6d25061d1bdc; build_uid=5d0a752f-a2e2-4f12-9308-aae97d6e8617)
+    openEHR-EHR-EVALUATION.pharmacogenetic_gene_profile.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"ian@freshehr.com">
+        ["date"] = <"2023-03-02">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"HL7.FHIR.UV.GENOMICS-REPORTING\\Genomics Background - FHIR v4.0.1 \"HL7.FHIR.UV.GENOMICS-REPORTING\\Genomics Background - FHIR V4.0.1\". Build.Fhir.Org, 2023, http://build.fhir.org/ig/HL7/genomics-reporting/background.html. Accessed 7 Mar 2023.">
+        ["2"] = <"Dolin, R., Boxwala, A. and Shalaby, J. Dolin, R.H. et al. \"A Pharmacogenomics Clinical Decision Support Service Based On FHIR And CDS Hooks\". Methods Of Information In Medicine, vol 57, no. S 02, 2018, pp. e115-e123. Georg Thieme Verlag KG, doi:10.1055/s-0038-1676466. Accessed 7 Mar 2023.">
+        ["3"] = <"Cpicpgx.Org, 2023, http://cpicpgx.org/wp-content/uploads/2016/02/CPIC-Term-Standardization-and-LOINC-151203.pdf. Accessed 22 May 2023.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"5770759C24BACD3D3F49506A5F774BC2">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details of pharmacogenetic phenotype findings relating to a single genotype, in particular to record metaboliser status / functional activity against an enzyme known to impact the effectiveness/ toxicity of one or more medications.
+
+As individual pharmacogenetic tests may provide only incomplete allele testing, this archetype is intended to act as an overall cumulative representation of tall individual tests, from which therapeutic recommendations should be derived.">
+            keywords = <"pharmacogenetics, pharmacogenomics, decision support, contraindication, precaution, pgx.", ...>
+            use = <"There is crossover in purpose with the Precaution archetype https://ckm.openehr.org/ckm/archetypes/1013.1.2593, but this is designed to record many different therapeutic precautions, and to report only adverse effects e.g poor efficacy or toxicity, whereas this archetype is intended to capture both positive and negative effects and normal metaboliser status. 
+
+In that respect this is perhaps closer to a a diagnosis then a risk factor or precaution.
+
+There is an argument that Precaution might be used to flag the presence of significant phenotypes, perhaps as a general statement such as 'Significant known metaboliser issues'  which reference the specific Phenotypic records.
+
+The main content is intended to be carried in a slotted CLUSTER Pharmacogenetics analyte result archetype=, but in this context to record the cumulative results and not that of a single test.">
+            misuse = <"Not to be used to record genomic phenotypes which are unrelated to pharmacogenetics, such as molecular genomics reports to support cancer care.">
+            copyright = <"© Apperta Foundation, openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Pharmacogenetic gene profile
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0003] occurrences matches {0..1} matches {    -- Pharmacogenetic profile
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0015] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Date assessed
+                        value matches {
+                            DV_DATE_TIME[at9000]
+                        }
+                    }
+                    ELEMENT[at0030] matches {    -- Original result
+                        value matches {
+                            DV_EHR_URI[at9001]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0017] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Pharmacogenetic gene profile">
+                description = <"Details of cumulative pharmacogenetic phenotype findings relating to a single gene, in particular to record metaboliser status / functional activity against an enzyme known to impact the effectiveness/ toxicity of one or more medications.
+
+As individual pharmacogenetic tests may provide only incomplete allele testing, this archetype is intended to act as an overall cumulative representation of tall individual tests, from which therapeutic recommendations should be derived.">
+            >
+            ["at0003"] = <
+                text = <"Pharmacogenetic profile">
+                description = <"Slot to include details of the genotype which relates to this phenotype.">
+            >
+            ["at0016"] = <
+                text = <"Date assessed">
+                description = <"The date at which the phenotype was assessed.">
+            >
+            ["at0017"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+            >
+            ["at0030"] = <
+                text = <"Original result">
+                description = <"Details of those people who helped me to complete this record.">
+            >
+        >
+    >
+    term_bindings = <
+        ["LOINC"] = <
+            ["at0030"] = <http://loinc.org/id/LA10315-2>
+        >
+        ["SNOMED-CT"] = <
+            ["at0030"] = <http://snomed.info/id/3331000181100>
+        >
+    >

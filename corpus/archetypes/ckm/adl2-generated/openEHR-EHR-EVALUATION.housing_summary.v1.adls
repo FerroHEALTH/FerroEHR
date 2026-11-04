@@ -1,0 +1,303 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6719ab41-032e-4412-8a39-03c10d5bb450; build_uid=2436b703-3fa5-4dc9-9d60-3c12c0d50f97)
+    openEHR-EHR-EVALUATION.housing_summary.v1.1.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Vanessa Pereira">
+                ["organisation"] = <"Luxembourg Institute of Health (LIH)">
+                ["email"] = <"vanessapereira@protonmail.com">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand, Vebjørn Arntzen">
+                ["organisation"] = <"Helse Bergen, Oslo universitetssykehus">
+                ["email"] = <"john.tore.valand@helse-bergen.no, varntzen@ous-hf.no">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Vanessa Pereira">
+                ["organisation"] = <"Luxembourg Institute of Health (LIH)">
+                ["email"] = <"vanessapereira@protonmail.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2018-05-29">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Amund Aakerholt, Helse Stavanger, KORFOR, Norway", "Morten Aas, Diakonhjemmet Sykehus, Norway", "Marit Alice Venheim, Helse Vest IKT, Norway", "Erling Are Hole, Helse Bergen, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Carrick Gillespie, Omniq AB, Sweden", "Heather Grain, Llewelyn Grain Informatics, Australia", "Lars Morgan Karlsen, DIPS ASA, Norway", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Ronald Krawec, Alberta Health Services, Canada", "Anita Lagos, Haraldsplass Diakonale Sykehus, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Andrej Orel, Marand d.o.o., Slovenia", "Ragnhild Sandvold, Vestre Viken HF, Norway", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Ingrid Vange, Helse Bergen, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Housing, Rejected archetype [Internet]. openEHR Foundation, openEHR Clinical Knowledge Manager [cited: 2018-05-30]. Available from: http://www.openehr.org/ckm/#showArchetype_1013.1.1667.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"E4C0EC5F6CC1E6BE77C957C269EBDE23">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Aufzeichnung zusammenfassender oder dauerhafter Informationen über die aktuelle und frühere Wohn- oder Unterkunftssituation einer Person.">
+            keywords = <"Gehäuse", "Unterkunft", "Wohnen", "wohnung", "Haus", "Wohnen", "Vereinbarung", "Wohngemeinschaft", "Altersheim", "Pflegeheim">
+            use = <"Zur Erfassung zusammenfassender oder dauerhafter Informationen über die aktuelle und frühere Wohn- oder Unterkunftssituation einer Person.
+
+Mehrere Instanzen des CLUSTER.housing_record, die innerhalb des Datensatzes SLOT \"Wohnen\" verwendet werden, ermöglichen die Aggregation eines Verlaufs sowohl der früheren als auch der gegenwärtigen Wohnsituation, einschließlich der Flexibilität, Situationen zu erfassen, in denen Personen während desselben Zeitraums an mehr als einem Ort leben, z. B. Hauptwohnsitze und Ferienhäuser usw.
+
+Das Datenelement \"Letzte Aktualisierung\" erfasst das letzte Mal, dass die Wohnungsübersicht als Ganzes, einschließlich der einzelnen Wohnungsdatensätze, aktualisiert wurde.
+
+Verwenden Sie das Datenelement \"Beschreibung\", um die narrativen Beschreibungen der Wohngeschichte in bestehenden oder älteren klinischen Systemen in ein archetypisches Format einzubinden.">
+            misuse = <"Nicht zur Aufzeichnung spezifischer Details über die Umgebung, in der eine Person gewöhnlich wohnt - verwenden Sie CLUSTER.housing_record, verschachtelt im SLOT Housing record in diesem Archetyp.
+
+Nicht zur Erfassung spezifischer Details über die Personen, mit denen eine Person zusammenlebt - verwenden Sie CLUSTER.living_arrangement, das im SLOT Additional details im CLUSTER.housing_record verschachtelt ist, oder ähnliche Archetypen, die klinisch geeignet sind.
+
+Nicht zur Aufzeichnung spezifischer Details über die Wohnstruktur, in der eine Person lebt, zu verwenden - verwenden Sie CLUSTER.dwelling verschachtelt innerhalb des Additional details SLOT im CLUSTER.housing_record oder ähnliche Archetypen, die klinisch angemessen sind.
+
+Nicht zur Erfassung der physischen Adresse, an der eine Person wohnt, zu verwenden - verwenden Sie zu diesem Zweck demografische Archetypen oder CLUSTER.address innerhalb des CLUSTER.housing_record o. ä., wenn die Adresse der Person in der Gesundheitsakte erfasst werden muss.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere sammendrag eller varig (persistent) informasjon om et individs nåværende og tidligere bolig- eller bosituasjon.">
+            keywords = <"bolig, aldersbolig, hjem, hjemmesituasjon, sykehjem, omsorgsbolig, midlertidig, institusjon, leilighet, hospits, uten fast bopel, bopel, UFB, enebolig, oppholdssted, bokollektiv, hybel, aldershjem, tilrettelagt, støtte, bofellesskap, leieforhold, botrening", ...>
+            use = <"Brukes for å registrere sammendrag eller varig (persistent) informasjon om et individs nåværende og tidligere bolig- eller bosituasjon.
+
+Ved å benytte flere instanser av arketypen CLUSTER.housing_record (Bolig) i SLOTet \"Bolig\" kan man registrere en historikk over tidligere og nåværende boliger. Dette gir fleksibilitet til å registrere at et individ bor på mer enn ett sted i samme tidsperiode, for eksempel primærbolig og feriehus etc.
+
+Dataelementet \"Sist oppdatert\" brukes for å registrere når \"Boligsammendrag\" sist ble oppdatert, inkludert opplysninger som er registrert i SLOTet \"Bolig\".
+
+Dataelementet \"Beskrivelse\" brukes til å overføre fritekstbeskrivelser fra eksisterende eller tidligere kliniske systemer til arketypeformat.">
+            misuse = <"Brukes ikke for å registrere detaljer om hvor et individ vanligvis har bopel, bruk CLUSTER.housing_record (Bolig) nøstet i SLOTet \"Bolig\" i denne arketypen.
+
+Brukes ikke for å registrere detaljer om menneskene et individ bor sammen med, bruk arketypen CLUSTER.living_arrangement nøstet i SLOTet \"Ytterligere detaljer\" i arketypen CLUSTER.housing_record (Bolig) eller en lignende arketype.
+
+Brukes ikke for å registrere detaljer om de fysiske forholdene i boligen individet bor i, bruk arketypen CLUSTER.dwelling nøstet i SLOTet \"Ytterligere detaljer\" i arketypen CLUSTER.housing_record (Bolig) eller en lignende arketype.
+
+Brukes ikke for å registrere den fysiske adressen hvor individet bor, bruk demografiske arketyper for dette formålet. Hvis det er nødvendig at adressen lagres i journaldelen av pasientjournalen, bruk CLUSTER.address (Adresse) arketypen i CLUSTER.housing_record (Bolig) eller lignende arketyper.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record summary or persistent information about an individual's current and past housing or accommodation situation.">
+            keywords = <"housing,accommodation,living,dwelling,house,living,arrangement,share house,retirement home,nursing home", ...>
+            use = <"Use to record summary or persistent information about an individual's current and past housing or accommodation situation.
+
+Multiple instances of the CLUSTER.housing_record used within the Housing record SLOT will allow aggregation of a history of both past and present housing, including the flexibility to record situations where individuals live in more than one place during the same period of time, for main residences and holiday houses, etc.
+
+The 'Last updated' data element will record the last time that the Housing summary as a whole, including individual housing records, was updated.
+
+Use to incorporate the narrative descriptions of housing history within existing or legacy clinical systems into an archetyped format, using the 'Description' data element.">
+            misuse = <"Not to be used to record specific details about the setting in which an individual usually resides - use CLUSTER.housing_record nested within the Housing record SLOT in this archetype.
+
+Not to be used to record specific details about the people with which an individual lives - use CLUSTER.living_arrangement nested within the Additional details SLOT in the CLUSTER.housing_record, or similar archetypes which are clinically appropriate.
+
+Not to be used to record specific details about the housing structure in which an individual lives - use CLUSTER.dwelling nested within the Additional details SLOT in the CLUSTER.housing_record, or similar archetypes which are clinically appropriate.
+
+Not to be used to record the physical address where an individual lives - use demographic archetypes for this purpose, or CLUSTER.address within the CLUSTER.housing_record, or similar, if the individual's address needs to be recorded within the health record.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Enregistrer des informations sommaires ou persistantes sur la situation actuelle et passée d'une personne en matière de logement ou d'hébergement.">
+            keywords = <"maison", "logement", "arrangement", "maison commune", "maison de retraite">
+            use = <"À utiliser pour enregistrer des informations sommaires ou persistantes sur la situation actuelle et passée d'une personne en matière de logement ou d'hébergement.
+
+Plusieurs instances du CLUSTER.housing_record utilisées dans le SLOT de l'enregistrement relatif au logement permettront d'agréger un historique du logement passé et présent, y compris la possibilité d'enregistrer des situations dans lesquelles les personnes vivent dans plusieurs endroits au cours de la même période, pour les résidences principales et les maisons de vacances, etc.
+
+L'élément de données \"Dernière mise à jour\" enregistre la dernière mise à jour de la synthèse du logement dans son ensemble, y compris les fiches de logement individuelles.
+
+L'élément de données \"Description\" permet d'incorporer les descriptions narratives de l'historique du logement dans les systèmes cliniques existants ou hérités dans un format archétypique.">
+            misuse = <"Ne pas utiliser pour enregistrer des détails spécifiques sur le cadre dans lequel une personne réside habituellement - utiliser CLUSTER.housing_record imbriqué dans le SLOT de l'enregistrement de logement dans cet archétype.
+
+Ne pas utiliser pour enregistrer des détails spécifiques sur les personnes avec lesquelles un individu vit - utiliser CLUSTER.living_arrangement imbriqué dans le SLOT Additional details du CLUSTER.housing_record, ou des archétypes similaires cliniquement appropriés.
+
+Ne pas utiliser pour enregistrer des détails spécifiques sur la structure du logement dans lequel vit un individu - utiliser CLUSTER.dwelling imbriqué dans le SLOT Additional details de CLUSTER.housing_record, ou des archétypes similaires cliniquement appropriés.
+
+Ne pas utiliser pour enregistrer l'adresse physique où vit un individu - utiliser les archétypes démographiques à cette fin, ou CLUSTER.address dans le CLUSTER.housing_record, ou un archétype similaire, si l'adresse de l'individu doit être enregistrée dans le dossier médical.">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Housing summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9000]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0009] matches {    -- Housing record
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.housing_record(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0003] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0012] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0014] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9007]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Gehäuse Zusammenfassung">
+                description = <"Zusammenfassende oder dauerhafte Informationen über die aktuelle und frühere Wohn- oder Unterkunftssituation einer Person.">
+            >
+            ["at0002"] = <
+                text = <"Beschreibung">
+                description = <"Narrative Beschreibung der allgemeinen Wohnsituation der betreffenden Person.">
+            >
+            ["at0003"] = <
+                text = <"Zusätzliche Details">
+                description = <"Strukturierte Angaben über die allgemeine Wohnsituation einer Person.">
+            >
+            ["at0005"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Angaben zur allgemeinen Wohnsituation, die in anderen Feldern nicht erfasst werden.">
+            >
+            ["at0009"] = <
+                text = <"Gehäuse Rekord">
+                description = <"Strukturierte Angaben zu jedem Wohnungsnachweis, sowohl aktuell als auch in der Vergangenheit.">
+            >
+            ["at0013"] = <
+                text = <"Zuletzt aktualisiert">
+                description = <"Datum, an dem die Wohnungsübersicht oder die zugehörigen Wohnungsdatensätze aktualisiert wurden.">
+            >
+            ["at0014"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Boligsammendrag">
+                description = <"Sammendrag eller varig (persistent) informasjon om et individs nåværende og tidligere bolig- eller bosituasjon.">
+            >
+            ["at0002"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse om individets overordnede bosituasjon.">
+            >
+            ["at0003"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Strukturerte detaljer om den overordnede bolig- eller bosituasjonen.">
+            >
+            ["at0005"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om den overordnede bolig- eller bosituasjonen.">
+            >
+            ["at0009"] = <
+                text = <"Bolig">
+                description = <"Strukturerte detaljer om nåværende og tidligere bolig- eller bosituasjon.">
+            >
+            ["at0013"] = <
+                text = <"Sist oppdatert">
+                description = <"Datoen da boligsammendraget eller underliggende boligregistreringer sist ble oppdatert.">
+            >
+            ["at0014"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Housing summary">
+                description = <"Summary or persistent information about an individual's current and past housing or accommodation situation.">
+            >
+            ["at0002"] = <
+                text = <"Description">
+                description = <"Narrative description about the overall housing situation for the individual.">
+            >
+            ["at0003"] = <
+                text = <"Additional details">
+                description = <"Structured details about the overall housing situation for an individual.">
+            >
+            ["at0005"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the overall housing situation, not captured in other fields.">
+            >
+            ["at0009"] = <
+                text = <"Housing record">
+                description = <"Structured details about the each housing record, both current and past.">
+            >
+            ["at0013"] = <
+                text = <"Last updated">
+                description = <"Date when the housing summary or associated housing records was updated.">
+            >
+            ["at0014"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Résumé du logement">
+                description = <"Informations sommaires ou persistantes sur la situation actuelle et passée d'une personne en matière de logement ou d'hébergement.">
+            >
+            ["at0002"] = <
+                text = <"Description">
+                description = <"Description narrative de la situation générale de l'individu en matière de logement.">
+            >
+            ["at0003"] = <
+                text = <"Détails supplémentaires">
+                description = <"Détails structurés sur la situation globale du logement d'un individu.">
+            >
+            ["at0005"] = <
+                text = <"Commentaire">
+                description = <"Description supplémentaire de la situation générale du logement, qui n'a pas été saisie dans d'autres champs.">
+            >
+            ["at0009"] = <
+                text = <"Fiche de logement">
+                description = <"Détails structurés sur chaque dossier de logement, actuel et passé.">
+            >
+            ["at0013"] = <
+                text = <"Dernière mise à jour">
+                description = <"Date à laquelle le résumé du logement ou les dossiers de logement associés ont été mis à jour.">
+            >
+            ["at0014"] = <
+                text = <"Extension">
+                description = <"Informations supplémentaires requises pour tenir compte du contenu local ou pour s'aligner sur d'autres modèles/formalismes de référence.">
+                comment = <"Par exemple : exigences locales en matière d'informations ou métadonnées supplémentaires pour s'aligner sur les équivalents FHIR ou CIMI.">
+            >
+        >
+    >

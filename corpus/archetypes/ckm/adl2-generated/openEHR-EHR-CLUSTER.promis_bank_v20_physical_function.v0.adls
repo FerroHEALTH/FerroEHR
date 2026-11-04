@@ -1,0 +1,241 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6c4a9886-aa16-4225-a9a2-32ecc532abdb; build_uid=2c0f8bb6-4bdc-4dec-9d91-6bb01ccb8c72)
+    openEHR-EHR-CLUSTER.promis_bank_v20_physical_function.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Sarah Ballout, Alina Rehberg">
+                ["organisation"] = <"MHH-Hannover, Medizinische Hochschule Hannover">
+                ["email"] = <"ballout.sarah@mh-hannover.de, rehberg.alina@mh-hannover.de">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Silje Ljosland Bakke">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no">
+        ["date"] = <"2020-06-04">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"https://www.healthmeasures.net/index.php?option=com_instruments&view=measure&id=789&Itemid=992">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"C8026CF5EEC8C34B860BBEF71A5FE553">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Erfassung von PROMIS Datenbank v2.0 Elementen über die physische Funktion.">
+            use = <"Zur Erfassung von PROMIS-Bank-v2.0-Elementen zu körperlichen Funktionen.
+
+Dieser Archetyp wurde für die Verwendung innerhalb des Archetyps OBSERVATION.promis und zusammen mit anderen PROMIS-Bank-Archetypen entwickelt, die ein bestimmtes PROMIS-Profil wie PROMIS-29 abbilden müssen.
+
+Der Archetyp ist bei der anfänglichen Modellierung unvollständig und sollte erweitert werden, wenn zusätzliche Elemente aus der entsprechenden Elementbank benötigt werden.
+
+Obwohl alle openEHR-Archetypen unter einer offenen Lizenz frei verfügbar sind, ist der spezifische Inhalt dieses Archetyps urheberrechtlich geschützt. Jede Verwendung dieses Archetyps innerhalb von Implementierungen muss den von den Urheberrechtsinhabern festgelegten Bedingungen entsprechen.
+
+Copyright-Erklärung: PROMIS-Tests, Testprotokolle, Testelemente, Normen, Normtabellen, Bewertungsprogramme, Bewertungsschlüssel (einschließlich Bewertungsalgorithmen, Skalendefinitionen, Skalenmitgliedschaft und Bewertungsanweisungen), Bewertungsberichte, Software und andere PROMIS-bezogene Materialien sind ©2006-2017 PROMIS Health Organization oder andere Personen/Einrichtungen, die Informationen und Materialien beigesteuert haben, und werden mit Genehmigung der Urheberrechtsinhaber verwendet.
+
+Terms and conditions for use: https://www.healthmeasures.net/images/PROMIS/Terms_of_Use_HM_approved_1-12-17_-_Updated_Copyright_Notices.pdf(en)">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record PROMIS bank v2.0 items about physical function.">
+            use = <"Use to record PROMIS bank v2.0 items about physical function.
+
+This archetype has been designed to be used within the OBSERVATION.promis archetype, and along with other PROMIS bank archetypes constrained to represent a specific PROMIS profile such as PROMIS-29.
+
+The archetype is incomplete at initial modelling, and should be grown as additional items from the relevant item bank are required.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this archetype is copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners.
+
+Copyright statement: PROMIS tests, test protocols, test items, norms, norms tables, scoring programs, scoring keys (including scoring algorithms, scale definitions, scale membership, and scoring directions), score reports, software, and other PROMIS-related materials are ©2006-2017 PROMIS Health Organization or other individuals/entities that have contributed information and materials, and are being used with the permission of the copyright holders.
+
+Terms and conditions for use: https://www.healthmeasures.net/images/PROMIS/Terms_of_Use_HM_approved_1-12-17_-_Updated_Copyright_Notices.pdf">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- PROMIS Item Bank v2.0 - Physical Function
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Are you able to do chores such as vacuuming or yard work?
+                value matches {
+                    DV_ORDINAL[at9001] matches {
+                        [value, symbol] matches {
+                            [{5}, {[at0002]}],    -- Without any difficulty
+                            [{4}, {[at0003]}],    -- With a little difficulty
+                            [{3}, {[at0004]}],    -- With some difficulty
+                            [{2}, {[at0005]}],    -- With much difficulty
+                            [{1}, {[at0006]}]    -- Unable to do
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Are you able to go up and down stairs at a normal pace?
+                value matches {
+                    DV_ORDINAL[at9002] matches {
+                        [value, symbol] matches {
+                            [{5}, {[at0002]}],    -- Without any difficulty
+                            [{4}, {[at0003]}],    -- With a little difficulty
+                            [{3}, {[at0004]}],    -- With some difficulty
+                            [{2}, {[at0005]}],    -- With much difficulty
+                            [{1}, {[at0006]}]    -- Unable to do
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Are you able to go for a walk of at least 15 minutes?
+                value matches {
+                    DV_ORDINAL[at9003] matches {
+                        [value, symbol] matches {
+                            [{5}, {[at0002]}],    -- Without any difficulty
+                            [{4}, {[at0003]}],    -- With a little difficulty
+                            [{3}, {[at0004]}],    -- With some difficulty
+                            [{2}, {[at0005]}],    -- With much difficulty
+                            [{1}, {[at0006]}]    -- Unable to do
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Are you able to run errands and shop?
+                value matches {
+                    DV_ORDINAL[at9004] matches {
+                        [value, symbol] matches {
+                            [{5}, {[at0002]}],    -- Without any difficulty
+                            [{4}, {[at0003]}],    -- With a little difficulty
+                            [{3}, {[at0004]}],    -- With some difficulty
+                            [{2}, {[at0005]}],    -- With much difficulty
+                            [{1}, {[at0006]}]    -- Unable to do
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"PROMIS Datenbank v2.0 - Physikalische Funktion">
+                description = <"Die PROMIS-Item-Datenbank v2.0 für physische Funktion.">
+            >
+            ["at0001"] = <
+                text = <"Können Sie Hausarbeiten erledigen, z.B. Staubsaugen oder Gartenarbeit?">
+                description = <"Können Sie Hausarbeiten erledigen, z.B. Staubsaugen oder Gartenarbeit?">
+                item_code = <"PFA11">
+            >
+            ["at0002"] = <
+                text = <"Ohne jede Schwierigkeit">
+                description = <"">
+            >
+            ["at0003"] = <
+                text = <"Mit geringen Schwierigkeiten">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Mit einigen Schwierigkeiten">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Mit großen Schwierigkeiten">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Kann ich gar nicht">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Können Sie mit normaler Geschwindigkeit Treppen hoch- und runtergehen?">
+                description = <"*">
+                item_code = <"PFA21">
+            >
+            ["at0008"] = <
+                text = <"Können Sie mindestens 15 Minuten lang spazieren gehen?">
+                description = <"Können Sie mindestens 15 Minuten lang spazieren gehen?">
+                item_code = <"PFA23">
+            >
+            ["at0009"] = <
+                text = <"Können Sie Besorgungen machen und einkaufen gehen?">
+                description = <"*">
+                item_code = <"PFA53">
+            >
+            ["ac9004"] = <
+                text = <"Können Sie Hausarbeiten erledigen, z.B. Staubsaugen oder Gartenarbeit? (synthesised)">
+                description = <"Können Sie Hausarbeiten erledigen, z.B. Staubsaugen oder Gartenarbeit? (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"PROMIS Item Bank v2.0 - Physical Function">
+                description = <"The PROMIS item bank v2.0 for physical function.">
+            >
+            ["at0001"] = <
+                text = <"Are you able to do chores such as vacuuming or yard work?">
+                description = <"Are you able to do chores such as
+vacuuming or yard work?">
+                item_code = <"PFA11">
+            >
+            ["at0002"] = <
+                text = <"Without any difficulty">
+                description = <"">
+            >
+            ["at0003"] = <
+                text = <"With a little difficulty">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"With some difficulty">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"With much difficulty">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Unable to do">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Are you able to go up and down stairs at a normal pace?">
+                description = <"*">
+                item_code = <"PFA21">
+            >
+            ["at0008"] = <
+                text = <"Are you able to go for a walk of at least 15 minutes?">
+                description = <"Are you able to go for a walk of at least
+15 minutes?">
+                item_code = <"PFA23">
+            >
+            ["at0009"] = <
+                text = <"Are you able to run errands and shop?">
+                description = <"*">
+                item_code = <"PFA53">
+            >
+            ["ac9004"] = <
+                text = <"Are you able to do chores such as vacuuming or yard work? (synthesised)">
+                description = <"Are you able to do chores such as
+vacuuming or yard work? (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0002", "at0003", "at0004", "at0005", "at0006">
+        >
+    >

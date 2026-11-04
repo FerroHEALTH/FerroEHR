@@ -1,0 +1,1013 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b6029faf-4089-4731-ac22-29569b4ae960; build_uid=93209d8c-034d-436e-b4aa-7f9d2b3142dd)
+    openEHR-EHR-CLUSTER.macronutrients.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Priscila Maranhão; Gustavo Bacelar">
+        ["organisation"] = <"MEDCIDS-FMUP; VIRTUAL CARE">
+        ["email"] = <"priscilamaranhao@gmail.com; gbacelar@gmail.com">
+        ["date"] = <"2016-12-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Ricardo Correia", "Pedro Marques", "Duarte Ferreira", "Heather Leslie, Ocean Health Systems, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Franceschini, SCC; Priore, SE; Euclydes, MP et al. Necessidades e recomendações de nutrientes. In: Cuppari, L. Guias de medicina ambulatorial e hospitalar da EPM-UNIFESP, Nutricção Clínica no Adulto. Barueri, SP: Manole, 2014.">
+        ["2"] = <"Institute of Medicine/ Food and nutrition Board, 2011. Dietary reference Intake. Disponível em: <https://ods.od.nih.gov/Health_Information/Dietary_Reference_Intakes.aspx>">
+        ["3"] = <"FAO/WHO (Food and Agricultural/World Health Organization). Classificação dos Carboidratos - 1998. Disponível em: <http://fao.org>">
+        ["4"] = <"Caruso, L. Distúrbios do trato digestório. In: Cuppari, L. Guias de medicina ambulatorial e hospitalar da EPM-UNIFESP, Nutricção Clínica no Adulto. Barueri, SP: Manole, 2014.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"CDA06FE00BB25C035338B234B56A52AF">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about the nutrients that are consumed in the largest quantities.">
+            keywords = <"nutrients", "diet", "lipids", "carbohydrates", "protein">
+            use = <"Use to record details about the nutrients that are consumed in the largest quantities.
+
+This archetype has been designed to be used within the 'Details' SLOT in the OBSERVATION.dietary_nutrients archetype.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Macronutrients
+        items cardinality matches {1..*; unordered} matches {
+            CLUSTER[at0037] occurrences matches {0..1} matches {    -- Fatty acids
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0068] occurrences matches {0..1} matches {    -- Trans fatty acid
+                        value matches {
+                            DV_QUANTITY[at9001] matches {
+                                property matches {[at9000]}    -- Mass
+                                units matches {"g"}
+                            }
+                        }
+                    }
+                    CLUSTER[at0038] occurrences matches {0..1} matches {    -- Saturated
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0040] occurrences matches {0..1} matches {    -- Caprylic acid
+                                value matches {
+                                    DV_QUANTITY[at9002] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"g"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0041] occurrences matches {0..1} matches {    -- Caproic acid
+                                value matches {
+                                    DV_QUANTITY[at9003] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"g"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0042] occurrences matches {0..1} matches {    -- Lauric acid
+                                value matches {
+                                    DV_QUANTITY[at9004] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"g"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0043] occurrences matches {0..1} matches {    -- Myristic acid
+                                value matches {
+                                    DV_QUANTITY[at9005] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"g"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0044] occurrences matches {0..1} matches {    -- Palmitic acid
+                                value matches {
+                                    DV_QUANTITY[at9006] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"g"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0045] occurrences matches {0..1} matches {    -- Stearic acid
+                                value matches {
+                                    DV_QUANTITY[at9007] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"g"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0046] occurrences matches {0..1} matches {    -- Mounsaturated
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0048] occurrences matches {0..1} matches {    -- Myristoleic acid
+                                value matches {
+                                    DV_QUANTITY[at9008] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"g"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0049] occurrences matches {0..1} matches {    -- Palmitoleic acid
+                                value matches {
+                                    DV_QUANTITY[at9009] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"g"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0050] occurrences matches {0..1} matches {    -- Oleic acid
+                                value matches {
+                                    DV_QUANTITY[at9010] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"g"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0051] occurrences matches {0..1} matches {    -- Cis-vaccenic acid
+                                value matches {
+                                    DV_QUANTITY[at9011] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"g"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0052] occurrences matches {0..1} matches {    -- Eicosenoic acid
+                                value matches {
+                                    DV_QUANTITY[at9012]
+                                }
+                            }
+                            ELEMENT[at0053] occurrences matches {0..1} matches {    -- Docosapentaenoic acid
+                                value matches {
+                                    DV_QUANTITY[at9013] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"g"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0054] occurrences matches {0..1} matches {    -- Polyunsaturated
+                        items cardinality matches {1..*; unordered} matches {
+                            CLUSTER[at0056] occurrences matches {0..1} matches {    -- (n-3)
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0058] occurrences matches {0..1} matches {    -- Alpha linolenic acid (n-3)
+                                        value matches {
+                                            DV_QUANTITY[at9014] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                units matches {"g"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0059] occurrences matches {0..1} matches {    -- Eicosapentaenoic acid
+                                        value matches {
+                                            DV_QUANTITY[at9015] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                units matches {"g"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0060] occurrences matches {0..1} matches {    -- Docosahexaenoic acid
+                                        value matches {
+                                            DV_QUANTITY[at9016] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                units matches {"g"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0061] occurrences matches {0..1} matches {    -- Docosapentaenoic acid
+                                        value matches {
+                                            DV_QUANTITY[at9017] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                units matches {"g"}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            CLUSTER[at0057] occurrences matches {0..1} matches {    -- (n-6)
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0062] occurrences matches {0..1} matches {    -- Linoleic acid (n-6)
+                                        value matches {
+                                            DV_QUANTITY[at9018] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                units matches {"g"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0063] occurrences matches {0..1} matches {    -- Gama-linoleic acid
+                                        value matches {
+                                            DV_QUANTITY[at9019] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                units matches {"g"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0064] occurrences matches {0..1} matches {    -- Dihomo-gama-linoleic acid
+                                        value matches {
+                                            DV_QUANTITY[at9020] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                units matches {"g"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0065] occurrences matches {0..1} matches {    -- Arachidonic acid
+                                        value matches {
+                                            DV_QUANTITY[at9021] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                units matches {"g"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0066] occurrences matches {0..1} matches {    -- Adrenic acid
+                                        value matches {
+                                            DV_QUANTITY[at9022] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                units matches {"g"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0067] occurrences matches {0..1} matches {    -- Docosapentaenoic acid
+                                        value matches {
+                                            DV_QUANTITY[at9023] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                units matches {"g"}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0009] occurrences matches {0..1} matches {    -- Carbohydrates
+                items cardinality matches {1..*; unordered} matches {
+                    CLUSTER[at0115] occurrences matches {0..1} matches {    -- Sugars
+                        items cardinality matches {1..*; unordered} matches {
+                            CLUSTER[at0118] occurrences matches {0..1} matches {    -- Monosaccharides
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0121] occurrences matches {0..1} matches {    -- Glucose
+                                        value matches {
+                                            DV_QUANTITY[at9024] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [units] matches {
+                                                    [{"g"}],
+                                                    [{"mg"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0123] occurrences matches {0..1} matches {    -- Galactose
+                                        value matches {
+                                            DV_QUANTITY[at9025] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [units] matches {
+                                                    [{"mg"}],
+                                                    [{"g"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0124] occurrences matches {0..1} matches {    -- Fructose
+                                        value matches {
+                                            DV_QUANTITY[at9026] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [units] matches {
+                                                    [{"g"}],
+                                                    [{"mg"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            CLUSTER[at0119] occurrences matches {0..1} matches {    -- Disaccharides
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0125] occurrences matches {0..1} matches {    -- Sucrose
+                                        value matches {
+                                            DV_QUANTITY[at9027] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [units] matches {
+                                                    [{"mg"}],
+                                                    [{"g"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0126] occurrences matches {0..1} matches {    -- Lactose
+                                        value matches {
+                                            DV_QUANTITY[at9028] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [units] matches {
+                                                    [{"mg"}],
+                                                    [{"g"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0127] occurrences matches {0..1} matches {    -- Tetralose
+                                        value matches {
+                                            DV_QUANTITY[at9029] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [units] matches {
+                                                    [{"mg"}],
+                                                    [{"g"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            CLUSTER[at0120] occurrences matches {0..1} matches {    -- Polyols
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0128] occurrences matches {0..1} matches {    -- Sorbitol
+                                        value matches {
+                                            DV_QUANTITY[at9030] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [units] matches {
+                                                    [{"mg"}],
+                                                    [{"g"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0129] occurrences matches {0..1} matches {    -- Mannitol
+                                        value matches {
+                                            DV_QUANTITY[at9031] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [units] matches {
+                                                    [{"g"}],
+                                                    [{"mg"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0116] occurrences matches {0..1} matches {    -- Oligosaccharides
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0133] occurrences matches {0..1} matches {    -- Maltodextrins
+                                value matches {
+                                    DV_QUANTITY[at9032] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"g"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0134] occurrences matches {0..1} matches {    -- Rafinose
+                                value matches {
+                                    DV_QUANTITY[at9033] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        [units] matches {
+                                            [{"g"}],
+                                            [{"mg"}]
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0135] occurrences matches {0..1} matches {    -- Staccose
+                                value matches {
+                                    DV_QUANTITY[at9034] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        [units] matches {
+                                            [{"g"}],
+                                            [{"mg"}]
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0136] occurrences matches {0..1} matches {    -- Fruit-oligosaccharides
+                                value matches {
+                                    DV_QUANTITY[at9035] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        [units] matches {
+                                            [{"mg"}],
+                                            [{"g"}]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0117] occurrences matches {0..1} matches {    -- Polysaccharides
+                        items cardinality matches {1..*; unordered} matches {
+                            CLUSTER[at0137] occurrences matches {0..1} matches {    -- Starch
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0139] occurrences matches {0..1} matches {    -- Amylose
+                                        value matches {
+                                            DV_QUANTITY[at9036] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [units] matches {
+                                                    [{"g"}],
+                                                    [{"mg"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0140] occurrences matches {0..1} matches {    -- Amylopectin
+                                        value matches {
+                                            DV_QUANTITY[at9037] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [units] matches {
+                                                    [{"g"}],
+                                                    [{"mg"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0141] occurrences matches {0..1} matches {    -- Starch-resistant
+                                        value matches {
+                                            DV_QUANTITY[at9038] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [units] matches {
+                                                    [{"g"}],
+                                                    [{"mg"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            CLUSTER[at0138] occurrences matches {0..1} matches {    -- Non-starch
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0142] occurrences matches {0..1} matches {    -- Cellulose
+                                        value matches {
+                                            DV_QUANTITY[at9039] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [units] matches {
+                                                    [{"g"}],
+                                                    [{"mg"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0143] occurrences matches {0..1} matches {    -- Hemicellulose
+                                        value matches {
+                                            DV_QUANTITY[at9040] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [units] matches {
+                                                    [{"g"}],
+                                                    [{"mg"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0144] occurrences matches {0..1} matches {    -- Pectins
+                                        value matches {
+                                            DV_QUANTITY[at9041] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [units] matches {
+                                                    [{"g"}],
+                                                    [{"mg"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0145] occurrences matches {0..1} matches {    -- Hydrocolloids
+                                        value matches {
+                                            DV_QUANTITY[at9042] matches {
+                                                property matches {[at9000]}    -- Mass
+                                                [units] matches {
+                                                    [{"g"}],
+                                                    [{"mg"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0006] occurrences matches {0..1} matches {    -- Proteins
+                items cardinality matches {1..*; unordered} matches {
+                    CLUSTER[at0014] occurrences matches {0..1} matches {    -- Non-essential amino acids
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0019] occurrences matches {0..1} matches {    -- Serine
+                                value matches {
+                                    DV_QUANTITY[at9043] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"mg"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0018] occurrences matches {0..1} matches {    -- Glutamic acid
+                                value matches {
+                                    DV_QUANTITY[at9044] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"mg"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Aspargine
+                                value matches {
+                                    DV_QUANTITY[at9045] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"mg"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Aspartic acid
+                                value matches {
+                                    DV_QUANTITY[at9046] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"mg"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Alanine
+                                value matches {
+                                    DV_QUANTITY[at9047] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"mg"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0013] occurrences matches {0..1} matches {    -- Essential amino acids
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0028] occurrences matches {0..1} matches {    -- Valine
+                                value matches {
+                                    DV_QUANTITY[at9048] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"mg"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0027] occurrences matches {0..1} matches {    -- Tryptophan
+                                value matches {
+                                    DV_QUANTITY[at9049] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"mg"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0026] occurrences matches {0..1} matches {    -- Threonine
+                                value matches {
+                                    DV_QUANTITY[at9050] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"mg"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Phenylalanine
+                                value matches {
+                                    DV_QUANTITY[at9051] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"mg"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Methionine
+                                value matches {
+                                    DV_QUANTITY[at9052] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"mg"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Lysine
+                                value matches {
+                                    DV_QUANTITY[at9053] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"mg"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Leucine
+                                value matches {
+                                    DV_QUANTITY[at9054] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"mg"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0021] occurrences matches {0..1} matches {    -- Isoleucine
+                                value matches {
+                                    DV_QUANTITY[at9055] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"mg"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0020] occurrences matches {0..1} matches {    -- Histidine
+                                value matches {
+                                    DV_QUANTITY[at9056] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"mg"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0012] occurrences matches {0..1} matches {    -- Conditionally essential amino acids
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0030] occurrences matches {0..1} matches {    -- Cysteine
+                                value matches {
+                                    DV_QUANTITY[at9057] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"mg"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0029] occurrences matches {0..1} matches {    -- Arginine
+                                value matches {
+                                    DV_QUANTITY[at9058] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"mg"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0031] occurrences matches {0..1} matches {    -- Glutamine
+                                value matches {
+                                    DV_QUANTITY[at9059] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"mg"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0032] occurrences matches {0..1} matches {    -- Glycine
+                                value matches {
+                                    DV_QUANTITY[at9060] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"mg"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0033] occurrences matches {0..1} matches {    -- Proline
+                                value matches {
+                                    DV_QUANTITY[at9061] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"mg"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0034] occurrences matches {0..1} matches {    -- Tyrosine
+                                value matches {
+                                    DV_QUANTITY[at9062] matches {
+                                        property matches {[at9000]}    -- Mass
+                                        units matches {"mg"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Macronutrients">
+                description = <"The nutrients that are consumed in the largest quantities and used for energy, growth and body functions by living organisms.">
+            >
+            ["at0006"] = <
+                text = <"Proteins">
+                description = <"Assessment of protein of an individual.">
+            >
+            ["at0009"] = <
+                text = <"Carbohydrates">
+                description = <"Assessment of carbohydrates of an individual.">
+            >
+            ["at0012"] = <
+                text = <"Conditionally essential amino acids">
+                description = <"Assessment of conditionally essential amino acids  are these  sinthetized in human organism (not essential), but they are used more faster then produced.">
+            >
+            ["at0013"] = <
+                text = <"Essential amino acids">
+                description = <"Assessment of essential amino acids of an individual.">
+            >
+            ["at0014"] = <
+                text = <"Non-essential amino acids">
+                description = <"Assessment of not essential amino acids of an individual.">
+            >
+            ["at0015"] = <
+                text = <"Alanine">
+                description = <"Assessment of alanine amino acid.">
+            >
+            ["at0016"] = <
+                text = <"Aspartic acid">
+                description = <"Assessment of aspartic acid  amino acid.">
+            >
+            ["at0017"] = <
+                text = <"Aspargine">
+                description = <"Assessment of aspargineis amino acid.">
+            >
+            ["at0018"] = <
+                text = <"Glutamic acid">
+                description = <"Assessment of glutamic amino acid.">
+            >
+            ["at0019"] = <
+                text = <"Serine">
+                description = <"Assessment of serine amino acid.">
+            >
+            ["at0020"] = <
+                text = <"Histidine">
+                description = <"Histidine is a type of essential amino acids.">
+            >
+            ["at0021"] = <
+                text = <"Isoleucine">
+                description = <"Isoleucine is a type of essential amino acids.">
+            >
+            ["at0022"] = <
+                text = <"Leucine">
+                description = <"Assessment of Leucine is a type of essential amino acids.">
+            >
+            ["at0023"] = <
+                text = <"Lysine">
+                description = <"Assessment of lysine amino acid.">
+            >
+            ["at0024"] = <
+                text = <"Methionine">
+                description = <"Assessment of methionine amino acid.">
+            >
+            ["at0025"] = <
+                text = <"Phenylalanine">
+                description = <"Assessment of phenylalanine amino acid.">
+            >
+            ["at0026"] = <
+                text = <"Threonine">
+                description = <"Assessment of threonine amino acids.">
+            >
+            ["at0027"] = <
+                text = <"Tryptophan">
+                description = <"Assessment of tryptophan amino acid.">
+            >
+            ["at0028"] = <
+                text = <"Valine">
+                description = <"Assessment of valine amino acid.">
+            >
+            ["at0029"] = <
+                text = <"Arginine">
+                description = <"Assessment of argine amino acids.">
+            >
+            ["at0030"] = <
+                text = <"Cysteine">
+                description = <"Assessment of cysteine amino acid.">
+            >
+            ["at0031"] = <
+                text = <"Glutamine">
+                description = <"Assessment of glutamine amino acids.">
+            >
+            ["at0032"] = <
+                text = <"Glycine">
+                description = <"Assessment of glycine amino acids.">
+            >
+            ["at0033"] = <
+                text = <"Proline">
+                description = <"Assessment of proline amino acids.">
+            >
+            ["at0034"] = <
+                text = <"Tyrosine">
+                description = <"Assessment of tyrosine amino acids.">
+            >
+            ["at0037"] = <
+                text = <"Fatty acids">
+                description = <"Assessment of dietary fatty acids of an individual.">
+            >
+            ["at0038"] = <
+                text = <"Saturated">
+                description = <"Assessment of dietary saturated fatty acids of an individual.">
+            >
+            ["at0040"] = <
+                text = <"Caprylic acid">
+                description = <"Assessment of dietary caprylic acid.">
+            >
+            ["at0041"] = <
+                text = <"Caproic acid">
+                description = <"Assessment of caproic acid.">
+            >
+            ["at0042"] = <
+                text = <"Lauric acid">
+                description = <"Assessment of lauric acid.">
+            >
+            ["at0043"] = <
+                text = <"Myristic acid">
+                description = <"Assessment of myristic acid.">
+            >
+            ["at0044"] = <
+                text = <"Palmitic acid">
+                description = <"Assessment of palmitic acid.">
+            >
+            ["at0045"] = <
+                text = <"Stearic acid">
+                description = <"Assessment of stearic acid.">
+            >
+            ["at0046"] = <
+                text = <"Mounsaturated">
+                description = <"Assessment of dietary monounsaturated fatty acids (n-9) of an individual.">
+            >
+            ["at0048"] = <
+                text = <"Myristoleic acid">
+                description = <"Assessment of myristoleic acid.">
+            >
+            ["at0049"] = <
+                text = <"Palmitoleic acid">
+                description = <"Assessment of palmitoleic acid.">
+            >
+            ["at0050"] = <
+                text = <"Oleic acid">
+                description = <"Assessment of oleic acid.">
+            >
+            ["at0051"] = <
+                text = <"Cis-vaccenic acid">
+                description = <"Assessment of cis-vaccenic acid  is a type of monousaturated fatty acids.">
+            >
+            ["at0052"] = <
+                text = <"Eicosenoic acid">
+                description = <"Assessment of eicosenoic acid.">
+            >
+            ["at0053"] = <
+                text = <"Docosapentaenoic acid">
+                description = <"Assessment of docosapentaenoic acid.">
+            >
+            ["at0054"] = <
+                text = <"Polyunsaturated">
+                description = <"Assessment of polyunsaturated acids which include the n-6 fatty acids and n-3 fatty acids.">
+            >
+            ["at0056"] = <
+                text = <"(n-3)">
+                description = <"Measurement of n-3 fatty acids of an individual.">
+            >
+            ["at0057"] = <
+                text = <"(n-6)">
+                description = <"Assessment of linoleic acid of an individual.">
+            >
+            ["at0058"] = <
+                text = <"Alpha linolenic acid (n-3)">
+                description = <"Assessment of a-linolenic acid.">
+            >
+            ["at0059"] = <
+                text = <"Eicosapentaenoic acid">
+                description = <"Assessment of eicosapentaenoic  acid.">
+            >
+            ["at0060"] = <
+                text = <"Docosahexaenoic acid">
+                description = <"Assessment of docosahexaenoic acid.">
+            >
+            ["at0061"] = <
+                text = <"Docosapentaenoic acid">
+                description = <"Assessment of docosapentaenoic acid.">
+            >
+            ["at0062"] = <
+                text = <"Linoleic acid (n-6)">
+                description = <"Assessment of linoleic acid.">
+            >
+            ["at0063"] = <
+                text = <"Gama-linoleic acid">
+                description = <"Assessment of gama-linoleic acid.">
+            >
+            ["at0064"] = <
+                text = <"Dihomo-gama-linoleic acid">
+                description = <"Assessment of dihomo-gama-linoleic acid.">
+            >
+            ["at0065"] = <
+                text = <"Arachidonic acid">
+                description = <"Assessment of arachidonic acid.">
+            >
+            ["at0066"] = <
+                text = <"Adrenic acid">
+                description = <"Assessment of adrenic acid.">
+            >
+            ["at0067"] = <
+                text = <"Docosapentaenoic acid">
+                description = <"Assessment of docosapentaenoic acid.">
+            >
+            ["at0068"] = <
+                text = <"Trans fatty acid">
+                description = <"Assessment of dietary  trans fatty acids.">
+            >
+            ["at0115"] = <
+                text = <"Sugars">
+                description = <"Assessment of sugars (1-2 degree of polymerization) of an individual.">
+            >
+            ["at0116"] = <
+                text = <"Oligosaccharides">
+                description = <"Assessment of oligosaccharides (They have 3-9 degree of polymerization of an individual).">
+            >
+            ["at0117"] = <
+                text = <"Polysaccharides">
+                description = <"Assessment of polysaccharides (They have more than 9 degree of polymerization).">
+            >
+            ["at0118"] = <
+                text = <"Monosaccharides">
+                description = <"Assessment of monosaccharides (simple  carbohydrate) of an individual.">
+            >
+            ["at0119"] = <
+                text = <"Disaccharides">
+                description = <"Assessment of disaccharides (carbohydrate constitued by two units of monossacharides).">
+            >
+            ["at0120"] = <
+                text = <"Polyols">
+                description = <"Assessment of polyol.">
+            >
+            ["at0121"] = <
+                text = <"Glucose">
+                description = <"Assessment of glucose.">
+            >
+            ["at0123"] = <
+                text = <"Galactose">
+                description = <"Assessment of galactose.">
+            >
+            ["at0124"] = <
+                text = <"Fructose">
+                description = <"Assessment of fructose.">
+            >
+            ["at0125"] = <
+                text = <"Sucrose">
+                description = <"Assessment of sucrose.">
+            >
+            ["at0126"] = <
+                text = <"Lactose">
+                description = <"Assessment of lactose.">
+            >
+            ["at0127"] = <
+                text = <"Tetralose">
+                description = <"Assessment of tetralose.">
+            >
+            ["at0128"] = <
+                text = <"Sorbitol">
+                description = <"Assessment of sorbitol.">
+            >
+            ["at0129"] = <
+                text = <"Mannitol">
+                description = <"Assessment of mannitol.">
+            >
+            ["at0133"] = <
+                text = <"Maltodextrins">
+                description = <"Assessment of maltodextrina  is a type of sugar of an individual.">
+            >
+            ["at0134"] = <
+                text = <"Rafinose">
+                description = <"Assessment of rafinose.">
+            >
+            ["at0135"] = <
+                text = <"Staccose">
+                description = <"Assessment of staccose.">
+            >
+            ["at0136"] = <
+                text = <"Fruit-oligosaccharides">
+                description = <"Assessment of fruit-oligosaccharides (FOS)  is a type of sugar.">
+            >
+            ["at0137"] = <
+                text = <"Starch">
+                description = <"Measurement of starch, which is a complex carbohydrate and main energy reserve in plants, is present in grains, legumes, tubers, fruits, and root vegetables.">
+            >
+            ["at0138"] = <
+                text = <"Non-starch">
+                description = <"Assessment of non-starch polysaccharides which are also known as dietary fiber.">
+            >
+            ["at0139"] = <
+                text = <"Amylose">
+                description = <"Assessment of amylose.">
+            >
+            ["at0140"] = <
+                text = <"Amylopectin">
+                description = <"Assessment of amylopectin.">
+            >
+            ["at0141"] = <
+                text = <"Starch-resistant">
+                description = <"Assessment of starch-resistant  is a type of sugar.">
+            >
+            ["at0142"] = <
+                text = <"Cellulose">
+                description = <"Assessment of cellulose.">
+            >
+            ["at0143"] = <
+                text = <"Hemicellulose">
+                description = <"Assessment of hemicellulose.">
+            >
+            ["at0144"] = <
+                text = <"Pectins">
+                description = <"Assessment of pectins.">
+            >
+            ["at0145"] = <
+                text = <"Hydrocolloids">
+                description = <"Assessment of hydrocolloids is a type of sugar.">
+            >
+            ["at9000"] = <
+                text = <"Mass">
+                description = <"Mass">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/124>
+        >
+    >

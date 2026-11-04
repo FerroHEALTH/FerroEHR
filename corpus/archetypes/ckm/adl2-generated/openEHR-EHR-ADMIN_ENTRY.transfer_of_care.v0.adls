@@ -1,0 +1,70 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ca3f03ed-9fd3-478c-885e-9715c236e728; build_uid=772cf42b-d960-42c6-b6c8-86b7b67a7ad6)
+    openEHR-EHR-ADMIN_ENTRY.transfer_of_care.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-03-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"382EC1E715660816C05802A44C0EAE34">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record administrative details about transfer of care from a healthcare institution to home or another institution at the end of an episode of care.">
+            use = <"Use to record administrative details about transfer of care from a healthcare institution to home or another institution at the end of an episode of care.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ADMIN_ENTRY[at0000] matches {    -- Transfer of care
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Discharge date
+                        value matches {
+                            DV_DATE_TIME[at9000]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Destination category
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Transfer of care">
+                description = <"Administrative details about transfer of care from a healthcare institution to home or another institution at the end of an episode of care.">
+            >
+            ["at0002"] = <
+                text = <"Discharge date">
+                description = <"The date of transfer of care to home or another instituion.">
+            >
+            ["at0003"] = <
+                text = <"Destination category">
+                description = <"The category of destination after discharge.">
+                comment = <"For example: home; hospital; nursing home; or rehabilitation hospital.">
+            >
+        >
+    >

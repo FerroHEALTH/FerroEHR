@@ -1,0 +1,912 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=71752b17-1366-4527-8638-170b78f546d5; build_uid=a0ed3df7-8376-4680-a873-217caf9cc948)
+    openEHR-EHR-EVALUATION.art_cycle_summary.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Peter Fedorcsak, Liv Laugen, Vebjørn Arntzen">
+                ["organisation"] = <"University of Oslo, ​Oslo University Hospital, Norway">
+                ["email"] = <"peterfe@uio.no, liv.laugen@ous-hf.no, varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Peter Fedorcsak">
+        ["organisation"] = <"University of Oslo">
+        ["email"] = <"peterfe@uio.no">
+        ["date"] = <"2022-01-11">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Peter Fedorcsak, University of Oslo, Norway (openEHR Editor)", "Heather Grain, Llewelyn Grain Informatics, Australia", "Evelyn Hovenga, EJSH Consulting, Australia", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Christine Mikalsen, Regional forvaltning EPJ, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"ESHRE Special Interest Group of Embryology; Alpha Scientists in Reproductive Medicine. The Vienna consensus: report of an expert meeting on the development of art laboratory performance indicators. Hum Reprod Open. 2017 Aug 4;2017(2):hox011. doi: 10.1093/hropen/hox011. PMID: 31486806; PMCID: PMC6276649.">
+        ["2"] = <"Group, E.C.P.W., et al., The Maribor consensus: report of an expert meeting on the development of performance indicators for clinical practice in ART. Hum Reprod Open, 2021. 2021(3): p. hoab022. PMID: 34250273.">
+        ["3"] = <"Nargund G, Fauser BC, Macklon NS, Ombelet W, Nygren K, Frydman R; Rotterdam ISMAAR Consensus Group on Terminology for Ovarian Stimulation for IVF. The ISMAAR proposal on terminology for ovarian stimulation for IVF. Hum Reprod. 2007 Nov;22(11):2801-4. doi: 10.1093/humrep/dem285. Epub 2007 Sep 12. PMID: 17855409.">
+        ["4"] = <"Zegers-Hochschild F, Adamson GD, Dyer S, Racowsky C, de Mouzon J, Sokol R, Rienzi L, Sunde A, Schmidt L, Cooke ID, Simpson JL, van der Poel S. The International Glossary on Infertility and Fertility Care, 2017. Fertil Steril. 2017 Sep;108(3):393-406. doi: 10.1016/j.fertnstert.2017.06.005. Epub 2017 Jul 29. PMID: 28760517.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"09CC509268F4E20A73807CF409B4705B">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere oppsummering og persistent informasjon om et behandlingsforsøk ved assistert befruktning.">
+            keywords = <"ART", "IVF", "ICSI", "reproduksjon", "in vitro", "fertilisering", "inseminasjon", "infertilitet", "befruktning", "barneønske">
+            use = <"Brukes til å registrere oppsummering og persistent informasjon om ett enkelt behandlingsforsøk ved assistert befruktning.
+
+Behandling begynner ved oppstart av ovarialstimulering eller monitorering.
+
+Behandlingsforsøk avsluttes ved valg av 'Utfall av forsøk':
+- kansellering av behandling for hvilken som helst grunn;
+- tilbakesetting av embryo;
+- ingen embryo er egnet for tilbakesetting;
+- nedfrysing av embryo;
+- uttak av oocytter som enten fryses eller doneres.">
+            misuse = <"Skal ikke brukes til å registrere detaljer om svangerskap etter assistert befruktning utover ultralydundersøkelse ved uke åtte.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record summary or persistent information about a single cycle of assisted reproduction treatment.">
+            keywords = <"ART", "IVF", "ICSI", "reproduction", "in vitro", "fertilisation", "insemination", "infertility", "reproductive">
+            use = <"Use to record summary or persistent information about a single cycle of assisted reproduction treatment.
+
+The start of a treatment cycle is triggered by the initiation of ovulation stimulation or monitoring. 
+
+The end of a treatment cycle is triggered by identifying a 'Cycle outcome':
+- the cancellation of treatment for any reason; 
+- embryo transfer;
+- the recognition that no embryo is suitable for transfer;
+- embryo freezing; or
+- successful harvesting of oocytes that are frozen or donated.">
+            misuse = <"Not to be used to record details about a pregnancy conceived by assisted reproduction treatment beyond a week eight ultrasound scan.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Assisted reproduction treatment cycle summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Cycle sequence
+                        value matches {
+                            DV_COUNT[at9007]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Cycle identifier
+                        value matches {
+                            DV_IDENTIFIER[at9008]
+                            DV_TEXT[at9009]
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Start date
+                        value matches {
+                            DV_DATE_TIME[at9010]
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9011]
+                        }
+                    }
+                    ELEMENT[at0006] matches {    -- Intent
+                        value matches {
+                            DV_TEXT[at9013]
+                        }
+                    }
+                    ELEMENT[at0012] matches {    -- Activities
+                        value matches {
+                            DV_CODED_TEXT[at9014] matches {
+                                defining_code matches {[ac9001]}    -- Activities (synthesised)
+                            }
+                            DV_TEXT[at9015]
+                        }
+                    }
+                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Donation received
+                        value matches {
+                            DV_CODED_TEXT[at9016] matches {
+                                defining_code matches {[ac9002]}    -- Donation received (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Hormone protocol
+                        value matches {
+                            DV_CODED_TEXT[at9017] matches {
+                                defining_code matches {[ac9003]}    -- Hormone protocol (synthesised)
+                            }
+                            DV_TEXT[at9018]
+                        }
+                    }
+                    ELEMENT[at0072] occurrences matches {0..1} matches {    -- Cumulative gonadotropin dose
+                        value matches {
+                            DV_QUANTITY[at9040] matches {
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"[iU]"}],
+                                    [{|>=0.0|}, {"ug"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0073] occurrences matches {0..1} matches {    -- Duration of gonadotropin administration
+                        value matches {
+                            DV_DURATION[at9041] matches {
+                                value matches {PD/|>=P0D|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0042] occurrences matches {0..1} matches {    -- Number of oocytes collected
+                        value matches {
+                            DV_COUNT[at9021]
+                        }
+                    }
+                    ELEMENT[at0043] occurrences matches {0..1} matches {    -- Number of mature (M2) oocytes collected
+                        value matches {
+                            DV_COUNT[at9022]
+                        }
+                    }
+                    ELEMENT[at0044] occurrences matches {0..1} matches {    -- Number of oocytes attempted fertilized
+                        value matches {
+                            DV_COUNT[at9023]
+                        }
+                    }
+                    ELEMENT[at0071] occurrences matches {0..1} matches {    -- Number of 2PN zygotes
+                        value matches {
+                            DV_COUNT[at9042]
+                        }
+                    }
+                    ELEMENT[at0045] occurrences matches {0..1} matches {    -- Number of embryos transferred
+                        value matches {
+                            DV_COUNT[at9024]
+                        }
+                    }
+                    ELEMENT[at0046] occurrences matches {0..1} matches {    -- Transferred embryo quality
+                        value matches {
+                            DV_TEXT[at9025]
+                        }
+                    }
+                    ELEMENT[at0047] occurrences matches {0..1} matches {    -- Number of embryos frozen
+                        value matches {
+                            DV_COUNT[at9026]
+                        }
+                    }
+                    ELEMENT[at0048] occurrences matches {0..1} matches {    -- Number of oocytes frozen
+                        value matches {
+                            DV_COUNT[at9027]
+                        }
+                    }
+                    ELEMENT[at0049] occurrences matches {0..1} matches {    -- Number of embryos thawed
+                        value matches {
+                            DV_COUNT[at9028]
+                        }
+                    }
+                    ELEMENT[at0050] occurrences matches {0..1} matches {    -- Number of embryos surviving thaw
+                        value matches {
+                            DV_COUNT[at9029]
+                        }
+                    }
+                    ELEMENT[at0051] occurrences matches {0..1} matches {    -- Number of embryos biopsied
+                        value matches {
+                            DV_COUNT[at9030]
+                        }
+                    }
+                    ELEMENT[at0052] occurrences matches {0..1} matches {    -- Number of embryos surviving biopsy
+                        value matches {
+                            DV_COUNT[at9031]
+                        }
+                    }
+                    ELEMENT[at0034] matches {    -- Cycle outcome
+                        value matches {
+                            DV_CODED_TEXT[at9019] matches {
+                                defining_code matches {[ac9004]}    -- Cycle outcome (synthesised)
+                            }
+                            DV_TEXT[at9020]
+                        }
+                    }
+                    ELEMENT[at0054] occurrences matches {0..1} matches {    -- Pregnancy test outcome
+                        value matches {
+                            DV_CODED_TEXT[at9033] matches {
+                                defining_code matches {[ac9005]}    -- Pregnancy test outcome (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0053] occurrences matches {0..1} matches {    -- Number of viable fetuses
+                        value matches {
+                            DV_COUNT[at9032]
+                        }
+                    }
+                    CLUSTER[at0057] matches {    -- Complications
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0058] occurrences matches {1} matches {    -- Condition
+                                value matches {
+                                    DV_CODED_TEXT[at9034] matches {
+                                        defining_code matches {[ac9006]}    -- Condition (synthesised)
+                                    }
+                                    DV_TEXT[at9035]
+                                }
+                            }
+                            ELEMENT[at0065] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9036]
+                                }
+                            }
+                            ELEMENT[at0066] occurrences matches {0..1} matches {    -- Date of onset
+                                value matches {
+                                    DV_DATE_TIME[at9037]
+                                }
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0074] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0067] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9038]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0068] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0069] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9039]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0070] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Forsøkssammendrag ved assistert befruktning">
+                description = <"Sammendrag og persistent informasjon om et enkelt behandlingsforsøk ved assistert befruktning.">
+            >
+            ["at0002"] = <
+                text = <"Forsøksnummer">
+                description = <"Rekkefølgenummer av forsøk i en behandlingsrekke.">
+                comment = <"Eksempelvis '2' for andre behandlingsforsøk.">
+            >
+            ["at0003"] = <
+                text = <"Forsøksidentifikator">
+                description = <"Virksomhetens interne identifikator for behandlingsforsøket.">
+            >
+            ["at0004"] = <
+                text = <"Startdato">
+                description = <"Startdato for behandlingsforsøk.">
+                comment = <"For eksempel dato, eller dato og tid da ovarialstimulering eller monitorering ble startet med sikte på behandling.">
+            >
+            ["at0005"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstlig beskrivelse om behandlingsforsøket.">
+            >
+            ["at0006"] = <
+                text = <"Behandlingsformål">
+                description = <"Formål med oppstart av behandlingsforsøket.">
+                comment = <"For eksempel \"Behandling av infertilitet\", \"Fertilitetsbevarende behandling\", \"Donasjon av kjønnsceller\", \"Forebygge overføring av smittsom sykdom\", \"Forebygging av overføring av genetisk sykdom\". Dette dataelementet er satt til å kunne gjentas, for å tillate at flere enn ett behandlingsformål kan registreres.">
+            >
+            ["at0012"] = <
+                text = <"Behandlingsaktiviteter">
+                description = <"Aktivitet eller behandling utført under forsøket.">
+                comment = <"Dataelementet har flere forekomster for å kunne registrere flere behandlingsaktiviteter.">
+            >
+            ["at0013"] = <
+                text = <"Intrauterin inseminasjon">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Konvensjonell in vitro inseminasjon">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Intracytoplasmatisk spermie mikroinjeksjon (ICSI)">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Frosset-tint embryotransfer">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Kirurgisk uthenting av sæd">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Preimplantasjonstest (PGT)">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Egguttak">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Embryotransfer">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Mottatt donasjon">
+                description = <"Type celler eller vev donert til individet som ledd i behandlingsforsøk.">
+            >
+            ["at0022"] = <
+                text = <"Ingen">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Sædceller">
+                description = <"Donerte sædceller ble brukt i behandlingsforsøket.">
+            >
+            ["at0024"] = <
+                text = <"Eggdonasjon">
+                description = <"Donerte oocytter ble brukt i behandlingsforsøket.">
+            >
+            ["at0025"] = <
+                text = <"Embryodonasjon">
+                description = <"Donerte embryo ble brukt i behandlingsforsøket.">
+            >
+            ["at0026"] = <
+                text = <"Hormonprotokoll">
+                description = <"Identifisering av hormonprotokoll brukt under behandlingsforsøket.">
+            >
+            ["at0027"] = <
+                text = <"Naturlig syklus">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Modifisert naturlig syklus">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Hormonsubstitusjon">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Mild stimulering">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Langvarig GnRH agonist, standard stimuleringsprotokoll">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Flare-up GnRH agonist, standard stimuleringsprotokoll">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"GnRH antagonist, standard stimuleringsprotokoll">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Utfall av forsøk">
+                description = <"Utfall av behandlingsforsøk.">
+            >
+            ["at0035"] = <
+                text = <"Embryotransfer gjennomført">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Kansellert før egguttak">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Kansellert etter egguttak">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Alle embryo frosset">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Alle oocytter frosset">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Oocytter donert">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Ingen embryo er egnet for embryotransfer">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Antall oocytter ved egguttak">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Antall modne (M2) oocytter ved egguttak">
+                description = <"Antall oocytter ved egguttak i metafase 2 av den meiotiske celledelingen.">
+            >
+            ["at0044"] = <
+                text = <"Antall oocytter til befruktning">
+                description = <"Antall oocytter som ble forsøkt befruktet ved vanlig in vitro inseminasjon (IVF) eller ved intracytoplasmatisk spermie mikroinjeksjon (ICSI).">
+            >
+            ["at0045"] = <
+                text = <"Antall embryotransfer">
+                description = <"Antall embryo tilbakeført.">
+            >
+            ["at0046"] = <
+                text = <"Kvalitet av tilbakeført embryo">
+                description = <"Fritekstlig beskrivelse av kvalitet av embryo som ble tilbakeført under behandlingsforsøket.">
+            >
+            ["at0047"] = <
+                text = <"Antall nedfrossede embryo">
+                description = <"Antall kryokonserverte embryo.">
+            >
+            ["at0048"] = <
+                text = <"Antall nedfrossede oocytter">
+                description = <"Antall kryokonserverte oocytter.">
+            >
+            ["at0049"] = <
+                text = <"Antall tinte embryo">
+                description = <"Antall embryo som ble tint.">
+            >
+            ["at0050"] = <
+                text = <"Opptining overlevelse">
+                description = <"Antall embryo som overlevde opptiningen.">
+            >
+            ["at0051"] = <
+                text = <"Antall embryo biopsiert">
+                description = <"Antall embryo som har gjennomgått biopsi ved preimplantasjonstest (PGT).">
+            >
+            ["at0052"] = <
+                text = <"Biopsi overlevelse">
+                description = <"Antall embryo som overlevde biopsi ved preimplantasjonstest (PGT).">
+            >
+            ["at0053"] = <
+                text = <"Antall levende fostre">
+                description = <"Antall fostre med hjerteaktivitet ved åtte ukers ultralydundersøkelse.">
+            >
+            ["at0054"] = <
+                text = <"Utfall av svangerskapstest">
+                description = <"Utfall av svangerskapstest med humant koriongonadotropin (hCG).">
+            >
+            ["at0055"] = <
+                text = <"Positiv">
+                description = <"Positiv svangerskapstest etter forsøket.">
+            >
+            ["at0056"] = <
+                text = <"Negativ">
+                description = <"Negativ svangerskapstest etter forsøket.">
+            >
+            ["at0057"] = <
+                text = <"Komplikasjoner">
+                description = <"Detaljer om en eller flere komplikasjoner som følge av behandling eller aktiviteter under assistert befruktning.">
+            >
+            ["at0058"] = <
+                text = <"Tilstand">
+                description = <"Navn for behandlingskomplikasjon.">
+            >
+            ["at0059"] = <
+                text = <"Mild overstimuleringssyndrom">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Moderat overstimuleringssyndrom">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Alvorlig overstimuleringssyndrom">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"Infeksjon">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"Blødning">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"Trombose">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstlig beskrivelse om komplikasjonen.">
+            >
+            ["at0066"] = <
+                text = <"Dato for oppstart">
+                description = <"Dato for komplikasjonenes oppstart.">
+            >
+            ["at0067"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om behandlingsforsøket, som ikke dekkes av andre elementer.">
+            >
+            ["at0069"] = <
+                text = <"Sist oppdatert">
+                description = <"Dato når behandlingssammendraget sist ble oppdatert.">
+            >
+            ["at0070"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som er nødvendig for å sammenstille med andre referansemodeller/formalismer.">
+                comment = <"F.eks. lokale informasjonskrav eller ekstra metadata for å samsvare med FHIR.">
+            >
+            ["at0071"] = <
+                text = <"Antall 2PN zygoter">
+                description = <"Antall zygoter med to synlige forkjerner.">
+            >
+            ["at0072"] = <
+                text = <"Kumulativ gonadotropindose">
+                description = <"Total dose gonadotropin gitt for ovarialstimulering under behandlingsforsøket.">
+            >
+            ["at0073"] = <
+                text = <"Varighet for gonadotropinstimulering">
+                description = <"Antall dager for gonadotropinstimulering under behandlingsforsøket.">
+            >
+            ["at0074"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere detaljer om den assisterte reproduksjonsbehandlingen.">
+            >
+            ["ac9001"] = <
+                text = <"Behandlingsaktiviteter (synthesised)">
+                description = <"Aktivitet eller behandling utført under forsøket. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Mottatt donasjon (synthesised)">
+                description = <"Type celler eller vev donert til individet som ledd i behandlingsforsøk. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Hormonprotokoll (synthesised)">
+                description = <"Identifisering av hormonprotokoll brukt under behandlingsforsøket. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Utfall av forsøk (synthesised)">
+                description = <"Utfall av behandlingsforsøk. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Utfall av svangerskapstest (synthesised)">
+                description = <"Utfall av svangerskapstest med humant koriongonadotropin (hCG). (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Tilstand (synthesised)">
+                description = <"Navn for behandlingskomplikasjon. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Assisted reproduction treatment cycle summary">
+                description = <"Summary or persistent information about a single cycle of assisted reproduction treatment.">
+            >
+            ["at0002"] = <
+                text = <"Cycle sequence">
+                description = <"The cycle number within a sequence of cycles.">
+                comment = <"For example: '2' as the second treatment cycle.">
+            >
+            ["at0003"] = <
+                text = <"Cycle identifier">
+                description = <"Identifier of the treatment cycle within the treating organisation.">
+            >
+            ["at0004"] = <
+                text = <"Start date">
+                description = <"The date of commencement for the treatment cycle.">
+                comment = <"For example: the date, or date and time, when ovarian stimulation or monitoring was initiated with the intention to treat.">
+            >
+            ["at0005"] = <
+                text = <"Description">
+                description = <"Narrative description about the treatment cycle.">
+            >
+            ["at0006"] = <
+                text = <"Intent">
+                description = <"The intended purpose at the onset of the treatment cycle.">
+                comment = <"For example: infertility treatment; fertility preservation; produce gamete for donation; prevent transmission of infectious disease; prevent transmission of genetic disease. This data element has multiple occurrences to allow for more than one intended purpose to be recorded.">
+            >
+            ["at0012"] = <
+                text = <"Activities">
+                description = <"Activity or treatment caried out during the treatment cycle.">
+                comment = <"This data element has multiple occurrences to allow for more than one activity to be recorded.">
+            >
+            ["at0013"] = <
+                text = <"Intrauterine insemination">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Conventional in vitro insemination">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Intracytoplasmatic sperm injection (ICSI)">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Frozen-thawed embryo transfer">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Surgical sperm collection">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Pre-implantation genetic testing">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Oocyte aspiration">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Embryo transfer">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Donation received">
+                description = <"Cell or tissue type donated to the individual as part of the treatment cycle.">
+            >
+            ["at0022"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Sperm">
+                description = <"Donated sperm were used as part of the treatment cycle.">
+            >
+            ["at0024"] = <
+                text = <"Oocyte donation">
+                description = <"Donated oocyte/s were used as part of the treatment cycle.">
+            >
+            ["at0025"] = <
+                text = <"Embryo donation">
+                description = <"Donated embryo/s were used as part of the treatment cycle.">
+            >
+            ["at0026"] = <
+                text = <"Hormone protocol">
+                description = <"Identification of the hormone protocol used during the treatment cycle.">
+            >
+            ["at0027"] = <
+                text = <"Natural cycle">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Modified natural cycle">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Hormone replacement cycle">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Mild stimulation">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Long-term GnRH agonist, conventional simulation">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Flare-up GnRH agonist, conventional stimulation">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"GnRH antagonist, conventional stimulation">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Cycle outcome">
+                description = <"Identification of the outcome of the treatment cycle.">
+            >
+            ["at0035"] = <
+                text = <"Embryo transfer completed">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Cycle cancelled before oocyte aspiration">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Cycle cancelled after oocyte aspiration">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"All embryos frozen">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"All oocytes frozen">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Oocytes donated">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"No embryo is suitable for transfer">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Number of oocytes collected">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Number of mature (M2) oocytes collected">
+                description = <"Number of collected oocytes in metaphase 2 of the meiotic cell division.">
+            >
+            ["at0044"] = <
+                text = <"Number of oocytes attempted fertilized">
+                description = <"Number of oocytes subjected to conventional in vitro fertilisation (IVF) or to intracytoplasmatic sperm injection (ICSI).">
+            >
+            ["at0045"] = <
+                text = <"Number of embryos transferred">
+                description = <"Number of embryo transferred.">
+            >
+            ["at0046"] = <
+                text = <"Transferred embryo quality">
+                description = <"Narrative description about the quality of the embryos transferred.">
+            >
+            ["at0047"] = <
+                text = <"Number of embryos frozen">
+                description = <"Number of cryopreserved embryos.">
+            >
+            ["at0048"] = <
+                text = <"Number of oocytes frozen">
+                description = <"Number of cryopreserved oocytes.">
+            >
+            ["at0049"] = <
+                text = <"Number of embryos thawed">
+                description = <"Number of embryos thawed.">
+            >
+            ["at0050"] = <
+                text = <"Number of embryos surviving thaw">
+                description = <"Number of embryos surviving thaw.">
+            >
+            ["at0051"] = <
+                text = <"Number of embryos biopsied">
+                description = <"Number of embryos biopsied for preimplantation genetic test.">
+            >
+            ["at0052"] = <
+                text = <"Number of embryos surviving biopsy">
+                description = <"Number of embryos surviving biopsy for preimplantation genetic test.">
+            >
+            ["at0053"] = <
+                text = <"Number of viable fetuses">
+                description = <"The number of fetuses with cardiac activity on the eight week ultrasound.">
+            >
+            ["at0054"] = <
+                text = <"Pregnancy test outcome">
+                description = <"Outcome of pregnancy test with human chorionic gonadotropin (hCG).">
+            >
+            ["at0055"] = <
+                text = <"Positive">
+                description = <"The end of cycle hCG test result was positive.">
+            >
+            ["at0056"] = <
+                text = <"Negative">
+                description = <"The end of cycle hCG test result was negative.">
+            >
+            ["at0057"] = <
+                text = <"Complications">
+                description = <"Details about one or more complications due to treatment or activities during the assisted reproduction treatment cycle.">
+            >
+            ["at0058"] = <
+                text = <"Condition">
+                description = <"Name of the condition identified as a complication of treatment.">
+            >
+            ["at0059"] = <
+                text = <"Mild ovarian hyperstimulation syndrome">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Moderate ovarian hyperstimulation syndrome">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Severe ovarian hyperstimulation syndrome">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"Infection">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"Bleeding">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"Thrombosis">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Description">
+                description = <"Narrative description about the complication.">
+            >
+            ["at0066"] = <
+                text = <"Date of onset">
+                description = <"Date of onset of the complication.">
+            >
+            ["at0067"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the treatment cycle, not captured in other fields.">
+            >
+            ["at0069"] = <
+                text = <"Last updated">
+                description = <"The date this treatment cycle summary was last updated.">
+            >
+            ["at0070"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0071"] = <
+                text = <"Number of 2PN zygotes">
+                description = <"Number of zygotes with two visible pronuclei.">
+            >
+            ["at0072"] = <
+                text = <"Cumulative gonadotropin dose">
+                description = <"Total gonadotropin dose administered for ovarian stimulation during the treatment cycle.">
+            >
+            ["at0073"] = <
+                text = <"Duration of gonadotropin administration">
+                description = <"Number of days for gonadotropin administration during ovarian stimulation.">
+            >
+            ["at0074"] = <
+                text = <"Additional details">
+                description = <"Additional details about the assisted reproduction treatment.">
+            >
+            ["ac9001"] = <
+                text = <"Activities (synthesised)">
+                description = <"Activity or treatment caried out during the treatment cycle. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Donation received (synthesised)">
+                description = <"Cell or tissue type donated to the individual as part of the treatment cycle. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Hormone protocol (synthesised)">
+                description = <"Identification of the hormone protocol used during the treatment cycle. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Cycle outcome (synthesised)">
+                description = <"Identification of the outcome of the treatment cycle. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Pregnancy test outcome (synthesised)">
+                description = <"Outcome of pregnancy test with human chorionic gonadotropin (hCG). (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Condition (synthesised)">
+                description = <"Name of the condition identified as a complication of treatment. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0022", "at0023", "at0024", "at0025">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0013", "at0014", "at0015", "at0016", "at0017", "at0018", "at0019", "at0020">
+        >
+        ["ac9006"] = <
+            id = <"ac9006">
+            members = <"at0059", "at0060", "at0061", "at0062", "at0063", "at0064">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0055", "at0056">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0035", "at0036", "at0037", "at0038", "at0039", "at0040", "at0041">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0027", "at0028", "at0029", "at0030", "at0031", "at0032", "at0033">
+        >
+    >

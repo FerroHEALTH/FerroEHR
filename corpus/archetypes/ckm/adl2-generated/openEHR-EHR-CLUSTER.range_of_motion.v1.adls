@@ -1,0 +1,753 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=5502b586-c238-46bd-b08d-8fa0b7a826eb; build_uid=d8de10a7-fe8c-40fe-b80f-e135e5760062)
+    openEHR-EHR-CLUSTER.range_of_motion.v1.0.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Thomas Weikert">
+                ["organisation"] = <"USB">
+                ["email"] = <"t.weikert@usb.ch">
+            >
+            accreditation = <"Universitätsspital Basel">
+            other_details = <
+                ["other_contributors"] = <"Sol Fustina, Ohla Nikolaieva">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand, Hanne Marte Bårholm">
+                ["organisation"] = <"Helse Vest IKT">
+                ["email"] = <"john.tore.valand@helse-vest-ikt.no, hanne.marte.sandal.barholm@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Hanne Marte Sandal Bårholm">
+        ["organisation"] = <"Helse Vest IKT">
+        ["email"] = <"hanne.marte.sandal.barholm@helse-vest-ikt.no">
+        ["date"] = <"2023-11-01">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Stein Arne Rimehaug, Sunnaas sykehus, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Ivar Berge, Oslo University Hospital, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "Grant Forrest, Lunaria Ltd, United Kingdom", "Mikkel Johan Gaup Grønmo, Helse Nord IKT, Norway (openEHR Editor)", "Evelyn Hovenga, EJSH Consulting, Australia", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Michael Lutz, BITsoft, Germany", "Svenne Naumann, Finnmarkssykehuset, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Hallvard Reigstad, Haukeland us, Norway", "Terje Sagmyr, Helse Vest IKT, Norway (openEHR Editor)", "Bodil Salvesen, Barneklinikken Haukeland Universitetssykehus, Norway", "Sara-Petrine Solli Veierød, Haukeland Universitetssykehus, Norway", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Kanthan Theivendran, NHS, United Kingdom", "John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"65FFB413CF2188FD807134BCE72A2201">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Um die Messung des Bewegungsumfangs für eine bestimmte einfache oder komplexe Bewegung um ein identifiziertes Gelenk oder einen Abschnitt der Wirbelsäule aufzuzeichnen.">
+            keywords = <"ROM, AAROM, PROM, AROM, Gelenk, Bewegung, Winkel, Bewegungsvorgang, Umfang", ...>
+            use = <"Wird verwendet, um die Messung des Bewegungsumfangs für eine bestimmte einfache oder komplexe Bewegung um ein identifiziertes Gelenk oder einen Abschnitt der Wirbelsäule aufzuzeichnen.
+Dieses Archetyp wurde speziell dafür entwickelt, im „Untersuchungsbefunde“ (Examination findings)-SLOT innerhalb des CLUSTER.exam oder einer Spezialisierung von CLUSTER.exam für ein bestimmtes Gelenk verwendet zu werden. Es kann jedoch auch in anderen ENTRY- oder CLUSTER-Archetypen eingesetzt werden, sofern dies klinisch angemessen ist.
+Das untersuchte Gelenk wird im Element „System oder Struktur untersucht“ (System or structure examined) des CLUSTER.exam-Archetyps identifiziert, in dem dieses Archetyp eingebettet ist. Um mehrere Bewegungen aufzeichnen zu können, müssen mehrere Instanzen dieses Archetyps verwendet werden.
+Häufige Bewegungen um ein Gelenk wurden dem Datentyp DV_CODED_TEXT im Datenelement „Bewegung“ (Movement) hinzugefügt. Wenn im Laufe der Zeit weitere Gelenkbewegungen identifiziert werden, können diese in diese Liste aufgenommen werden.
+">
+            misuse = <"Nicht zur Aufzeichnung der Ergebnisse spezifischer, benannter Tests verwendet werden, die an einem Gelenk durchgeführt wurden. Beispielsweise beim Hüftgelenk der Thomas-Test oder Ortolani-Test. Für diese Zwecke sollte der exam-hip_joint-Archetyp verwendet werden.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"Måling av bevegelsesutslag for en spesifisert enkel eller sammensatt bevegelse i et ledd eller segment av ryggraden.">
+            keywords = <"ROM, AAROM, PROM, AROM, ledd, bevegelse, vinkel", ...>
+            use = <"Brukes for måling av bevegelsesutslag for en enkel eller sammensatt bevegelse i et ledd eller segment av ryggraden.
+
+Denne arketypen har vært designet spesifikt for å kunne brukes i SLOT'et \"Undersøkelsesdetaljer\" i arketypen OBSERVATION.exam (Funn ved fysisk undersøkelse) eller i en spesialisering av arketypen CLUSTER.exam for et spesifikt ledd, men kan også bli brukt i andre ENTRY- eller CLUSTER-arketyper der det er klinisk passende.
+
+Hvilket spesifikt ledd undersøkelsen omfatter registeres i dataelementet \"Undersøkt organsystem eller struktur\" i den CLUSTER.exam arketypen hvor denne arketypen er nøstet inn. For å registrere flere ulike bevegelser må man bruke flere instanser av denne arketypen.
+
+Vanlige leddbevegelser er lagt til DV_CODED_TEXT datatypen i elementet \"Bevegelse\". Om det er behov for å registrere ytterligere bevegelser kan disse legges til listen over tid.">
+            misuse = <"Benyttes ikke for å registrere spesifikke, navngitte undersøkelser som utføres på et ledd. For eksempel Thomas test eller Ortolani test for hofteleddet. Bruk exam-hip_joint arketypen for dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record measurement of the extent of motion for a specified simple or complex movement around an indentified joint or section of the spine.">
+            keywords = <"ROM, AAROM, PROM, AROM, joint, movement, angle, motion, range", ...>
+            use = <"Use to record the measurement of the extent of motion for a specified simple or complex movement around an indentified joint or section of the spine.
+			
+This archetype has been specifically designed to be used in the 'Examination findings' SLOT within the CLUSTER.exam or a specialisation of CLUSTER.exam for a specific joint, but can also be used within other ENTRY or CLUSTER archetypes where clinically appropriate.
+
+The examined joint is identified in the 'System or structure examined' element of the CLUSTER.exam archetype in which this archetype is nested.  In order to be able to record multiple movements several instances of this archetype will need to be used.
+
+Common motions around a joint have been added to the DV_CODED_TEXT data type in the 'Movement' data element. As further joint movements are identified, these can be added to this list over time.">
+            misuse = <"Not to be used to record the results of specific named tests performed on a joint. For example in the hip the Thomas test or Ortolani test. Use the exam-hip_joint archetype for these purposes.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] occurrences matches {1..*} matches {    -- Range of motion of a joint
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0002] occurrences matches {1} matches {    -- Movement
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9013]}    -- Movement (synthesised)
+                    }
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Starting position
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Mode of examination
+                value matches {
+                    DV_CODED_TEXT[at9006] matches {
+                        defining_code matches {[ac9001]}    -- Mode of examination (synthesised)
+                    }
+                    DV_TEXT[at9007]
+                }
+            }
+            ELEMENT[at0027] occurrences matches {0..1} matches {    -- Range of motion
+                value matches {
+                    DV_QUANTITY[at9008] matches {
+                        [magnitude, units] matches {
+                            [{|-360.0..360.0|}, {"deg"}],
+                            [{|>=0.0|}, {"mm"}],
+                            [{|>=0.0|}, {"cm"}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0035] occurrences matches {0..1} matches {    -- Clinical interpretation
+                value matches {
+                    DV_TEXT[at9012]
+                }
+            }
+            allow_archetype CLUSTER[at0028] matches {    -- Additional details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0029] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9013]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Bewegungsumfang eines Gelenks">
+                description = <"Messung des Bewegungsausmaßes einer bestimmten einfachen oder komplexen Bewegung um ein identifiziertes Gelenk oder einen Abschnitt der Wirbelsäule.
+">
+            >
+            ["at0002"] = <
+                text = <"Bewegung">
+                description = <"Identifikation der getesteten Bewegung.">
+            >
+            ["at0003"] = <
+                text = <"Abduktion">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Adduktion">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Streckung">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Flexion">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Innenrotation">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Außenrotation">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Einwärtsdrehung">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Auswärtsdrehung">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Innenrotation">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Außenrotation">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Fußrückenbewegung">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Fußsohlenwärtsbewegung">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Ulnarabduktion">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Radialabduktion">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Pronation">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Supination">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Zurückführung">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Gegenüberstellung">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Radialabduktion">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Palmarabduktion">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Ausgangsstellung">
+                description = <"Beschreibung der Gelenkstellung zu Beginn der Untersuchung.">
+                comment = <"Zum Beispiel: „90 Grad Beugung in Hüfte und Knie in Rückenlage“ bei der Untersuchung der Innenrotation oder „15 Grad fixierte Beugefehlstellung“ bei der Untersuchung der Ellenbogenbeugung.">
+            >
+            ["at0024"] = <
+                text = <"Untersuchungsmodus">
+                description = <"Ob die Untersuchung aktiv oder passiv durchgeführt wird.">
+            >
+            ["at0025"] = <
+                text = <"Aktiv">
+                description = <"Die Bewegung wird vom Patienten selbst ausgeführt. Auch bekannt als aktiver Bewegungsumfang (AROM).">
+            >
+            ["at0026"] = <
+                text = <"Passiv">
+                description = <"Die Bewegung wird vom Untersucher oder einem Gerät durchgeführt. Auch bekannt als passiver Bewegungsumfang (PROM).">
+            >
+            ["at0027"] = <
+                text = <"Bewegungsumfang">
+                description = <"Der Bewegungsumfang für eine identifizierte Bewegung um ein Gelenk.">
+            >
+            ["at0028"] = <
+                text = <"Zusätzliche Details">
+                description = <"Zusätzliche strukturierte Angaben zum Bewegungsumfang">
+            >
+            ["at0029"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche narrative Angaben zu den Befunden des Bewegungsumfangs, die in anderen Feldern nicht erfasst wurden.">
+            >
+            ["at0030"] = <
+                text = <"Rechte Seitneigung">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Linke Seitneigung">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Rechtsdrehung">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Linksdrehung">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Aktiv-unterstützt">
+                description = <"Die Bewegung wird teilweise vom Untersucher oder einem Gerät unterstützt. Auch bekannt als aktiv-unterstützter Bewegungsumfang (AAROM).">
+            >
+            ["at0035"] = <
+                text = <"Klinische Interpretation">
+                description = <"Stichwort, Phrase oder kurze Beschreibung, die die klinische Aussagekraft und Relevanz des gemessenen Bewegungsumfangs wiedergibt.">
+                comment = <"Beispiel: „Im Normbereich“, „Erhöhter Bewegungsumfang“ oder „Verminderter Bewegungsumfang“. Wenn möglich, sollte die „Interpretation“ codiert und mit einer Terminologie verknüpft werden.">
+            >
+            ["at0042"] = <
+                text = <"Zurückziehen">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Vorschieben">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Aufwärtsrotation">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Abwärtsrotation">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Anhebung">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Senkung">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Öffnung">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Schließen">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Rechte Kieferverschiebung">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Linke Kieferverschiebung">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Vorschub">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Rückführung">
+                description = <"">
+            >
+            ["ac9013"] = <
+                text = <"Bewegung (synthesised)">
+                description = <"Identifikation der getesteten Bewegung. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Untersuchungsmodus (synthesised)">
+                description = <"Ob die Untersuchung aktiv oder passiv durchgeführt wird. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Leddutslag">
+                description = <"Måling av bevegelsesutslag for en spesifisert enkel eller sammensatt bevegelse i et ledd eller segment av ryggraden.">
+            >
+            ["at0002"] = <
+                text = <"Bevegelse">
+                description = <"Bevegelsen som blir undersøkt.">
+            >
+            ["at0003"] = <
+                text = <"Abduksjon">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Adduksjon">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Ekstensjon">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Fleksjon">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Innadrotasjon">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Utadrotasjon">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Inversjon">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Eversjon">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Medial rotasjon">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Lateral rotasjon">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Dorsalfleksjon">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Plantarfleksjon">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Ulnar deviasjon">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Radial deviasjon">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Pronasjon">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Supinasjon">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Reposisjon">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Opposisjon">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Radial abduksjon">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Palmar abduksjon">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Utgangsposisjon">
+                description = <"Beskrivelse av leddets posisjon når man starter undersøkelsen.">
+                comment = <"For eksempel: \"90 graders fleksjon i hofte og kne med pasienten i ryggleie\" når man undersøker innadrotasjon, eller \"15 graders fast fleksjonsdeformitet\" når man undersøker fleksjon i albuen.">
+            >
+            ["at0024"] = <
+                text = <"Undersøkelsesmetode">
+                description = <"Om undersøkelsen er gjennomført aktivt eller passivt.">
+            >
+            ["at0025"] = <
+                text = <"Aktiv">
+                description = <"Individet utfører bevegelsen selv.">
+            >
+            ["at0026"] = <
+                text = <"Passiv">
+                description = <"Bevegelsen er utført av en behandler eller en maskin.">
+            >
+            ["at0027"] = <
+                text = <"Leddutslag">
+                description = <"Bevegelsesutslag for en gitt bevegelse i et ledd.">
+            >
+            ["at0028"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere strukturerte detaljer om leddutslaget.">
+            >
+            ["at0029"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om funn ved leddutslag som ikke dekkes av andre elementer.">
+            >
+            ["at0030"] = <
+                text = <"Høyre lateral fleksjon">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Venstre lateral fleksjon">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Høyrerotasjon">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Venstrerotasjon">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Aktiv med assistanse">
+                description = <"Bevegelsen er delvis assistert av en behandler eller en maskin.">
+            >
+            ["at0035"] = <
+                text = <"Fortolkning">
+                description = <"Enkelt ord, setning, frase eller kort beskrivelse som representerer den kliniske betydning og viktigheten av funnene ved undersøkelse av leddutslag.">
+                comment = <"For eksempel: 'Innenfor normalområdet', 'Økt leddutslag' eller 'Redusert leddutslag'. Det anbefales å kode \"Fortolkning\" med en terminologi dersom mulig.">
+            >
+            ["at0042"] = <
+                text = <"Retraksjon">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Protraksjon">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Rotasjon oppover">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Rotasjon nedover">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Elevasjon">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Depresjon">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Gaping">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Lukking">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Kjevetranslasjon mot høyre">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Kjevetranslasjon mot venstre">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Protrusjon">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Retrusjon">
+                description = <"">
+            >
+            ["ac9013"] = <
+                text = <"Bevegelse (synthesised)">
+                description = <"Bevegelsen som blir undersøkt. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Undersøkelsesmetode (synthesised)">
+                description = <"Om undersøkelsen er gjennomført aktivt eller passivt. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Range of motion of a joint">
+                description = <"Measurement of the extent of motion for a specified simple or complex movement around an indentified joint or section of the spine.">
+            >
+            ["at0002"] = <
+                text = <"Movement">
+                description = <"Identification of the movement being tested.">
+            >
+            ["at0003"] = <
+                text = <"Abduction">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Adduction">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Extension">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Flexion">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Internal rotation">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"External rotation">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Inversion">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Eversion">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Medial rotation">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Lateral rotation">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Dorsiflexion">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Plantar flexion">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Ulnar deviation">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Radial deviation">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Pronation">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Supination">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Reposition">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Opposition">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Radial abduction">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Palmar abduction">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Starting position">
+                description = <"Description of the joint's position when starting the examination.">
+                comment = <"For example: \"90 degrees flexion in hip and knee in supine position\" when examining internal rotation, or \"15 degrees of fixed flexion deformity\" when examining the flexion of the elbow.">
+            >
+            ["at0024"] = <
+                text = <"Mode of examination">
+                description = <"Whether the examination is done actively or passively.">
+            >
+            ["at0025"] = <
+                text = <"Active">
+                description = <"The movement is performed by the individual. Also known as AROM.">
+            >
+            ["at0026"] = <
+                text = <"Passive">
+                description = <"The movement is performed by the examiner or a device. Also known as PROM.">
+            >
+            ["at0027"] = <
+                text = <"Range of motion">
+                description = <"The extent of motion for an identified movement around a joint.">
+            >
+            ["at0028"] = <
+                text = <"Additional details">
+                description = <"Additional structured details about the range of motion.">
+            >
+            ["at0029"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the range of motion findings, not captured in other fields.">
+            >
+            ["at0030"] = <
+                text = <"Right lateral flexion">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Left lateral flexion">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Right rotation">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Left rotation">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Active-assisted">
+                description = <"The movement is partially assisted by the examiner or a device. Also known as AAROM.">
+            >
+            ["at0035"] = <
+                text = <"Clinical interpretation">
+                description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the range of motion finding.">
+                comment = <"For example: 'Within normal range', 'Increased range of motion' or 'Decreased range of motion'.
+Coding of the 'Interpretation' with a terminology is preferred, where possible.">
+            >
+            ["at0042"] = <
+                text = <"Retraction">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Protraction">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Upward rotation">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Downward rotation">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Elavation">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Depression">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Opening">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Closing">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Rightward jaw translation">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Leftward jaw translation">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Protrusion">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Retrusion">
+                description = <"">
+            >
+            ["ac9013"] = <
+                text = <"Movement (synthesised)">
+                description = <"Identification of the movement being tested. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Mode of examination (synthesised)">
+                description = <"Whether the examination is done actively or passively. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0003", "at0004", "at0005", "at0006", "at0007", "at0008", "at0009", "at0010", "at0011", "at0012", "at0013", "at0014", "at0015", "at0016", "at0017", "at0018", "at0019", "at0020", "at0021", "at0022", "at0030", "at0031", "at0032", "at0033", "at0042", "at0043", "at0044", "at0045", "at0046", "at0047", "at0048", "at0049", "at0050", "at0051", "at0052", "at0053">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0025", "at0034", "at0026">
+        >
+    >

@@ -1,0 +1,227 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d06666ef-9c25-34f4-b203-7d42fe4ddd01; build_uid=e71a528c-347d-4688-a0cb-2c7a871303da)
+    openEHR-EHR-CLUSTER.distribution.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Lars Bitsch-Larsen">
+                ["organisation"] = <"Haukeland University Hospital of Bergen, Norway">
+                ["email"] = <"lbla@helse-bergen.no">
+            >
+            accreditation = <"MD, DEAA, MBA, spec in anesthesia, spec in tropical medicine.">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            author = <
+                ["name"] = <"Uroš Rajkovič, Biljana Prinčič">
+                ["organisation"] = <"Slovenia">
+                ["email"] = <"uros.rajkovic@fov.uni-mb.si, biljana.princic@marand.si">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"D B Hutchinson">
+        ["organisation"] = <"NHS CFH UK">
+        ["date"] = <"2008-07-07">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Ian McNicoll, freshEHR Clinical Informatics, UK", "Heather Leslie, Atomica Informatics, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"EB35384930A3C9471F6C43E2C2D2B773">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere opplysninger om målgruppe for en distribusjon eller melding. Dette kan være til en navngitt gruppe, kategori, til enkeltpersoner eller organisasjoner.">
+            keywords = <"kopi til", "melding", "notifikasjon", "beskjed", "notat", "distribusjon", "e-post", "e-mail", "fax", "brev">
+            use = <"Brukes normalt i sammenheng med en serviceforespørsel, rapport eller annen kommunikasjon som er ment å bli distribuert til andre parter. Kan brukes som en del av en forespørsel eller annen instruks om å angi andre parter som bør inkluderes eller 'med kopi \"i responsen, og for å indikere hvilke andre partefir som faktisk ble notifisert i responsen.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the details of the target of a distribution or notification. This may be to a named group or category or to individual persons or organisations.">
+            keywords = <"cc", "notification">
+            use = <"Normally used within the context of a service request, report or other communication which is intended to be distributed to other parties. May be used as part of a request or other instruction to specify other parties who should be included or 'cced' in the response, and to indicate which other parties were actually notified in the response.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            purpose = <"Skupina naslovnikov, seznam prejemnikov">
+            keywords = <"cc", "distribution list", "prejemnik", "naslovnik", "skupina naslovnikov", "seznam prejemnikov">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Distribution
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0008] matches {    -- Group category
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Communication mode
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Urgent
+                value matches {
+                    DV_BOOLEAN[at9002]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Date sent
+                value matches {
+                    DV_DATE_TIME[at9003]
+                }
+            }
+            CLUSTER[at0011] matches {    -- Individual recipient
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Recipient identifier
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                    use_node ELEMENT[at9005] occurrences matches {0..1} /items[at0003]    -- Individual recipient (synthesised)
+                    allow_archetype CLUSTER[at0007] matches {    -- Recipient details
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.individual_professional\.v0\..*|openEHR-EHR-CLUSTER\.individual_professional\.v1\..*|openEHR-EHR-CLUSTER\.individual_personal\.v0\..*|openEHR-EHR-CLUSTER\.individual_personal\.v1\..*|openEHR-EHR-CLUSTER\.organisation\.v0\..*|openEHR-EHR-CLUSTER\.organisation\.v1\..*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Distribusjon">
+                description = <"Detaljer om den målgruppen som meddelelsen skal distribueres til, enten for identifikasjon av et individuelle parter eller som kategori.">
+            >
+            ["at0003"] = <
+                text = <"Kommunikasjons modus">
+                description = <"Den metode som anvendes til distribusjon av meddelelsen.">
+                comment = <"fx fax, e-post, brev.">
+            >
+            ["at0006"] = <
+                text = <"Forsendelse dato">
+                description = <"Dato for utsending av meddelelse.">
+            >
+            ["at0007"] = <
+                text = <"Mottaker dealjer">
+                description = <"En individuell person eller organisasjon som meddelelsen vedrører.">
+            >
+            ["at0008"] = <
+                text = <"Gruppe kategori">
+                description = <"En navngitt gruppe fx sosialt arbeide, pasient representanter som meddelelsen vedrører.">
+            >
+            ["at0010"] = <
+                text = <"Mottaker identifikator">
+                description = <"Unik identifikator for en individuell mottaker.">
+            >
+            ["at0011"] = <
+                text = <"Individuell mottaker">
+                description = <"Distribusjons detaljer for en individuell mottaker.">
+            >
+            ["at0012"] = <
+                text = <"Haster">
+                description = <"Hvis sant: meddelelsen bør sendes som hastemeddelelse.">
+            >
+            ["at9005"] = <
+                text = <"Individuell mottaker (synthesised)">
+                description = <"Distribusjons detaljer for en individuell mottaker. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Distribution">
+                description = <"Details of the target of communication distribution, whether to identified individual parties or as a category.">
+            >
+            ["at0003"] = <
+                text = <"Communication mode">
+                description = <"The communications mode by which the distribution is to be made.">
+                comment = <"e.g. fax, email.">
+            >
+            ["at0006"] = <
+                text = <"Date sent">
+                description = <"Date that the distribution was sent.">
+            >
+            ["at0007"] = <
+                text = <"Recipient details">
+                description = <"An individual person or organisation to whom the distribution applies.">
+            >
+            ["at0008"] = <
+                text = <"Group category">
+                description = <"A named category of group e.g. Social work, patient representatives to whom the distribution applies.">
+            >
+            ["at0010"] = <
+                text = <"Recipient identifier">
+                description = <"Unique identifier for an individual recipient.">
+            >
+            ["at0011"] = <
+                text = <"Individual recipient">
+                description = <"Distribution details for an individual recipient.">
+            >
+            ["at0012"] = <
+                text = <"Urgent">
+                description = <"If true the notification should be distributed made as a matter of urgency.">
+            >
+            ["at9005"] = <
+                text = <"Individual recipient (synthesised)">
+                description = <"Distribution details for an individual recipient. (synthesised)">
+            >
+        >
+        ["sl"] = <
+            ["at0000"] = <
+                text = <"Obveščanje">
+                description = <"Seznam prejemnikov - skupina posameznikov, ki so naslovniki sporočila">
+            >
+            ["at0003"] = <
+                text = <"Način komunikacija">
+                description = <"Način obveščanja">
+            >
+            ["at0006"] = <
+                text = <"Datum odpošiljanja">
+                description = <"Datum obveščanja - distribuiranja sporočila">
+            >
+            ["at0007"] = <
+                text = <"Podrobnosti o prejemniku">
+                description = <"Posameznik ali organizacija, na koga je naslovljeno sporočilo">
+            >
+            ["at0008"] = <
+                text = <"Skupina">
+                description = <"Ime skupine prejemnikov, npr. 'zdravniki predstojniki oddelkov'">
+            >
+            ["at0010"] = <
+                text = <"ID prejemnika">
+                description = <"Unikatni identifikator posameznika (primarni ključ, ki določa posameznika)">
+            >
+            ["at0011"] = <
+                text = <"Posamezni prejemnik">
+                description = <"Podatki o posameznem prejemniku">
+            >
+            ["at0012"] = <
+                text = <"Nujno">
+                description = <"Če potrebna nujna obravnava?">
+            >
+            ["at9005"] = <
+                text = <"Posamezni prejemnik (synthesised)">
+                description = <"Podatki o posameznem prejemniku (synthesised)">
+            >
+        >
+    >

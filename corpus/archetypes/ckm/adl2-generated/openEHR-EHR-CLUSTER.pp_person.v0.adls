@@ -1,0 +1,156 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=e484b17a-12c1-4ac6-9fb4-2461eedf7827; build_uid=a96a4596-d6db-4a12-86fb-fa9808ef38d5)
+    openEHR-EHR-CLUSTER.pp_person.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-09-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"EB4BA3B85BDF8FE07CE7AF2F9DC7EFE0">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Phenopackets person
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- family_id
+                value matches {
+                    DV_IDENTIFIER[at9002]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- individual_id
+                value matches {
+                    DV_IDENTIFIER[at9003]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- paternal_id
+                value matches {
+                    DV_IDENTIFIER[at9004]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- maternal_id
+                value matches {
+                    DV_IDENTIFIER[at9005]
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- sex
+                value matches {
+                    DV_ORDINAL[at9006] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0006]}],    -- UNKNOWN_SEX
+                            [{1}, {[at0007]}],    -- FEMALE
+                            [{2}, {[at0008]}],    -- MALE
+                            [{3}, {[at0009]}]    -- OTHER_SEX
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- affected_status
+                value matches {
+                    DV_CODED_TEXT[at9007] matches {
+                        defining_code matches {[ac9001]}    -- affected_status (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Phenopackets person">
+                description = <"Phenopackets person">
+            >
+            ["at0001"] = <
+                text = <"family_id">
+                description = <"*">
+            >
+            ["at0002"] = <
+                text = <"individual_id">
+                description = <"*">
+            >
+            ["at0003"] = <
+                text = <"paternal_id">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"maternal_id">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"sex">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"UNKNOWN_SEX">
+                description = <"Not assessed or not available. Maps to NCIT:C17998">
+            >
+            ["at0007"] = <
+                text = <"FEMALE">
+                description = <"female sex. Maps to NCIT:C46113">
+            >
+            ["at0008"] = <
+                text = <"MALE">
+                description = <"male sex. Maps to NCIT:C46112">
+            >
+            ["at0009"] = <
+                text = <"OTHER_SEX">
+                description = <"It is not possible to accurately assess the applicability of MALE/FEMALE. Maps to NCIT:C45908">
+            >
+            ["at0010"] = <
+                text = <"affected_status">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"MISSING">
+                description = <"It is unknown if the individual has the affected phenotype.">
+            >
+            ["at0012"] = <
+                text = <"UNAFFECTED">
+                description = <"The individual does not show the affected phenotype of the proband.">
+            >
+            ["at0013"] = <
+                text = <"AFFECTED">
+                description = <"The individual has the affected phenotype of the proband.">
+            >
+            ["ac9007"] = <
+                text = <"sex (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"affected_status (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0011", "at0012", "at0013">
+        >
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at0006", "at0007", "at0008", "at0009">
+        >
+    >

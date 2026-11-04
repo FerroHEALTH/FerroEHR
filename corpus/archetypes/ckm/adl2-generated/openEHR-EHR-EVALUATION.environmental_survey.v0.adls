@@ -1,0 +1,239 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=87531f77-ea44-4d5d-b9af-643df3776358; build_uid=da7148c5-06ca-4276-94d8-001263ff2cd5)
+    openEHR-EHR-EVALUATION.environmental_survey.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2023-07-17">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Defining urban contexts. World Vision International, 2017. Available from https://www.wvi.org/sites/default/files/Defining%20urban%20contexts%2012.11.17.pdf.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"E96A1F34FB5AB8AA3814014D0C423DB3">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about environmental factors related to the local community and built environment that may impact health, especially those relevant to disease surveillance and public health.">
+            use = <"Use to record details about environmental factors related to the local community and built environment that impact health.">
+            misuse = <"Not to be used to record details about environmental factors related to a specific dwelling - use CLUSTER.dwelling for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Environmental survey
+        data matches {
+            ITEM_TREE[at0001] matches {    -- ITEM_TREE
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Urban setting
+                        value matches {
+                            DV_TEXT[at9004]
+                            DV_CODED_TEXT[at9005] matches {
+                                defining_code matches {[ac9000]}    -- Urban setting (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Community planning
+                        value matches {
+                            DV_CODED_TEXT[at9006] matches {
+                                defining_code matches {[ac9001]}    -- Community planning (synthesised)
+                            }
+                            DV_TEXT[at9007]
+                        }
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Water supply
+                        value matches {
+                            DV_TEXT[at9008]
+                            DV_CODED_TEXT[at9009] matches {
+                                defining_code matches {[ac9002]}    -- Water supply (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Waste collection frequency
+                        value matches {
+                            DV_TEXT[at9010]
+                            DV_CODED_TEXT[at9011] matches {
+                                defining_code matches {[ac9003]}    -- Waste collection frequency (synthesised)
+                            }
+                            DV_QUANTITY[at9012] matches {
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"1/wk"}],
+                                    [{|>=0.0|}, {"1/mo"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0012] matches {    -- Mosquito population
+                        value matches {
+                            DV_TEXT[at9013]
+                        }
+                    }
+                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9014]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0020] matches {    -- ITEM_TREE
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9015]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0016] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Environmental survey">
+                description = <"Details about environmental factors related to the local community and built environment that impact health.">
+            >
+            ["at0002"] = <
+                text = <"Urban setting">
+                description = <"The type of setting in which an individual lives or works.">
+            >
+            ["at0003"] = <
+                text = <"Urban">
+                description = <"Within an area of high population density relative to other areas, often characterised by a relatively high presence of administrative structures, government services and other infrastructure.">
+            >
+            ["at0004"] = <
+                text = <"Peri-urban">
+                description = <"Location with mixed urban and rural characteristics, often on the outskirts of cities or large urban areas.">
+            >
+            ["at0005"] = <
+                text = <"Rural">
+                description = <"Within an area of low population density relative to other areas, often characterised by low presence of administrative structures, government services and other infrastructure. Livelihood is predominantly centred on agricultural production.">
+            >
+            ["at0006"] = <
+                text = <"Water supply">
+                description = <"The type of water supply to the local area.">
+            >
+            ["at0007"] = <
+                text = <"Piped">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Stored">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Waste collection frequency">
+                description = <"Indication of solid waste collection frequency.">
+            >
+            ["at0010"] = <
+                text = <"Frequent">
+                description = <"At least once weekly.">
+            >
+            ["at0011"] = <
+                text = <"Infrequent">
+                description = <"Less than once weekly.">
+            >
+            ["at0012"] = <
+                text = <"Mosquito population">
+                description = <"Type of mosquitoes found in the local area.">
+                comment = <"For example: the genus, subgenus or species, such as Aedes or, more specifically Aeded aegypti and Aedes albopictus.">
+            >
+            ["at0013"] = <
+                text = <"Community planning">
+                description = <"The level of planning in the local area or community.">
+            >
+            ["at0014"] = <
+                text = <"Planned">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Unplanned">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0017"] = <
+                text = <"Last updated">
+                description = <"The date when the environmental survey was last updated.">
+            >
+            ["at0018"] = <
+                text = <"Description">
+                description = <"Narrative description about the local environment.">
+                comment = <"For example, community facilities, infrastructure, or the built environment.">
+            >
+            ["at0019"] = <
+                text = <"Comment">
+                description = <"Narrative description about the environmental survey, not captured in other fields.">
+            >
+            ["at0001"] = <
+                text = <"ITEM_TREE">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"ITEM_TREE">
+                description = <"">
+            >
+            ["ac9000"] = <
+                text = <"Urban setting (synthesised)">
+                description = <"The type of setting in which an individual lives or works. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Community planning (synthesised)">
+                description = <"The level of planning in the local area or community. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Water supply (synthesised)">
+                description = <"The type of water supply to the local area. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Waste collection frequency (synthesised)">
+                description = <"Indication of solid waste collection frequency. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0007", "at0008">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0014", "at0015">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0003", "at0004", "at0005">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0010", "at0011">
+        >
+    >

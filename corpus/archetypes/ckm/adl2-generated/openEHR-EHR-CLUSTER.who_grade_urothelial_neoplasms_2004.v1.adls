@@ -1,0 +1,135 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=8d6b7fff-b12f-441e-a8ac-16c7379d96ab; build_uid=8dfd2380-67f5-49aa-b794-77202bafddc6)
+    openEHR-EHR-CLUSTER.who_grade_urothelial_neoplasms_2004.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Helse Vest IKT AS">
+                ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Silje Ljosland Bakke">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no">
+        ["date"] = <"2025-05-23">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Tara Bonet Chinillach, Catalan Health Service, Spain", "Grete Hovde Bøe, Sykehuspartner HF, Norway", "Aleksander Furnes, Helse Nord IKT, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Elin Kristiansen, Sykehuspartner HF, Norway", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Aydin Dadfar, Oslo Universitetssykehus, Norway", "Kristina Førde, Helse Bergen, Norway", "Gigja Gudbrandsdottir, Helse Bergen, Norway", "Marte Vassli Gullesen, HNIKT, Norway", "Liv Laugen, Oslo universitetssykehus, Norway", "Martin Milde, Helse Vest IKT, Norway", "Terje Nordberg, Helse Bergen, Norway", "Ruben Rognmo, Helse Nord IKT, Norway", "John Tore Valand, Helse Vest IKT, Norway", "Linn Wiker Røstengen, OUS, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Humphrey PA, Moch H, Cubilla AL, Ulbright TM, Reuter VE. The 2016 WHO Classification of Tumours of the Urinary System and Male Genital Organs-Part B: Prostate and Bladder Tumours. Eur Urol. 2016 Jul;70(1):106-119. doi: 10.1016/j.eururo.2016.02.028. Epub 2016 Mar 17. Review. PubMed PMID: 26996659.">
+        ["2"] = <"Eble JN, Sauter G, Epstein J, Sesterhenn I (eds). Pathology and Genetics of Tumours of the Urinary System and Male Genital Organs. WHO Classification of Tumours, 3rd Edition, Volume 7. 2004. ISBN: 978-92-832-2415-0.">
+        ["3"] = <"Moch H, Humphrey P, Ulbright T, Reuter V. WHO Classification of Tumours of the Urinary System and Male Genital Organs [Internet] Lyon, France: International Agency for Research on Cancer; 2016. Available from: https://publications.iarc.who.int/Book-And-Report-Series/Who-Classification-Of-Tumours/WHO-Classification-Of-Tumours-Of-The-Urinary-System-And-Male-Genital-Organs-2016. ISBN: 978-92-832-2437-2">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"DA128672D71C2BFAF616FEE31C816AC8">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere den histologiske graden av uroteliale neoplasmer i henhold til WHO Histological Typing of Urinary Bladder Tumours (2004/2016).">
+            keywords = <"urotelial", "blære", "tumor", "neoplasme", "carcinom", "histologi", "patologi", "grad", "gradering", "klassifikasjon">
+            use = <"Brukes for å registrere den histologiske graden av uroteliale neoplasmer i henhold til WHO Histological Typing of Urinary Bladder Tumours (2004/2016).
+
+Arketypen er laget for å benyttes i en ENTRY-arketype som vil gi den kliniske eller patologiske konteksten. For eksempel: I SLOTet \"Spesifikke detaljer\" i arketypen EVALUATION.problem_diagnosis (Problem/diagnose), i en relevant patologirelatert CLUSTER-arketype som igjen nøstes i arketypen OBSERVATION.laboratory_test_result (Laboratoriesvar) eller innen andre ENTRY- eller CLUSTER-arketyper der det er klinisk passende.">
+            misuse = <"Brukes ikke for å registrere 1973-revisjonen av WHO histologisk grad av uroteliale neoplasmer. Bruk arketypen CLUSTER.who_grade_urothelial_neoplasms_1973 for dette formålet.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the histological grade of urothelial neoplasms according to the WHO Histological Typing of Urinary Bladder Tumours (2004/2016).">
+            keywords = <"Urothelial", "bladder", "tumor", "neoplasm", "carcinoma", "histology", "pathology", "grade", "grading", "classification">
+            use = <"Use to record the histological grade of urothelial neoplasms according to the WHO Histological Typing of Urinary Bladder Tumours (2004/2016).
+
+This archetype has been designed to be nested inside an ENTRY or appropriate CLUSTER archetype which will provide a clinical or pathological context - for example: the 'Specific details' SLOT within the EVALUATION.problem_diagnosis archetype; an appropriate histopathology-related CLUSTER archetype within the OBSERVATION.laboratory_test_result archetype context; or within other ENTRY or CLUSTER archetypes, where clinically appropriate.">
+            misuse = <"Not to be used to record the 1973 revision of the WHO histological grade of urothelial neoplasms. Use the CLUSTER.who_grade_urothelial_neoplasms_1973 archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- WHO histological grade of urothelial neoplasms (2004/2016)
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Grade
+                value matches {
+                    DV_CODED_TEXT[at9001] matches {
+                        defining_code matches {[ac9001]}    -- Grade (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"WHO histologisk grad av uroteliale neoplasmer (2004/2016)">
+                description = <"Histologisk grad av uroteliale neoplasmer i henhold til WHO Histological Typing of Urinary Bladder Tumours (2004/2016).">
+            >
+            ["at0001"] = <
+                text = <"Grad">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Lavgradig papillært urotelialt carcinom">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Høygradig papillært urotelialt carcinom">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Papillær urotelial neoplasme med lavt malignitetspotensiale (PUNLMP)">
+                description = <"">
+            >
+            ["ac9001"] = <
+                text = <"Grad (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"WHO histological grade of urothelial neoplasms (2004/2016)">
+                description = <"A histological grading of urothelial neoplasms according to the WHO Histological Typing of Urinary Bladder Tumours (2004/2016).">
+            >
+            ["at0001"] = <
+                text = <"Grade">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Low-grade papillary urothelial carcinoma">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"High-grade papillary urothelial carcinoma">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Papillary urothelial neoplasm of low malignant potential (PUNLMP)">
+                description = <"">
+            >
+            ["ac9001"] = <
+                text = <"Grade (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0009", "at0007", "at0008">
+        >
+    >

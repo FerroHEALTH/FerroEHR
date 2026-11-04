@@ -1,0 +1,1753 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=bbed944c-2c66-463b-a36f-90d437f5ab8a; build_uid=6f77bb46-d87a-4f57-8437-813f770279ef)
+    openEHR-EHR-OBSERVATION.heartbeat-pulse.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-OBSERVATION.heartbeat.v0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Jasmin Buck, Sebastian Garde, Ramona Wellmann">
+                ["organisation"] = <"University of Heidelberg, Central Queensland University, Hannover Medical School">
+            >
+        >
+        ["ru"] = <
+            language = <[ISO_639-1::ru]>
+            author = <
+                ["name"] = <"Vyacheslav Mavrin">
+                ["organisation"] = <"JSC Comsoft">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Erik Sundvall; Åsa Skagerhult, Kirsi Poikela">
+                ["organisation"] = <"Region Östergötland, Tieto Sweden AB">
+                ["email"] = <"asa.skagerhult@regionostergotland.se, ext.kirsi.poikela@tieto.com">
+            >
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            author = <
+                ["name"] = <"Vesa Peltola">
+                ["organisation"] = <"Tieto Finland">
+                ["email"] = <"vesa.peltola@tieto.com">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Helse Bergen HF">
+                ["email"] = <".">
+            >
+            accreditation = <"RN">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Osmeire Chamelette Sanzovo">
+                ["organisation"] = <"Hospital Sírio Libanês - SP">
+                ["email"] = <"osmeire.acsanzovo@hsl.org.br">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Pablo Pazos">
+                ["organisation"] = <"CaboLabs - Health Informatics">
+                ["email"] = <"pablo.pazos@cabolabs.com">
+            >
+        >
+        ["es-co"] = <
+            language = <[ISO_639-1::es-co]>
+            author = <
+                ["name"] = <"Jose Florez-Arango">
+            >
+            accreditation = <"MD MS PhD">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2006-03-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Morten Aas, Diakonhjemmet Sykehus, Norway", "Tomas Alme, Norway", "Magnus Alvestad, Helse Bergen HF, Norway", "Nadim Anani, Karolinska Institutet, Sweden", "Anne Pauline Anderssen, Helse Nord RHF, Norway", "Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (Nasjonal IKT redaktør)", "Koray Atalag, University of Auckland, New Zealand", "Gustavo Bacelar-Silva, Healthcare Designs, Brazil (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (Nasjonal IKT redaktør)", "Lars Bitsch-Larsen, Haukeland University Hospital, Bergen, Norway", "Diego Bosca, IBIME group, Spain", "Pål Brekke, OUS Rikshospitalet, Norway", "Einar Bugge, UNN HF, Fag- og forskningssenteret, Norway", "Rong Chen, Cambio Healthcare Systems, Sweden", "Stephen Chu, Queensland Health, Australia", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Angela de Zwart, Orion Health, New Zealand", "Graham Denyer, Australian Antarctic Division, Australia", "Paul Donaldson, Nursing Informatics Australia, Australia", "Shahla Foozonkhah, Ocean Informatics, Australia", "Einar Fosse, UNN HF, Norwegian Centre for Integrated Care and Telemedicine, Norway", "Sebastian Garde, Ocean Informatics, Germany", "John George, HSCIC, United Kingdom", "Soon Ghee Yap, Singapore General Hospital, Singapore", "Heather Grain, Llewelyn Grain Informatics, Australia", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)", "Bjørn Grøva, Diretoratet for e-helse, Norway", "Atle Hansen, Universitetssykehuset Nord-Norge, Norway", "Sam Heard, Ocean Informatics, Australia", "Kristian Heldal, Telemark Hospital Trust, Norway", "Andreas Hering, Helse Bergen HF, Haukeland universitetssjukehus, Norway", "Erling Are Hole, Helse Bergen, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Eugene Igras, IRIS Systems, Inc., Canada", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Lars Karlsen, DIPS ASA, Norway", "Athanasios Kleontas, Ergobyte Informatics, Greece", "Shinji Kobayashi, Kyoto University, Japan", "Robert Legan, NEHTA, Australia", "Heather Leslie, Ocean Informatics, Australia (openEHR Editor)", "Hallvard Lærum, Direktoratet for e-helse, Norway", "Rohan Martin, Ambulance Victoria, Australia", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Lars Ivar Mehlum, Nasjonal IKT HF, Norway", "Jeroen Meintjens, Medisch Centrum Alkmaar, Netherlands", "Monica Merchat, Hospital Cardiac Electrophysiology, MS Health Informatics Student, former ICU nurse, former Anesthesia Technician, United States", "Bjoern Naess, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Arturo Romero, SESCAM, Spain", "Jussara Rotzsch, UNB, Brazil", "Thomas Schopf, University Hospital of North-Norway, Norway", "Nils Thomas Songstad, UNN HF, BUK, Barneavdelingen., Norway", "Thor-Einar Stemland, Helse Bergen, FOU Seksjon for e-helse, Norway", "Arne Løberg Sæter, DIPS ASA, Norway", "Jan Inge Sørheim, Helse Bergen, Haukeland uniersitetssjukehus, Norway", "Micaela Thierley, Helse Bergen/Haraldsplass sykehus, Norway", "Kevin Thon, SKDE, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Pulse/Heart beat, Published archetype [Internet]. openEHR Foundation, openEHR Clinical Knowledge Manager [cited: 2024-02-15]. Available from: https://ckm.openehr.org/ckm/archetypes/1013.1.4295.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"F9037859D3DA8DB4F5B4A60E3D84032F">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To record findings about a series of arterial pulses, observed at a single arterial site. (en)">
+            keywords = <"*rate (en)", "*rhythm (en)", "*beat (en)", "*heart (en)", "*vital (en)", "*sign (en)">
+            use = <"*Use to record findings about a series of arterial pulses, including rate and regularity.
+
+Measurements such as the maximum pulse rate during an interval can be recorded using 'Maximum' event. (en)">
+            misuse = <"*Not to be used to record findings about a series of heartbeats, observed at the heart - use the parent OBSERVATION.heartbeat archetype for this purpose.
+
+Not to be used to record the heart rate measured as R-R rate in the context of an Electrocardiograph report - use the OBSERVATION.ecg archetype for this purpose.
+
+Not to be used to record other details of a cardiovascular examination or assessment. Use the CLUSTER.exam-heart archetype or other archetypes from the CLUSTER.exam family to record physical examination findings.
+
+Not to be used to record fetal heart rate - use the OBSERVATION.fetal_heart archetype for this purpose.
+
+Not to be used to record a pulse deficit - use the OBSERVATION.pulse_deficit archetype for this purpose.
+
+Concepts such as Target Heart Rate should be recorded in specific archetypes such as EVALUATION.goal. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"*To record findings about a series of arterial pulses, observed at a single arterial site. (en)">
+            keywords = <"*rate (en)", "*rhythm (en)", "*beat (en)", "*heart (en)", "*vital (en)", "*sign (en)">
+            use = <"*Use to record findings about a series of arterial pulses, including rate and regularity.
+
+Measurements such as the maximum pulse rate during an interval can be recorded using 'Maximum' event. (en)">
+            misuse = <"*Not to be used to record findings about a series of heartbeats, observed at the heart - use the parent OBSERVATION.heartbeat archetype for this purpose.
+
+Not to be used to record the heart rate measured as R-R rate in the context of an Electrocardiograph report - use the OBSERVATION.ecg archetype for this purpose.
+
+Not to be used to record other details of a cardiovascular examination or assessment. Use the CLUSTER.exam-heart archetype or other archetypes from the CLUSTER.exam family to record physical examination findings.
+
+Not to be used to record fetal heart rate - use the OBSERVATION.fetal_heart archetype for this purpose.
+
+Not to be used to record a pulse deficit - use the OBSERVATION.pulse_deficit archetype for this purpose.
+
+Concepts such as Target Heart Rate should be recorded in specific archetypes such as EVALUATION.goal. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"*To record findings about a series of arterial pulses, observed at a single arterial site. (en)">
+            keywords = <"*rate (en)", "*rhythm (en)", "*beat (en)", "*heart (en)", "*vital (en)", "*sign (en)">
+            use = <"*Use to record findings about a series of arterial pulses, including rate and regularity.
+
+Measurements such as the maximum pulse rate during an interval can be recorded using 'Maximum' event. (en)">
+            misuse = <"*Not to be used to record findings about a series of heartbeats, observed at the heart - use the parent OBSERVATION.heartbeat archetype for this purpose.
+
+Not to be used to record the heart rate measured as R-R rate in the context of an Electrocardiograph report - use the OBSERVATION.ecg archetype for this purpose.
+
+Not to be used to record other details of a cardiovascular examination or assessment. Use the CLUSTER.exam-heart archetype or other archetypes from the CLUSTER.exam family to record physical examination findings.
+
+Not to be used to record fetal heart rate - use the OBSERVATION.fetal_heart archetype for this purpose.
+
+Not to be used to record a pulse deficit - use the OBSERVATION.pulse_deficit archetype for this purpose.
+
+Concepts such as Target Heart Rate should be recorded in specific archetypes such as EVALUATION.goal. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ru"] = <
+            language = <[ISO_639-1::ru]>
+            purpose = <"*To record findings about a series of arterial pulses, observed at a single arterial site. (en)">
+            keywords = <"*rate (en)", "*rhythm (en)", "*beat (en)", "*heart (en)", "*vital (en)", "*sign (en)">
+            use = <"*Use to record findings about a series of arterial pulses, including rate and regularity.
+
+Measurements such as the maximum pulse rate during an interval can be recorded using 'Maximum' event. (en)">
+            misuse = <"*Not to be used to record findings about a series of heartbeats, observed at the heart - use the parent OBSERVATION.heartbeat archetype for this purpose.
+
+Not to be used to record the heart rate measured as R-R rate in the context of an Electrocardiograph report - use the OBSERVATION.ecg archetype for this purpose.
+
+Not to be used to record other details of a cardiovascular examination or assessment. Use the CLUSTER.exam-heart archetype or other archetypes from the CLUSTER.exam family to record physical examination findings.
+
+Not to be used to record fetal heart rate - use the OBSERVATION.fetal_heart archetype for this purpose.
+
+Not to be used to record a pulse deficit - use the OBSERVATION.pulse_deficit archetype for this purpose.
+
+Concepts such as Target Heart Rate should be recorded in specific archetypes such as EVALUATION.goal. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"*To record findings about a series of arterial pulses, observed at a single arterial site. (en)">
+            keywords = <"*rate (en)", "*rhythm (en)", "*beat (en)", "*heart (en)", "*vital (en)", "*sign (en)">
+            use = <"*Use to record findings about a series of arterial pulses, including rate and regularity.
+
+Measurements such as the maximum pulse rate during an interval can be recorded using 'Maximum' event. (en)">
+            misuse = <"*Not to be used to record findings about a series of heartbeats, observed at the heart - use the parent OBSERVATION.heartbeat archetype for this purpose.
+
+Not to be used to record the heart rate measured as R-R rate in the context of an Electrocardiograph report - use the OBSERVATION.ecg archetype for this purpose.
+
+Not to be used to record other details of a cardiovascular examination or assessment. Use the CLUSTER.exam-heart archetype or other archetypes from the CLUSTER.exam family to record physical examination findings.
+
+Not to be used to record fetal heart rate - use the OBSERVATION.fetal_heart archetype for this purpose.
+
+Not to be used to record a pulse deficit - use the OBSERVATION.pulse_deficit archetype for this purpose.
+
+Concepts such as Target Heart Rate should be recorded in specific archetypes such as EVALUATION.goal. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*To record findings about a series of arterial pulses, observed at a single arterial site. (en)">
+            keywords = <"*rate (en)", "*rhythm (en)", "*beat (en)", "*heart (en)", "*vital (en)", "*sign (en)">
+            use = <"*Use to record findings about a series of arterial pulses, including rate and regularity.
+
+Measurements such as the maximum pulse rate during an interval can be recorded using 'Maximum' event. (en)">
+            misuse = <"*Not to be used to record findings about a series of heartbeats, observed at the heart - use the parent OBSERVATION.heartbeat archetype for this purpose.
+
+Not to be used to record the heart rate measured as R-R rate in the context of an Electrocardiograph report - use the OBSERVATION.ecg archetype for this purpose.
+
+Not to be used to record other details of a cardiovascular examination or assessment. Use the CLUSTER.exam-heart archetype or other archetypes from the CLUSTER.exam family to record physical examination findings.
+
+Not to be used to record fetal heart rate - use the OBSERVATION.fetal_heart archetype for this purpose.
+
+Not to be used to record a pulse deficit - use the OBSERVATION.pulse_deficit archetype for this purpose.
+
+Concepts such as Target Heart Rate should be recorded in specific archetypes such as EVALUATION.goal. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"*To record findings about a series of arterial pulses, observed at a single arterial site. (en)">
+            keywords = <"*rate (en)", "*rhythm (en)", "*beat (en)", "*heart (en)", "*vital (en)", "*sign (en)">
+            use = <"*Use to record findings about a series of arterial pulses, including rate and regularity.
+
+Measurements such as the maximum pulse rate during an interval can be recorded using 'Maximum' event. (en)">
+            misuse = <"*Not to be used to record findings about a series of heartbeats, observed at the heart - use the parent OBSERVATION.heartbeat archetype for this purpose.
+
+Not to be used to record the heart rate measured as R-R rate in the context of an Electrocardiograph report - use the OBSERVATION.ecg archetype for this purpose.
+
+Not to be used to record other details of a cardiovascular examination or assessment. Use the CLUSTER.exam-heart archetype or other archetypes from the CLUSTER.exam family to record physical examination findings.
+
+Not to be used to record fetal heart rate - use the OBSERVATION.fetal_heart archetype for this purpose.
+
+Not to be used to record a pulse deficit - use the OBSERVATION.pulse_deficit archetype for this purpose.
+
+Concepts such as Target Heart Rate should be recorded in specific archetypes such as EVALUATION.goal. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record findings about a series of pulses, observed at a single, specified arterial site.">
+            keywords = <"rate", "rhythm", "beat", "heart", "vital", "sign">
+            use = <"Use to record findings about a series of pulses, including rate and regularity, observed at a single, specified arterial site.
+
+In clinical practice and daily use, the terms 'heart beat' and 'pulse' may be used interchangeably, depending on the context and method of measurement. 'Heart beat' is the broader term that covers any method of measuring the heart action, whereas 'pulse' specifically describes measuring the heart action through the palpation of a pulse. When designing templates for scenarios where it can't be anticipated whether specifically 'heart beat' or specifically 'pulse' will be measured, and it's not important to the clinical scenario to tell them apart, the 'Heart beat' archetype should be used.
+
+Measurements such as the maximum pulse rate during an interval can be recorded using 'Maximum' event.">
+            misuse = <"Not to be used to record findings about a series of heartbeats, observed at the heart. Use the parent OBSERVATION.heartbeat archetype for this purpose.
+
+Not to be used to record findings about 'pulse'/'heart beat' in scenarios where it can't be anticipated whether specifically 'heart beat' or specifically 'pulse' will be measured. Use the parent OBSERVATION.heartbeat archetype for this purpose.
+
+Not to be used to record the heart rate measured as R-R rate in the context of an electrocardiograph (ECG) report. Use the OBSERVATION.ecg archetype for this purpose.
+
+Not to be used to record other details of a cardiovascular examination or assessment. Use the CLUSTER.exam-heart archetype or other archetypes from the CLUSTER.exam family to record physical examination findings.
+
+Not to be used to record fetal heart rate. Use the OBSERVATION.fetal_heart archetype for this purpose.
+
+Not to be used to record a pulse deficit. Use the OBSERVATION.pulse_deficit archetype for this purpose.
+
+Not to be used to record concepts such as \"Target pulse\". Use specific archetypes such as EVALUATION.goal for these purposes.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"*To record findings about a series of arterial pulses, observed at a single arterial site. (en)">
+            keywords = <"*rate (en)", "*rhythm (en)", "*beat (en)", "*heart (en)", "*vital (en)", "*sign (en)">
+            use = <"*Use to record findings about a series of arterial pulses, including rate and regularity.
+
+Measurements such as the maximum pulse rate during an interval can be recorded using 'Maximum' event. (en)">
+            misuse = <"*Not to be used to record findings about a series of heartbeats, observed at the heart - use the parent OBSERVATION.heartbeat archetype for this purpose.
+
+Not to be used to record the heart rate measured as R-R rate in the context of an Electrocardiograph report - use the OBSERVATION.ecg archetype for this purpose.
+
+Not to be used to record other details of a cardiovascular examination or assessment. Use the CLUSTER.exam-heart archetype or other archetypes from the CLUSTER.exam family to record physical examination findings.
+
+Not to be used to record fetal heart rate - use the OBSERVATION.fetal_heart archetype for this purpose.
+
+Not to be used to record a pulse deficit - use the OBSERVATION.pulse_deficit archetype for this purpose.
+
+Concepts such as Target Heart Rate should be recorded in specific archetypes such as EVALUATION.goal. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es-co"] = <
+            language = <[ISO_639-1::es-co]>
+            purpose = <"*To record findings about a series of arterial pulses, observed at a single arterial site. (en)">
+            keywords = <"*rate (en)", "*rhythm (en)", "*beat (en)", "*heart (en)", "*vital (en)", "*sign (en)">
+            use = <"*Use to record findings about a series of arterial pulses, including rate and regularity.
+
+Measurements such as the maximum pulse rate during an interval can be recorded using 'Maximum' event. (en)">
+            misuse = <"*Not to be used to record findings about a series of heartbeats, observed at the heart - use the parent OBSERVATION.heartbeat archetype for this purpose.
+
+Not to be used to record the heart rate measured as R-R rate in the context of an Electrocardiograph report - use the OBSERVATION.ecg archetype for this purpose.
+
+Not to be used to record other details of a cardiovascular examination or assessment. Use the CLUSTER.exam-heart archetype or other archetypes from the CLUSTER.exam family to record physical examination findings.
+
+Not to be used to record fetal heart rate - use the OBSERVATION.fetal_heart archetype for this purpose.
+
+Not to be used to record a pulse deficit - use the OBSERVATION.pulse_deficit archetype for this purpose.
+
+Concepts such as Target Heart Rate should be recorded in specific archetypes such as EVALUATION.goal. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000.1] matches {    -- Pulse
+        /data[at0002]/events matches {
+            EVENT[at0003] matches {
+                /data[at0001]/items matches {
+                    ELEMENT[at1005.1] matches {    -- Presence
+                        /value[at9006]/defining_code matches {[ac9000.1]}    -- Presence (synthesised)
+                    }
+                    ELEMENT[at0004.1] matches {    -- Pulse rate
+                        value matches {
+                            DV_QUANTITY[at0.9001] matches {
+                                property matches {[at9001]}
+                                magnitude matches {|0.0..<1000.0|}
+                                units matches {"/min"}
+                                precision matches {0}
+                            }
+                        }
+                    }
+                    ELEMENT[at0005.1] matches {    -- Regularity
+                        value matches {
+                            DV_CODED_TEXT[at0.9002] matches {
+                                defining_code matches {[ac9002]}
+                            }
+                            DV_TEXT[at0.9003]
+                        }
+                    }
+                    ELEMENT[at1022.1]    -- Clinical description
+                    ELEMENT[at1023.1]    -- Clinical interpretation
+                    ELEMENT[at1059.1]    -- Comment
+                    after [at0005.1]
+                    ELEMENT[at0.5] matches {    -- Character
+                        value matches {
+                            DV_TEXT[at0.9004]
+                        }
+                    }
+                }
+            }
+            INTERVAL_EVENT[at1036.1]    -- Maximum pulse rate
+        }
+        /protocol[at0010]/items matches {
+            ELEMENT[at1019.1] matches {    -- Method
+                /value[at9018]/defining_code matches {[ac9005.1]}    -- Method (synthesised)
+            }
+            after [at1019.1]
+            ELEMENT[at0.6] occurrences matches {0..1} matches {    -- Artery site
+                value matches {
+                    DV_CODED_TEXT[at0.9005] matches {
+                        defining_code matches {[ac0.9000]}    -- Artery site (synthesised)
+                    }
+                    DV_TEXT[at0.9006]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"*Pulse (en)">
+                description = <"*Findings about consecutive pressure waves observed as blood is pumped through an artery by the heart. (en)">
+            >
+            ["at1005.1"] = <
+                text = <"Vorhandensein">
+                description = <"*Observation about the detection of an arterial pulse. (en)">
+                comment = <"*It can be implied that the pulse is present if Rate >0 /min. (en)">
+            >
+            ["at0004.1"] = <
+                text = <"*Pulse rate (en)">
+                description = <"*The measured rate of the pulse. (en)">
+            >
+            ["at0005.1"] = <
+                text = <"*Regularity(en)">
+                description = <"*The regularity of the pulse. (en)">
+                comment = <"*This data element allows a choice of datatypes. Use the DV_TEXT data type to support inclusion of alternative or extended value sets. (en)">
+            >
+            ["at1022.1"] = <
+                text = <"Klinische Beschreibung">
+                description = <"*Narrative description about the pulse. (en)">
+            >
+            ["at1023.1"] = <
+                text = <"Klinische Interpretation">
+                description = <"*Single word, phrase or brief description that represents the clinical meaning and significance of the pulse findings, including the rhythm. (en)">
+                comment = <"*For example: 'bradycardia'; or 'ectopic beats'. Coding with a terminology is preferred, where possible. This data element has multiple occurrences to allow the recording of more than one 'Clinical interpretation'. (en)">
+            >
+            ["at1059.1"] = <
+                text = <"Kommentar">
+                description = <"*Additional narrative about the pulse findings not captured in other fields. (en)">
+            >
+            ["at1036.1"] = <
+                text = <"*Maximum pulse rate (en)">
+                description = <"*Maximum pulse rate observed during a specified time interval. (en)">
+            >
+            ["at1019.1"] = <
+                text = <"Methode">
+                description = <"*Method used to observe the pulse. (en)">
+                comment = <"*For example, palpation or pulse oximetry. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Pulse oximetry (en)">
+                description = <"*The findings are observed using a pulse oximetry device. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Doppler (en)">
+                description = <"*The findings are observed using a doppler ultrasound device. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Oscillometry (en)">
+                description = <"*The findings are observed using an oscillometric device, such as an automatic blood pressure device. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Intra-arterial probe (en)">
+                description = <"*The findings are observed using an intra-arterial probe, directly measuring the pressure wave in the artery. (en)">
+            >
+            ["at1013.1"] = <
+                text = <"Gerät">
+                description = <"*Details about the device used to measure the pulse. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Character (en)">
+                description = <"*Description of the character of the pulse. (en)">
+                comment = <"*Coding with a terminology is desired, where possible. For example: full, thready, bounding, slow rising, or collapsing. Multiple terms may be recorded. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Artery site (en)">
+                description = <"*Body site where the pulse was observed. (en)">
+                comment = <"*This data element allows a choice of datatypes. Use the DV_TEXT data type to support inclusion of alternative or extended value sets. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Radial artery - Left (en)">
+                description = <"*The left radial artery. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Radial artery - Right (en)">
+                description = <"*The right radial artery. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Carotid artery - Left (en)">
+                description = <"*The left carotid artery. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Carotid artery - Right (en)">
+                description = <"*The right carotid artery. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Femoral artery - Left (en)">
+                description = <"*The left femoral artery. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Femoral artery - Right (en)">
+                description = <"*The right femoral artery. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Brachial artery - Right (en)">
+                description = <"*The right brachial artery. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Brachial artery - Left (en)">
+                description = <"*The left brachial artery. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Finger (en)">
+                description = <"*An unspecified finger. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Toe (en)">
+                description = <"*An unspecified toe. (en)">
+            >
+            ["at0.17"] = <
+                text = <"*Ear lobe (en)">
+                description = <"*The lobe of an unspecified ear. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Present (en)">
+                description = <"*A pulse can be detected. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Not detected (en)">
+                description = <"*A pulse cannot be detected. (en)">
+            >
+            ["ac9000.1"] = <
+                text = <"Vorhandensein (synthesised)">
+                description = <"*Observation about the detection of an arterial pulse. (en) (synthesised)">
+            >
+            ["ac9005.1"] = <
+                text = <"Methode (synthesised)">
+                description = <"*Method used to observe the pulse. (en) (synthesised)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Artery site (en) (synthesised)">
+                description = <"*Body site where the pulse was observed. (en) (synthesised)">
+            >
+        >
+        ["ru"] = <
+            ["at0000.1"] = <
+                text = <"*Pulse (en)">
+                description = <"*Findings about consecutive pressure waves observed as blood is pumped through an artery by the heart. (en)">
+            >
+            ["at1005.1"] = <
+                text = <"*Presence(en)">
+                description = <"*Observation about the detection of an arterial pulse. (en)">
+                comment = <"*It can be implied that the pulse is present if Rate >0 /min. (en)">
+            >
+            ["at0004.1"] = <
+                text = <"*Pulse rate (en)">
+                description = <"*The measured rate of the pulse. (en)">
+            >
+            ["at0005.1"] = <
+                text = <"*Regularity(en)">
+                description = <"*The regularity of the pulse. (en)">
+                comment = <"*This data element allows a choice of datatypes. Use the DV_TEXT data type to support inclusion of alternative or extended value sets. (en)">
+            >
+            ["at1022.1"] = <
+                text = <"*Clinical description(en)">
+                description = <"*Narrative description about the pulse. (en)">
+            >
+            ["at1023.1"] = <
+                text = <"*Clinical interpretation(en)">
+                description = <"*Single word, phrase or brief description that represents the clinical meaning and significance of the pulse findings, including the rhythm. (en)">
+                comment = <"*For example: 'bradycardia'; or 'ectopic beats'. Coding with a terminology is preferred, where possible. This data element has multiple occurrences to allow the recording of more than one 'Clinical interpretation'. (en)">
+            >
+            ["at1059.1"] = <
+                text = <"*Comment(en)">
+                description = <"*Additional narrative about the pulse findings not captured in other fields. (en)">
+            >
+            ["at1036.1"] = <
+                text = <"*Maximum pulse rate (en)">
+                description = <"*Maximum pulse rate observed during a specified time interval. (en)">
+            >
+            ["at1019.1"] = <
+                text = <"*Method(en)">
+                description = <"*Method used to observe the pulse. (en)">
+                comment = <"*For example, palpation or pulse oximetry. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Pulse oximetry (en)">
+                description = <"*The findings are observed using a pulse oximetry device. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Doppler (en)">
+                description = <"*The findings are observed using a doppler ultrasound device. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Oscillometry (en)">
+                description = <"*The findings are observed using an oscillometric device, such as an automatic blood pressure device. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Intra-arterial probe (en)">
+                description = <"*The findings are observed using an intra-arterial probe, directly measuring the pressure wave in the artery. (en)">
+            >
+            ["at1013.1"] = <
+                text = <"*Device(en)">
+                description = <"*Details about the device used to measure the pulse. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Character (en)">
+                description = <"*Description of the character of the pulse. (en)">
+                comment = <"*Coding with a terminology is desired, where possible. For example: full, thready, bounding, slow rising, or collapsing. Multiple terms may be recorded. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Artery site (en)">
+                description = <"*Body site where the pulse was observed. (en)">
+                comment = <"*This data element allows a choice of datatypes. Use the DV_TEXT data type to support inclusion of alternative or extended value sets. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Radial artery - Left (en)">
+                description = <"*The left radial artery. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Radial artery - Right (en)">
+                description = <"*The right radial artery. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Carotid artery - Left (en)">
+                description = <"*The left carotid artery. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Carotid artery - Right (en)">
+                description = <"*The right carotid artery. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Femoral artery - Left (en)">
+                description = <"*The left femoral artery. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Femoral artery - Right (en)">
+                description = <"*The right femoral artery. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Brachial artery - Right (en)">
+                description = <"*The right brachial artery. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Brachial artery - Left (en)">
+                description = <"*The left brachial artery. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Finger (en)">
+                description = <"*An unspecified finger. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Toe (en)">
+                description = <"*An unspecified toe. (en)">
+            >
+            ["at0.17"] = <
+                text = <"*Ear lobe (en)">
+                description = <"*The lobe of an unspecified ear. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Present (en)">
+                description = <"*A pulse can be detected. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Not detected (en)">
+                description = <"*A pulse cannot be detected. (en)">
+            >
+            ["ac9000.1"] = <
+                text = <"*Presence(en) (synthesised)">
+                description = <"*Observation about the detection of an arterial pulse. (en) (synthesised)">
+            >
+            ["ac9005.1"] = <
+                text = <"*Method(en) (synthesised)">
+                description = <"*Method used to observe the pulse. (en) (synthesised)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Artery site (en) (synthesised)">
+                description = <"*Body site where the pulse was observed. (en) (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000.1"] = <
+                text = <"*Pulse (en)">
+                description = <"*Findings about consecutive pressure waves observed as blood is pumped through an artery by the heart. (en)">
+            >
+            ["at1005.1"] = <
+                text = <"Närvaro">
+                description = <"*Observation about the detection of an arterial pulse. (en)">
+                comment = <"*It can be implied that the pulse is present if Rate >0 /min. (en)">
+            >
+            ["at0004.1"] = <
+                text = <"*Pulse rate (en)">
+                description = <"*The measured rate of the pulse. (en)">
+            >
+            ["at0005.1"] = <
+                text = <"*Regularity(en)">
+                description = <"*The regularity of the pulse. (en)">
+                comment = <"*This data element allows a choice of datatypes. Use the DV_TEXT data type to support inclusion of alternative or extended value sets. (en)">
+            >
+            ["at1022.1"] = <
+                text = <"Klinisk beskrivning">
+                description = <"*Narrative description about the pulse. (en)">
+            >
+            ["at1023.1"] = <
+                text = <"Klinisk tolkning">
+                description = <"*Single word, phrase or brief description that represents the clinical meaning and significance of the pulse findings, including the rhythm. (en)">
+                comment = <"*For example: 'bradycardia'; or 'ectopic beats'. Coding with a terminology is preferred, where possible. This data element has multiple occurrences to allow the recording of more than one 'Clinical interpretation'. (en)">
+            >
+            ["at1059.1"] = <
+                text = <"Kommentar">
+                description = <"*Additional narrative about the pulse findings not captured in other fields. (en)">
+            >
+            ["at1036.1"] = <
+                text = <"*Maximum pulse rate (en)">
+                description = <"*Maximum pulse rate observed during a specified time interval. (en)">
+            >
+            ["at1019.1"] = <
+                text = <"Metod">
+                description = <"*Method used to observe the pulse. (en)">
+                comment = <"*For example, palpation or pulse oximetry. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Pulse oximetry (en)">
+                description = <"*The findings are observed using a pulse oximetry device. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Doppler (en)">
+                description = <"*The findings are observed using a doppler ultrasound device. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Oscillometry (en)">
+                description = <"*The findings are observed using an oscillometric device, such as an automatic blood pressure device. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Intra-arterial probe (en)">
+                description = <"*The findings are observed using an intra-arterial probe, directly measuring the pressure wave in the artery. (en)">
+            >
+            ["at1013.1"] = <
+                text = <"Utrustning">
+                description = <"*Details about the device used to measure the pulse. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Character (en)">
+                description = <"*Description of the character of the pulse. (en)">
+                comment = <"*Coding with a terminology is desired, where possible. For example: full, thready, bounding, slow rising, or collapsing. Multiple terms may be recorded. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Artery site (en)">
+                description = <"*Body site where the pulse was observed. (en)">
+                comment = <"*This data element allows a choice of datatypes. Use the DV_TEXT data type to support inclusion of alternative or extended value sets. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Radial artery - Left (en)">
+                description = <"*The left radial artery. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Radial artery - Right (en)">
+                description = <"*The right radial artery. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Carotid artery - Left (en)">
+                description = <"*The left carotid artery. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Carotid artery - Right (en)">
+                description = <"*The right carotid artery. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Femoral artery - Left (en)">
+                description = <"*The left femoral artery. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Femoral artery - Right (en)">
+                description = <"*The right femoral artery. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Brachial artery - Right (en)">
+                description = <"*The right brachial artery. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Brachial artery - Left (en)">
+                description = <"*The left brachial artery. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Finger (en)">
+                description = <"*An unspecified finger. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Toe (en)">
+                description = <"*An unspecified toe. (en)">
+            >
+            ["at0.17"] = <
+                text = <"*Ear lobe (en)">
+                description = <"*The lobe of an unspecified ear. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Present (en)">
+                description = <"*A pulse can be detected. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Not detected (en)">
+                description = <"*A pulse cannot be detected. (en)">
+            >
+            ["ac9000.1"] = <
+                text = <"Närvaro (synthesised)">
+                description = <"*Observation about the detection of an arterial pulse. (en) (synthesised)">
+            >
+            ["ac9005.1"] = <
+                text = <"Metod (synthesised)">
+                description = <"*Method used to observe the pulse. (en) (synthesised)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Artery site (en) (synthesised)">
+                description = <"*Body site where the pulse was observed. (en) (synthesised)">
+            >
+        >
+        ["fi"] = <
+            ["at0000.1"] = <
+                text = <"*Pulse (en)">
+                description = <"*Findings about consecutive pressure waves observed as blood is pumped through an artery by the heart. (en)">
+            >
+            ["at1005.1"] = <
+                text = <"Läsnäolo">
+                description = <"*Observation about the detection of an arterial pulse. (en)">
+                comment = <"*It can be implied that the pulse is present if Rate >0 /min. (en)">
+            >
+            ["at0004.1"] = <
+                text = <"*Pulse rate (en)">
+                description = <"*The measured rate of the pulse. (en)">
+            >
+            ["at0005.1"] = <
+                text = <"*Regularity(en)">
+                description = <"*The regularity of the pulse. (en)">
+                comment = <"*This data element allows a choice of datatypes. Use the DV_TEXT data type to support inclusion of alternative or extended value sets. (en)">
+            >
+            ["at1022.1"] = <
+                text = <"Kliininen kuvaus">
+                description = <"*Narrative description about the pulse. (en)">
+            >
+            ["at1023.1"] = <
+                text = <"Kliininen tulkinta">
+                description = <"*Single word, phrase or brief description that represents the clinical meaning and significance of the pulse findings, including the rhythm. (en)">
+                comment = <"*For example: 'bradycardia'; or 'ectopic beats'. Coding with a terminology is preferred, where possible. This data element has multiple occurrences to allow the recording of more than one 'Clinical interpretation'. (en)">
+            >
+            ["at1059.1"] = <
+                text = <"Kommentti">
+                description = <"*Additional narrative about the pulse findings not captured in other fields. (en)">
+            >
+            ["at1036.1"] = <
+                text = <"*Maximum pulse rate (en)">
+                description = <"*Maximum pulse rate observed during a specified time interval. (en)">
+            >
+            ["at1019.1"] = <
+                text = <"Menetelmä">
+                description = <"*Method used to observe the pulse. (en)">
+                comment = <"*For example, palpation or pulse oximetry. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Pulse oximetry (en)">
+                description = <"*The findings are observed using a pulse oximetry device. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Doppler (en)">
+                description = <"*The findings are observed using a doppler ultrasound device. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Oscillometry (en)">
+                description = <"*The findings are observed using an oscillometric device, such as an automatic blood pressure device. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Intra-arterial probe (en)">
+                description = <"*The findings are observed using an intra-arterial probe, directly measuring the pressure wave in the artery. (en)">
+            >
+            ["at1013.1"] = <
+                text = <"Laite">
+                description = <"*Details about the device used to measure the pulse. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Character (en)">
+                description = <"*Description of the character of the pulse. (en)">
+                comment = <"*Coding with a terminology is desired, where possible. For example: full, thready, bounding, slow rising, or collapsing. Multiple terms may be recorded. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Artery site (en)">
+                description = <"*Body site where the pulse was observed. (en)">
+                comment = <"*This data element allows a choice of datatypes. Use the DV_TEXT data type to support inclusion of alternative or extended value sets. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Radial artery - Left (en)">
+                description = <"*The left radial artery. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Radial artery - Right (en)">
+                description = <"*The right radial artery. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Carotid artery - Left (en)">
+                description = <"*The left carotid artery. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Carotid artery - Right (en)">
+                description = <"*The right carotid artery. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Femoral artery - Left (en)">
+                description = <"*The left femoral artery. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Femoral artery - Right (en)">
+                description = <"*The right femoral artery. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Brachial artery - Right (en)">
+                description = <"*The right brachial artery. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Brachial artery - Left (en)">
+                description = <"*The left brachial artery. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Finger (en)">
+                description = <"*An unspecified finger. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Toe (en)">
+                description = <"*An unspecified toe. (en)">
+            >
+            ["at0.17"] = <
+                text = <"*Ear lobe (en)">
+                description = <"*The lobe of an unspecified ear. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Present (en)">
+                description = <"*A pulse can be detected. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Not detected (en)">
+                description = <"*A pulse cannot be detected. (en)">
+            >
+            ["ac9000.1"] = <
+                text = <"Läsnäolo (synthesised)">
+                description = <"*Observation about the detection of an arterial pulse. (en) (synthesised)">
+            >
+            ["ac9005.1"] = <
+                text = <"Menetelmä (synthesised)">
+                description = <"*Method used to observe the pulse. (en) (synthesised)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Artery site (en) (synthesised)">
+                description = <"*Body site where the pulse was observed. (en) (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000.1"] = <
+                text = <"*Pulse (en)">
+                description = <"*Findings about consecutive pressure waves observed as blood is pumped through an artery by the heart. (en)">
+            >
+            ["at1005.1"] = <
+                text = <"Tilstedeværelse">
+                description = <"*Observation about the detection of an arterial pulse. (en)">
+                comment = <"*It can be implied that the pulse is present if Rate >0 /min. (en)">
+            >
+            ["at0004.1"] = <
+                text = <"*Pulse rate (en)">
+                description = <"*The measured rate of the pulse. (en)">
+                comment = <"Det er spesifisert begrensninger i navn for å gjøre det lettere å eksplisitt merke dette elementet som Pulsfrekvens eller Hjertefrekvens ved behov.">
+            >
+            ["at0005.1"] = <
+                text = <"*Regularity(en)">
+                description = <"*The regularity of the pulse. (en)">
+                comment = <"*This data element allows a choice of datatypes. Use the DV_TEXT data type to support inclusion of alternative or extended value sets. (en)">
+            >
+            ["at1022.1"] = <
+                text = <"Klinisk beskrivelse">
+                description = <"*Narrative description about the pulse. (en)">
+            >
+            ["at1023.1"] = <
+                text = <"Klinisk tolkning">
+                description = <"*Single word, phrase or brief description that represents the clinical meaning and significance of the pulse findings, including the rhythm. (en)">
+                comment = <"*For example: 'bradycardia'; or 'ectopic beats'. Coding with a terminology is preferred, where possible. This data element has multiple occurrences to allow the recording of more than one 'Clinical interpretation'. (en)">
+            >
+            ["at1059.1"] = <
+                text = <"Kommentar">
+                description = <"*Additional narrative about the pulse findings not captured in other fields. (en)">
+            >
+            ["at1036.1"] = <
+                text = <"*Maximum pulse rate (en)">
+                description = <"*Maximum pulse rate observed during a specified time interval. (en)">
+            >
+            ["at1019.1"] = <
+                text = <"Målemetode">
+                description = <"*Method used to observe the pulse. (en)">
+                comment = <"*For example, palpation or pulse oximetry. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Pulse oximetry (en)">
+                description = <"*The findings are observed using a pulse oximetry device. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Doppler (en)">
+                description = <"*The findings are observed using a doppler ultrasound device. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Oscillometry (en)">
+                description = <"*The findings are observed using an oscillometric device, such as an automatic blood pressure device. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Intra-arterial probe (en)">
+                description = <"*The findings are observed using an intra-arterial probe, directly measuring the pressure wave in the artery. (en)">
+            >
+            ["at1013.1"] = <
+                text = <"Måleapparat">
+                description = <"*Details about the device used to measure the pulse. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Character (en)">
+                description = <"*Description of the character of the pulse. (en)">
+                comment = <"*Coding with a terminology is desired, where possible. For example: full, thready, bounding, slow rising, or collapsing. Multiple terms may be recorded. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Artery site (en)">
+                description = <"*Body site where the pulse was observed. (en)">
+                comment = <"*This data element allows a choice of datatypes. Use the DV_TEXT data type to support inclusion of alternative or extended value sets. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Radial artery - Left (en)">
+                description = <"*The left radial artery. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Radial artery - Right (en)">
+                description = <"*The right radial artery. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Carotid artery - Left (en)">
+                description = <"*The left carotid artery. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Carotid artery - Right (en)">
+                description = <"*The right carotid artery. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Femoral artery - Left (en)">
+                description = <"*The left femoral artery. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Femoral artery - Right (en)">
+                description = <"*The right femoral artery. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Brachial artery - Right (en)">
+                description = <"*The right brachial artery. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Brachial artery - Left (en)">
+                description = <"*The left brachial artery. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Finger (en)">
+                description = <"*An unspecified finger. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Toe (en)">
+                description = <"*An unspecified toe. (en)">
+            >
+            ["at0.17"] = <
+                text = <"*Ear lobe (en)">
+                description = <"*The lobe of an unspecified ear. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Present (en)">
+                description = <"*A pulse can be detected. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Not detected (en)">
+                description = <"*A pulse cannot be detected. (en)">
+            >
+            ["ac9000.1"] = <
+                text = <"Tilstedeværelse (synthesised)">
+                description = <"*Observation about the detection of an arterial pulse. (en) (synthesised)">
+            >
+            ["ac9005.1"] = <
+                text = <"Målemetode (synthesised)">
+                description = <"*Method used to observe the pulse. (en) (synthesised)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Artery site (en) (synthesised)">
+                description = <"*Body site where the pulse was observed. (en) (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000.1"] = <
+                text = <"*Pulse (en)">
+                description = <"*Findings about consecutive pressure waves observed as blood is pumped through an artery by the heart. (en)">
+            >
+            ["at1005.1"] = <
+                text = <"Presença">
+                description = <"*Observation about the detection of an arterial pulse. (en)">
+                comment = <"*It can be implied that the pulse is present if Rate >0 /min. (en)">
+            >
+            ["at0004.1"] = <
+                text = <"*Pulse rate (en)">
+                description = <"*The measured rate of the pulse. (en)">
+            >
+            ["at0005.1"] = <
+                text = <"*Regularity(en)">
+                description = <"*The regularity of the pulse. (en)">
+                comment = <"*This data element allows a choice of datatypes. Use the DV_TEXT data type to support inclusion of alternative or extended value sets. (en)">
+            >
+            ["at1022.1"] = <
+                text = <"Descrição clínica">
+                description = <"*Narrative description about the pulse. (en)">
+            >
+            ["at1023.1"] = <
+                text = <"Interpretação clínica">
+                description = <"*Single word, phrase or brief description that represents the clinical meaning and significance of the pulse findings, including the rhythm. (en)">
+                comment = <"*For example: 'bradycardia'; or 'ectopic beats'. Coding with a terminology is preferred, where possible. This data element has multiple occurrences to allow the recording of more than one 'Clinical interpretation'. (en)">
+            >
+            ["at1059.1"] = <
+                text = <"Comentários">
+                description = <"*Additional narrative about the pulse findings not captured in other fields. (en)">
+            >
+            ["at1036.1"] = <
+                text = <"*Maximum pulse rate (en)">
+                description = <"*Maximum pulse rate observed during a specified time interval. (en)">
+            >
+            ["at1019.1"] = <
+                text = <"Método">
+                description = <"*Method used to observe the pulse. (en)">
+                comment = <"*For example, palpation or pulse oximetry. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Pulse oximetry (en)">
+                description = <"*The findings are observed using a pulse oximetry device. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Doppler (en)">
+                description = <"*The findings are observed using a doppler ultrasound device. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Oscillometry (en)">
+                description = <"*The findings are observed using an oscillometric device, such as an automatic blood pressure device. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Intra-arterial probe (en)">
+                description = <"*The findings are observed using an intra-arterial probe, directly measuring the pressure wave in the artery. (en)">
+            >
+            ["at1013.1"] = <
+                text = <"Dispositivo">
+                description = <"*Details about the device used to measure the pulse. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Character (en)">
+                description = <"*Description of the character of the pulse. (en)">
+                comment = <"*Coding with a terminology is desired, where possible. For example: full, thready, bounding, slow rising, or collapsing. Multiple terms may be recorded. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Artery site (en)">
+                description = <"*Body site where the pulse was observed. (en)">
+                comment = <"*This data element allows a choice of datatypes. Use the DV_TEXT data type to support inclusion of alternative or extended value sets. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Radial artery - Left (en)">
+                description = <"*The left radial artery. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Radial artery - Right (en)">
+                description = <"*The right radial artery. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Carotid artery - Left (en)">
+                description = <"*The left carotid artery. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Carotid artery - Right (en)">
+                description = <"*The right carotid artery. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Femoral artery - Left (en)">
+                description = <"*The left femoral artery. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Femoral artery - Right (en)">
+                description = <"*The right femoral artery. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Brachial artery - Right (en)">
+                description = <"*The right brachial artery. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Brachial artery - Left (en)">
+                description = <"*The left brachial artery. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Finger (en)">
+                description = <"*An unspecified finger. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Toe (en)">
+                description = <"*An unspecified toe. (en)">
+            >
+            ["at0.17"] = <
+                text = <"*Ear lobe (en)">
+                description = <"*The lobe of an unspecified ear. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Present (en)">
+                description = <"*A pulse can be detected. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Not detected (en)">
+                description = <"*A pulse cannot be detected. (en)">
+            >
+            ["ac9000.1"] = <
+                text = <"Presença (synthesised)">
+                description = <"*Observation about the detection of an arterial pulse. (en) (synthesised)">
+            >
+            ["ac9005.1"] = <
+                text = <"Método (synthesised)">
+                description = <"*Method used to observe the pulse. (en) (synthesised)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Artery site (en) (synthesised)">
+                description = <"*Body site where the pulse was observed. (en) (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000.1"] = <
+                text = <"*Pulse (en)">
+                description = <"*Findings about consecutive pressure waves observed as blood is pumped through an artery by the heart. (en)">
+            >
+            ["at1005.1"] = <
+                text = <"*Presence(en)">
+                description = <"*Observation about the detection of an arterial pulse. (en)">
+                comment = <"*It can be implied that the pulse is present if Rate >0 /min. (en)">
+            >
+            ["at0004.1"] = <
+                text = <"*Pulse rate (en)">
+                description = <"*The measured rate of the pulse. (en)">
+            >
+            ["at0005.1"] = <
+                text = <"*Regularity(en)">
+                description = <"*The regularity of the pulse. (en)">
+                comment = <"*This data element allows a choice of datatypes. Use the DV_TEXT data type to support inclusion of alternative or extended value sets. (en)">
+            >
+            ["at1022.1"] = <
+                text = <"*Clinical description(en)">
+                description = <"*Narrative description about the pulse. (en)">
+            >
+            ["at1023.1"] = <
+                text = <"*Clinical interpretation(en)">
+                description = <"*Single word, phrase or brief description that represents the clinical meaning and significance of the pulse findings, including the rhythm. (en)">
+                comment = <"*For example: 'bradycardia'; or 'ectopic beats'. Coding with a terminology is preferred, where possible. This data element has multiple occurrences to allow the recording of more than one 'Clinical interpretation'. (en)">
+            >
+            ["at1059.1"] = <
+                text = <"*Comment(en)">
+                description = <"*Additional narrative about the pulse findings not captured in other fields. (en)">
+            >
+            ["at1036.1"] = <
+                text = <"*Maximum pulse rate (en)">
+                description = <"*Maximum pulse rate observed during a specified time interval. (en)">
+            >
+            ["at1019.1"] = <
+                text = <"*Method(en)">
+                description = <"*Method used to observe the pulse. (en)">
+                comment = <"*For example, palpation or pulse oximetry. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Pulse oximetry (en)">
+                description = <"*The findings are observed using a pulse oximetry device. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Doppler (en)">
+                description = <"*The findings are observed using a doppler ultrasound device. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Oscillometry (en)">
+                description = <"*The findings are observed using an oscillometric device, such as an automatic blood pressure device. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Intra-arterial probe (en)">
+                description = <"*The findings are observed using an intra-arterial probe, directly measuring the pressure wave in the artery. (en)">
+            >
+            ["at1013.1"] = <
+                text = <"*Device(en)">
+                description = <"*Details about the device used to measure the pulse. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Character (en)">
+                description = <"*Description of the character of the pulse. (en)">
+                comment = <"*Coding with a terminology is desired, where possible. For example: full, thready, bounding, slow rising, or collapsing. Multiple terms may be recorded. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Artery site (en)">
+                description = <"*Body site where the pulse was observed. (en)">
+                comment = <"*This data element allows a choice of datatypes. Use the DV_TEXT data type to support inclusion of alternative or extended value sets. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Radial artery - Left (en)">
+                description = <"*The left radial artery. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Radial artery - Right (en)">
+                description = <"*The right radial artery. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Carotid artery - Left (en)">
+                description = <"*The left carotid artery. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Carotid artery - Right (en)">
+                description = <"*The right carotid artery. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Femoral artery - Left (en)">
+                description = <"*The left femoral artery. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Femoral artery - Right (en)">
+                description = <"*The right femoral artery. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Brachial artery - Right (en)">
+                description = <"*The right brachial artery. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Brachial artery - Left (en)">
+                description = <"*The left brachial artery. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Finger (en)">
+                description = <"*An unspecified finger. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Toe (en)">
+                description = <"*An unspecified toe. (en)">
+            >
+            ["at0.17"] = <
+                text = <"*Ear lobe (en)">
+                description = <"*The lobe of an unspecified ear. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Present (en)">
+                description = <"*A pulse can be detected. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Not detected (en)">
+                description = <"*A pulse cannot be detected. (en)">
+            >
+            ["ac9000.1"] = <
+                text = <"*Presence(en) (synthesised)">
+                description = <"*Observation about the detection of an arterial pulse. (en) (synthesised)">
+            >
+            ["ac9005.1"] = <
+                text = <"*Method(en) (synthesised)">
+                description = <"*Method used to observe the pulse. (en) (synthesised)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Artery site (en) (synthesised)">
+                description = <"*Body site where the pulse was observed. (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Pulse">
+                description = <"A series of pressure waves observed in an artery, generated as the heart pumps blood through the circulatory system.">
+            >
+            ["at1005.1"] = <
+                text = <"Presence">
+                description = <"Observation about the detection of an arterial pulse.">
+                comment = <"It can be implied that the pulse is present if Rate >0 /min.">
+            >
+            ["at0004.1"] = <
+                text = <"Pulse rate">
+                description = <"The measured rate of the pulse.">
+            >
+            ["at0005.1"] = <
+                text = <"Regularity">
+                description = <"The regularity of the pulse.">
+                comment = <"This data element allows a choice of datatypes. Use the DV_TEXT data type to support inclusion of alternative or extended value sets.">
+            >
+            ["at1022.1"] = <
+                text = <"Clinical description">
+                description = <"Narrative description about the pulse.">
+            >
+            ["at1023.1"] = <
+                text = <"Clinical interpretation">
+                description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the pulse findings, including the rhythm.">
+                comment = <"For example: 'bradycardia'; or 'ectopic beats'. Coding with a terminology is preferred, where possible. This data element has multiple occurrences to allow the recording of more than one 'Clinical interpretation'.">
+            >
+            ["at1059.1"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the pulse findings not captured in other fields.">
+            >
+            ["at1036.1"] = <
+                text = <"Maximum pulse rate">
+                description = <"Maximum pulse rate observed during a specified time interval.">
+            >
+            ["at1019.1"] = <
+                text = <"Method">
+                description = <"Method used to observe the pulse.">
+                comment = <"For example, palpation or pulse oximetry.">
+            >
+            ["at0.1"] = <
+                text = <"Pulse oximetry">
+                description = <"The findings are observed using a pulse oximetry device.">
+            >
+            ["at0.2"] = <
+                text = <"Doppler">
+                description = <"The findings are observed using a doppler ultrasound device.">
+            >
+            ["at0.3"] = <
+                text = <"Oscillometry">
+                description = <"The findings are observed using an oscillometric device, such as an automatic blood pressure device.">
+            >
+            ["at0.4"] = <
+                text = <"Intra-arterial probe">
+                description = <"The findings are observed using an intra-arterial probe, directly measuring the pressure wave in the artery.">
+            >
+            ["at1013.1"] = <
+                text = <"Device">
+                description = <"Details about the device used to measure the pulse.">
+            >
+            ["at0.5"] = <
+                text = <"Character">
+                description = <"The character of the pulse.">
+                comment = <"Coding with a terminology is desired, where possible. For example: full, thready, bounding, slow rising, or collapsing. Multiple terms may be recorded.">
+            >
+            ["at0.6"] = <
+                text = <"Artery site">
+                description = <"Identification of the arterial site where the pulse was observed.">
+                comment = <"This data element allows a choice of datatypes. Use the DV_TEXT data type to support inclusion of alternative or extended value sets.">
+            >
+            ["at0.7"] = <
+                text = <"Radial artery - Left">
+                description = <"The left radial artery.">
+            >
+            ["at0.8"] = <
+                text = <"Radial artery - Right">
+                description = <"The right radial artery.">
+            >
+            ["at0.9"] = <
+                text = <"Carotid artery - Left">
+                description = <"The left carotid artery.">
+            >
+            ["at0.10"] = <
+                text = <"Carotid artery - Right">
+                description = <"The right carotid artery.">
+            >
+            ["at0.11"] = <
+                text = <"Femoral artery - Left">
+                description = <"The left femoral artery.">
+            >
+            ["at0.12"] = <
+                text = <"Femoral artery - Right">
+                description = <"The right femoral artery.">
+            >
+            ["at0.13"] = <
+                text = <"Brachial artery - Right">
+                description = <"The right brachial artery.">
+            >
+            ["at0.14"] = <
+                text = <"Brachial artery - Left">
+                description = <"The left brachial artery.">
+            >
+            ["at0.15"] = <
+                text = <"Finger">
+                description = <"An unspecified finger.">
+            >
+            ["at0.16"] = <
+                text = <"Toe">
+                description = <"An unspecified toe.">
+            >
+            ["at0.17"] = <
+                text = <"Ear lobe">
+                description = <"The lobe of an unspecified ear.">
+            >
+            ["at0.18"] = <
+                text = <"Present">
+                description = <"A pulse can be detected.">
+            >
+            ["at0.19"] = <
+                text = <"Not detected">
+                description = <"A pulse cannot be detected.">
+            >
+            ["ac9000.1"] = <
+                text = <"Presence (synthesised)">
+                description = <"Observation about the detection of an arterial pulse. (synthesised)">
+            >
+            ["ac9005.1"] = <
+                text = <"Method (synthesised)">
+                description = <"Method used to observe the pulse. (synthesised)">
+            >
+            ["ac0.9000"] = <
+                text = <"Artery site (synthesised)">
+                description = <"Identification of the arterial site where the pulse was observed. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000.1"] = <
+                text = <"*Pulse (en)">
+                description = <"*Findings about consecutive pressure waves observed as blood is pumped through an artery by the heart. (en)">
+            >
+            ["at1005.1"] = <
+                text = <"Presencia del pulso">
+                description = <"*Observation about the detection of an arterial pulse. (en)">
+                comment = <"*It can be implied that the pulse is present if Rate >0 /min. (en)">
+            >
+            ["at0004.1"] = <
+                text = <"*Pulse rate (en)">
+                description = <"*The measured rate of the pulse. (en)">
+            >
+            ["at0005.1"] = <
+                text = <"*Regularity(en)">
+                description = <"*The regularity of the pulse. (en)">
+                comment = <"*This data element allows a choice of datatypes. Use the DV_TEXT data type to support inclusion of alternative or extended value sets. (en)">
+            >
+            ["at1022.1"] = <
+                text = <"Descripción clínica">
+                description = <"*Narrative description about the pulse. (en)">
+            >
+            ["at1023.1"] = <
+                text = <"Interpretación clínica">
+                description = <"*Single word, phrase or brief description that represents the clinical meaning and significance of the pulse findings, including the rhythm. (en)">
+                comment = <"*For example: 'bradycardia'; or 'ectopic beats'. Coding with a terminology is preferred, where possible. This data element has multiple occurrences to allow the recording of more than one 'Clinical interpretation'. (en)">
+            >
+            ["at1059.1"] = <
+                text = <"Comentarios">
+                description = <"*Additional narrative about the pulse findings not captured in other fields. (en)">
+            >
+            ["at1036.1"] = <
+                text = <"*Maximum pulse rate (en)">
+                description = <"*Maximum pulse rate observed during a specified time interval. (en)">
+            >
+            ["at1019.1"] = <
+                text = <"Método">
+                description = <"*Method used to observe the pulse. (en)">
+                comment = <"*For example, palpation or pulse oximetry. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Pulse oximetry (en)">
+                description = <"*The findings are observed using a pulse oximetry device. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Doppler (en)">
+                description = <"*The findings are observed using a doppler ultrasound device. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Oscillometry (en)">
+                description = <"*The findings are observed using an oscillometric device, such as an automatic blood pressure device. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Intra-arterial probe (en)">
+                description = <"*The findings are observed using an intra-arterial probe, directly measuring the pressure wave in the artery. (en)">
+            >
+            ["at1013.1"] = <
+                text = <"Dispositivo">
+                description = <"*Details about the device used to measure the pulse. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Character (en)">
+                description = <"*Description of the character of the pulse. (en)">
+                comment = <"*Coding with a terminology is desired, where possible. For example: full, thready, bounding, slow rising, or collapsing. Multiple terms may be recorded. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Artery site (en)">
+                description = <"*Body site where the pulse was observed. (en)">
+                comment = <"*This data element allows a choice of datatypes. Use the DV_TEXT data type to support inclusion of alternative or extended value sets. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Radial artery - Left (en)">
+                description = <"*The left radial artery. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Radial artery - Right (en)">
+                description = <"*The right radial artery. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Carotid artery - Left (en)">
+                description = <"*The left carotid artery. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Carotid artery - Right (en)">
+                description = <"*The right carotid artery. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Femoral artery - Left (en)">
+                description = <"*The left femoral artery. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Femoral artery - Right (en)">
+                description = <"*The right femoral artery. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Brachial artery - Right (en)">
+                description = <"*The right brachial artery. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Brachial artery - Left (en)">
+                description = <"*The left brachial artery. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Finger (en)">
+                description = <"*An unspecified finger. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Toe (en)">
+                description = <"*An unspecified toe. (en)">
+            >
+            ["at0.17"] = <
+                text = <"*Ear lobe (en)">
+                description = <"*The lobe of an unspecified ear. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Present (en)">
+                description = <"*A pulse can be detected. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Not detected (en)">
+                description = <"*A pulse cannot be detected. (en)">
+            >
+            ["ac9000.1"] = <
+                text = <"Presencia del pulso (synthesised)">
+                description = <"*Observation about the detection of an arterial pulse. (en) (synthesised)">
+            >
+            ["ac9005.1"] = <
+                text = <"Método (synthesised)">
+                description = <"*Method used to observe the pulse. (en) (synthesised)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Artery site (en) (synthesised)">
+                description = <"*Body site where the pulse was observed. (en) (synthesised)">
+            >
+        >
+        ["es-co"] = <
+            ["at0000.1"] = <
+                text = <"*Pulse (en)">
+                description = <"*Findings about consecutive pressure waves observed as blood is pumped through an artery by the heart. (en)">
+            >
+            ["at1005.1"] = <
+                text = <"*Presence(en)">
+                description = <"*Observation about the detection of an arterial pulse. (en)">
+                comment = <"*It can be implied that the pulse is present if Rate >0 /min. (en)">
+            >
+            ["at0004.1"] = <
+                text = <"*Pulse rate (en)">
+                description = <"*The measured rate of the pulse. (en)">
+            >
+            ["at0005.1"] = <
+                text = <"*Regularity(en)">
+                description = <"*The regularity of the pulse. (en)">
+                comment = <"*This data element allows a choice of datatypes. Use the DV_TEXT data type to support inclusion of alternative or extended value sets. (en)">
+            >
+            ["at1022.1"] = <
+                text = <"*Clinical description(en)">
+                description = <"*Narrative description about the pulse. (en)">
+            >
+            ["at1023.1"] = <
+                text = <"*Clinical interpretation(en)">
+                description = <"*Single word, phrase or brief description that represents the clinical meaning and significance of the pulse findings, including the rhythm. (en)">
+                comment = <"*For example: 'bradycardia'; or 'ectopic beats'. Coding with a terminology is preferred, where possible. This data element has multiple occurrences to allow the recording of more than one 'Clinical interpretation'. (en)">
+            >
+            ["at1059.1"] = <
+                text = <"*Comment(en)">
+                description = <"*Additional narrative about the pulse findings not captured in other fields. (en)">
+            >
+            ["at1036.1"] = <
+                text = <"*Maximum pulse rate (en)">
+                description = <"*Maximum pulse rate observed during a specified time interval. (en)">
+            >
+            ["at1019.1"] = <
+                text = <"*Method(en)">
+                description = <"*Method used to observe the pulse. (en)">
+                comment = <"*For example, palpation or pulse oximetry. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Pulse oximetry (en)">
+                description = <"*The findings are observed using a pulse oximetry device. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Doppler (en)">
+                description = <"*The findings are observed using a doppler ultrasound device. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Oscillometry (en)">
+                description = <"*The findings are observed using an oscillometric device, such as an automatic blood pressure device. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Intra-arterial probe (en)">
+                description = <"*The findings are observed using an intra-arterial probe, directly measuring the pressure wave in the artery. (en)">
+            >
+            ["at1013.1"] = <
+                text = <"*Device(en)">
+                description = <"*Details about the device used to measure the pulse. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Character (en)">
+                description = <"*Description of the character of the pulse. (en)">
+                comment = <"*Coding with a terminology is desired, where possible. For example: full, thready, bounding, slow rising, or collapsing. Multiple terms may be recorded. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Artery site (en)">
+                description = <"*Body site where the pulse was observed. (en)">
+                comment = <"*This data element allows a choice of datatypes. Use the DV_TEXT data type to support inclusion of alternative or extended value sets. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Radial artery - Left (en)">
+                description = <"*The left radial artery. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Radial artery - Right (en)">
+                description = <"*The right radial artery. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Carotid artery - Left (en)">
+                description = <"*The left carotid artery. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Carotid artery - Right (en)">
+                description = <"*The right carotid artery. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Femoral artery - Left (en)">
+                description = <"*The left femoral artery. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Femoral artery - Right (en)">
+                description = <"*The right femoral artery. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Brachial artery - Right (en)">
+                description = <"*The right brachial artery. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Brachial artery - Left (en)">
+                description = <"*The left brachial artery. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Finger (en)">
+                description = <"*An unspecified finger. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Toe (en)">
+                description = <"*An unspecified toe. (en)">
+            >
+            ["at0.17"] = <
+                text = <"*Ear lobe (en)">
+                description = <"*The lobe of an unspecified ear. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Present (en)">
+                description = <"*A pulse can be detected. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Not detected (en)">
+                description = <"*A pulse cannot be detected. (en)">
+            >
+            ["ac9000.1"] = <
+                text = <"*Presence(en) (synthesised)">
+                description = <"*Observation about the detection of an arterial pulse. (en) (synthesised)">
+            >
+            ["ac9005.1"] = <
+                text = <"*Method(en) (synthesised)">
+                description = <"*Method used to observe the pulse. (en) (synthesised)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Artery site (en) (synthesised)">
+                description = <"*Body site where the pulse was observed. (en) (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at1022.1"] = <http://snomed.info/id/703852005>
+            ["at1023.1"] = <http://snomed.info/id/243814003>
+            ["at1059.1"] = <http://snomed.info/id/703852005>
+            ["at0.5"] = <http://snomed.info/id/271639008>
+            ["at0.6"] = <http://snomed.info/id/246280004>
+            ["at0000.1"] = <http://snomed.info/id/8499008>
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.7", "at0.8", "at0.9", "at0.10", "at0.11", "at0.12", "at0.13", "at0.14", "at0.15", "at0.16", "at0.17">
+        >
+        ["ac9000.1"] = <
+            id = <"ac9000.1">
+            members = <"at0.18", "at0.19">
+        >
+        ["ac9005.1"] = <
+            id = <"ac9005.1">
+            members = <"at1032", "at0.1", "at0.2", "at0.3", "at0.4">
+        >
+    >

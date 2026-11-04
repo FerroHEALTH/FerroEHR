@@ -1,0 +1,571 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d51743b9-d234-4f4c-8db8-453326c60831; build_uid=3ea3946f-fc8e-4ed6-86c3-7d9f13c4f093)
+    openEHR-EHR-OBSERVATION.exposure_screening.v1.0.3
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch, Alina Rehberg, Nina Schewe, Darin Leonhardt">
+                ["organisation"] = <"Medizinische Hochschule Hannover, PLRI, PLRI für medizinische Informatik/ Medizinische Hochschule">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de, rehberg.alina@mh-hannover.de, schewe.nina@mh-hannover.de, leonhardt.darin@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke, Marit Alice Venheim, John Tore Valand">
+                ["organisation"] = <"Helse Vest IKT AS, Helse Bergen">
+                ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no, marit.alice.venheim@helse-vest-ikt.no, john.tore.valand@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-03-14">
+    >
+    original_namespace = <"no.nasjonalikt">
+    original_publisher = <"Nasjonal IKT">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Hugo Claudio Briceño García, Catsalut, Spain", "Gunn Elin Blakkisrud, DIPS ASA, Norway", "Kåre Flø, DIPS ASA, Norway", "Rosane Gotardo, Systema Ltda., Brazil", "Evelyn Hovenga, EJSH Consulting, Australia", "Mika Kiviaho, Tietoevry, Finland", "Anjali Kulkarni, Karkinos, India", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, Oslo universitetssykehus, Norway (Nasjonal IKT redaktør)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Nina Louise Jebsen, Haukeland Universitetssykehus, Norway", "Michael Lutz, BITsoft, Germany", "Svenne Naumann, Finnmarkssykehuset, Norway", "Terje Nordberg, Helse Bergen, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Ragnhild Schultz, OUS, Norway", "Anders Thurin, VGR, Sweden", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"no.nasjonalikt">
+    custodian_organisation = <"Nasjonal IKT">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"9F5057B598DB438B02A47E5FA52C7194">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Schaffung eines Konzeptes für die Erfassung von Antworten auf vordefinierte Screening-Fragen zu Situationen oder Ereignissen, in denen die Person einem Schadstoff ausgesetzt war oder gewesen sein könnte.">
+            use = <"Zur Schaffung eines Konzeptes für die Erfassung von Antworten auf vordefinierte Screening-Fragen zu Situationen oder Ereignissen, in denen die Person einem Schadstoff ausgesetzt war oder gewesen sein könnte.
+
+Beispiele für Erreger und Erregergruppen sind \"Hepatitis C\" und \"durch Blut übertragbare Infektionserreger\" oder \"Asbest\" und \"krebserregende Stoffe\".
+
+Häufige Anwendungsfälle sind unter anderem:
+- Systematische Befragung bei jeder Konsultation im Zusammenhang mit der Exposition, zum Beispiel:
+--- Waren Sie in den letzten 6 Wochen in einem Malaria-Endemiegebiet?
+--- Hatten Sie in den letzten 8 Wochen einen Bienenstich?
+--- Haben Sie in den letzten 3 Monaten in einem Schlachthof gearbeitet? 
+--- Haben Sie jemals in einem Gebäude mit Asbest gelebt oder gearbeitet?
+--- Haben Sie jemals gebrauchte Injektionsnadeln gemeinsam benutzt?
+--- Haben Sie in den letzten 24 Stunden Hähnchen von ACME Chicken Company gegessen?
+--- Haben Ihre Eltern im Haus geraucht, als Sie ein Kind waren?
+
+Die Semantik dieses Archetyps ist absichtlich offener gehalten, und eine Abfrage dieses Archetyps wäre normalerweise nur im Kontext der jeweiligen Vorlage sinnvoll oder sicher. In einer Vorlage würde jedes Datenelement in der Regel in die spezifische Frage umbenannt werden, die gestellt wird. Wenn Wertemengen für allgemeine Anwendungsfälle vorgeschlagen wurden, können diese für die lokale Verwendung angepasst werden, indem die Datentypen DV_TEXT oder DV_BOOLEAN verwendet werden, um jedem spezifischen Anwendungsfall zu entsprechen.
+
+Die EVENT-Struktur aus dem Referenzmodell kann verwendet werden, um anzugeben, ob sich die Fragen auf einen Zeitpunkt oder einen Zeitraum beziehen. Verwenden Sie eine separate Instanz dieses Archetyps, um zwischen einem Fragebogen, der Informationen über die Exposition zu einem beliebigen Zeitpunkt in der Vergangenheit aufzeichnet, und Informationen über die Exposition innerhalb eines bestimmten Zeitraums zu unterscheiden - zum Beispiel der Unterschied zwischen \"Haben Sie jemals eine Droge durch Injektion konsumiert?\" und \"Haben Sie in den letzten 6 Monaten eine Droge injiziert?\".
+
+Die Informationsquelle in einer Fragebogenantwort kann in verschiedenen Kontexten variieren, kann aber mit Hilfe des Elements \"Informationsanbieter\" im Referenzmodell spezifisch identifiziert werden.
+
+Dieser Archetyp wurde für die Verwendung als Screening-Instrument oder für die Aufzeichnung einfacher Daten im Fragebogenformat zur Verwendung in Situationen wie einem Krankheitsregister konzipiert. Wenn der Screening-Fragebogen das Vorhandensein einer Exposition feststellt, wird empfohlen, dass das klinische System die spezifischen Details über die Exposition unter Verwendung eines entsprechenden Expositionsarchetyps aufzeichnet und weiterführt, z. B. EVALUATION.exposure zur Aufzeichnung von Details über die tatsächliche Exposition.">
+            misuse = <"Nicht für die Aufzeichnung dauerhafter Details über eine bekannte oder identifizierte Exposition zu verwenden. Verwenden Sie zu diesem Zweck den Archetyp EVALUATION.exposure.
+
+Nicht zur Erstellung eines Rahmens für die Aufzeichnung von Antworten auf vordefinierte Screening-Fragen zur Exposition gegenüber potenziell schädlichen psychosozialen Faktoren wie Armut oder traumatischen Erfahrungen wie Mobbing oder Krieg. Verwenden Sie zu diesem Zweck einen geeigneten Screening-Fragebogen-Archetyp.
+
+Nicht zur Erfassung von Informationen über Substanzkonsum wie Zigarettenrauchen oder Alkoholkonsum verwenden. Verwenden Sie zu diesem Zweck den Archetyp OBSERVATION.substance_use_screening oder einen geeigneten EVALUATION-Archetyp.">
+            copyright = <"© Nasjonal IKT HF">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å lage et rammeverk for registrering av svar på forhåndsdefinerte spørsmål om situasjoner eller hendelser der individet har blitt eller kan ha blitt eksponert for en skadelig agens.">
+            use = <"Bruk for å lage et rammeverk for registrering av svar på forhåndsdefinerte spørsmål om situasjoner eller hendelser der individet har blitt eller kan ha blitt eksponert for en skadelig agens.
+
+Eksempler på agenser og grupper av agenser er \"hepatitt C\" og \"blodbårne smittsomme organismer\", eller \"asbest\" og \"kreftfremkallende stoffer\".
+
+Vanlige bruksområder inkluderer, men er ikke begrenset til:
+- Systematiske spørsmål ved konsultasjoner, for eksempel:
+--- Har du vært i et malariaområde de siste 6 ukene?
+--- Har du blitt stukket av bier de siste 8 ukene?
+--- Har du jobbet i et slakteri de siste 3 månedene?
+--- Har du noensinne bodd eller jobbet i en bygning med asbest?
+--- Har du noensinne delt brukte sprøyter?
+--- Har du spist rå eller bløtkokte egg utenfor Norge de siste to ukene?
+--- Røykte foreldrene dine inne da du var barn?
+
+Semantikken til denne arketypen er med vilje løst definert, og spørringer etter data i denne arketypen vil normalt bare være hensiktsmessig eller sikkert i konteksten av det spesifikke templatet. I et templat vil hvert dataelement vanligvis døpes om til det (spesifikke) spørsmålet man ønsker svar på. Flere steder er det foreslått verdisett som passer til de vanligste bruksområder, men det er allikevel mulig å tilpasse/endre verdisett for lokal bruk ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN for å harmonere verdisettet til hvert enkelt brukstilfelle.
+
+EVENT-strukturen fra arketypens referansemodell kan brukes for å spesifisere om spørsmålene relateres til et tidspunkt eller til et tidsintervall.
+Bruk egne instanser av denne arketypen for å skille mellom spørsmål om eksponering på et hvilket som helst tidspunkt og spørsmål om eksponering i et tidsintervall. For eksempel; \"Har du noen gang brukt sprøyte med rusmiddel eller kroppsbyggermidler?\" sammenlignet med \"Har du brukt sprøyte med rusmiddel eller kroppsbyggermidler siste 6 mnd?\".
+
+Kilden til informasjonen i et spørreskjema kan variere i ulike kontekster, men kan identifiseres spesifikt ved å benytte \"Information provider\" elementet i openEHR referansemodellen.
+
+Denne arketypen er laget for å bli brukt i et spørreskjema eller for å registrere enkle strukturerte data til for eksempel et sykdomsregister. Dersom det i spørreskjemaet identifiseres at en eksponering er tilstede, anbefales det at spesifikke detaljer om eksponeringen registreres og lagres i pasientjournalen i en egnet eksponeringsarketype, for eksempel arketypen EVALUATION.exposure for å registrere detaljer om eksponeringen.">
+            misuse = <"Brukes ikke for å registrere persistente detaljer om en kjent eller identifisert eksponering. Bruk arketypen EVALUATION.exposure for dette formålet.
+
+Brukes ikke for å lage et rammeverk for registrering av svar på forhåndsdefinerte spørsmål om eksponering for potensielt skadelige psykososiale faktorer som fattigdom, eller traumatiske opplevelser som mobbing eller krig. Bruk en annen passende kartleggingsspørsmål-arketype til dette formålet.
+
+Brukes ikke til å registrere informasjon om egen bruk av substanser som tobakk eller alkohol. Bruk arketypen OBSERVATION.substance_use_screening eller en passende EVALUATION-arketype til dette formålet.">
+            copyright = <"© Nasjonal IKT HF">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To create a framework for recording answers to pre-defined screening questions about situations or events where the individual has been, or may have been, exposed to a harmful agent.">
+            use = <"Use to create a framework for recording answers to pre-defined screening questions about situations or events where the individual has been, or may have been, exposed to a harmful agent.
+
+Examples of agents and groupings of agents are 'hepatitis C' and 'blood borne infectious agents'; or 'asbestos' and 'carcinogenic substances'.
+
+Common use cases include, but are not limited to:
+- Systematic questioning in any consultation related to exposure, for example:
+--- Have you been to a malaria endemic area in the last 6 weeks?
+--- Have you had a bee sting in the last 8 weeks?
+--- Have you worked in a slaughterhouse in the last 3 months? 
+--- Have you ever lived or worked in a building with asbestos?
+--- Have you ever shared used injection needles?
+--- Have you eaten chicken from ACME Chicken Company in the last 24 hours?
+--- Did your parents smoke inside the house when you were a child?
+
+The semantics of this archetype are intentionally loose, and querying this archetype would normally only be useful or safe within the context of each specific template. In a template, each data element would usually be renamed to the specific question asked. Where value sets have been proposed for common use cases, these can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.
+
+The EVENT structure from the reference model can be used to specify whether the questions relate to point in time or over a period of time. Use a separate instance of this archetype to distinguish between a questionnaire recording information about exposure that has happened at any time in the past and information about exposure within a specified time interval - for example the difference between \"Have you ever used any drug by injection?\" compared to \"Have you injected any drug during the last 6 months?\".
+
+The source of the information in a questionnaire response may vary in different contexts but can be specifically identified using the 'Information provider' element in the Reference Model.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry. If the screening questionnaire identifies the presence of exposure it is recommended that clinical system record and persist the specific details about the exposure using a relevant exposure archetype, for example the EVALUATION.exposure to record details about the actual exposure.">
+            misuse = <"Not to be used to record persistent details about a known or identified exposure. Use the EVALUATION.exposure archetype for this purpose.
+
+Not to be used to create a framework for recording answers to pre-defined screening questions about exposure to potentially harmful psychosocial factors like poverty, or traumatic experiences like bullying or war. Use an appropriate screening questionnaire archetype for this purpose.
+
+Not to be used to record information about substance use such as cigarette smoking or alcohol use. Use the OBSERVATION.substance_use_screening or an appropriate EVALUATION archetype for this purpose.">
+            copyright = <"© Nasjonal IKT HF">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Exposure screening questionnaire
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Screening purpose
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Agent name
+                                        value matches {
+                                            DV_TEXT[at9011]
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Any exposure?
+                                        value matches {
+                                            DV_CODED_TEXT[at9003] matches {
+                                                defining_code matches {[ac9017]}    -- Any exposure? (synthesised)
+                                            }
+                                            DV_TEXT[at9004]
+                                            DV_BOOLEAN[at9012]
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at9019]
+                                        }
+                                    }
+                                    CLUSTER[at0009] matches {    -- Specific exposure
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0010] occurrences matches {1} matches {    -- Situation
+                                                value matches {
+                                                    DV_TEXT[at9005]
+                                                }
+                                            }
+                                            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Presence?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9006] matches {
+                                                        defining_code matches {[ac9018]}    -- Presence? (synthesised)
+                                                    }
+                                                    DV_TEXT[at9007]
+                                                    DV_BOOLEAN[at9013]
+                                                }
+                                            }
+                                            ELEMENT[at0015] matches {    -- Timing
+                                                value matches {
+                                                    DV_DATE_TIME[at9008]
+                                                    DV_INTERVAL<DV_DATE_TIME>[at9009]
+                                                    DV_DURATION[at9015]
+                                                    DV_INTERVAL<DV_DURATION>[at9016]
+                                                    DV_TEXT[at9017]
+                                                }
+                                            }
+                                            allow_archetype CLUSTER[at0016] matches {    -- Additional details
+                                                include
+                                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.address(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_circle(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_relative\.v2\..*/}
+                                            }
+                                            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Comment
+                                                value matches {
+                                                    DV_TEXT[at9010]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0023] matches {    -- Additional details
+                                        include
+                                            archetype_id/value matches {/.*/}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0018] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0019] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Screening-Fragebogen zur Exposition">
+                description = <"Eine Reihe von Fragen und zugehörigen Antworten, die dazu dienen, eine mögliche Exposition gegenüber einem chemischen, physikalischen oder biologischen Stoff zu ermitteln, der einer Person Schaden zugefügt hat oder zufügen kann.">
+                comment = <"Die Antworten können als Selbstauskunft gegeben werden.">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardwert, ein undefinierter/s Zeitpunkt oder Intervallereignis, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Zweck des Screenings">
+                description = <"Der Kontext oder der Grund für das Screening.">
+                comment = <"Dieses Datenelement soll bei einer späteren Abfrage den Erfassungskontext für die Frage-/Antwortgruppen liefern. Es wird nicht erwartet, dass dieses Datenelement der Person zugänglich gemacht wird, sondern nur in den Daten gespeichert wird. Beispiel: Screening vor der Aufnahme, der Name des eigentlichen Fragebogens oder Screening auf frühere Exposition gegenüber einer Gruppe von Erregern, wie antibiotikaresistente Bakterien.">
+            >
+            ["at0005"] = <
+                text = <"Exposition vorhanden?">
+                description = <"Vorhandensein einer relevanten Exposition.">
+            >
+            ["at0006"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Nein">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Unbekannt">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Spezifische Exposition">
+                description = <"Details zu jedem möglichen spezifischen Expositionsumstand.">
+            >
+            ["at0010"] = <
+                text = <"Situation">
+                description = <"Das Expositionsereignis bzw. die Situation oder Tätigkeit, bei der es zu einer Exposition gekommen sein könnte.">
+                comment = <"Zum Beispiel: Bienenstich; Reise zu einem \"gefährdeten\" Ort; Kontakt mit infizierten Körperflüssigkeiten; oder Arbeit als Gesundheitsdienstleister. Die Kodierung von \"Situation\" mit einer Terminologie wird, wenn möglich, bevorzugt.">
+            >
+            ["at0011"] = <
+                text = <"Anwesenheit?">
+                description = <"Ist die angegebene \"Situation\" eingetreten?">
+                comment = <"In einer Vorlage würde das Datenelement in der Regel in die spezifische Frage umbenannt, die gestellt wird. Der vorgeschlagene Wertesatz kann für die lokale Verwendung angepasst werden, indem die Datentypen DV_TEXT oder DV_BOOLEAN verwendet werden, um jedem spezifischen Anwendungsfall gerecht zu werden.">
+            >
+            ["at0012"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Nein">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Unbekannt">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Zeitpunkt">
+                description = <"Angabe des Zeitpunkts in Bezug auf die Expositionssituation.">
+                comment = <"Das Datenelement \"Zeitpunkt\" wurde bewusst offen modelliert, um die unzähligen Möglichkeiten zu unterstützen, mit denen es in Fragebögen verwendet werden kann, um zu erfassen, wann eine Expositionssituation eingetreten ist. Die spezifische und beabsichtigte Semantik kann in einer Vorlage weiter geklärt werden. Zum Beispiel: das tatsächliche Datum und/oder die Uhrzeit; die Start- und Endzeit der Expositionssituation; das Zeitintervall, in dem die Expositionssituation auftrat; die Dauer der Expositionssituation; das Alter der Person zum Zeitpunkt der Expositionssituation; oder die Zeitdauer seit dem Auftreten der Situation. Bei Verwendung des Datentyps DV_DATE_TIME ist ein Teildatum zulässig, um nur ein Jahr zu erfassen.">
+            >
+            ["at0016"] = <
+                text = <"Zusätzliche Details">
+                description = <"Zusätzliche Einzelheiten über das spezifische Expositionsereignis, den Ort oder die zugehörigen Kontakte.">
+            >
+            ["at0017"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Angaben zur spezifischen Expositionssituation, die nicht in anderen Feldern erfasst werden.">
+            >
+            ["at0019"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+            ["at0020"] = <
+                text = <"Name des Erregers">
+                description = <"Der Name des chemischen, physikalischen oder biologischen Erregers oder der Gruppe von Erregern, denen eine Person ausgesetzt gewesen sein könnte.">
+                comment = <"Zum Beispiel: Lärm, Zigarettenrauch in der Umgebung, Insektengift, ionisierende Strahlung oder ein Virus. Die Kodierung des \"Erregernamens\" mit einer Terminologie wird, wenn möglich, bevorzugt. Freier Text sollte nur verwendet werden, wenn keine geeignete Terminologie verfügbar ist.">
+            >
+            ["at0021"] = <
+                text = <"Unsicher">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Beschreibung">
+                description = <"Narrative Beschreibung der Vorgeschichte der Exposition gegenüber dem identifizierten chemischen, physikalischen oder biologischen Wirkstoff oder der Gruppe von Wirkstoffen.">
+            >
+            ["at0023"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Strukturierte Angaben oder Fragen zum Expositionsscreening.">
+            >
+            ["at0024"] = <
+                text = <"Unsicher">
+                description = <"">
+            >
+            ["ac9017"] = <
+                text = <"Exposition vorhanden? (synthesised)">
+                description = <"Vorhandensein einer relevanten Exposition. (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"Anwesenheit? (synthesised)">
+                description = <"Ist die angegebene \"Situation\" eingetreten? (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Kartleggingsspørsmål om eksponering">
+                description = <"Spørsmål og tilhørende svar som brukes til å kartlegge mulig eksponering for en kjemisk, fysisk eller biologisk agens som har forårsaket eller kan forårsake skade på individet.">
+                comment = <"Svarene kan være selvrapporterte.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Kartleggingsformål">
+                description = <"Konteksten eller årsaken for kartleggingen.">
+                comment = <"Dette dataelementet er ment for å sette en kontekst for spørsmålene om man senere ønsker å gjøre spørringer på dataene. Det er ikke forventet at dette dataelementet skal være synlig for en bruker av skjemaet, men kun tilgjengelig i de lagrede dataene. For eksempel: \"Preoperativ screening\" eller navnet på det faktiske spørreskjemaet eller screening for eksponering for en gruppe agenser, for eksempel resistente bakterier.">
+            >
+            ["at0005"] = <
+                text = <"Eksponert?">
+                description = <"Individet er eller har blitt eksponert for relevant agens.">
+            >
+            ["at0006"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Ukjent">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Spesifikk eksponering">
+                description = <"Detaljer om omstendigheter rundt hver spesifikke eksponering.">
+            >
+            ["at0010"] = <
+                text = <"Situasjon">
+                description = <"Eksponeringshendelsen, -situasjonen eller -aktiviteten der eksponering kan ha skjedd.">
+                comment = <"For eksempel bistikk, reise til et risikoområde, eksponering for infiserte kroppsvæsker, eller jobbet som helsearbeider. Det foretrekkes at \"Situasjon\" kodes med en terminologi der dette er mulig.">
+            >
+            ["at0011"] = <
+                text = <"Tilstede?">
+                description = <"Har den spesifiserte eksponeringssituasjonen hendt?">
+                comment = <"Navnet på dataelementet kan omformuleres til det spesifikke spørsmålet i et templat eller brukergrensesnitt. Det foreslåtte verdisettet kan tilpasses/endres i det enkelte bruksområde ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN.">
+            >
+            ["at0012"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Ukjent">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Timing">
+                description = <"Tidsangivelse for eksponeringssituasjonen.">
+                comment = <"Dataelementet \"Tidsangivelse\" er med hensikt løst modellert for å støtte ulike måter å angi tidsangivelser for når eksponeringssituasjonen hendte i et spørreskjema. Den konkrete semantikken defineres i templatet. For eksempel: Den faktiske datoen og/eller klokkeslettet, start- og slutttid, et tidsintervall, varigheten, individets alder, eller hvor lenge det siden eksponeringssituasjonen. Kan være en deldato, for eksempel bare år, ved å bruke datatypen DV_DATE_TIME.">
+            >
+            ["at0016"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere detaljer om den spesifikke eksponeringshendelsen, lokalisering eller tilhørende kontakter.">
+            >
+            ["at0017"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om den spesifikke eksponeringssituasjonen som ikke er omfattet av andre felt.">
+            >
+            ["at0019"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0020"] = <
+                text = <"Agens">
+                description = <"Navnet på den kjemiske, fysiske eller biologiske agensen eller gruppen agenser som individet kan ha blitt eksponert for.">
+                comment = <"For eksempel støy, tobakksrøyk, insektgift, ioniserende stråling eller et virus. Det anbefales at \"Agens\" kodes med en terminologi der dette er mulig. Fritekst bør kun brukes dersom en passende terminologi ikke er tilgjengelig.">
+            >
+            ["at0021"] = <
+                text = <"Usikker">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse om eksponering av agens og som er relevant for kartleggingsformålet.">
+            >
+            ["at0023"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Strukturerte detaljer eller spørsmål om kartleggingen av eksponering.">
+            >
+            ["at0024"] = <
+                text = <"Usikker">
+                description = <"">
+            >
+            ["ac9017"] = <
+                text = <"Eksponert? (synthesised)">
+                description = <"Individet er eller har blitt eksponert for relevant agens. (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"Tilstede? (synthesised)">
+                description = <"Har den spesifiserte eksponeringssituasjonen hendt? (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Exposure screening questionnaire">
+                description = <"Series of questions and associated answers used to screen for potential exposure to a chemical, physical or biological agent which has caused or may cause harm to an individual.">
+                comment = <"The answers may be self-reported.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Screening purpose">
+                description = <"The context or reason for screening.">
+                comment = <"This data element is intended to provide collection context for the question/answer groups when queried at a later date. It is not expected that this data element will be exposed to the individual, but only stored in data. For example: pre-admission screening, the name of the actual questionnaire or screening for previous exposure to a group of agents, such as antibiotic resistant bacteria.">
+            >
+            ["at0005"] = <
+                text = <"Any exposure?">
+                description = <"Presence of any relevant exposure.">
+            >
+            ["at0006"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Specific exposure">
+                description = <"Details about each possible specific exposure circumstance.">
+            >
+            ["at0010"] = <
+                text = <"Situation">
+                description = <"The exposure event, or situation or activity where exposure may have occurred.">
+                comment = <"For example: Bee sting; travel to an 'at risk' location; exposure to infected body fluids; or worked as a healthcare provider. Coding of 'Situation' with a terminology is preferred, where possible.">
+            >
+            ["at0011"] = <
+                text = <"Presence?">
+                description = <"Has the specified 'Situation' occurred?">
+                comment = <"In a template, the data element would usually be renamed to the specific question asked. The proposed value set can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.">
+            >
+            ["at0012"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Timing">
+                description = <"Indication of timing related to the exposure situation.">
+                comment = <"The 'Timing' data element has deliberately been loosely modelled to support the myriad of ways that it can be used in questionnaires to capture when an exposure situation occurred. The specific and intended semantics can be further clarified in a template. For example: the actual date and/or time; the start and stop time for the exposure situation; the interval of time during which the exposure situation occurred; the duration of the exposure situation; the age of the individual at the time of the exposure situation; or the duration of time since it occurred. A partial date is valid, using the DV_DATE_TIME data type, to record only a year.">
+            >
+            ["at0016"] = <
+                text = <"Additional details">
+                description = <"Additional details about the specific exposure event, location or associated contacts.">
+            >
+            ["at0017"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the specific exposure situation, not captured in other fields.">
+            >
+            ["at0019"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0020"] = <
+                text = <"Agent name">
+                description = <"The name of the chemical, physical or biological agent or grouping of agents to which an individual may have been exposed.">
+                comment = <"For example: noise, environmental cigarette smoke, insect venom, ionising radiation, or a virus. Coding of 'Agent name' with a terminology is preferred, where possible. Free text should be used only if there is no appropriate terminology available.">
+            >
+            ["at0021"] = <
+                text = <"Unsure">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Description">
+                description = <"Narrative description about the history of exposure to the identified chemical, physical or biological agent or grouping of agents.">
+            >
+            ["at0023"] = <
+                text = <"Additional details">
+                description = <"Structured details or questions about screening for exposure.">
+            >
+            ["at0024"] = <
+                text = <"Unsure">
+                description = <"">
+            >
+            ["ac9017"] = <
+                text = <"Any exposure? (synthesised)">
+                description = <"Presence of any relevant exposure. (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"Presence? (synthesised)">
+                description = <"Has the specified 'Situation' occurred? (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0014"] = <http://snomed.info/id/261665006>
+            ["at0012"] = <http://snomed.info/id/373066001>
+            ["at0013"] = <http://snomed.info/id/373067005>
+            ["at0008"] = <http://snomed.info/id/261665006>
+            ["at0006"] = <http://snomed.info/id/373066001>
+            ["at0007"] = <http://snomed.info/id/373067005>
+        >
+    >
+    value_sets = <
+        ["ac9018"] = <
+            id = <"ac9018">
+            members = <"at0012", "at0013", "at0014", "at0024">
+        >
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0006", "at0007", "at0008", "at0021">
+        >
+    >

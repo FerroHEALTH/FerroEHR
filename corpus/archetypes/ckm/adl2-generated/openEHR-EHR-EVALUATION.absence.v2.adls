@@ -1,0 +1,326 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f5adea69-7b6c-4f99-968d-a8e33a7e2f63; build_uid=b9213aea-2687-4637-88bf-33917cb9e373)
+    openEHR-EHR-EVALUATION.absence.v2.0.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Ramona Wellmann">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Vladimir Pizzo">
+                ["organisation"] = <"Hospital Sirio Libanes, Brazil">
+                ["email"] = <"vladimir.pizzo@hsl.org.br">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Bassem Khouzam, Vanessa Pereira">
+                ["organisation"] = <"Medtronic, Better - Pathfinder">
+                ["email"] = <"bassem.khouzam@medtronic.com, vanessapereira@protonmail.com">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Julio de Sosa">
+                ["organisation"] = <"Servei Català de la Salut">
+                ["email"] = <"juliodesosa@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2013-03-12">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway", "Koray Atalag, University of Auckland, New Zealand", "Gustavo Bacelar-Silva, Healthcare Designs, Brazil (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway", "Sebastian Garde, Ocean Informatics, Germany", "Heather Grain, Llewelyn Grain Informatics, Australia", "Sam Heard, Ocean Informatics, Australia", "Lars Karlsen, DIPS ASA, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Shinji Kobayashi, Kyoto University, Japan", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Andrej Orel, Marand d.o.o., Slovenia", "Nyree Taylor, Ocean Informatics, Australia", "Richard Townley-O'Neill, Australian Digital Health Agency, Australia", "John Tore Valand, Helse Bergen, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"2DC80F474683F0694427F87B2BA48457">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Um die Aufzeichnung oder den Austausch einer expliziten Aussage eines Arztes zu ermöglichen, dass bestimmte Gesundheitsinformationen zum Zeitpunkt der Erfassung nicht für die Dokumentation in der Krankenakte oder einem Aktenauszug zur Verfügung stehen.">
+            keywords = <"Abwesenheit", "Fehlen", "Nichtvorhandensein", "Information", "Auskunft", "unerwünscht", "Nebenwirkung", "Problem", "Diagnose", "Medikament", "Verfahren", "Schutzimpfung", "Impfung">
+            use = <"Um die Aufzeichnung oder den Austausch einer Aussage eines Arztes zu ermöglichen, dass bestimmte Gesundheitsinformationen zum Zeitpunkt der Erfassung nicht für die Dokumentation in der Krankenakte oder einem Aktenauszug zur Verfügung stehen. 
+
+Dieser Datensatz ist die 3. Komponente einer Familie von Aussagen - Aussagen über das sichere Vorhandensein von Informationen, Aussagen über den expliziten Ausschluss von z.B. Krankheiten oder Medikamenteneinnahmen und Aussagen über die Abwesenheit bezüglich z.B. einer Erkrankung oder Medikamenteneinnahme:
+-Aussagen über vorhandene Informationen bedeuten, dass die entsprechenden Einträge in der Krankenakte oder in einem Auszug daraus vorliegen - zum Beispiel: EVALUATION.adverse_reaction kann aussagen, dass der Patient eine Allergie gegen Penicillin hat oder EVALUATION.problem_diagnosis kann aussagen, dass der Patient an Diabetes erkrankt ist.
+-Äquivalent können über z.B. nicht vorliegende Erkrankungen oder Medikamenteneinnahmen Aussagen getroffen werden. Sie geben an, dass keine entprechende Dokumentation in der Krankenakte oder einem Auszug daraus vorliegt - zum Beispiel: EVALUATION.exclusion_adverse kann aussagen, dass der Patient keine Allergie gegen Penicillin hat oder EVALUATION.exclusion_problem_diagnosis kann aussagen, dass der Patient nicht an Diabetes erkrankt ist; und;
+- In diesem Zusammenhang kann EVALUATION.absence genutzt werden, um auszudrücken, dass keine Informationen über ein Vorliegen einer Penicillin Allergie oder einer Diabetes Erkrankung des Patienten vorhanden sind - es ist nicht bekannt, ob z.B. eine Allergie vorliegt oder diese Allergie ausgeschlossen werden kann, da keine Informationen darüber zur Verfügung stehen.
+
+Dieser Archetyp wurde z.B. für die Erstellung eines Arztbriefes entwickelt. Der Empfänger dieses Dokuments kann die vorhandenen Informationen klar und eindeutig verstehen - welche Angaben liegen vor, was ist ausgeschlossen und welche Informationen sind nicht vorhanden. 
+
+Dieser Archetyp ist dazu vorgesehen, innerhalb von SLOTS in fortbestehenden COMPOSITIONS wie z.B. \"Therapiemaßnahmen\", \"Medikamentenliste\" oder \"Nebenwirkungsliste\" verwendet zu werden. Die Dokumentation soll ebenso erfolgen, wie bei der Aufnahme einer Allergie oder einer Diagnose durch den Arzt. Dabei soll es jedoch eine Abgrenzung gegenüber der technischen Verwendung eines \"Null Flavor\" Standards geben. 
+
+Die Aussagen über fehlende Informationen können nur zum Zeitpunkt der Dokumentation als aktuell und korrekt angesehen werden. 
+
+Die Archetypen dieser Familie ermöglichen es auf \"Flags\", beispielsweise zum Ausdrücken von Negationen, zu verzichten.">
+            misuse = <"Nicht zur Dokumentation von Nebenwirkungen, Medikamenteneinnahmen, Verfahren, Problemen oder Diagnosen entwickelt - für diesen Zweck bitte die dafür vorgesehenen Archetypen verwenden.
+
+Nicht zur Dokumentation von ausgeschlossenen Nebenwirkungen, Medikamenteneinnahmen, Verfahren, Problemen oder Diagnosen entwickelt - für diesen Zweck bitte die Spezialisierungen des Archetyps EVALUATION.exclusion verwenden.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Para permitir o registro ou mudança de uma declaração explícita por um clínico que especificou que informações de saúde não estão disponíveis para inclusão no registro de saúde ou para registrar sua extração no momento do registro.">
+            keywords = <"ausência", "informação", "adversa", "reação", "problema", "diagnóstico", "medicação", "procedimento", "vacinação", "reação adversa">
+            use = <"Utilizar para permitir o registro ou mudança de uma declaração explícita de um sistema de informação especificado que não está disponível para inclusão no prontuário médico ou fragmento no momento do registro.
+
+Esta declaração é o terceiro componente de uma família de declarações - declarações de presença positiva, declarações de exclusão positiva e declarações de ausência:
+- Declarações de presença positiva indicam que há uma informação de saúde relevante no relato ou fragmento - por exemplo, EVALUATION.adverse_reaction afirmando que o paciente tem alergia a penicilina ou EVALUATION.problem_diagnosis afirmando que o paciente tem diabetes. 
+- Declarações equivalentes sobre exclusão são usadas para indicar que é conhecido que não há informação de saúde relevante no relato de saúde ou extrato deste - por exemplo, EVALUATION.exclusion_adverse afirmando que o paciente nao tem alergia conhecida a penicilina ou EVALUATION.exclusion_problem_diagnosis afirmando que o paciente não é diabético; e;
+- Neste contexto, o EVALUATION.absence pode ser utilizado para registrar que não há informação de saúde disponível sobre alergia a penicilina ou diagnóstico de diabetes - não se sabe se é presente ou excluído, mas não há informação a ser disponibilizada. 
+
+Este arquétipo foi desenvolvido especificamete para o caso de uso em que o clínico está preparando uma parte de um relatório de saúde, então o receptor tem uma compreensão explícita e não ambígua da informação disponível - que se está presente, excluida ou não disponível. É intenção primária que seja utilizado com SLOTS em COMPOSITIONS persistentes como 'Precauções terapêuticas', 'Lista de medicações', 'Lista de problemas' ou 'Lista de reações adversas'. É também pretendido deliberadamente que seja declaração feita por clínico da mesma maneira que ele registra qualquer alergia ou diagnóstico, e é pretendido que seja bem diferente do uso técnico de dados com valores nulos.
+
+Declarações de ausência somente podem ser consideradas correntes a acuradas no momento do registro.
+
+Este arquétipo foi projetado especificamente para evitar a necessidade de usar flags para expressar negação em qualquer entrada no relato de saúde.">
+            misuse = <"Não deve ser utilizado para registrar a presença ou ausência de reações adversas, uso de medicações, procedimentos, problemas ou diagnósticos - usar arquétipos específicos para estas finalidades.
+
+Não dever ser utilizado para registrar a exclusão de reações adversas, uso de medicações, procedimentos, problemas ou diagnósticos - utilizar especializações específicas do arquétipo EVALUATION.exclusion para esta finalidade.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To enable recording or exchange of an explicit statement by a clinician that specified health information is not available for inclusion in the health record or record extract at the time of recording.">
+            keywords = <"absence", "information", "adverse", "reaction", "problem", "diagnosis", "medication", "procedure", "vaccination", "adverse reaction">
+            use = <"Use to enable recording or exchange of an explicit statement that specified health information is not available for inclusion in the health record or record extract at the time of recording. 
+
+This statement is the third component of a family of statements - statements of positive presence, statements of positive exclusion and statements of absence:
+- Statements of positive presence indicate that there is relevant health information in the record or extract - for example, EVALUATION.adverse_reaction stating that the patient has an allergy to penicillin or EVALUATION.problem_diagnosis stating that the patient has diabetes. 
+- Equivalent statements about exclusion are used to indicate that it is known that there is no relevant health information in the health record or extract - for example, EVALUATION.exclusion_adverse  stating that the patient does not have a known allergy to penicillin or EVALUATION.exclusion_problem_diagnosis stating that the patient is not diabetic; and;
+- In this context, the EVALUATION.absence could be used to record that there is no health information available about penicillin allergy or the diagnosis of diabetes - it is not known if it is present or excluded, but there is no information that can be provided. 
+
+This archetype has been developed specifically for the use case where a clinician is preparing an extract from a health record, so that the receiver has explicit and unambiguous understanding of the information available - that which is present, excluded or just not available. It is primarily intended to be used within SLOTS in persistent COMPOSITIONS such as 'Therapeutic precautions', 'Medication list', 'Problem list', or 'Adverse reaction list'. It is also deliberately intended to be statement made by a clinician in the same way that they would record any allergies or diagnoses, and is intended to be quite different to technical use of null flavours in data.
+
+Absence statements can only be considered to be current and accurate at the time of recording.
+
+This archetype has been designed specifically to avoid the need to use of flags to express negation about any entry within the health record.">
+            misuse = <"Not to be used to record the presence of adverse reactions, medication use, procedures, problems or diagnoses - use specific archetypes for this purpose.
+
+Not to be used to record the exclusion of adverse reactions, medication use, procedures, problems or diagnoses - use specific specialisations of the EVALUATION.exclusion archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"*To enable recording or exchange of an explicit statement by a clinician that specified health information is not available for inclusion in the health record or record extract at the time of recording.(en)">
+            keywords = <"absence", "information", "négatif", "réaction", "problème", "diagnostic", "médicament", "procédure", "vaccination", "réaction indésirable">
+            use = <"*Use to enable recording or exchange of an explicit statement that specified health information is not available for inclusion in the health record or record extract at the time of recording. 
+
+This statement is the third component of a family of statements - statements of positive presence, statements of positive exclusion and statements of absence:
+- Statements of positive presence indicate that there is relevant health information in the record or extract - for example, EVALUATION.adverse_reaction stating that the patient has an allergy to penicillin or EVALUATION.problem_diagnosis stating that the patient has diabetes. 
+- Equivalent statements about exclusion are used to indicate that it is known that there is no relevant health information in the health record or extract - for example, EVALUATION.exclusion_adverse  stating that the patient does not have a known allergy to penicillin or EVALUATION.exclusion_problem_diagnosis stating that the patient is not diabetic; and;
+- In this context, the EVALUATION.absence could be used to record that there is no health information available about penicillin allergy or the diagnosis of diabetes - it is not known if it is present or excluded, but there is no information that can be provided. 
+
+This archetype has been developed specifically for the use case where a clinician is preparing an extract from a health record, so that the receiver has explicit and unambiguous understanding of the information available - that which is present, excluded or just not available. It is primarily intended to be used within SLOTS in persistent COMPOSITIONS such as 'Therapeutic precautions', 'Medication list', 'Problem list', or 'Adverse reaction list'. It is also deliberately intended to be statement made by a clinician in the same way that they would record any allergies or diagnoses, and is intended to be quite different to technical use of null flavours in data.
+
+Absence statements can only be considered to be current and accurate at the time of recording.
+
+This archetype has been designed specifically to avoid the need to use of flags to express negation about any entry within the health record.(en)">
+            misuse = <"*Not to be used to record the presence of adverse reactions, medication use, procedures, problems or diagnoses - use specific archetypes for this purpose.
+
+Not to be used to record the exclusion of adverse reactions, medication use, procedures, problems or diagnoses - use specific specialisations of the EVALUATION.exclusion archetype for this purpose.(en)">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Permitir el registro o intercambio de una declaración expresa por parte de un clínico, de que determinada información sanitaria no está disponible para su inclusión en la historia clínica, o extracto de la misma, en el momento del registro.">
+            keywords = <"ausencia", "información", "adversa", "reacción", "problema", "diagnóstico", "medicación", "procedimiento", "vacunación", "reacción adversa">
+            use = <"Se utiliza para permitir el registro o intercambio de una declaración expresa de que determinada información sanitaria no está disponible para su inclusión en la historia clínica, o extracto de la misma, en el momento del registro. 
+
+Esta declaración es el tercer componente de una familia de declaraciones: declaraciones de presencia positiva, declaraciones de exclusión positiva y declaraciones de ausencia:
+- Las declaraciones de presencia positiva indican que existe información sanitaria relevante en el registro o extracto - por ejemplo, EVALUATION.adverse_reaction indica que el paciente tiene alergia a la penicilina, o EVALUATION.problem_diagnosis indica que el paciente tiene diabetes. 
+- Las declaraciones equivalentes sobre exclusión se utilizan para indicar que se sabe que no hay información sanitaria relevante en la historia clínica o en el extracto - por ejemplo, EVALUATION.exclusion_adverse indicando que el paciente no tiene una alergia conocida a la penicilina, o EVALUATION.exclusion_problem_diagnosis indicando que el paciente no es diabético;
+- En este contexto, EVALUATION.absence podría utilizarse para registrar que no se dispone de información sanitaria sobre la alergia a la penicilina o el diagnóstico de diabetes - no se sabe si está presente o excluido, pero no hay información que pueda proporcionarse. 
+
+Este arquetipo se ha desarrollado específicamente para el caso de uso en el que un clínico está preparando un extracto de un registro sanitario, de modo que el receptor tenga una comprensión explícita e inequívoca de la información disponible: la que está presente, la que está excluida o simplemente la que no está disponible. Está pensado principalmente para ser utilizado dentro de SLOTS en COMPOSITIONS persistentes como 'Therapeutic precautions', 'Medication list', 'Problem list' o 'Adverse reaction list'. También se pretende, de forma deliberada, que sea una declaración realizada por un clínico de la misma manera que registraría cualquier alergia o diagnóstico, y se pretende que sea bastante diferente del uso técnico de los valoras nulos en los datos.
+
+Las declaraciones de ausencia sólo pueden considerarse actuales y precisas en el momento de su registro.
+
+Este arquetipo se ha diseñado específicamente para evitar la necesidad de utilizar indicadores para expresar una negación sobre cualquier entrada de la historia clínica.">
+            misuse = <"No debe utilizarse para registrar la presencia de reacciones adversas, uso de medicación, procedimientos, problemas o diagnósticos - utilice arquetipos específicos para este fin.
+
+No debe utilizarse para registrar la exclusión de reacciones adversas, uso de medicación, procedimientos, problemas o diagnósticos - utilice especializaciones específicas del arquetipo EVALUATION.exclusion para este fin.">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Absence of information
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {1} matches {    -- Absence statement
+                        value matches {
+                            DV_TEXT[at9000]
+                        }
+                    }
+                    ELEMENT[at0005] matches {    -- Reason for absence
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0003] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9001]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0006] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Fehlen von Informationen">
+                description = <"Aussage darüber, dass bestimmte Gesundheitsinformationen zum Zeitpukt der Erfassung nicht in der Krankenakte oder einem Schriftstück erfasst werden können, da keine Kenntnisse darüber vorhanden sind.">
+            >
+            ["at0002"] = <
+                text = <"Aussage über Abwesenheit">
+                description = <"Positive Aussage, dass keine Informationen verfügbar sind.">
+                comment = <"Zum Beispiel: \"Es liegen keine Informationen über Nebenwirkungen vor\"; \"Es liegen keine Informationen über Probleme oder Diagnosen vor\"; \"Es liegen keine Informationen über vorangegangene Verfahren vor\"; oder \"Es liegen keine Informationen über verwendete Medikamente vor\".">
+            >
+            ["at0004"] = <
+                text = <"Letzte Aktualisierung">
+                description = <"Das Datum, an dem das Fehlen der Information das letzte Mal aktualisiert wurde.">
+            >
+            ["at0005"] = <
+                text = <"Grund für die Abwesenheit">
+                description = <"Beschreibung des Grundes, warum keine Informationen vorhanden sind.">
+                comment = <"Zum Beispiel: Der Patient ist bewusstlos oder weigert sich Informationen preiszugeben. Die Codierung mit einer Terminologie wird empfohlen, wenn möglich.">
+            >
+            ["at0006"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Kommentar: Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Ausência de informação">
+                description = <"Declaração de que informação específica sobre a saúde não está disponível para inclusão no prontuário de saúde ou fragmento deste no momento do registro.">
+            >
+            ["at0002"] = <
+                text = <"Declaração de ausência">
+                description = <"Declaração positiva de que não há informação disponível.">
+                comment = <"Por exemplo: \"Não há informações disponíveis sobre reações adversas\"; \"Não há informações disponíveis sobre problemas ou diagnósticos\"; \"Não há informações disponíveis sobre procedimetnos previamente realizados\"; ou \"Não há informações disponíveis sobre medicações utilizadas\".">
+            >
+            ["at0004"] = <
+                text = <"Última atualização">
+                description = <"A data em que a ausência foi atualizada, por último.">
+            >
+            ["at0005"] = <
+                text = <"Razão para ausência">
+                description = <"Descrição narrativa da razão pela qual não há informação disponível.">
+                comment = <"Por exemplo: paciente está inconsciente ou recusa prover informações.">
+            >
+            ["at0006"] = <
+                text = <"Extensão">
+                description = <"Informações adicionais necessárias para capturar conteúdo local ou para alinhar com outros modelos de referência/formalismos.">
+                comment = <"Por exemplo: requerimentos de informações locais ou metadados adicionais para alinhar com equivalentes CIMI ou FHIR.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Absence of information">
+                description = <"Statement that specified health information is not available for inclusion in the health record or extract at the time of recording.">
+            >
+            ["at0002"] = <
+                text = <"Absence statement">
+                description = <"Positive statement that no information is available.">
+                comment = <"For example: \"No information available about adverse reactions\"; No information available about problems or diagnoses\"; \"No information available about previous procedures performed\"; or \"No information available about medications used\".">
+            >
+            ["at0004"] = <
+                text = <"Last updated">
+                description = <"The date at which the absence was last updated.">
+            >
+            ["at0005"] = <
+                text = <"Reason for absence">
+                description = <"Description of the reason why there is no information available.">
+                comment = <"For example: patient is unconscious or refuses to provide information. Coding the reason with a terminology is desirable, if possible.">
+            >
+            ["at0006"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Absence d'information">
+                description = <"Déclaration selon laquelle les informations de santé spécifiées ne sont pas disponibles pour être incluses dans le dossier ou l'extrait de santé au moment de l'enregistrement.">
+            >
+            ["at0002"] = <
+                text = <"Déclaration d'absence">
+                description = <"Déclaration d'absence">
+                comment = <"Déclaration d'absence">
+            >
+            ["at0004"] = <
+                text = <"Dernière mise à jour">
+                description = <"La date à laquelle l'absence a été mise à jour pour la dernière fois.">
+            >
+            ["at0005"] = <
+                text = <"Motif de l'absence">
+                description = <"Description de la raison pour laquelle aucune information n'est disponible.">
+                comment = <"Par exemple : le patient est inconscient ou refuse de fournir des informations. Il est souhaitable, si possible, de coder la raison avec une terminologie.">
+            >
+            ["at0006"] = <
+                text = <"Extension">
+                description = <"Informations supplémentaires requises pour saisir le contenu local ou pour s'aligner sur d'autres modèles/formalismes de référence.">
+                comment = <"Par exemple : exigences locales en matière d'information ou métadonnées supplémentaires à aligner sur les équivalents FHIR ou CIMI.">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Ausencia de información">
+                description = <"Declaración de que determinada información sanitaria no está disponible para su inclusión en la historia clínica, o extracto de la misma, en el momento del registro.">
+            >
+            ["at0002"] = <
+                text = <"Declaración de ausencia">
+                description = <"Declaración positiva de que no se dispone de información.">
+                comment = <"Por ejemplo: \"No hay información disponible sobre reacciones adversas\"; \"No hay información disponible sobre problemas o diagnósticos\"; \"No hay información disponible sobre procedimientos previos realizados\"; o \"No hay información disponible sobre medicamentos utilizados\".">
+            >
+            ["at0004"] = <
+                text = <"Última actualización">
+                description = <"Fecha de la última actualización de la ausencia.">
+            >
+            ["at0005"] = <
+                text = <"Motivo de la ausencia">
+                description = <"Descripción del motivo por el que no se dispone de información.">
+                comment = <"Por ejemplo: el paciente está inconsciente o se niega a facilitar información. Es conveniente codificar el motivo con una terminología, si es posible.">
+            >
+            ["at0006"] = <
+                text = <"Extensión">
+                description = <"Información adicional necesaria para registrar el contenido local o para alinearse con otros modelos/formalismos de referencia.">
+                comment = <"Por ejemplo: requisitos locales de información o metadatos adicionales para alinearse con los equivalentes de FHIR o CIMI.">
+            >
+        >
+    >

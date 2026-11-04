@@ -1,0 +1,85 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=33b256c9-2046-4b50-84ce-800a03acb72e; build_uid=716717eb-92c0-4753-a625-2e7c1638f91f)
+    openEHR-EHR-EVALUATION.consumer_note.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2016-05-04">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heath Frankel, Ocean Informatics, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics<heather.leslie@oceaninformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"D6EA5C6700AB7364E7847D3CC47302C9">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record health-related information about an individual, as entered into a health record by that individual or their carer. 
+
+This note may include details about an individual's health status, events, and issues. The intent of this note could be for the sole use of that individual or for sharing with healthcare providers.">
+            use = <"Use to record health-related information about an individual, as entered into a health record by that individual or their carer. 
+
+If the note requires association with a physical location, then the reference model can be used for this purpose.
+If the note requires association with a healthcare provider, then participations can be used for this purpose.">
+            misuse = <"Not to be used for recording health information about an individual by a healthcare provider.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Consumer note
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Topic name
+                        value matches {
+                            DV_TEXT[at9000]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Note
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Date
+                        value matches {
+                            DV_DATE_TIME[at9002]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Consumer note">
+                description = <"Health related information about an individual, entered into a health record by that individual or their carer.">
+            >
+            ["at0002"] = <
+                text = <"Topic name">
+                description = <"Identification of the topic of the note, by name.">
+            >
+            ["at0003"] = <
+                text = <"Note">
+                description = <"Narrative description of information that the consumer wishes to record.">
+            >
+            ["at0004"] = <
+                text = <"Date">
+                description = <"Option to make the note relevant for a specific date and/or time.">
+            >
+        >
+    >

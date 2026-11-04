@@ -1,0 +1,144 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=324008cd-a778-3412-b5f5-0dd397daaf14; build_uid=ead9f88c-30dd-473c-95cf-917cc46a9eb9)
+    openEHR-EHR-OBSERVATION.penetration_aspiration_scale.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Christian Ghan">
+        ["organisation"] = <"The Chris O'Brien Lifehouse at RPA">
+        ["email"] = <"christian.ghan@lifehouserpa.org.au">
+        ["date"] = <"2012-12-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Rosenbek JC, Robbins JA, Roecker EB, Coyle JL, Wood JL. A penetration-aspiration scale. Dysphagia. 1996 Spring;11(2):93-8. PubMed PMID: 8721066.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"D484571B2C2621449A638EF2CB2A22C6">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"A tool used to quantify the depth to which material passes into the airway, and to qualify if material entering the airway is able to be expelled or is retained.">
+            keywords = <"dysphagia", "swallow", "speech", "aspiration">
+            use = <"For use, usually by speech pathologists, in the assessment of a patient's dysphagia by video-fluoroscopic swallowing studies.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Penetration-aspiration scale
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Penetration-aspiration scale
+                                        value matches {
+                                            DV_ORDINAL[at9001] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0005]}],    -- Neither penetration nor aspiration
+                                                    [{2}, {[at0006]}],    -- Penetration; above vocal folds; ejected
+                                                    [{3}, {[at0007]}],    -- Penetration; above vocal folds; not ejected
+                                                    [{4}, {[at0008]}],    -- Penetration; contacts vocal folds; ejected
+                                                    [{5}, {[at0009]}],    -- Penetration; contacts vocal folds; not ejected
+                                                    [{6}, {[at0010]}],    -- Aspiration; ejected
+                                                    [{7}, {[at0011]}],    -- Aspiration; not ejected despite effort
+                                                    [{8}, {[at0012]}]    -- Aspiration; no effort to eject
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0013] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0014] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Penetration-aspiration scale">
+                description = <"Scale to describe the disordered physiology of a person's swallow.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Penetration-aspiration scale">
+                description = <"Scale to describe penetration and aspiration events.">
+            >
+            ["at0005"] = <
+                text = <"Neither penetration nor aspiration">
+                description = <"Material does not enter airway.">
+            >
+            ["at0006"] = <
+                text = <"Penetration; above vocal folds; ejected">
+                description = <"Material enters airway, but remains above vocal folds; ejected from airway; no stasis.">
+            >
+            ["at0007"] = <
+                text = <"Penetration; above vocal folds; not ejected">
+                description = <"Material remains above vocal folds; visible stasis remains.">
+            >
+            ["at0008"] = <
+                text = <"Penetration; contacts vocal folds; ejected">
+                description = <"Material contacts vocal folds, but is ejected; no stasis.">
+            >
+            ["at0009"] = <
+                text = <"Penetration; contacts vocal folds; not ejected">
+                description = <"Material contacts vocal folds, and is not ejected; visible stasis remains.">
+            >
+            ["at0010"] = <
+                text = <"Aspiration; ejected">
+                description = <"Material passes glottis, but is ejected from airway; no visible subglottic stasis.">
+            >
+            ["at0011"] = <
+                text = <"Aspiration; not ejected despite effort">
+                description = <"Material passes glottis, but is not ejected from airway; visible subglottic stasis despite patient's response.">
+            >
+            ["at0012"] = <
+                text = <"Aspiration; no effort to eject">
+                description = <"Material passes glottis, and is not ejected; visible subglottic stasis; absent patient response.">
+            >
+            ["at0014"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9001"] = <
+                text = <"Penetration-aspiration scale (synthesised)">
+                description = <"Scale to describe penetration and aspiration events. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009", "at0010", "at0011", "at0012">
+        >
+    >

@@ -1,0 +1,363 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=737ea2ce-78ed-4a0b-8dec-2084d3e765ca; build_uid=1eb19e16-3466-4e1c-bac6-328da920d616)
+    openEHR-EHR-OBSERVATION.iief_5.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Hildegard Franke">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"hildi@freshehr.com">
+        ["date"] = <"2016-05-30">
+    >
+    original_namespace = <"uk.org.clinicalmodels">
+    original_publisher = <"UK Clinical Models">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"uk.org.clinicalmodels">
+    custodian_organisation = <"UK Clinical Models">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"http://www.nottinghamurologygroup.co.uk/sites/nottinghamurologygroup.co.uk/files/pages/iief-5.pdf">
+    >
+    other_details = <
+        ["current_contact"] = <"Hildegard Franke, freshEHR Clinical Informatics Ltd.<hildi@freshehr.com>">
+        ["MD5-CAM-1.0.1"] = <"7606607D7643C3336A79FDE0D56985D6">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Intended to capture the 5-item version of the International Index of Erectile Function (IIEF-5) as a diagnostic tool for erectile dysfunction.">
+            keywords = <"erectile", "dysfunction", "IIEF", "score", "index", "prostate">
+            use = <"Use to record 5-item scoring test for erectile dysfunction.">
+            misuse = <"">
+            copyright = <"© Clinical Models UK">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- IIEF-5-Score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Point in time
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Confidence
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0005]}],    -- Very low
+                                                    [{2}, {[at0006]}],    -- Low
+                                                    [{3}, {[at0007]}],    -- Moderate
+                                                    [{4}, {[at0008]}],    -- High
+                                                    [{5}, {[at0009]}]    -- Very high
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Hard enough for penetration
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0011]}],    -- No sexual activity
+                                                    [{1}, {[at0012]}],    -- Almost never or never
+                                                    [{2}, {[at0013]}],    -- A few times
+                                                    [{3}, {[at0014]}],    -- Sometimes
+                                                    [{4}, {[at0015]}],    -- Most times
+                                                    [{5}, {[at0016]}]    -- Almost always or always
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Maintain after penetration
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0018]}],    -- Did not attempt intercourse
+                                                    [{1}, {[at0019]}],    -- Almost never or never
+                                                    [{2}, {[at0020]}],    -- A few times
+                                                    [{3}, {[at0021]}],    -- Sometimes
+                                                    [{4}, {[at0022]}],    -- Most times
+                                                    [{5}, {[at0023]}]    -- Almost always or always
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Maintain to completion
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0025]}],    -- Did not attempt intercourse
+                                                    [{1}, {[at0026]}],    -- Extremely difficult
+                                                    [{2}, {[at0027]}],    -- Very difficult
+                                                    [{3}, {[at0028]}],    -- Difficult
+                                                    [{4}, {[at0029]}],    -- Slightly difficult
+                                                    [{5}, {[at0030]}]    -- Not difficult
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0031] occurrences matches {0..1} matches {    -- Satisfactory
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0032]}],    -- Did not attempt intercourse
+                                                    [{1}, {[at0033]}],    -- Almost never or never
+                                                    [{2}, {[at0034]}],    -- A few times
+                                                    [{3}, {[at0035]}],    -- Sometimes
+                                                    [{4}, {[at0036]}],    -- Most times
+                                                    [{5}, {[at0037]}]    -- Almost always or always
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0038] occurrences matches {0..1} matches {    -- IIEF-5 Score
+                                        value matches {
+                                            DV_COUNT[at9010] matches {
+                                                magnitude matches {|1..25|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0039] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0040] matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9011]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0041] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0042] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"IIEF-5-Score">
+                description = <"International index of erectile dysfunction (IIEF-5).">
+            >
+            ["at0002"] = <
+                text = <"Point in time">
+                description = <"A specific date and/or time which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Confidence">
+                description = <"Confidence to get and keep erection.">
+                comment = <"Prompt: Over the past 6 months how did you rate your confidence that you could get and keep an erection?">
+            >
+            ["at0005"] = <
+                text = <"Very low">
+                description = <"Over past 6 months confidence of ability to get and keep erection is very low.">
+            >
+            ["at0006"] = <
+                text = <"Low">
+                description = <"Over past 6 months confidence of ability to get and keep erection is low.">
+            >
+            ["at0007"] = <
+                text = <"Moderate">
+                description = <"Over the past 6 months confidence of ability to get and keep erection is moderate.">
+            >
+            ["at0008"] = <
+                text = <"High">
+                description = <"Over the past 6 months confidence of ability to get and keep erection is high.">
+            >
+            ["at0009"] = <
+                text = <"Very high">
+                description = <"Over the past 6 months confidence of ability to get and keep erection is very high.">
+            >
+            ["at0010"] = <
+                text = <"Hard enough for penetration">
+                description = <"Frequency of erection being hard enough for penetration.">
+                comment = <"Prompt: Over the past 6 months when you had erections with sexual stimulation, how often were your erections hard enough for penetration?
+with sexual stimulation, how often were your erections hard enough for penetration?
+with sexual stimulation, how often were your erections hard enough for penetration?">
+            >
+            ["at0011"] = <
+                text = <"No sexual activity">
+                description = <"There was no sexual activity over the past 6 months.">
+            >
+            ["at0012"] = <
+                text = <"Almost never or never">
+                description = <"Over the past 6 months erections were almost never or never hard enough for penetration.">
+            >
+            ["at0013"] = <
+                text = <"A few times">
+                description = <"Over the past 6 months erections were hard enough for penetration a few times.">
+            >
+            ["at0014"] = <
+                text = <"Sometimes">
+                description = <"Over the past 6 months erections were sometimes hard enough for penetration.">
+            >
+            ["at0015"] = <
+                text = <"Most times">
+                description = <"Over the past 6 months erections were hard enough for penetration most times.">
+            >
+            ["at0016"] = <
+                text = <"Almost always or always">
+                description = <"Over the past 6 months erections were almost always or always hard enough for penetration.">
+            >
+            ["at0017"] = <
+                text = <"Maintain after penetration">
+                description = <"Frequency of erection being maintained after penetration.">
+                comment = <"Prompt: Over the past 6 months during sexual intercourse, how often were you able to maintain your erection after you had penetrated your partner?">
+            >
+            ["at0018"] = <
+                text = <"Did not attempt intercourse">
+                description = <"Over the past 6 months intercourse was not attempted.">
+            >
+            ["at0019"] = <
+                text = <"Almost never or never">
+                description = <"Over the past 6 months erection was almost never or never maintained after penetration.">
+            >
+            ["at0020"] = <
+                text = <"A few times">
+                description = <"Over the past 6 months erection was maintained after penetration a few times.">
+            >
+            ["at0021"] = <
+                text = <"Sometimes">
+                description = <"Over the past 6 months erection was sometimes maintained after penetration.">
+            >
+            ["at0022"] = <
+                text = <"Most times">
+                description = <"Over the past 6 months erection was maintained after penetration most times.">
+            >
+            ["at0023"] = <
+                text = <"Almost always or always">
+                description = <"Over the past 6 months erection was almost always or always maintained after penetration.">
+            >
+            ["at0024"] = <
+                text = <"Maintain to completion">
+                description = <"Frequency of erection being maintained to completion of intercourse.">
+                comment = <"Prompt: Over the past 6 months during sexual intercourse, how difficult was it to maintain your erection to completion of intercourse?">
+            >
+            ["at0025"] = <
+                text = <"Did not attempt intercourse">
+                description = <"Over the past 6 months intercourse was not attempted.">
+            >
+            ["at0026"] = <
+                text = <"Extremely difficult">
+                description = <"Over the past 6 months it was extremely difficult to maintain erections to completion of intercourse.">
+            >
+            ["at0027"] = <
+                text = <"Very difficult">
+                description = <"Over the past 6 months it was very difficult to maintain erections to completion of intercourse.">
+            >
+            ["at0028"] = <
+                text = <"Difficult">
+                description = <"Over the past 6 months it was difficult to maintain erections to completion of intercourse.">
+            >
+            ["at0029"] = <
+                text = <"Slightly difficult">
+                description = <"Over the past 6 months it was slightly difficult to maintain erections to completion of intercourse.">
+            >
+            ["at0030"] = <
+                text = <"Not difficult">
+                description = <"Over the past 6 months it was not difficult to maintain erections to completion of intercourse.">
+            >
+            ["at0031"] = <
+                text = <"Satisfactory">
+                description = <"Frequency of satisfactory outcome of intercourse.">
+                comment = <"Prompt: Over the last 6 months when you attempted sexual intercourse, how often was it satisfactory to you?">
+            >
+            ["at0032"] = <
+                text = <"Did not attempt intercourse">
+                description = <"Over the past 6 months intercourse was not attempted.">
+            >
+            ["at0033"] = <
+                text = <"Almost never or never">
+                description = <"Over the past 6 months intercourse was almost never or never satisfactory.">
+            >
+            ["at0034"] = <
+                text = <"A few times">
+                description = <"Over the past 6 months intercourse was satisfactory a few times.">
+            >
+            ["at0035"] = <
+                text = <"Sometimes">
+                description = <"Over the past 6 months intercourse was sometimes satisfactory.">
+            >
+            ["at0036"] = <
+                text = <"Most times">
+                description = <"Over the past 6 months intercourse was satisfactory most times.">
+            >
+            ["at0037"] = <
+                text = <"Almost always or always">
+                description = <"Over the past 6 months intercourse was almost always or always satisfactory.">
+            >
+            ["at0038"] = <
+                text = <"IIEF-5 Score">
+                description = <"The IIEF-5 is administered as a screening instrument for the presence & severity of ED in conjunction with the clinical assessment. The score is the sum of the responses to the five items, so that overall score may range from 1 to 25. A score of 20 or higher indicates a normal degree of erectile functioning. Low scores (10 or less) indicate moderate to severe ED.">
+            >
+            ["at0040"] = <
+                text = <"Confounding factors">
+                description = <"Description of any incidental factors that may have contributed to the score.">
+            >
+            ["at0042"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.
+Comment: e.g. Local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9011"] = <
+                text = <"Confidence (synthesised)">
+                description = <"Confidence to get and keep erection. (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Hard enough for penetration (synthesised)">
+                description = <"Frequency of erection being hard enough for penetration. (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Maintain after penetration (synthesised)">
+                description = <"Frequency of erection being maintained after penetration. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Maintain to completion (synthesised)">
+                description = <"Frequency of erection being maintained to completion of intercourse. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Satisfactory (synthesised)">
+                description = <"Frequency of satisfactory outcome of intercourse. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0018", "at0019", "at0020", "at0021", "at0022", "at0023">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0011", "at0012", "at0013", "at0014", "at0015", "at0016">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0032", "at0033", "at0034", "at0035", "at0036", "at0037">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0025", "at0026", "at0027", "at0028", "at0029", "at0030">
+        >
+    >

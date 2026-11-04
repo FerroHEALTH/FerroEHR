@@ -1,0 +1,1942 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b956cb51-44c6-40f2-aa5f-62956205a16a; build_uid=42f18655-0119-47c6-b57e-f308f266314a)
+    openEHR-EHR-OBSERVATION.hoos.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Jonas Lyshaug">
+        ["organisation"] = <"HN IKT">
+        ["email"] = <"Jonas.nils.erik.lyshaug@hnikt.no">
+        ["date"] = <"2025-03-12">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"June Marie Nepstad Knappskog", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Klassbo M, Larsson E, Mannevik E. Hip disability and osteoarthritis outcome score. An extension of the Western Ontario and McMaster Universities Osteoarthritis Index. Scand J Rheumatol. 2003;32(1):46-51">
+        ["2"] = <"Nilsdotter AK, Lohmander LS, Klassbo M, Roos EM. Hip Disability and Osteoarthritis Outcome Score (HOOS)- Validity and responsiveness in total hip replacement. BMC Musculoskeletal Disorders. 2003;4:10">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"4EB80918F7BBC177FC67D447528C1156">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter, subscale scores, total score for the HOOS survey.">
+            keywords = <"hip, function, disability,", ...>
+            use = <"Use to record the results for each component parameter, subscale scores, total score for the HOOS survey.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this Hip Disability and Osteoarthritis Outcome Score archetype is copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Hip Disability and Osteoarthritis Outcome Score (HOOS)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- S1. Do you feel grinding, hear clicking or any other type of noise from your hip?
+                                        value matches {
+                                            DV_ORDINAL[at9040] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0012]}],    -- Never
+                                                    [{1}, {[at0013]}],    -- Rarely
+                                                    [{2}, {[at0014]}],    -- Sometimes
+                                                    [{3}, {[at0015]}],    -- Often
+                                                    [{4}, {[at0016]}]    -- Always
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0258] occurrences matches {0..1} matches {    -- S2. Difficulties spreading legs wide apart
+                                        value matches {
+                                            DV_ORDINAL[at9041] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0259]}],    -- None
+                                                    [{1}, {[at0260]}],    -- Mild
+                                                    [{2}, {[at0261]}],    -- Moderate
+                                                    [{3}, {[at0262]}],    -- Severe
+                                                    [{4}, {[at0263]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- S3. Difficulties to stride out when walking
+                                        value matches {
+                                            DV_ORDINAL[at9042] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0030]}],    -- None
+                                                    [{1}, {[at0031]}],    -- Mild
+                                                    [{2}, {[at0032]}],    -- Moderate
+                                                    [{3}, {[at0033]}],    -- Severe
+                                                    [{4}, {[at0034]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0035] occurrences matches {0..1} matches {    -- S4. How severe is your hip joint stiffness after first wakening in the morning?
+                                        value matches {
+                                            DV_ORDINAL[at9043] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0036]}],    -- None
+                                                    [{1}, {[at0037]}],    -- Mild
+                                                    [{2}, {[at0038]}],    -- Moderate
+                                                    [{3}, {[at0039]}],    -- Severe
+                                                    [{4}, {[at0040]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0041] occurrences matches {0..1} matches {    -- S5. How severe is your hip stiffness after sitting, lying or resting later in the day?
+                                        value matches {
+                                            DV_ORDINAL[at9044] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0042]}],    -- None
+                                                    [{1}, {[at0043]}],    -- Mild
+                                                    [{2}, {[at0044]}],    -- Moderate
+                                                    [{3}, {[at0045]}],    -- Severe
+                                                    [{4}, {[at0046]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0047] occurrences matches {0..1} matches {    -- Symptoms + Stiffness subtotal
+                                        value matches {
+                                            DV_COUNT[at9045]
+                                        }
+                                    }
+                                    ELEMENT[at0049] occurrences matches {0..1} matches {    -- P1. How often is your hip painful?
+                                        value matches {
+                                            DV_ORDINAL[at9046] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0050]}],    -- Never
+                                                    [{1}, {[at0051]}],    -- Monthly
+                                                    [{2}, {[at0052]}],    -- Weekly
+                                                    [{3}, {[at0053]}],    -- Daily
+                                                    [{4}, {[at0054]}]    -- Always
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0055] occurrences matches {0..1} matches {    -- P2. Straightening your hip fully
+                                        value matches {
+                                            DV_ORDINAL[at9047] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- None
+                                                    [{1}, {[at0057]}],    -- Mild
+                                                    [{2}, {[at0058]}],    -- Moderate
+                                                    [{3}, {[at0059]}],    -- Severe
+                                                    [{4}, {[at0060]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- P3. Bending your hip fully
+                                        value matches {
+                                            DV_ORDINAL[at9048] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0006]}],    -- None
+                                                    [{1}, {[at0007]}],    -- Mild
+                                                    [{2}, {[at0008]}],    -- Moderate
+                                                    [{3}, {[at0009]}],    -- Severe
+                                                    [{4}, {[at0010]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0061] occurrences matches {0..1} matches {    -- P4. Walking on flat surface
+                                        value matches {
+                                            DV_ORDINAL[at9049] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0062]}],    -- None
+                                                    [{1}, {[at0063]}],    -- Mild
+                                                    [{2}, {[at0064]}],    -- Moderate
+                                                    [{3}, {[at0065]}],    -- Severe
+                                                    [{4}, {[at0066]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0067] occurrences matches {0..1} matches {    -- P5. Going up or down stairs
+                                        value matches {
+                                            DV_ORDINAL[at9050] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0068]}],    -- None
+                                                    [{1}, {[at0069]}],    -- Mild
+                                                    [{2}, {[at0070]}],    -- Moderate
+                                                    [{3}, {[at0071]}],    -- Severe
+                                                    [{4}, {[at0072]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0073] occurrences matches {0..1} matches {    -- P6. At night while in bed
+                                        value matches {
+                                            DV_ORDINAL[at9051] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0074]}],    -- None
+                                                    [{1}, {[at0075]}],    -- Mild
+                                                    [{2}, {[at0076]}],    -- Moderate
+                                                    [{3}, {[at0077]}],    -- Severe
+                                                    [{4}, {[at0078]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0079] occurrences matches {0..1} matches {    -- P7. Sitting or lying
+                                        value matches {
+                                            DV_ORDINAL[at9052] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0080]}],    -- None
+                                                    [{1}, {[at0081]}],    -- Mild
+                                                    [{2}, {[at0082]}],    -- Moderate
+                                                    [{3}, {[at0083]}],    -- Severe
+                                                    [{4}, {[at0084]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0085] occurrences matches {0..1} matches {    -- P8. Standing upright
+                                        value matches {
+                                            DV_ORDINAL[at9053] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0086]}],    -- None
+                                                    [{1}, {[at0087]}],    -- Mild
+                                                    [{2}, {[at0088]}],    -- Moderate
+                                                    [{3}, {[at0089]}],    -- Severe
+                                                    [{4}, {[at0090]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0091] occurrences matches {0..1} matches {    -- P9. Walking on a hard surface (asphalt, concrete, etc.)
+                                        value matches {
+                                            DV_ORDINAL[at9054] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0092]}],    -- None
+                                                    [{1}, {[at0093]}],    -- Mild
+                                                    [{2}, {[at0094]}],    -- Moderate
+                                                    [{3}, {[at0095]}],    -- Severe
+                                                    [{4}, {[at0096]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0097] occurrences matches {0..1} matches {    -- P10. Walking on an uneven surface
+                                        value matches {
+                                            DV_ORDINAL[at9055] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0098]}],    -- None
+                                                    [{1}, {[at0099]}],    -- Mild
+                                                    [{2}, {[at0100]}],    -- Moderate
+                                                    [{3}, {[at0101]}],    -- Severe
+                                                    [{4}, {[at0102]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0109] occurrences matches {0..1} matches {    -- Pain Subtotal
+                                        value matches {
+                                            DV_COUNT[at9056]
+                                        }
+                                    }
+                                    ELEMENT[at0103] occurrences matches {0..1} matches {    -- A1. Descending stairs
+                                        value matches {
+                                            DV_ORDINAL[at9057] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0104]}],    -- None
+                                                    [{1}, {[at0105]}],    -- Mild
+                                                    [{2}, {[at0106]}],    -- Moderate
+                                                    [{3}, {[at0107]}],    -- Severe
+                                                    [{4}, {[at0108]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0110] occurrences matches {0..1} matches {    -- A2. Ascending stairs
+                                        value matches {
+                                            DV_ORDINAL[at9058] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0111]}],    -- None
+                                                    [{1}, {[at0112]}],    -- Mild
+                                                    [{2}, {[at0113]}],    -- Moderate
+                                                    [{3}, {[at0114]}],    -- Severe
+                                                    [{4}, {[at0115]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0116] occurrences matches {0..1} matches {    -- A3. Rising from sitting
+                                        value matches {
+                                            DV_ORDINAL[at9059] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0117]}],    -- None
+                                                    [{1}, {[at0118]}],    -- Mild
+                                                    [{2}, {[at0119]}],    -- Moderate
+                                                    [{3}, {[at0120]}],    -- Severe
+                                                    [{4}, {[at0121]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0122] occurrences matches {0..1} matches {    -- A4. Standing
+                                        value matches {
+                                            DV_ORDINAL[at9060] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0123]}],    -- None
+                                                    [{1}, {[at0124]}],    -- Mild
+                                                    [{2}, {[at0125]}],    -- Moderate
+                                                    [{3}, {[at0126]}],    -- Severe
+                                                    [{4}, {[at0127]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0128] occurrences matches {0..1} matches {    -- A5. Bending to floor/pick up an object
+                                        value matches {
+                                            DV_ORDINAL[at9061] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0129]}],    -- None
+                                                    [{1}, {[at0130]}],    -- Mild
+                                                    [{2}, {[at0131]}],    -- Moderate
+                                                    [{3}, {[at0132]}],    -- Severe
+                                                    [{4}, {[at0133]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0134] occurrences matches {0..1} matches {    -- A6. Walking on flat surface
+                                        value matches {
+                                            DV_ORDINAL[at9062] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0135]}],    -- None
+                                                    [{1}, {[at0136]}],    -- Mild
+                                                    [{2}, {[at0137]}],    -- Moderate
+                                                    [{3}, {[at0138]}],    -- Severe
+                                                    [{4}, {[at0139]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0140] occurrences matches {0..1} matches {    -- A7. Getting in/out of car
+                                        value matches {
+                                            DV_ORDINAL[at9063] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0141]}],    -- None
+                                                    [{1}, {[at0142]}],    -- Mild
+                                                    [{2}, {[at0143]}],    -- Moderate
+                                                    [{3}, {[at0144]}],    -- Severe
+                                                    [{4}, {[at0145]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0146] occurrences matches {0..1} matches {    -- A8. Going shopping
+                                        value matches {
+                                            DV_ORDINAL[at9064] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0147]}],    -- None
+                                                    [{1}, {[at0148]}],    -- Mild
+                                                    [{2}, {[at0149]}],    -- Moderate
+                                                    [{3}, {[at0150]}],    -- Severe
+                                                    [{4}, {[at0151]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0152] occurrences matches {0..1} matches {    -- A9. Putting on socks/stockings
+                                        value matches {
+                                            DV_ORDINAL[at9065] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0153]}],    -- None
+                                                    [{1}, {[at0154]}],    -- Mild
+                                                    [{2}, {[at0155]}],    -- Moderate
+                                                    [{3}, {[at0156]}],    -- Severe
+                                                    [{4}, {[at0157]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0158] occurrences matches {0..1} matches {    -- A10. Rising from bed
+                                        value matches {
+                                            DV_ORDINAL[at9066] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0159]}],    -- None
+                                                    [{1}, {[at0160]}],    -- Mild
+                                                    [{2}, {[at0161]}],    -- Moderate
+                                                    [{3}, {[at0162]}],    -- Severe
+                                                    [{4}, {[at0163]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0164] occurrences matches {0..1} matches {    -- A11. Taking off socks/stockings
+                                        value matches {
+                                            DV_ORDINAL[at9067] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0165]}],    -- None
+                                                    [{1}, {[at0166]}],    -- Mild
+                                                    [{2}, {[at0167]}],    -- Moderate
+                                                    [{3}, {[at0168]}],    -- Severe
+                                                    [{4}, {[at0169]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0170] occurrences matches {0..1} matches {    -- A12. Lying in bed (turning over, maintaining hip position)
+                                        value matches {
+                                            DV_ORDINAL[at9068] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0171]}],    -- None
+                                                    [{1}, {[at0172]}],    -- Mild
+                                                    [{2}, {[at0173]}],    -- Moderate
+                                                    [{3}, {[at0174]}],    -- Severe
+                                                    [{4}, {[at0175]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0176] occurrences matches {0..1} matches {    -- A13. Getting in/out of bath
+                                        value matches {
+                                            DV_ORDINAL[at9069] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0177]}],    -- None
+                                                    [{1}, {[at0178]}],    -- Mild
+                                                    [{2}, {[at0179]}],    -- Moderate
+                                                    [{3}, {[at0180]}],    -- Severe
+                                                    [{4}, {[at0181]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0182] occurrences matches {0..1} matches {    -- A14. Sitting
+                                        value matches {
+                                            DV_ORDINAL[at9070] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0183]}],    -- None
+                                                    [{1}, {[at0184]}],    -- Mild
+                                                    [{2}, {[at0185]}],    -- Moderate
+                                                    [{3}, {[at0186]}],    -- Severe
+                                                    [{4}, {[at0187]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0188] occurrences matches {0..1} matches {    -- A15. Getting on/off toilet
+                                        value matches {
+                                            DV_ORDINAL[at9071] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0189]}],    -- None
+                                                    [{1}, {[at0190]}],    -- Mild
+                                                    [{2}, {[at0191]}],    -- Moderate
+                                                    [{3}, {[at0192]}],    -- Severe
+                                                    [{4}, {[at0193]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0194] occurrences matches {0..1} matches {    -- A16. Heavy domestic duties (moving heavy boxes, scrubbing floors, etc)
+                                        value matches {
+                                            DV_ORDINAL[at9072] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0195]}],    -- None
+                                                    [{1}, {[at0196]}],    -- Mild
+                                                    [{2}, {[at0197]}],    -- Moderate
+                                                    [{3}, {[at0198]}],    -- Severe
+                                                    [{4}, {[at0199]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0200] occurrences matches {0..1} matches {    -- A17. Light domestic duties (cooking, dusting, etc)
+                                        value matches {
+                                            DV_ORDINAL[at9073] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0201]}],    -- None
+                                                    [{1}, {[at0202]}],    -- Mild
+                                                    [{2}, {[at0203]}],    -- Moderate
+                                                    [{3}, {[at0204]}],    -- Severe
+                                                    [{4}, {[at0205]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0206] occurrences matches {0..1} matches {    -- Function, daily living subtotal
+                                        value matches {
+                                            DV_COUNT[at9074]
+                                        }
+                                    }
+                                    ELEMENT[at0207] occurrences matches {0..1} matches {    -- SP1. Squatting
+                                        value matches {
+                                            DV_ORDINAL[at9075] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0208]}],    -- None
+                                                    [{1}, {[at0209]}],    -- Mild
+                                                    [{2}, {[at0210]}],    -- Moderate
+                                                    [{3}, {[at0211]}],    -- Severe
+                                                    [{4}, {[at0212]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0213] occurrences matches {0..1} matches {    -- SP2. Running
+                                        value matches {
+                                            DV_ORDINAL[at9076] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0214]}],    -- None
+                                                    [{1}, {[at0215]}],    -- Mild
+                                                    [{2}, {[at0216]}],    -- Moderate
+                                                    [{3}, {[at0217]}],    -- Severe
+                                                    [{4}, {[at0218]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0219] occurrences matches {0..1} matches {    -- SP3. Twisting/pivoting on your injured hip
+                                        value matches {
+                                            DV_ORDINAL[at9077] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0220]}],    -- None
+                                                    [{1}, {[at0221]}],    -- Mild
+                                                    [{2}, {[at0222]}],    -- Moderate
+                                                    [{3}, {[at0223]}],    -- Severe
+                                                    [{4}, {[at0224]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0225] occurrences matches {0..1} matches {    -- SP4. Walking on uneven surface
+                                        value matches {
+                                            DV_ORDINAL[at9078] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0226]}],    -- None
+                                                    [{1}, {[at0227]}],    -- Mild
+                                                    [{2}, {[at0228]}],    -- Moderate
+                                                    [{3}, {[at0229]}],    -- Severe
+                                                    [{4}, {[at0230]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0255] occurrences matches {0..1} matches {    -- Function, sports and recreational activities subtotal
+                                        value matches {
+                                            DV_COUNT[at9079]
+                                        }
+                                    }
+                                    ELEMENT[at0231] occurrences matches {0..1} matches {    -- Q1. How often are you aware of your hip problem?
+                                        value matches {
+                                            DV_ORDINAL[at9080] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0232]}],    -- Never
+                                                    [{1}, {[at0233]}],    -- Monthly
+                                                    [{2}, {[at0234]}],    -- Weekly
+                                                    [{3}, {[at0235]}],    -- Daily
+                                                    [{4}, {[at0236]}]    -- Constantly
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0237] occurrences matches {0..1} matches {    -- Q2. Have you modified your life style to avoid potentially damaging activities to your hip?
+                                        value matches {
+                                            DV_ORDINAL[at9081] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0238]}],    -- Not at all
+                                                    [{1}, {[at0239]}],    -- Mildly
+                                                    [{2}, {[at0240]}],    -- Moderately
+                                                    [{3}, {[at0241]}],    -- Severely
+                                                    [{4}, {[at0242]}]    -- Extremely
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0243] occurrences matches {0..1} matches {    -- Q3. How much are you troubled with lack of confidence in your hip?
+                                        value matches {
+                                            DV_ORDINAL[at9082] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0244]}],    -- Not at all
+                                                    [{1}, {[at0245]}],    -- Mildly
+                                                    [{2}, {[at0246]}],    -- Moderately
+                                                    [{3}, {[at0247]}],    -- Severely
+                                                    [{4}, {[at0248]}]    -- Extremely
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0249] occurrences matches {0..1} matches {    -- Q4. In general, how much difficulty do you have with your hip?
+                                        value matches {
+                                            DV_ORDINAL[at9083] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0250]}],    -- None
+                                                    [{1}, {[at0251]}],    -- Mild
+                                                    [{2}, {[at0252]}],    -- Moderate
+                                                    [{3}, {[at0253]}],    -- Severe
+                                                    [{4}, {[at0254]}]    -- Extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0256] occurrences matches {0..1} matches {    -- Quality of life subtotal
+                                        value matches {
+                                            DV_COUNT[at9084]
+                                        }
+                                    }
+                                    ELEMENT[at0257] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9085]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0004] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0264] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Hip Disability and Osteoarthritis Outcome Score (HOOS)">
+                description = <"An assesment tool to evaluate symptoms and functional limitations related to the hip.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"@ internal @">
+            >
+            ["at0005"] = <
+                text = <"P3. Bending your hip fully">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"S1. Do you feel grinding, hear clicking or any other type of noise from your hip?">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Never">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Rarely">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Sometimes">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Often">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Always">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"S3. Difficulties to stride out when walking">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"S4. How severe is your hip joint stiffness after first wakening in the morning?">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"S5. How severe is your hip stiffness after sitting, lying or resting later in the day?">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Symptoms + Stiffness subtotal">
+                description = <"The total for the Symptoms + Stiffness subscore.">
+            >
+            ["at0049"] = <
+                text = <"P1. How often is your hip painful?">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Never">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Monthly">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Weekly">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Daily">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Always">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"P2. Straightening your hip fully">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"P4. Walking on flat surface">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0066"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"P5. Going up or down stairs">
+                description = <"">
+            >
+            ["at0068"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0069"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0070"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0071"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0072"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0073"] = <
+                text = <"P6. At night while in bed">
+                description = <"">
+            >
+            ["at0074"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0075"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0076"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0077"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0078"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0079"] = <
+                text = <"P7. Sitting or lying">
+                description = <"">
+            >
+            ["at0080"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0081"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0082"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0083"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0084"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0085"] = <
+                text = <"P8. Standing upright">
+                description = <"">
+            >
+            ["at0086"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0087"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0088"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0089"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0090"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0091"] = <
+                text = <"P9. Walking on a hard surface (asphalt, concrete, etc.)">
+                description = <"">
+            >
+            ["at0092"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0093"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0094"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0095"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0096"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0097"] = <
+                text = <"P10. Walking on an uneven surface">
+                description = <"">
+            >
+            ["at0098"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0099"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0100"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0101"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0102"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0103"] = <
+                text = <"A1. Descending stairs">
+                description = <"">
+            >
+            ["at0104"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0105"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0106"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0107"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0108"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0109"] = <
+                text = <"Pain Subtotal">
+                description = <"The total for the Pain subscale.">
+            >
+            ["at0110"] = <
+                text = <"A2. Ascending stairs">
+                description = <"">
+            >
+            ["at0111"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0112"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0113"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0114"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0115"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0116"] = <
+                text = <"A3. Rising from sitting">
+                description = <"">
+            >
+            ["at0117"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0118"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0119"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0120"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0121"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0122"] = <
+                text = <"A4. Standing">
+                description = <"">
+            >
+            ["at0123"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0124"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0125"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0126"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0127"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0128"] = <
+                text = <"A5. Bending to floor/pick up an object">
+                description = <"">
+            >
+            ["at0129"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0130"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0131"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0132"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0133"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0134"] = <
+                text = <"A6. Walking on flat surface">
+                description = <"">
+            >
+            ["at0135"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0136"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0137"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0138"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0139"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0140"] = <
+                text = <"A7. Getting in/out of car">
+                description = <"">
+            >
+            ["at0141"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0142"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0143"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0144"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0145"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0146"] = <
+                text = <"A8. Going shopping">
+                description = <"">
+            >
+            ["at0147"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0148"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0149"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0150"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0151"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0152"] = <
+                text = <"A9. Putting on socks/stockings">
+                description = <"">
+            >
+            ["at0153"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0154"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0155"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0156"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0157"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0158"] = <
+                text = <"A10. Rising from bed">
+                description = <"">
+            >
+            ["at0159"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0160"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0161"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0162"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0163"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0164"] = <
+                text = <"A11. Taking off socks/stockings">
+                description = <"">
+            >
+            ["at0165"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0166"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0167"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0168"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0169"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0170"] = <
+                text = <"A12. Lying in bed (turning over, maintaining hip position)">
+                description = <"">
+            >
+            ["at0171"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0172"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0173"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0174"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0175"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0176"] = <
+                text = <"A13. Getting in/out of bath">
+                description = <"">
+            >
+            ["at0177"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0178"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0179"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0180"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0181"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0182"] = <
+                text = <"A14. Sitting">
+                description = <"">
+            >
+            ["at0183"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0184"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0185"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0186"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0187"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0188"] = <
+                text = <"A15. Getting on/off toilet">
+                description = <"">
+            >
+            ["at0189"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0190"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0191"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0192"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0193"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0194"] = <
+                text = <"A16. Heavy domestic duties (moving heavy boxes, scrubbing floors, etc)">
+                description = <"">
+            >
+            ["at0195"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0196"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0197"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0198"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0199"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0200"] = <
+                text = <"A17. Light domestic duties (cooking, dusting, etc)">
+                description = <"">
+            >
+            ["at0201"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0202"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0203"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0204"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0205"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0206"] = <
+                text = <"Function, daily living subtotal">
+                description = <"The total for Function, daily living subscale.">
+            >
+            ["at0207"] = <
+                text = <"SP1. Squatting">
+                description = <"">
+            >
+            ["at0208"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0209"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0210"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0211"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0212"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0213"] = <
+                text = <"SP2. Running">
+                description = <"">
+            >
+            ["at0214"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0215"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0216"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0217"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0218"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0219"] = <
+                text = <"SP3. Twisting/pivoting on your injured hip">
+                description = <"">
+            >
+            ["at0220"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0221"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0222"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0223"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0224"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0225"] = <
+                text = <"SP4. Walking on uneven surface">
+                description = <"">
+            >
+            ["at0226"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0227"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0228"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0229"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0230"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0231"] = <
+                text = <"Q1. How often are you aware of your hip problem?">
+                description = <"">
+            >
+            ["at0232"] = <
+                text = <"Never">
+                description = <"">
+            >
+            ["at0233"] = <
+                text = <"Monthly">
+                description = <"">
+            >
+            ["at0234"] = <
+                text = <"Weekly">
+                description = <"">
+            >
+            ["at0235"] = <
+                text = <"Daily">
+                description = <"">
+            >
+            ["at0236"] = <
+                text = <"Constantly">
+                description = <"">
+            >
+            ["at0237"] = <
+                text = <"Q2. Have you modified your life style to avoid potentially damaging activities to your hip?">
+                description = <"">
+            >
+            ["at0238"] = <
+                text = <"Not at all">
+                description = <"">
+            >
+            ["at0239"] = <
+                text = <"Mildly">
+                description = <"">
+            >
+            ["at0240"] = <
+                text = <"Moderately">
+                description = <"">
+            >
+            ["at0241"] = <
+                text = <"Severely">
+                description = <"">
+            >
+            ["at0242"] = <
+                text = <"Extremely">
+                description = <"">
+            >
+            ["at0243"] = <
+                text = <"Q3. How much are you troubled with lack of confidence in your hip?">
+                description = <"">
+            >
+            ["at0244"] = <
+                text = <"Not at all">
+                description = <"">
+            >
+            ["at0245"] = <
+                text = <"Mildly">
+                description = <"">
+            >
+            ["at0246"] = <
+                text = <"Moderately">
+                description = <"">
+            >
+            ["at0247"] = <
+                text = <"Severely">
+                description = <"">
+            >
+            ["at0248"] = <
+                text = <"Extremely">
+                description = <"">
+            >
+            ["at0249"] = <
+                text = <"Q4. In general, how much difficulty do you have with your hip?">
+                description = <"">
+            >
+            ["at0250"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0251"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0252"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0253"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0254"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0255"] = <
+                text = <"Function, sports and recreational activities subtotal">
+                description = <"The total for the Function, sports and recreational activities subscale.">
+            >
+            ["at0256"] = <
+                text = <"Quality of life subtotal">
+                description = <"The total for the Quality of life subscale.">
+            >
+            ["at0257"] = <
+                text = <"Total score">
+                description = <"The total sum of each subscale total for the HOOS survey.">
+            >
+            ["at0258"] = <
+                text = <"S2. Difficulties spreading legs wide apart">
+                description = <"">
+            >
+            ["at0259"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0260"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0261"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0262"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0263"] = <
+                text = <"Extreme">
+                description = <"">
+            >
+            ["at0264"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9085"] = <
+                text = <"S1. Do you feel grinding, hear clicking or any other type of noise from your hip? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9086"] = <
+                text = <"S2. Difficulties spreading legs wide apart (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9087"] = <
+                text = <"S3. Difficulties to stride out when walking (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9088"] = <
+                text = <"S4. How severe is your hip joint stiffness after first wakening in the morning? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9089"] = <
+                text = <"S5. How severe is your hip stiffness after sitting, lying or resting later in the day? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9090"] = <
+                text = <"P1. How often is your hip painful? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9091"] = <
+                text = <"P2. Straightening your hip fully (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9092"] = <
+                text = <"P3. Bending your hip fully (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9093"] = <
+                text = <"P4. Walking on flat surface (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9094"] = <
+                text = <"P5. Going up or down stairs (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9095"] = <
+                text = <"P6. At night while in bed (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9096"] = <
+                text = <"P7. Sitting or lying (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9097"] = <
+                text = <"P8. Standing upright (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9098"] = <
+                text = <"P9. Walking on a hard surface (asphalt, concrete, etc.) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9099"] = <
+                text = <"P10. Walking on an uneven surface (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9100"] = <
+                text = <"A1. Descending stairs (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9101"] = <
+                text = <"A2. Ascending stairs (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9102"] = <
+                text = <"A3. Rising from sitting (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9103"] = <
+                text = <"A4. Standing (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9104"] = <
+                text = <"A5. Bending to floor/pick up an object (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9105"] = <
+                text = <"A6. Walking on flat surface (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9106"] = <
+                text = <"A7. Getting in/out of car (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9107"] = <
+                text = <"A8. Going shopping (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9108"] = <
+                text = <"A9. Putting on socks/stockings (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9109"] = <
+                text = <"A10. Rising from bed (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9110"] = <
+                text = <"A11. Taking off socks/stockings (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9111"] = <
+                text = <"A12. Lying in bed (turning over, maintaining hip position) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9112"] = <
+                text = <"A13. Getting in/out of bath (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9113"] = <
+                text = <"A14. Sitting (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9114"] = <
+                text = <"A15. Getting on/off toilet (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9115"] = <
+                text = <"A16. Heavy domestic duties (moving heavy boxes, scrubbing floors, etc) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9116"] = <
+                text = <"A17. Light domestic duties (cooking, dusting, etc) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9117"] = <
+                text = <"SP1. Squatting (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9118"] = <
+                text = <"SP2. Running (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9119"] = <
+                text = <"SP3. Twisting/pivoting on your injured hip (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9120"] = <
+                text = <"SP4. Walking on uneven surface (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9121"] = <
+                text = <"Q1. How often are you aware of your hip problem? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9122"] = <
+                text = <"Q2. Have you modified your life style to avoid potentially damaging activities to your hip? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9123"] = <
+                text = <"Q3. How much are you troubled with lack of confidence in your hip? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9124"] = <
+                text = <"Q4. In general, how much difficulty do you have with your hip? (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9101"] = <
+            id = <"ac9101">
+            members = <"at0111", "at0112", "at0113", "at0114", "at0115">
+        >
+        ["ac9100"] = <
+            id = <"ac9100">
+            members = <"at0104", "at0105", "at0106", "at0107", "at0108">
+        >
+        ["ac9105"] = <
+            id = <"ac9105">
+            members = <"at0135", "at0136", "at0137", "at0138", "at0139">
+        >
+        ["ac9104"] = <
+            id = <"ac9104">
+            members = <"at0129", "at0130", "at0131", "at0132", "at0133">
+        >
+        ["ac9103"] = <
+            id = <"ac9103">
+            members = <"at0123", "at0124", "at0125", "at0126", "at0127">
+        >
+        ["ac9102"] = <
+            id = <"ac9102">
+            members = <"at0117", "at0118", "at0119", "at0120", "at0121">
+        >
+        ["ac9112"] = <
+            id = <"ac9112">
+            members = <"at0177", "at0178", "at0179", "at0180", "at0181">
+        >
+        ["ac9111"] = <
+            id = <"ac9111">
+            members = <"at0171", "at0172", "at0173", "at0174", "at0175">
+        >
+        ["ac9110"] = <
+            id = <"ac9110">
+            members = <"at0165", "at0166", "at0167", "at0168", "at0169">
+        >
+        ["ac9116"] = <
+            id = <"ac9116">
+            members = <"at0201", "at0202", "at0203", "at0204", "at0205">
+        >
+        ["ac9115"] = <
+            id = <"ac9115">
+            members = <"at0195", "at0196", "at0197", "at0198", "at0199">
+        >
+        ["ac9114"] = <
+            id = <"ac9114">
+            members = <"at0189", "at0190", "at0191", "at0192", "at0193">
+        >
+        ["ac9113"] = <
+            id = <"ac9113">
+            members = <"at0183", "at0184", "at0185", "at0186", "at0187">
+        >
+        ["ac9109"] = <
+            id = <"ac9109">
+            members = <"at0159", "at0160", "at0161", "at0162", "at0163">
+        >
+        ["ac9108"] = <
+            id = <"ac9108">
+            members = <"at0153", "at0154", "at0155", "at0156", "at0157">
+        >
+        ["ac9107"] = <
+            id = <"ac9107">
+            members = <"at0147", "at0148", "at0149", "at0150", "at0151">
+        >
+        ["ac9106"] = <
+            id = <"ac9106">
+            members = <"at0141", "at0142", "at0143", "at0144", "at0145">
+        >
+        ["ac9086"] = <
+            id = <"ac9086">
+            members = <"at0259", "at0260", "at0261", "at0262", "at0263">
+        >
+        ["ac9085"] = <
+            id = <"ac9085">
+            members = <"at0012", "at0013", "at0014", "at0015", "at0016">
+        >
+        ["ac9123"] = <
+            id = <"ac9123">
+            members = <"at0244", "at0245", "at0246", "at0247", "at0248">
+        >
+        ["ac9089"] = <
+            id = <"ac9089">
+            members = <"at0042", "at0043", "at0044", "at0045", "at0046">
+        >
+        ["ac9122"] = <
+            id = <"ac9122">
+            members = <"at0238", "at0239", "at0240", "at0241", "at0242">
+        >
+        ["ac9088"] = <
+            id = <"ac9088">
+            members = <"at0036", "at0037", "at0038", "at0039", "at0040">
+        >
+        ["ac9121"] = <
+            id = <"ac9121">
+            members = <"at0232", "at0233", "at0234", "at0235", "at0236">
+        >
+        ["ac9087"] = <
+            id = <"ac9087">
+            members = <"at0030", "at0031", "at0032", "at0033", "at0034">
+        >
+        ["ac9120"] = <
+            id = <"ac9120">
+            members = <"at0226", "at0227", "at0228", "at0229", "at0230">
+        >
+        ["ac9124"] = <
+            id = <"ac9124">
+            members = <"at0250", "at0251", "at0252", "at0253", "at0254">
+        >
+        ["ac9119"] = <
+            id = <"ac9119">
+            members = <"at0220", "at0221", "at0222", "at0223", "at0224">
+        >
+        ["ac9118"] = <
+            id = <"ac9118">
+            members = <"at0214", "at0215", "at0216", "at0217", "at0218">
+        >
+        ["ac9117"] = <
+            id = <"ac9117">
+            members = <"at0208", "at0209", "at0210", "at0211", "at0212">
+        >
+        ["ac9093"] = <
+            id = <"ac9093">
+            members = <"at0062", "at0063", "at0064", "at0065", "at0066">
+        >
+        ["ac9092"] = <
+            id = <"ac9092">
+            members = <"at0006", "at0007", "at0008", "at0009", "at0010">
+        >
+        ["ac9091"] = <
+            id = <"ac9091">
+            members = <"at0056", "at0057", "at0058", "at0059", "at0060">
+        >
+        ["ac9090"] = <
+            id = <"ac9090">
+            members = <"at0050", "at0051", "at0052", "at0053", "at0054">
+        >
+        ["ac9097"] = <
+            id = <"ac9097">
+            members = <"at0086", "at0087", "at0088", "at0089", "at0090">
+        >
+        ["ac9096"] = <
+            id = <"ac9096">
+            members = <"at0080", "at0081", "at0082", "at0083", "at0084">
+        >
+        ["ac9095"] = <
+            id = <"ac9095">
+            members = <"at0074", "at0075", "at0076", "at0077", "at0078">
+        >
+        ["ac9094"] = <
+            id = <"ac9094">
+            members = <"at0068", "at0069", "at0070", "at0071", "at0072">
+        >
+        ["ac9099"] = <
+            id = <"ac9099">
+            members = <"at0098", "at0099", "at0100", "at0101", "at0102">
+        >
+        ["ac9098"] = <
+            id = <"ac9098">
+            members = <"at0092", "at0093", "at0094", "at0095", "at0096">
+        >
+    >

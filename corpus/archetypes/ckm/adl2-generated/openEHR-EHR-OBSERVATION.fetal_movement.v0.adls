@@ -1,0 +1,399 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ef092cfc-d9af-4538-b329-9a3b6c66b246; build_uid=1e774910-b639-4e68-9829-c460544a170a)
+    openEHR-EHR-OBSERVATION.fetal_movement.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            author = <
+                ["name"] = <"Vesa Peltola">
+                ["organisation"] = <"Tieto Finland">
+            >
+        >
+        ["es-cl"] = <
+            language = <[ISO_639-1::es-cl]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2007-03-04">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Sheryl Alexander, NT Department of Health, Australia", "Rita Apelt, Department of Health,NT, Australia", "Stephen Chu, NEHTA, Australia", "Margaret Cotter, AMSANT, Australia", "Michelle Dowden, Miwatj Health Ngalkanbuy Health, Australia", "Tim Garden, NTG Department of Health, Australia", "Tanya Gardner, CAAC, Australia", "Sam Heard, Ocean Informatics, Australia (Editor)", "Bernadette Lack, Department of Health, Australia", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Chunlan Ma, Ocean Informatics, Australia", "Ian McNicoll, Ocean Informatics UK, United Kingdom", "Jeremy Oats, NT Health, Australia", "Steven Schatz, Department of Health (Northern Territory), Australia", "Rosalie Schultz, Central Australia Remote Health, Australia", "Cherie Whitbread, Royal Darwin Hospital, Australia", "Jo Wright, NT Dept of Health, Australia (Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"NEHTA Clinical Knowledge Manager [Internet]. Australia: National eHealth Transition Authority. [Draft OBSERVATION archetype] Fetal Movement; [authored 2007 Mar 04, cited 2013 Jan 03]. Available from http://dcm.nehta.org.au/ckm/OKM.html#showArchetype_1013.1.1004_4.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"87963AA862E93FA6A5C3D1EBFEAAEFDC">
+    >
+    details = <
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"Tallentaa sikiön liikkeiden esiintyminen, kuten äiti havaitsee.">
+            keywords = <"sikiö, potkut, liikkeet, leikkuut, osumat, vauva", ...>
+            use = <"Käytä kirjaamaan todisteita sikiön aktiivisuudesta epäsuorana indikaattorina sikiön hyvinvoinnista.
+
+Käytä kirjaamaan sikiön liikkeiden läsnäoloa osana raskautta raskauden toisesta kolmanneksesta alkaen.
+
+Käytä tallentaaksesi tietyn ajanjakson aikana tuntuneita sikiöliikkeiden lukumäärän yksityiskohtia, jotka on esitetty \"Kick Chart\" -tilassa, useimmiten kolmannella kolmanneksella.">
+            misuse = <"Ei saa käyttää sikiön vasteen tallentamiseen tarkoitukselliseen stimulointiin, esim. vibroakustiseen stimulaatioon.
+
+Ei saa käyttää sikiön sykkeen tarkkailuun, esim. käyttämällä kardiotokografeja.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the presence and pattern of any and all spontaneous fetal movements in utero, as perceived by the mother.">
+            keywords = <"fetal", "kicks", "movements", "flutters", "hits", "baby", "foetus">
+            use = <"Use to record evidence of fetal activity as an indirect indicator of fetal well-being.
+
+Use to record the presence of fetal movements and pattern as part of routine antenatal visits from second trimester of pregnancy onwards.
+
+Use to record details of the number of fetal movements felt over a specified time interval, and represented in a 'Kick Chart', most often in the third trimester.">
+            misuse = <"Not to be used to record the response of a fetus to deliberate stimulation eg vibroacoustic stimulation.
+
+Not to be used to represent formal fetal heart rate monitoring eg using cardiotocographs.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es-cl"] = <
+            language = <[ISO_639-1::es-cl]>
+            purpose = <"Registrar la presencia y la intensidad de movimientos fetales como un gráfico del movimiento fetal para la madre o para el uso del clínico.">
+            keywords = <"Fetal (es)", "Movimientos (es)", "Patadas (es)">
+            use = <"Use to record evidence of fetal activity as an indirect indicator of fetal well-being.
+
+Use to record the presence of fetal movements and pattern as part of routine antenatal visits from second trimester of pregnancy onwards.
+
+Use to record details of the number of fetal movements felt over a specified time interval, and represented in a 'Kick Chart', most often in the third trimester.">
+            misuse = <"Not to be used to record the response of a fetus to deliberate stimulation eg vibroacoustic stimulation.
+
+Not to be used to represent formal fetal heart rate monitoring eg using cardiotocographs.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Fetal movement
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Presence
+                                        value matches {
+                                            DV_CODED_TEXT[at9009] matches {
+                                                defining_code matches {[ac9015]}    -- Presence (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Pattern
+                                        value matches {
+                                            DV_CODED_TEXT[at9013] matches {
+                                                defining_code matches {[ac9016]}    -- Pattern (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Movements
+                                        value matches {
+                                            DV_COUNT[at9012] matches {
+                                                magnitude matches {|>=0|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Elapsed time
+                                        value matches {
+                                            DV_DURATION[at9017] matches {
+                                                value matches {PWDTH/|>=PT0S|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at9019]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    INTERVAL_EVENT[at0027] occurrences matches {0..1} matches {    -- Monitored period
+                        data matches {
+                            use_node ITEM_TREE[at9018] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                        math_function matches {
+                            DV_CODED_TEXT[at9015] matches {
+                                defining_code matches {[at9005]}    -- total
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0029] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0030] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"Sikiön liikkeet">
+                description = <"*Spontaneous movements of the fetus in utero, as perceived by the mother. (en)">
+                comment = <"*Movements include kicks, jabs, rolls, twists, and turns. (en)">
+            >
+            ["at0002"] = <
+                text = <"Mikä tahansa tapahtuma">
+                description = <"Oletusarvoinen, määrittämättömänä ajanhetkenä tai ajanjaksolla ilmenevä tapahtuma, joka voi olla määritetty tarkasti jossakin mallissa tai suorituksen aikana.">
+            >
+            ["at0004"] = <
+                text = <"Liikkeiden tunteminen">
+                description = <"Sikiö liikkuu spontaanisti.">
+                comment = <"Jos tämä tieto kirjataan tiettynä ajankohtana tapahtuneena tapahtumana, tieto kertoo äidin viimeaikaisesta kokemuksesta. Jos tämä tieto kirjataan tiettynä ajanjaksona ilmenneenä tapahtumana, tieto kertoo äidin kokemuksesta kyseisen ajanjakson aikana, esimerkiksi liikkeitä havaittu kahden tunnin tarkastelujaksolla, joka tehtiin sikiönliikekaaviota varten.">
+            >
+            ["at0006"] = <
+                text = <"Liikkeiden lukumäärä">
+                description = <"Laskettu sikiön spontaanien liikkeiden lukumäärä havaintojaksolla.">
+                comment = <"Kirjataan yleensä vain osana ajanjakson tapahtumaa, tavallisesti tieto koskee tiettyä ajanjaksoa, jonka aikana tehtiin havaintoja esimerkiksi sikiönliikekaaviota varten.">
+            >
+            ["at0007"] = <
+                text = <"Havaittu">
+                description = <"Äiti on havainnut spontaaneja sikiön liikkeitä.">
+            >
+            ["at0011"] = <
+                text = <"Ei havaittu">
+                description = <"Äiti ei ole havainnut spontaaneja sikiön liikkeitä.">
+            >
+            ["at0019"] = <
+                text = <"Muutos liikkeiden määrässä">
+                description = <"Sikiön spontaanien liikkeiden tyyppi tai luonne.">
+                comment = <"Jos tämä tieto kirjataan tiettynä ajankohtana tapahtuneena tapahtumana, tieto kertoo äidin viimeaikaisesta kokemuksesta. Jos tämä tieto kirjataan tiettynä ajanjaksona ilmenneenä tapahtumana, tieto kertoo äidin kokemuksesta kyseisen ajanjakson aikana, esimerkiksi liikkeitä havaittu kahden tunnin tarkastelujaksolla, joka tehtiin sikiönliikekaaviota varten.">
+            >
+            ["at0021"] = <
+                text = <"Lisääntynyt">
+                description = <"Sikiön spontaanit liikkeet ovat lisääntyneet tai ne ovat tavallista voimakkaampia.">
+            >
+            ["at0022"] = <
+                text = <"Normaali">
+                description = <"Sikiö liikkuu ja potkii normaalisti.">
+            >
+            ["at0024"] = <
+                text = <"Vähentynyt">
+                description = <"Sikiön spontaanit liikkeet ovat vähentyneet tai ne ovat tavallista heikompia.">
+            >
+            ["at0025"] = <
+                text = <"*Elapsed time (en)">
+                description = <"*Duration since last spontaneous fetal movement was noticed by mother. (en)">
+                comment = <"Kirjataan yleensä vain, jos äiti kertoo, ettei ole havainnut lainkaan sikiön spontaaneja liikkeitä. Kirjataan yleensä vain osana Ajankohta-tapahtumaa.">
+            >
+            ["at0027"] = <
+                text = <"*Monitored period (en)">
+                description = <"*Period of time during which the number of spontaneous fetal movements are counted or observed. (en)">
+            >
+            ["at0028"] = <
+                text = <"Kuvaus">
+                description = <"Kertomusmuodossa oleva kuvaus äidin havaitsemista sikiön liikkeistä.">
+            >
+            ["at0030"] = <
+                text = <"*Extension (en)">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at9005"] = <
+                text = <"* total (en)">
+                description = <"* total (en)">
+            >
+            ["ac9015"] = <
+                text = <"Liikkeiden tunteminen (synthesised)">
+                description = <"Sikiö liikkuu spontaanisti. (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Muutos liikkeiden määrässä (synthesised)">
+                description = <"Sikiön spontaanien liikkeiden tyyppi tai luonne. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Fetal movement">
+                description = <"Spontaneous movements of the fetus in utero, as perceived by the mother.">
+                comment = <"Movements include kicks, jabs, rolls, twists, and turns.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Presence">
+                description = <"Presence of spontaneous fetal movements.">
+                comment = <"If recording as a point in time event, this reflects the mother's recent experience. If recording as an interval event, this reflects the mother's experience over the specified period of time, for example presence of movements noted during a two hour observation for a Kick Chart.">
+            >
+            ["at0006"] = <
+                text = <"Movements">
+                description = <"Number of spontaneous fetal movements counted during the period of observation.">
+                comment = <"Usually only recorded as part of a Interval event - commonly over a specified period of time eg to record in a Kick Chart.">
+            >
+            ["at0007"] = <
+                text = <"Present">
+                description = <"Spontaneous fetal movements have been perceived by the mother.">
+            >
+            ["at0011"] = <
+                text = <"Absent">
+                description = <"Spontaneous fetal movements have not been perceived by the mother.">
+            >
+            ["at0019"] = <
+                text = <"Pattern">
+                description = <"Pattern of spontaneous fetal movements.">
+                comment = <"If recording as a point in time event, this reflects the mother's recent experience. If recording as an interval event, this reflects the mother's experience over the specified period of time, for example presence of movements noted during a two hour observation for a Kick Chart.">
+            >
+            ["at0021"] = <
+                text = <"Increased">
+                description = <"Spontaneous fetal movements are increased or stronger compared to normal.">
+            >
+            ["at0022"] = <
+                text = <"Normal">
+                description = <"The fetus is moving and kicking normally.">
+            >
+            ["at0024"] = <
+                text = <"Reduced">
+                description = <"Spontaneous fetal movements are reduced or weaker compared to normal.">
+            >
+            ["at0025"] = <
+                text = <"Elapsed time">
+                description = <"Duration since last spontaneous fetal movement was noticed by mother.">
+                comment = <"Usually only recorded if mother reports that no spontaneous fetal movements have been noticed. Usually only recorded as part of a Point in Time event.">
+            >
+            ["at0027"] = <
+                text = <"Monitored period">
+                description = <"Period of time during which the number of spontaneous fetal movements are counted or observed.">
+            >
+            ["at0028"] = <
+                text = <"Description">
+                description = <"Narrative description of the fetal movements as noted by the mother.">
+            >
+            ["at0030"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at9005"] = <
+                text = <"total">
+                description = <"total">
+            >
+            ["ac9015"] = <
+                text = <"Presence (synthesised)">
+                description = <"Presence of spontaneous fetal movements. (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Pattern (synthesised)">
+                description = <"Pattern of spontaneous fetal movements. (synthesised)">
+            >
+        >
+        ["es-cl"] = <
+            ["at0000"] = <
+                text = <"Movimiento del feto">
+                description = <"*Spontaneous movements of the fetus in utero, as perceived by the mother. (en)">
+                comment = <"*Movements include kicks, jabs, rolls, twists, and turns. (en)">
+            >
+            ["at0002"] = <
+                text = <"Cualquier evento">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Presencia">
+                description = <"La presencia de  movimientos espontáneos">
+            >
+            ["at0006"] = <
+                text = <"Número de ocurrencias">
+                description = <"El número  de ocurrencias  en un tiempo determinado">
+            >
+            ["at0007"] = <
+                text = <"Movimientos fetal sentidos">
+                description = <"Movimientos fetales sentidos">
+            >
+            ["at0011"] = <
+                text = <"Movimientos Fetal no sentidos">
+                description = <"No se sienten los movimientos fetales">
+            >
+            ["at0019"] = <
+                text = <"Patrón">
+                description = <"Patrón de movimientos fetales">
+            >
+            ["at0021"] = <
+                text = <"Aumentados">
+                description = <"Los movimientos fetales ocurren más frecuentemente que lo esperado">
+            >
+            ["at0022"] = <
+                text = <"Normales">
+                description = <"El feto se mueve y patea normalmente">
+            >
+            ["at0024"] = <
+                text = <"Disminuidos">
+                description = <"Se reducen los movimientos fetales">
+            >
+            ["at0025"] = <
+                text = <"*Elapsed time (en)">
+                description = <"*Duration since last spontaneous fetal movement was noticed by mother. (en)">
+            >
+            ["at0027"] = <
+                text = <"*Monitored period (en)">
+                description = <"*Period of time during which the number of spontaneous fetal movements are counted or observed. (en)">
+            >
+            ["at0028"] = <
+                text = <"*Description(en)">
+                description = <"*Narrative description of the fetal movements as noted by the mother.(en)">
+            >
+            ["at0030"] = <
+                text = <"*Extension (en)">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at9005"] = <
+                text = <"* total (en)">
+                description = <"* total (en)">
+            >
+            ["ac9015"] = <
+                text = <"Presencia (synthesised)">
+                description = <"La presencia de  movimientos espontáneos (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Patrón (synthesised)">
+                description = <"Patrón de movimientos fetales (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9005"] = <http://openehr.org/id/148>
+        >
+    >
+    value_sets = <
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0021", "at0022", "at0024">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0007", "at0011">
+        >
+    >

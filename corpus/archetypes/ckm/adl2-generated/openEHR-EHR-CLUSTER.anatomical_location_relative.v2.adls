@@ -1,0 +1,1193 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f0ffebf8-c555-4927-a9f2-fd219d9335d8; build_uid=3ead758e-ab77-4b0a-8979-23821aa53050)
+    openEHR-EHR-CLUSTER.anatomical_location_relative.v2.2.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Darin Leonhardt">
+                ["organisation"] = <"PLRI für medizinische Informatik/ Medizinische Hochschule Hannover">
+                ["email"] = <"leonhardt.darin@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Linda Aulin">
+                ["organisation"] = <"Region Stockholm, Karolinska University Hospital">
+                ["email"] = <"linda.aulin@sll.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Lars Bitsch-Larsen">
+                ["organisation"] = <"Haukeland University Hospital of Bergen, Norway">
+                ["email"] = <"lbla@helse-bergen.no">
+            >
+            accreditation = <"MD, DEAA, MBA, spec in anesthesia, spec in tropical medicine.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Beatriz de Faria Leao">
+                ["organisation"] = <"BLEAO INFORMÁTICA EM SAÚDE">
+                ["email"] = <"bfleao@terra.com.br">
+            >
+            accreditation = <"MD, PhD">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            author = <
+                ["name"] = <"Biljana Princic">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2008-11-10">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Hildegunn Siv Aase, Helse Bergen, Norway", "Tomas Alme, DIPS, Norway", "Anne Pauline Anderssen, Helse Nord RHF, Norway", "Vebjoern Arntzen, Oslo university hospital, Norway", "Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (Nasjonal IKT redaktør)", "Koray Atalag, University of Auckland, New Zealand", "Gustavo Bacelar-Silva, Healthcare Designs, Brazil (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (Nasjonal IKT redaktør)", "Lars Bitsch-Larsen, Haukeland University Hospital, Bergen, Norway", "Hanne Marte Bårholm, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Bjørn Christensen, Helse Bergen HF, Norway", "Aitor Eguzkitza, UPNA (Public University of Navarre) - CHN (Complejo Hospitalario de Navarra), Spain", "Shahla Foozonkhah, Ocean Informatics, Australia", "Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway", "Sebastian Garde, Ocean Informatics, Germany", "Heather Grain, Llewelyn Grain Informatics, Australia", "Mikkel Johan Gaup Grønmo, Helse Nord IKT, Norway (Nasjonal IKT redaktør)", "Kristian Heldal, Telemark Hospital Trust, Norway", "Anca Heyd, DIPS ASA, Norway", "Dunmail Hodkinson, Black Pear Software Ltd, UK", "Hilde Hollås, Norway", "Hanne Joensen, Helse Bergen HUS, Norway", "Karl Trygve Kalleberg, Oslo Universitetssykehus, Norway", "Lars Karlsen, DIPS ASA, Norway", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Shinji Kobayashi, Kyoto University, Japan", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Kanika Kuwelker, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Siri Laronningen, Kreftregisteret, Norway", "Liv Laugen, Oslo universitetssykehus, Norway (Nasjonal IKT redaktør)", "Sabine Leh, Haukeland University Hospital, Department of Pathology, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Vesna Levasic, Orthopaedic Hospital Valdoltra, Slovenia", "Hallvard Lærum, Direktoratet for e-helse, Norway", "Luis Marco Ruiz, Norwegian Center for Integrated Care and Telemedicine, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Bjoern Naess, DIPS ASA, Norway", "Maria Beate Nupen-Stieng, Oslo Universitetssykehus, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Tanja Riise, Nasjonal IKT HF, Norway", "Terje Sagmyr, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Thomas Schopf, University Hospital of North-Norway, Norway", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "Richard Townley-O'Neill, NEHTA, Australia", "John Tore Valand, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Marit Alice Venheim, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Dmitri Wall, Irish Skin Foundation, Ireland">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Avgrenet fra: Relative anatomical location, Published archetype [Internet]. openEHR Foundation, openEHR Clinical Knowledge Manager [cited: 2023-07-11]. Available from: https://ckm.openehr.org/ckm/archetypes/1013.1.4863">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"95E62F4E6D9564FD0AF5151BBB3CC2A7">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Identifizierung und Aufzeichnung strukturierter Details über eine einzelne physische Stelle am oder im menschlichen Körper in Bezug auf ihre Beziehung zu anderen makroskopischen anatomischen Orientierungspunkten.">
+            keywords = <"Standort", "Standort", "anatomisch", "relativ", "ungefähre", "anatomische Region", "topographische Anatomie", "makroskopische Anatomie", "makroskopisch", "anatomisch", "Anatomie">
+            use = <"Zur Aufzeichnung strukturierter und konsistenter Details über eine einzelne identifizierte physische Stelle am oder im menschlichen Körper durch Beschreibung ihrer Lage im Verhältnis zu identifizierten makroskopischen anatomischen Orientierungspunkten. Es kann notwendig sein, die einzelne physische Stelle mit mehr als einer relativen Position zu beschreiben - z. B. 2 cm inferior zu 'Orientierungspunkt A' UND 3 cm medial zu 'Orientierungspunkt B'. 
+
+In der Regel enthalten einige Archetypen ein einziges Datenelement für eine einfache Beschreibung der Körperstelle - zum Beispiel OBSERVATION.blood_pressure und CLUSTER.symptom bei der Beschreibung von Ohrenschmerzen. In dieser Situation, in der der Wertesatz vorhersehbar und einfach zu definieren ist, ist dieses einzelne Datenelement eine sehr genaue und pragmatische Art, den Ort im Körper zu erfassen und zu einem späteren Zeitpunkt abzufragen. In Situationen, in denen der anatomische Ort nicht genau definiert ist oder zur Laufzeit bestimmt werden muss, kann es jedoch flexibler sein, diesen strukturierten Archetyp zu verwenden.
+
+Dieser Archetyp ist speziell für die Verwendung im Kontext geeigneter ENTRY- oder CLUSTER-Archetypen vorgesehen, die den Kontext der identifizierten Körperstelle liefern, einschließlich der Einfügung in den CLUSTER.anatomical_location, wenn der \"Name der Körperstelle\" oder andere Datenelemente ebenfalls erforderlich sind.
+
+Klinische Anwendungsfälle: 
+- 5 cm inferior des linken Schienbeinhöckers;
+- 2 cm medial zur rechten Brustwarze; und
+- 5 cm innerhalb der Analöffnung.
+
+In den Fällen, in denen der CLUSTER.anatomical_location nur zur Benennung eines großen und/oder unspezifischen Körperteils verwendet werden kann, unterstützt die Verwendung dieses Archetyps im SLOT \"Alternative Struktur\" die Erfassung einer genaueren Position - beispielsweise 2 cm anterior der Fossa cubitalis des linken Unterarms oder 4 cm unterhalb des Rippenbogens an der Brustwand in der mittleren Schlüsselbeinlinie.">
+            misuse = <"Nicht für die Angabe von \"unilateral\" und \"bilateral\" zu verwenden, da diese Begriffe eher für Schlussfolgerungen als für anatomische Orte stehen.
+
+Nicht zur Angabe der einfachen Lage einer benannten physischen Stelle im Körper zu verwenden.
+
+Nicht zu verwenden, um eine einfache Position einer benannten physischen Stelle im Körper anzugeben, wie z. B. linker Oberschenkelknochen oder mediale Seite der Nase. Zu diesem Zweck ist der Archetype CLUSTER.anatomical_location zu verwenden.
+
+Dieser Archetype darf nicht verwendet werden, um die Lage anatomischer Merkmale auf mikroskopischer Ebene darzustellen, z. B. bei histopathologischen Berichten. Verwenden Sie zu diesem Zweck einen CLUSTER-Archetype für Histopathologie, der in den Archetype OBSERVATION.laboratory_test_result eingebettet ist.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"För registrering av strukturerade detaljer om en enda fysisk plats på eller i människokroppen i förhållande till andra makroskopiska anatomiska landmärken.">
+            keywords = <"plats", "lokalisering", "anatomisk", "relativ", "ungefärlig", "anatomisk region", "topografisk plats", "topografisk anatomi", "makroskopisk anatomi", "makroskopisk", "anatomi", "placering">
+            use = <"Används för att registrera strukturerade och enhetliga detaljer om en enda identifierad fysisk plats på eller i människokroppen genom att beskriva platsen i förhållande till identifierade makroskopiska anatomiska landmärken. Det kan vara nödvändigt att beskriva en enkel fysisk plats med mer än en relativ plats - till exempel 2 cm lägre än \"landmärke A\" OCH 3 cm medialt till \"landmärke B\".
+
+Vissa arketyper innehåller ett enkelt dataelement för en enkel beskrivning av en plats på kroppen - till exempel OBSERVATION.blood_pressure och CLUSTER.symptom_sign. I de fall där värden är förutsägbara och enkla att definiera är dessa dataelement ett mycket exakt och praktiskt sätt att registrera och hämta en anatomisk plats. I fall där den anatomiska platsen inte är väldefinierad eller behöver definieras i en applikation kan det vara mer flexibelt att använda denna strukturerade arketyp.
+
+Den här arketypen är speciellt utformad för användning i ENTRY- och CLUSTER-arketyper som ger sammanhanget för den identifierade kroppsplatsen.
+
+Fall för klinisk användning:
+-5 cm lägre än vänster tuberositas tibiae.
+-2 cm medialt till höger bröstvårta.
+-5 cm inuti analöppningen.
+
+I en situation där CLUSTER.anatomical_location endast kan användas för att namnge en större eller ospecifik kroppsdel kan användningen av denna arketyp i SLOT för \"Alternativ struktur\" stödja registreringen av en mer exakt plats - t.ex. 2 cm främre än fossa cubitalis på vänster arm eller 4 cm under revbensbågen i medioklavikularlinjen på bröstväggen.
+">
+            misuse = <"Används inte för att registrera \"ensidig\" eller \"bilateral\", eftersom dessa termer kvalificerar sig för slutsatser snarare än anatomiska platser.
+
+Används inte för att ange en enda fysisk plats på kroppen som vänster lårben eller den mediala delen av näsan. Använd arketypen CLUSTER.anatomical_location för detta.
+
+Används inte för att specificera mikroskopiska anatomiska platser.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For registrering av strukturerte detaljer om et enkelt fysisk sted på eller i menneskekroppen i forhold til andre makroskopiske anatomiske landemerker.">
+            keywords = <"sted", "lokalisering", "anatomisk", "relativ", "omtrentlig", "anatomisk region", "topografisk sted", "topografisk anatomi", "makroskopisk anatomi", "makroskopisk", "anatomi", "plassering">
+            use = <"Brukes for å registrere strukturerte og ensartede detaljer om et enkelt identifisert fysisk sted på eller i menneskekroppen ved å beskrive lokaliseringen i relasjon til identifiserte makroskopiske anatomiske landemerker. Det kan være nødvendig å beskrive en enkel fysisk lokalisering med mer enn en relativ lokalisering - for eksempel 2 cm inferiort for \"landemerke A\" OG 3 cm medialt for \"landemerke B\".
+
+Noen arketyper inneholder et enkelt dataelement for enkel beskrivelse av et sted på kroppen - for eksempel OBSERVATION.blood_pressure (Blodtrykk), og CLUSTER.symptom_sign (Symptom/sykdomstegn). I tilfeller hvor verdisettet er forutsigbart og enkelt å definere, er disse dataelementene en meget nøyaktig og praktisk måte for å registrere og gjenfinne et anatomisk sted. I tilfeller når den anatomiske lokaliseringen ikke er veldefinert eller må defineres i en applikasjon, kan det være mer fleksibelt å bruke denne strukturerte arketypen.
+
+Denne arketypen er spesifikt designet for bruk i ENTRY- og CLUSTER-arketyper som gir konteksten for det identifiserte kroppsstedet.
+
+Kliniske brukstilfeller:
+-5 cm inferiort i forhold til venstre tibiale tuberositas.
+-2 cm medialt for den høyre brystvorten.
+-5 cm innenfor analåpningen.
+
+I en situasjon hvor CLUSTER.anatomical_location (Anatomisk lokalisering) bare kan brukes for å navngi en større eller uspesifikk kroppsdel, kan bruken av denne arketypen i \"Alternativ struktur\"-SLOTet understøtte registreringen av en mer presis lokasjon - f.eks. 2 cm anteriort for fossa cubiti på venstre arm eller 4 cm under høyre costal kant i midtclaviculær linjen på brystveggen på høyre side.">
+            misuse = <"Brukes ikke for å registrere \"unilateral\" eller \"bilateral\", da disse uttrykkene er kvalifikatorer for konklusjoner heller enn anatomiske lokaliseringer.
+
+Brukes ikke for spesifisering av et enkelt navngitt fysisk sted på kroppen som venstre femur eller den mediale del av nesen. Bruk arketypen CLUSTER.anatomical_location (Anatomisk lokalisering) for dette.
+
+Brukes ikke for å spesifisere mikroskopiske anatomiske lokaliseringer.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Identificar and registras detalhes estruturados sobre um único local físico dentro ou fora do corpo humano, a partir das suas relações com outros pontos macroscópicos de referência anatômica.">
+            keywords = <"localização", "local", "anatômico", "relativo", "aproximado", "região anatômica", "Anatomia topográfica", "Anatomia macroscópica", "macroscópico", "anatômico", "anatomia">
+            use = <"Utilizar para registrar os detalhes estruturados e consistentes sobre um único local físico identificado no corpo humano ou dentro dele, descrevendo sua localização em relação a marcos anatômicos macroscópicos identificados. Pode ser necessário descrever a localização física única usando mais de uma localização relativa - por exemplo, 2 cm inferior a \"marco A\" E 3 cm medial para 'marco B'.
+
+Na prática, alguns arquétipos possuem um único elemento de dados para representar uma descrição simples do local do corpo - por exemplo, OBSERVATION.blood_pressure e CLUSTER.smpto quando descreve a dor nos ouvidos. Nessa situação, onde o conjunto de valores é previsível e simples de definir, este elemento de dados único é uma maneira muito precisa e pragmática de gravar o local do corpo e consultar posteriormente. No entanto, na situação em que a localização anatômica não está bem definida ou precisa ser determinada em tempo de execução, pode ser mais flexível usar este arquétipo estruturado.
+
+Este arquétipo é projetado especificamente para ser usado no contexto de qualquer arquétipo ENTRY ou CLUSTER apropriado que forneça o contexto do local do corpo identificado, incluindo a inserção dentro da localização CLUSTER.anatomical se \"Nome do site do corpo\" ou outros elementos de dados também forem necessários.
+
+Casos de uso clínico:
+- 5 cm inferior à tuberosidade tibial esquerda
+- 2 cm medial ao mamilo direito
+- aspecto medial da unha do dedo indicador da mão.
+
+Na situação em que o CLUSTER.anatomical_location só pode ser usado para nomear uma parte do corpo grande e / ou não específica, o uso deste arquétipo dentro do SLOT 'Estrutura alternativa' suportará a gravação de uma localização mais precisa - por exemplo, 2 Cm anterior à fossa cubital do antebraço esquerdo ou 4 cm abaixo da margem costal R na parede torácica na linha médio clavicular.
+">
+            misuse = <"Não utilizar para especificar ocorrências de características anatômicas de lateralidade.
+Não utilizar para especificar um local simples de locais do corpo já nominados, tais como, femur esquerdo ou a fossa medial do nariz. Utilize neste caso o CLUSTER.anatomical_location.">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"تسجيل المكان التشريحي بالتفصيل">
+            keywords = <"الموقع", "المكان", "تشريحي">
+            use = <"">
+            misuse = <"لا يستخدم لتحديد حالات الحدوث في جانب واحد أو في الجانبين - حيث إن ذلك متعلق بتقييم قد يتضمن العديد من الأماكن">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            purpose = <"*To record details about anatomical location.(en)">
+            keywords = <"*location(en)", "*site(en)", "*anatomical(en)">
+            use = <"">
+            misuse = <"*Not for specifiying unilateral/bilateral occurence - this is related to an evaluation which perhaps includes multiple locations.(en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To identify and record structured details about a single physical site on, or within, the human body in terms of its relationship to other macroscopic anatomical landmarks.">
+            keywords = <"location", "site", "anatomical", "relative", "approximate", "anatomic region", "topographic anatomy", "macroscopic anatomy", "macroscopic", "anatomic", "anatomy">
+            use = <"Use to record structured and consistent details about a single identified physical site on, or within, the human body by describing its location in relation to identified macroscopic anatomical landmarks. It may be necessary to describe the single physical location using more than one relative location - for example, 2 cm inferior to 'landmark A' AND 3 cm medial to 'landmark B'. 
+
+In practice, some archetypes carry a single data element for carrying a simple description of body site - for example, OBSERVATION.blood_pressure and CLUSTER.symptom when describing ear pain. In this situation, where the value set is predictable and simple to define, this single data element is a very accurate and pragmatic way to record the site in the body and to query at a later date. However in the situation where the anatomical location is not well defined or needs to be determined at run-time, it may be more flexible to use this structured archetype.
+
+This archetype is specifically designed to be used within the context of any appropriate ENTRY or CLUSTER archetypes which supply the context of the identified body site, including insertion within the CLUSTER.anatomical_location if 'Body site name' or other data elements are also required.
+
+Clinical use cases: 
+- 5 cm inferior to the left tibial tuberosity;
+- 2 cm medial to the right nipple; and
+- 5 cm within the anal opening.
+
+In the situation where the CLUSTER.anatomical_location can only be used to name a large and/or non-specific body part, the use of this archetype within the 'Alternative Structure' SLOT will support recording of a more precise location - for example, 2 cm anterior to the cubital fossa of the left forearm or 4 cm below R costal margin on the chest wall in the mid-clavicular line.">
+            misuse = <"Not to be used to record 'unilateral' and 'bilateral', as these terms are qualifiers for conclusions rather than anatomical locations.
+
+Not to be used to specify a simple location of a named physical site in the body.
+
+Not to be used to specify a simple location of a named physical site in the body, such as left femur or medial aspect of nose. Use the CLUSTER.anatomical_location archetype for this purpose.
+
+Not to be used to represent location of anatomical features at the microscopic level, for example in reporting histopathology. Use a CLUSTER archetype for histopathology nested within the OBSERVATION.laboratory_test_result archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Relative anatomical location
+        items cardinality matches {1..*; unordered} matches {
+            CLUSTER[at0020] matches {    -- Relative location
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0021] occurrences matches {1} matches {    -- Landmark name
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                    ELEMENT[at0062] occurrences matches {0..1} matches {    -- Laterality
+                        value matches {
+                            DV_CODED_TEXT[at9009] matches {
+                                defining_code matches {[ac9007]}    -- Laterality (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Distance from landmark
+                        value matches {
+                            DV_QUANTITY[at9004] matches {
+                                property matches {[at9000]}    -- Length
+                                [magnitude, units, precision] matches {
+                                    [{|>=0.0|}, {"cm"}, {1}],
+                                    [{|>=0.0|}, {"[in_i]"}, {1}],
+                                    [{|>=0.0|}, {"mm"}, {1}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0006] occurrences matches {0..6} matches {    -- Direction
+                        value matches {
+                            DV_CODED_TEXT[at9005] matches {
+                                defining_code matches {[ac9008]}    -- Direction (synthesised)
+                            }
+                            DV_TEXT[at9006]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9007]
+                }
+            }
+            allow_archetype CLUSTER[at0054] matches {    -- Multimedia representation
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.media_file(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Relative anatomische Lage">
+                description = <"Eine physische Stelle am oder im menschlichen Körper, die im Hinblick auf ihre Beziehung zu anderen Körperteilen beschrieben wird.">
+            >
+            ["at0006"] = <
+                text = <"Richtung">
+                description = <"Angaben zur relativen Richtung der Körperstelle im Verhältnis zum Orientierungspunkt.">
+                comment = <"Gemeinsame Aspekte wurden als Wertesatz aufgenommen, der im Laufe der Zeit erweitert werden kann, sowie eine Freitextoption. Es wird davon ausgegangen, dass der Körper in der anatomischen Position beschrieben wird. Die Häufigkeit ist so festgelegt, dass maximal sechs Richtungen erfasst werden können. Innerhalb dieses Wertesatzes werden Kliniker erkennen, dass es acht sich gegenseitig ausschließende Richtungspaare gibt - zum Beispiel kann eine Körperstelle nicht gleichzeitig \"medial zu\" und \"lateral zu\" einer identischen Landmarke liegen. Weitere sich gegenseitig ausschließende Paare sind \"Superior zu\" und \"Inferior zu\", \"Anterior zu\" und \"Posterior zu\", \"Proximal zu\" und \"Distal zu\", \"Oberflächlich zu\" und \"Tief zu\", \"Kranial zu\" und \"Caudal zu\", \"Rostral zu\" und \"Caudal zu\" sowie \"Innerhalb\" und \"Äußerlich zu\". Kombinationen aus einer Auswahl aus jedem der acht Paare sind potenziell gültig, obwohl es in der klinischen Praxis sehr unwahrscheinlich ist, dass mehr als zwei Richtungen gleichzeitig erfasst werden müssen, um eine bestimmte Körperstelle zu beschreiben.">
+            >
+            ["at0007"] = <
+                text = <"Medial nach">
+                description = <"Zur Mitte hin, vom Orientierungspunkt aus.">
+            >
+            ["at0008"] = <
+                text = <"Seitlich nach">
+                description = <"Zur Seite hin, vom Orientierungspunkt aus.">
+            >
+            ["at0009"] = <
+                text = <"Oben liegend hin">
+                description = <"Oberhalb des Orientierungspunkts.">
+            >
+            ["at0010"] = <
+                text = <"Unten liegend hin">
+                description = <"Unterhalb des Orientierungspunkts.">
+            >
+            ["at0012"] = <
+                text = <"Nach vorne hin">
+                description = <"Vom Orientierungspunkt nach vorne oder ventral gerichtet.">
+            >
+            ["at0013"] = <
+                text = <"Nach hinten hin">
+                description = <"Nach hinten oder dorsal vom Orientierungspunkt aus.">
+            >
+            ["at0020"] = <
+                text = <"Relative Lage">
+                description = <"Detail zur Identifizierung einer einzelnen physischen Stelle am oder im menschlichen Körper in Bezug auf ihre Beziehung zu anderen makroskopischen anatomischen Orientierungspunkten.">
+                comment = <"Um einen genauen Bezug herzustellen, kann mehr als eine relative Position erforderlich sein.">
+            >
+            ["at0021"] = <
+                text = <"Name des Orientierungspunkts">
+                description = <"Identifizierte Körperstelle, die als Referenzpunkt für die tatsächliche Körperstelle dient.">
+                comment = <"Der Name des Orientierungspunkts kann eine anatomische Struktur (z. B. den Nabel), eine anatomische Linie (z. B. die mittlere Schlüsselbeinlinie) oder einen genau definierten anatomischen Punkt (z. B. den McBurney-Punkt) bezeichnen. Dieses Datenelement sollte nach Möglichkeit mit einer Terminologie kodiert werden, die eine Entscheidungshilfe auslösen kann - ein geeignetes Termset für die Verwendung in diesem Fall könnte aus einzelnen Begriffen oder einer Liste vorkoordinierter Begriffe bestehen. Freier Text sollte nur verwendet werden, wenn keine geeignete Terminologie verfügbar ist. Es wird dringend empfohlen, den \" Orientierungspunktnamen \" so spezifisch wie anatomisch möglich zu erfassen. Beispiel: Aufzeichnung von \"oberes Augenlid\" statt Aufzeichnung von \"Augenlid\" mit \"ober\" als Qualifizierer; \"fünfte Rippe\" statt \"Rippe\" mit einem numerischen Identifikator.">
+            >
+            ["at0022"] = <
+                text = <"Entfernung vom Orientierungspunkt">
+                description = <"Entfernung des Standorts vom ermittelten Orientierungspunkts.">
+            >
+            ["at0023"] = <
+                text = <"Beschreibung">
+                description = <"Narrative Beschreibung, die zur weiteren Verfeinerung und Unterstützung der relativen Standortstrukturdaten verwendet werden kann.">
+                comment = <"Zum Beispiel: Ein Tattoo bedeckt die untere Hälfte dieses Bereichs.">
+            >
+            ["at0054"] = <
+                text = <"Multimediale Darstellung">
+                description = <"Bild oder andere Medien, die zur Identifizierung der Stelle am Körper verwendet werden.">
+            >
+            ["at0055"] = <
+                text = <"Zum Rumpf hin">
+                description = <"Näher am Körper, relativ zum Orientierungspunkt.">
+            >
+            ["at0056"] = <
+                text = <"Vom Rumpf entfernt">
+                description = <"Weiter vom Körper entfernt, relativ zum Orientierungspunkt.">
+            >
+            ["at0057"] = <
+                text = <"Oberflächlich liegend hin">
+                description = <"Näher an der Außenfläche, relativ zum Orientierungspunkt">
+            >
+            ["at0058"] = <
+                text = <"Tief nach">
+                description = <"Weiter entfernt von der Außenfläche, relativ zum Orientierungspunkt.">
+            >
+            ["at0059"] = <
+                text = <"Innerhalb">
+                description = <"Einwärts von der äußeren Öffnung einer Körperhöhle, zum Beispiel des äußeren Gehörgangs, einer Fistel oder einer Wunde, relativ zum Orientierungspunkt.
+">
+            >
+            ["at0060"] = <
+                text = <"Außen gelegen nach">
+                description = <"Von der inneren Öffnung einer Körperhöhle, beispielsweise einer Analfistel oder einer Nasenhöhle, relativ zum Orientierungspunkt nach außen.">
+            >
+            ["at0062"] = <
+                text = <"Lateralität">
+                description = <"Die Seite des Körpers, auf der sich die identifizierte Orientierungspunkte befinden.">
+                comment = <"Wenn der identifizierte Orientierungspunkt keine Lateralität hat, sollte dieses Datenelement keinen Wert haben. Wenn das Datenelement \" Orientierungspunkt Name\" vordefinierte Begriffe verwendet, die die Lateralität einschließen, dann ist dieses Datenelement überflüssig.">
+            >
+            ["at0063"] = <
+                text = <"Am Mund">
+                description = <"In Richtung Mund, relativ zum Orientierungspunkt. Wird normalerweise zur Beschreibung von Stellen im Verdauungssystem verwendet.
+">
+            >
+            ["at0064"] = <
+                text = <"Am Anus">
+                description = <"In Richtung Anus, relativ zum Orientierungspunkt. Wird normalerweise zur Beschreibung von Stellen im Verdauungssystem verwendet.">
+            >
+            ["at0065"] = <
+                text = <"Fußwärts nach">
+                description = <"Zum Steißbein hin, relativ zum Orientierungspunkt.">
+            >
+            ["at0066"] = <
+                text = <"Kopfwärts nach">
+                description = <"In Richtung Kopf, relativ zum Orientierungspunkt.">
+            >
+            ["at0067"] = <
+                text = <"Zur Nase hin gelegen">
+                description = <"Zur Vorderseite des Kopfes, relativ zum Orientierungspunkt.">
+            >
+            ["at0068"] = <
+                text = <"Links">
+                description = <"Linke Körperseite.">
+            >
+            ["at0069"] = <
+                text = <"Rechts">
+                description = <"Rechte Körperseite.">
+            >
+            ["at9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac9007"] = <
+                text = <"Lateralität (synthesised)">
+                description = <"Die Seite des Körpers, auf der sich die identifizierte Orientierungspunkte befinden. (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"Richtung (synthesised)">
+                description = <"Angaben zur relativen Richtung der Körperstelle im Verhältnis zum Orientierungspunkt. (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Relativ anatomisk lokalisation">
+                description = <"En identifierad fysisk plats på eller i människokroppen, i förhållande till andra kroppsdelar och ytmarkeringar.
+
+">
+            >
+            ["at0006"] = <
+                text = <"Riktning">
+                description = <"Detalj om den relativa riktningen från kroppsstället till landmärket.
+
+">
+                comment = <"Vanliga aspekter ingår som värdeuppsättningar som kan utökas över tid och beskrivning av fritext är också ett alternativ. Man antar att kroppen beskrivs när den är i den anatomiska positionen. En maximal registrering av 6 riktningar är tillåten. Med denna uppsättning värden finns det 8 ömsesidiga parvisa undantag - till exempel kan ett kroppsställe inte vara både \"medialt till\" och \"lateralt till\" ett identifierat riktmärke. Andra parvisa ömsesidiga uteslutningar är \"ovan\" och \"nedan\", \"främre\" och \"bakre\", \"proximal\" och \"distal\", \"ytlig\" och \"djup\", \"kranial\" och \"kaudal\", \"rostral och kaudal\" och \"inuti\" och \"utanför\".
+Kombinationer som valts inom vart och ett av de 8 paren är i princip giltiga, även om det i praktiken är osannolikt att det finns ett behov av registrering av mer än två riktningar samtidigt för att beskriva riktningen för en kroppsplats.
+">
+            >
+            ["at0007"] = <
+                text = <"Medial">
+                description = <"Mot mitten, från landmärket">
+            >
+            ["at0008"] = <
+                text = <"Lateral">
+                description = <"Mot sidan, från landmärket">
+            >
+            ["at0009"] = <
+                text = <"Ovan">
+                description = <"Ovanför landmärket">
+            >
+            ["at0010"] = <
+                text = <"Nedan">
+                description = <"Under landmärket">
+            >
+            ["at0012"] = <
+                text = <"Främre">
+                description = <"Mot den främre, eller ventrala aspekten, från landmärket.">
+            >
+            ["at0013"] = <
+                text = <"Bakre">
+                description = <"Mot baksidan, eller dorsalt, från landmärket">
+            >
+            ["at0020"] = <
+                text = <"Relativ plats">
+                description = <"Detaljerad identifiering av en enda fysisk plats, antingen på eller i människokroppen, baserad på dess förhållande till andra makroskopiska anatomiska landmärken.
+
+">
+                comment = <"Fler än en relativ plats kan krävas för att tillhandahålla en korrekt korsreferens.">
+            >
+            ["at0021"] = <
+                text = <"Namn på landmärke">
+                description = <"Identifierat kroppsställe som används som referenspunkt för det faktiska kroppsstället.">
+                comment = <"\"Namn på landmärke\" kan identifiera en anatomisk struktur (såsom navelsträngen), en anatomisk linje (såsom den mellersta klavikulära linjen) eller en väldefinierad anatomisk punkt (som MacBurneys punkt) . Detta dataelement bör kodas till en terminologi som stöder beslutsstöd när så är möjligt. En lämplig terminologi för detta kan inkludera enskilda begrepp eller en lista med förkoordinerade termer. Fritext bör endast användas när det inte finns någon lämplig terminologi. Det rekommenderas starkt att \" Namn på landmärke\" registreras så specifikt som det är anatomiskt möjligt. Registrera till exempel övre ögonlock snarare än ögonlock med övre som kvalificering, eller femte revbenet snarare än revben med femte som numerisk kvalificering.">
+            >
+            ["at0022"] = <
+                text = <"Avstånd från landmärket">
+                description = <"Avstånd till kroppsstället från det identifierade landmärket.">
+            >
+            ["at0023"] = <
+                text = <"Beskrivning">
+                description = <"Berättande beskrivning för att ytterligare förfina och stödja relativa platsstrukturerade data.">
+                comment = <"Till exempel: en tatuering täcker den nedre halvan av detta område.">
+            >
+            ["at0054"] = <
+                text = <"Digital representation">
+                description = <"Bild eller annat media som används för att stödja identifiering av platsen på kroppen.">
+            >
+            ["at0055"] = <
+                text = <"Proximal">
+                description = <"Närmare kroppen, relativt landmärket.">
+            >
+            ["at0056"] = <
+                text = <"Distal">
+                description = <"Längre bort från kroppen, i förhållande till landmärket.">
+            >
+            ["at0057"] = <
+                text = <"Ytlig">
+                description = <"Närmare den yttre ytan, relativt landmärket.">
+            >
+            ["at0058"] = <
+                text = <"Djup">
+                description = <"Längre bort från den yttre ytan, relativt landmärket.">
+            >
+            ["at0059"] = <
+                text = <"Inuti">
+                description = <"Inåt från den yttre öppningen i en kroppshålighet, till exempel yttre hörselgång, fistel eller sår, relativt landmärket">
+            >
+            ["at0060"] = <
+                text = <"Utom">
+                description = <"Utåt från den inre öppningen av ett kroppshålrum, till exempel analfistel eller näshålighet, relativt landmärket.">
+            >
+            ["at0062"] = <
+                text = <"Lateralitet">
+                description = <"Den sida av kroppen där det identifierade landmärket är lokaliserat.
+
+">
+                comment = <"Om det identifierade landmärket inte har lateralitet saknar detta dataelement värde. Om \"Namn på landmärke\" använder förkoordinerade termer som innehåller lateralitet är detta dataelement överflödigt.">
+            >
+            ["at0063"] = <
+                text = <"Oral">
+                description = <"Mot munnen, relativt landmärket. Används vanligtvis för att beskriva platser i matsmältningssystemet">
+            >
+            ["at0064"] = <
+                text = <"Anal">
+                description = <"Mot anus, i förhållande till landmärket. Används vanligtvis för att beskriva platser i matsmältningssystemet.">
+            >
+            ["at0065"] = <
+                text = <"Kaudal">
+                description = <"Mot svansen i förhållande till landmärket">
+            >
+            ["at0066"] = <
+                text = <"Kranial">
+                description = <"Mot huvudet, relativt landmärket.">
+            >
+            ["at0067"] = <
+                text = <"Rostral">
+                description = <"Mot huvudets framsida, relativt landmärket.">
+            >
+            ["at0068"] = <
+                text = <"Vänster">
+                description = <"Vänster sida av kroppen">
+            >
+            ["at0069"] = <
+                text = <"Höger">
+                description = <"Höger sida av kroppen">
+            >
+            ["at9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac9007"] = <
+                text = <"Lateralitet (synthesised)">
+                description = <"Den sida av kroppen där det identifierade landmärket är lokaliserat.
+
+ (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"Riktning (synthesised)">
+                description = <"Detalj om den relativa riktningen från kroppsstället till landmärket.
+
+ (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Relativ anatomisk lokalisering">
+                description = <"Ett enkelt identifisert fysisk sted på eller i menneskekroppen, i forhold til andre kroppsdeler og overflatemarkeringer.">
+            >
+            ["at0006"] = <
+                text = <"Retning">
+                description = <"Detalj om den relative retningen fra kroppsstedet til landemerket.">
+                comment = <"Vanlige aspekter er tatt med som verdisett som kan utvides over tid, og fritekstbeskrivelse er også en mulighet. Det antas at kroppen beskrives når den er i den anatomiske posisjonen. Det tillates maksimalt registrering av 6 retninger. Med dette verdisettet er det 8 gjensidige parvise utelukkelser - for eksempel kan et kroppssted ikke både være \"medialt for\" og \"lateralt for\" et identifisert landemerke. Andre parvise gjensidige utelukkelser er \"ovenfor\" og \"nedenfor\", \"anteriort\" og \"posteriort\", \"proksimalt\" og \"distalt\", \"overfladisk\" og \"dypt\", \"kranialt\" og \"kaudalt\", \"rostralt og kaudalt\", og \"inni\" og \"utenfor\".
+Kombinasjoner valgt innenfor hvert av de 8 parene er i prinsippet gyldige, selv om det i praksis er usannsynlig at det er behov for registrering av mer enn to retninger samtidig for å beskrive retningen til et kroppssted.
+">
+            >
+            ["at0007"] = <
+                text = <"Medialt for">
+                description = <"Mot midten, fra landemerket.">
+            >
+            ["at0008"] = <
+                text = <"Lateralt for">
+                description = <"Mot siden, fra landemerket.">
+            >
+            ["at0009"] = <
+                text = <"Ovenfor">
+                description = <"Ovenfor landemerket.">
+            >
+            ["at0010"] = <
+                text = <"Nedenfor">
+                description = <"Nedenfor landemerket.">
+            >
+            ["at0012"] = <
+                text = <"Anteriort for">
+                description = <"Mot framsiden, eller ventralt aspekt, fra landemerket.">
+            >
+            ["at0013"] = <
+                text = <"Posteriort for">
+                description = <"Mot baksiden, eller dorsalt aspekt, fra landemerket.">
+            >
+            ["at0020"] = <
+                text = <"Relativ lokalisering">
+                description = <"Detalj for identifisering av et enkelt identifisert fysisk sted, enten på eller i menneskekroppen, som beskrives i forhold til dets relasjon til andre makroskopiske anatomiske landemerker.">
+                comment = <"Mer enn en relativ lokalisering kan bli nødvendig for å gi en nøyaktig kryssreferanse.">
+            >
+            ["at0021"] = <
+                text = <"Navn på landemerke">
+                description = <"Identifisert kroppssted som benyttes som referansepunkt for det aktuelle kroppsstedet.">
+                comment = <"\"Navn på landemerke\" kan identifisere en anatomisk struktur (som umbilicus), en anatomisk linje (som midt-claviculær linjen) og et veldefinert anatomisk punkt (som MacBurney's punkt). Dette dataelementet bør kodes i en terminologi som understøtter beslutningsstøtte når mulig. En passende terminologi for dette kunne omfatte individuelle konsepter eller en liste av prekoordinerte termer. Fritekst bør bare brukes når det ikke finnes en passende terminologi. Det anbefales sterkt at \"Navn på landemerke\" registreres så spesifikt som det er anatomisk mulig. For eksempel registrer øvre øyelokk fremfor øyelokk med øvre som kvalifikator, eller femte ribbein frem for ribbein med femte som numerisk kvalifikator.">
+            >
+            ["at0022"] = <
+                text = <"Avstand fra landemerke">
+                description = <"Avstanden til lokaliseringen fra det identifiserte landemerket.">
+            >
+            ["at0023"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse for å ytterligere definere å støtte den relative lokaliseringens strukturerte data.">
+                comment = <"For eksempel: En tatovering dekker den nederste halvdel av dette området.">
+            >
+            ["at0054"] = <
+                text = <"Multimedia representasjon">
+                description = <"Bilder eller annen multimedia som brukes for å støtte identifiseringen av kroppsstedet.">
+            >
+            ["at0055"] = <
+                text = <"Proksimalt for">
+                description = <"Nærmere kroppen relativt til landemerket.">
+            >
+            ["at0056"] = <
+                text = <"Distalt for">
+                description = <"Lengre vekk fra kroppen til forhold til landemerket.">
+            >
+            ["at0057"] = <
+                text = <"Overfladisk for">
+                description = <"Nærmere overflaten i forhold til landemerket.">
+            >
+            ["at0058"] = <
+                text = <"Dypt for">
+                description = <"Lengre vekk fra overflaten relativt til landemerket.">
+            >
+            ["at0059"] = <
+                text = <"Inni">
+                description = <"Innover fra fra den ytre åpningen til et kroppshulrom, f.eks. øregang, fistel eller sår, i forhold til landemerket.">
+            >
+            ["at0060"] = <
+                text = <"Utenfor">
+                description = <"Utover fra den indre åpningen til et kroppshulrom, f.eks. analfistel, i forhold til landemerket.">
+            >
+            ["at0062"] = <
+                text = <"Kroppsside">
+                description = <"Siden av kroppen hvor det identifiserte landemerket er lokalisert.">
+                comment = <"Om ikke det identifiserte landemerket har lateralitet har dette dataelementet ingen verdi. Bruker dataelementet \"Navn på landemerke\" prekoordinerte termer som inneholder lateralitet er dette dataelementet overflødig.">
+            >
+            ["at0063"] = <
+                text = <"Oralt for">
+                description = <"Mot munnen, i forhold til landemerket. Vanligvis brukt for å beskrive lokaliseringer i fordøyelsessystemet.">
+            >
+            ["at0064"] = <
+                text = <"Analt for">
+                description = <"Mot anus, i forhold til landemerket. Vanligvis brukt for å beskrive lokaliseringer i fordøyelsessystemet.">
+            >
+            ["at0065"] = <
+                text = <"Kaudalt for">
+                description = <"Mot halen, i forhold til landemerket.">
+            >
+            ["at0066"] = <
+                text = <"Kranialt for">
+                description = <"Mot hodet, i forhold til landemerket.">
+            >
+            ["at0067"] = <
+                text = <"Rostralt for">
+                description = <"Mot forsiden av hodet, i forhold til landemerket.">
+            >
+            ["at0068"] = <
+                text = <"Venstre">
+                description = <"Venstre side av kroppen.">
+            >
+            ["at0069"] = <
+                text = <"Høyre">
+                description = <"Høyre side av kroppen.">
+            >
+            ["at9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac9007"] = <
+                text = <"Kroppsside (synthesised)">
+                description = <"Siden av kroppen hvor det identifiserte landemerket er lokalisert. (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"Retning (synthesised)">
+                description = <"Detalj om den relative retningen fra kroppsstedet til landemerket. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Localização anatômica relativa">
+                description = <"Loca físico fora ou dentro do corpo humano que pode ser descrito em termos de seus relacionamentos com outras partes do corpo.">
+            >
+            ["at0006"] = <
+                text = <"*Direction(en)">
+                description = <"*Detail about the relative direction of the body site to the landmark.(en)">
+                comment = <"*Common aspects have been included as a value set, which can be extended over time, plus a free text option. Assumes that the body is being described while in the anatomical position. Occurrences are set to allow for a maximum of six directions to be recorded. Within this value set, clinicians will recognise that there are eight mutually exclusive directional pairs - for example, a body site cannot be simultaneously 'medial to' and 'lateral to' an identical landmark. Other mutually exclusive pairs are 'Superior to' and 'Inferior to'; 'Anterior to' and 'Posterior to'; 'Proximal to' and 'Distal to'; 'Superficial to' and 'Deep to'; 'Cranial to' and 'Caudal to'; 'Rostral to' and Caudal to'; and 'Within' and 'External to'. Combinations made from one selection from within each of the eight pair sets is potentially valid, although in clinical practice it will be very unlikely to need to simultaneously record more than two directions to describe a specified body site.(en)">
+            >
+            ["at0007"] = <
+                text = <"Medial a(ao)">
+                description = <"Em direção ao meio do ponto de referência">
+            >
+            ["at0008"] = <
+                text = <"Lateral a (ao)">
+                description = <"Lateral ao ponto de referência.">
+            >
+            ["at0009"] = <
+                text = <"*Superior to(en)">
+                description = <"*Above the landmark.(en)">
+            >
+            ["at0010"] = <
+                text = <"*Inferior to(en)">
+                description = <"*Below the landmark.(en)">
+            >
+            ["at0012"] = <
+                text = <"Anterior a (ao)">
+                description = <"Na frente, ou ventralmente, em relação ao ponto de referência.">
+            >
+            ["at0013"] = <
+                text = <"Posterior a (ao)">
+                description = <"Para trás, ou dorsalmente, em relação ao ponto de referência.">
+            >
+            ["at0020"] = <
+                text = <"Localização relativa">
+                description = <"Detalhe para identificar um único local físico, seja dentro ou dentro do corpo humano em termos de sua relação com outros marcos anatômicos macroscópicos.">
+                comment = <"Mais de uma localização relativa pode ser necessária para fornecer uma referência cruzada precisa.">
+            >
+            ["at0021"] = <
+                text = <"Nome do ponto de referência">
+                description = <"Site do corpo identificado usado como ponto de referência para o local em questão do corpo.">
+                comment = <"O \"nome do ponto de referência\" pode ser uma estrutura anatômica (como o umbigo), uma linha anatômica (como a linha médio clavicular), um ponto anatômico bem definido (como o ponto de McBurney). Sempre que possível, este elemento deve ser codificado com uma terminologia capaz de desencadear o suporte à decisão - um termo apropriado para uso aqui pode incluir conceitos individuais ou uma lista de termos pré-coordenados. O texto livre deve ser usado somente se não houver uma terminologia apropriada disponível. É altamente recomendável que o \"nome do ponto de referência\" seja registrado tão especificamente como for anatomicamente possível. Por exemplo: registre a \"pálpebra superior\" ao invés de registrar 'pálpebra' com 'superior' como qualificador; \"Quinta costela\" em vez de \"costela\" com um qualificador numérico.">
+            >
+            ["at0022"] = <
+                text = <"Distância do ponto de referência">
+                description = <"Distância da localização ao ponto de referência identificado.">
+            >
+            ["at0023"] = <
+                text = <"Descrição">
+                description = <"Descrição narrativa que pode ser utilizada para refinar e apoiar os dados estruturados da localização relativa.">
+                comment = <"Por exemplo: uma tatuagem cobre a metade inferior desta área.">
+            >
+            ["at0054"] = <
+                text = <"Representação mulimídia">
+                description = <"Imagem ou outra mídia usada para suportar a identificação da localização no corpo.">
+            >
+            ["at0055"] = <
+                text = <"Proximal a">
+                description = <"Proximal em relação ao ponto de referência">
+            >
+            ["at0056"] = <
+                text = <"Distal a (ao),">
+                description = <"Distal em relação ao ponto de referência.">
+            >
+            ["at0057"] = <
+                text = <"Superficial a(ao)">
+                description = <"Próximo a superfície externa com relação ao ponto de referência.">
+            >
+            ["at0058"] = <
+                text = <"Em profundidade a">
+                description = <"Distante da superfície externa com relação ao ponto de referência.">
+            >
+            ["at0059"] = <
+                text = <"*Within(en)">
+                description = <"*Inwards from the outer opening of a body cavity, for example outer ear canal, fistula or wound, relative to the landmark.(en)">
+            >
+            ["at0060"] = <
+                text = <"*External to(en)">
+                description = <"*Outwards from the inner opening of a body cavity, for example anal fistula or nasal cavity, relative to the landmark.(en)">
+            >
+            ["at0062"] = <
+                text = <"Lateralidade">
+                description = <"O lado do corpo no qual o ponto de referência está localizado.">
+                comment = <"Se o ponto de referência identificado não tiver lateralidade, este elemento de dados não deve ser preenchido. Se o elemento 'nome do ponto de referência' usar termos pré-coordenados que incluam lateralidade, esse elemento de dados é redundante.">
+            >
+            ["at0063"] = <
+                text = <"*Oral to(en)">
+                description = <"*Towards the mouth, relative to the landmark. Usually used to describe locations within the digestive system.(en)">
+            >
+            ["at0064"] = <
+                text = <"*Anal to(en)">
+                description = <"*Towards the anus, relative to the landmark. Usually used to describe locations within the digestive system.(en)">
+            >
+            ["at0065"] = <
+                text = <"*Caudal to(en)">
+                description = <"*Towards the tail, relative to the landmark.(en)">
+            >
+            ["at0066"] = <
+                text = <"*Cranial to(en)">
+                description = <"*Towards the head, relative to the landmark.(en)">
+            >
+            ["at0067"] = <
+                text = <"*Rostral to(en)">
+                description = <"*Towards the front of the head, relative to the landmark.(en)">
+            >
+            ["at0068"] = <
+                text = <"*Left(en)">
+                description = <"*Left side of the body.(en)">
+            >
+            ["at0069"] = <
+                text = <"*Right(en)">
+                description = <"*Right side of the body.(en)">
+            >
+            ["at9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac9007"] = <
+                text = <"Lateralidade (synthesised)">
+                description = <"O lado do corpo no qual o ponto de referência está localizado. (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"*Direction(en) (synthesised)">
+                description = <"*Detail about the relative direction of the body site to the landmark.(en) (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"*Relative anatomical location(en)">
+                description = <"*A physical site on or within the human body that is described in terms of its relationship to other body parts.(en)">
+            >
+            ["at0006"] = <
+                text = <"*Direction(en)">
+                description = <"*Detail about the relative direction of the body site to the landmark.(en)">
+                comment = <"*Common aspects have been included as a value set, which can be extended over time, plus a free text option. Assumes that the body is being described while in the anatomical position. Occurrences are set to allow for a maximum of six directions to be recorded. Within this value set, clinicians will recognise that there are eight mutually exclusive directional pairs - for example, a body site cannot be simultaneously 'medial to' and 'lateral to' an identical landmark. Other mutually exclusive pairs are 'Superior to' and 'Inferior to'; 'Anterior to' and 'Posterior to'; 'Proximal to' and 'Distal to'; 'Superficial to' and 'Deep to'; 'Cranial to' and 'Caudal to'; 'Rostral to' and Caudal to'; and 'Within' and 'External to'. Combinations made from one selection from within each of the eight pair sets is potentially valid, although in clinical practice it will be very unlikely to need to simultaneously record more than two directions to describe a specified body site.(en)">
+            >
+            ["at0007"] = <
+                text = <"إنسيّ/ وسطي">
+                description = <"المكان النسبي هو متوسط للمَعْلَم">
+            >
+            ["at0008"] = <
+                text = <"جانبي">
+                description = <"المكان النسبي هو جانبي بالنسبة للمَعْلَم">
+            >
+            ["at0009"] = <
+                text = <"*Superior to(en)">
+                description = <"*Above the landmark.(en)">
+            >
+            ["at0010"] = <
+                text = <"*Inferior to(en)">
+                description = <"*Below the landmark.(en)">
+            >
+            ["at0012"] = <
+                text = <"أمامي">
+                description = <"المكان النسبي هو أمام المَعْلَم">
+            >
+            ["at0013"] = <
+                text = <"خلفي">
+                description = <"المكان النسبي هو خلف المَعْلَم ">
+            >
+            ["at0020"] = <
+                text = <"*Relative location(en)">
+                description = <"*Detail to identify a single physical site either on, or within, the human body in terms of its relationship to other macroscopic anatomical landmarks.(en)">
+                comment = <"*More than one relative location may be required to provide an accurate cross reference.(en)">
+            >
+            ["at0021"] = <
+                text = <"*Landmark name(en)">
+                description = <"*Identified body site used as a reference point for the actual body site.(en)">
+                comment = <"*'Landmark name' can identify an anatomical structure (such as the umbilicus), an anatomical line (such as the mid-clavicular line), a well defined anatomical point (such as McBurney's point). This data element should be coded with a terminology capable of triggering decision support, where possible - an appropriate termset for use here could comprise individual concepts or a list of precoordinated terms. Free text should be used only if there is no appropriate terminology available. It is strongly recommended that 'Landmark name' be recorded as specifically as is anatomically possible. For example: record 'upper eyelid' rather than recording 'eyelid' with 'upper' as a qualifier; 'fifth rib' rather than 'rib' with a numeric qualifier.(en)">
+            >
+            ["at0022"] = <
+                text = <"المسافة من المَعْلَم">
+                description = <"المسافة بين المكان و المَعْلَم المعروف">
+            >
+            ["at0023"] = <
+                text = <"*Description(en)">
+                description = <"*Narrative description that can be used to further refine and support the relative location structured data.(en)">
+                comment = <"*For example: a tattoo covers the bottom half of this area.(en)">
+            >
+            ["at0054"] = <
+                text = <"*Cluster(en)">
+                description = <"**(en)">
+            >
+            ["at0055"] = <
+                text = <"*Proximal to(en)">
+                description = <"**(en)">
+            >
+            ["at0056"] = <
+                text = <"*Distal to(en)">
+                description = <"**(en)">
+            >
+            ["at0057"] = <
+                text = <"*Superficial to(en)">
+                description = <"**(en)">
+            >
+            ["at0058"] = <
+                text = <"*Deep to(en)">
+                description = <"**(en)">
+            >
+            ["at0059"] = <
+                text = <"*Within(en)">
+                description = <"*Inwards from the outer opening of a body cavity, for example outer ear canal, fistula or wound, relative to the landmark.(en)">
+            >
+            ["at0060"] = <
+                text = <"*External to(en)">
+                description = <"*Outwards from the inner opening of a body cavity, for example anal fistula or nasal cavity, relative to the landmark.(en)">
+            >
+            ["at0062"] = <
+                text = <"*Laterality(en)">
+                description = <"*The side of the body on which the identified landmark is located.(en)">
+                comment = <"*If the identified landmark has no laterality, this data element should not have a value. If the 'Landmark name' data element uses pre-coordinated terms that include laterality, then this data element is redundant.(en)">
+            >
+            ["at0063"] = <
+                text = <"*Oral to(en)">
+                description = <"*Towards the mouth, relative to the landmark. Usually used to describe locations within the digestive system.(en)">
+            >
+            ["at0064"] = <
+                text = <"*Anal to(en)">
+                description = <"*Towards the anus, relative to the landmark. Usually used to describe locations within the digestive system.(en)">
+            >
+            ["at0065"] = <
+                text = <"*Caudal to(en)">
+                description = <"*Towards the tail, relative to the landmark.(en)">
+            >
+            ["at0066"] = <
+                text = <"*Cranial to(en)">
+                description = <"*Towards the head, relative to the landmark.(en)">
+            >
+            ["at0067"] = <
+                text = <"*Rostral to(en)">
+                description = <"*Towards the front of the head, relative to the landmark.(en)">
+            >
+            ["at0068"] = <
+                text = <"*Left(en)">
+                description = <"*Left side of the body.(en)">
+            >
+            ["at0069"] = <
+                text = <"*Right(en)">
+                description = <"*Right side of the body.(en)">
+            >
+            ["at9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac9007"] = <
+                text = <"*Laterality(en) (synthesised)">
+                description = <"*The side of the body on which the identified landmark is located.(en) (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"*Direction(en) (synthesised)">
+                description = <"*Detail about the relative direction of the body site to the landmark.(en) (synthesised)">
+            >
+        >
+        ["sl"] = <
+            ["at0000"] = <
+                text = <"*Relative anatomical location(en)">
+                description = <"*A physical site on or within the human body that is described in terms of its relationship to other body parts.(en)">
+            >
+            ["at0006"] = <
+                text = <"*Direction(en)">
+                description = <"*Detail about the relative direction of the body site to the landmark.(en)">
+                comment = <"*Common aspects have been included as a value set, which can be extended over time, plus a free text option. Assumes that the body is being described while in the anatomical position. Occurrences are set to allow for a maximum of six directions to be recorded. Within this value set, clinicians will recognise that there are eight mutually exclusive directional pairs - for example, a body site cannot be simultaneously 'medial to' and 'lateral to' an identical landmark. Other mutually exclusive pairs are 'Superior to' and 'Inferior to'; 'Anterior to' and 'Posterior to'; 'Proximal to' and 'Distal to'; 'Superficial to' and 'Deep to'; 'Cranial to' and 'Caudal to'; 'Rostral to' and Caudal to'; and 'Within' and 'External to'. Combinations made from one selection from within each of the eight pair sets is potentially valid, although in clinical practice it will be very unlikely to need to simultaneously record more than two directions to describe a specified body site.(en)">
+            >
+            ["at0007"] = <
+                text = <"Srednji">
+                description = <"*Relative location medial to the landmark.(en)">
+            >
+            ["at0008"] = <
+                text = <"Stranski">
+                description = <"*Relative location lateral to the landmark.(en)">
+            >
+            ["at0009"] = <
+                text = <"*Superior to(en)">
+                description = <"*Above the landmark.(en)">
+            >
+            ["at0010"] = <
+                text = <"*Inferior to(en)">
+                description = <"*Below the landmark.(en)">
+            >
+            ["at0012"] = <
+                text = <"Spredaj">
+                description = <"*Relative location anterior to the landmark.(en)">
+            >
+            ["at0013"] = <
+                text = <"Zadaj">
+                description = <"*Relative location posterior to the landmark.(en)">
+            >
+            ["at0020"] = <
+                text = <"*Relative location(en)">
+                description = <"*Detail to identify a single physical site either on, or within, the human body in terms of its relationship to other macroscopic anatomical landmarks.(en)">
+                comment = <"*More than one relative location may be required to provide an accurate cross reference.(en)">
+            >
+            ["at0021"] = <
+                text = <"*Landmark name(en)">
+                description = <"*Identified body site used as a reference point for the actual body site.(en)">
+                comment = <"*'Landmark name' can identify an anatomical structure (such as the umbilicus), an anatomical line (such as the mid-clavicular line), a well defined anatomical point (such as McBurney's point). This data element should be coded with a terminology capable of triggering decision support, where possible - an appropriate termset for use here could comprise individual concepts or a list of precoordinated terms. Free text should be used only if there is no appropriate terminology available. It is strongly recommended that 'Landmark name' be recorded as specifically as is anatomically possible. For example: record 'upper eyelid' rather than recording 'eyelid' with 'upper' as a qualifier; 'fifth rib' rather than 'rib' with a numeric qualifier.(en)">
+            >
+            ["at0022"] = <
+                text = <"*Distance from landmark(en)">
+                description = <"*Distance of location from the identified landmark.(en)">
+            >
+            ["at0023"] = <
+                text = <"*Description(en)">
+                description = <"*Narrative description that can be used to further refine and support the relative location structured data.(en)">
+                comment = <"*For example: a tattoo covers the bottom half of this area.(en)">
+            >
+            ["at0054"] = <
+                text = <"*Cluster(en)">
+                description = <"**(en)">
+            >
+            ["at0055"] = <
+                text = <"*Proximal to(en)">
+                description = <"**(en)">
+            >
+            ["at0056"] = <
+                text = <"*Distal to(en)">
+                description = <"**(en)">
+            >
+            ["at0057"] = <
+                text = <"*Superficial to(en)">
+                description = <"**(en)">
+            >
+            ["at0058"] = <
+                text = <"*Deep to(en)">
+                description = <"**(en)">
+            >
+            ["at0059"] = <
+                text = <"*Within(en)">
+                description = <"*Inwards from the outer opening of a body cavity, for example outer ear canal, fistula or wound, relative to the landmark.(en)">
+            >
+            ["at0060"] = <
+                text = <"*External to(en)">
+                description = <"*Outwards from the inner opening of a body cavity, for example anal fistula or nasal cavity, relative to the landmark.(en)">
+            >
+            ["at0062"] = <
+                text = <"*Laterality(en)">
+                description = <"*The side of the body on which the identified landmark is located.(en)">
+                comment = <"*If the identified landmark has no laterality, this data element should not have a value. If the 'Landmark name' data element uses pre-coordinated terms that include laterality, then this data element is redundant.(en)">
+            >
+            ["at0063"] = <
+                text = <"*Oral to(en)">
+                description = <"*Towards the mouth, relative to the landmark. Usually used to describe locations within the digestive system.(en)">
+            >
+            ["at0064"] = <
+                text = <"*Anal to(en)">
+                description = <"*Towards the anus, relative to the landmark. Usually used to describe locations within the digestive system.(en)">
+            >
+            ["at0065"] = <
+                text = <"*Caudal to(en)">
+                description = <"*Towards the tail, relative to the landmark.(en)">
+            >
+            ["at0066"] = <
+                text = <"*Cranial to(en)">
+                description = <"*Towards the head, relative to the landmark.(en)">
+            >
+            ["at0067"] = <
+                text = <"*Rostral to(en)">
+                description = <"*Towards the front of the head, relative to the landmark.(en)">
+            >
+            ["at0068"] = <
+                text = <"*Left(en)">
+                description = <"*Left side of the body.(en)">
+            >
+            ["at0069"] = <
+                text = <"*Right(en)">
+                description = <"*Right side of the body.(en)">
+            >
+            ["at9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac9007"] = <
+                text = <"*Laterality(en) (synthesised)">
+                description = <"*The side of the body on which the identified landmark is located.(en) (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"*Direction(en) (synthesised)">
+                description = <"*Detail about the relative direction of the body site to the landmark.(en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Relative anatomical location">
+                description = <"A physical site on or within the human body that is described in terms of its relationship to other body parts.">
+            >
+            ["at0006"] = <
+                text = <"Direction">
+                description = <"Detail about the relative direction of the body site to the landmark.">
+                comment = <"Common aspects have been included as a value set, which can be extended over time, plus a free text option. Assumes that the body is being described while in the anatomical position. Occurrences are set to allow for a maximum of six directions to be recorded. Within this value set, clinicians will recognise that there are eight mutually exclusive directional pairs - for example, a body site cannot be simultaneously 'medial to' and 'lateral to' an identical landmark. Other mutually exclusive pairs are 'Superior to' and 'Inferior to'; 'Anterior to' and 'Posterior to'; 'Proximal to' and 'Distal to'; 'Superficial to' and 'Deep to'; 'Cranial to' and 'Caudal to'; 'Rostral to' and Caudal to'; and 'Within' and 'External to'. Combinations made from one selection from within each of the eight pair sets is potentially valid, although in clinical practice it will be very unlikely to need to simultaneously record more than two directions to describe a specified body site.">
+            >
+            ["at0007"] = <
+                text = <"Medial to">
+                description = <"Towards the middle, from the landmark.">
+            >
+            ["at0008"] = <
+                text = <"Lateral to">
+                description = <"Towards the side, from the landmark.">
+            >
+            ["at0009"] = <
+                text = <"Superior to">
+                description = <"Above the landmark.">
+            >
+            ["at0010"] = <
+                text = <"Inferior to">
+                description = <"Below the landmark.">
+            >
+            ["at0012"] = <
+                text = <"Anterior to">
+                description = <"Towards the front, or ventral aspect, from the landmark.">
+            >
+            ["at0013"] = <
+                text = <"Posterior to">
+                description = <"Towards the back, or dorsal aspect, from the landmark.">
+            >
+            ["at0020"] = <
+                text = <"Relative location">
+                description = <"Detail to identify a single physical site either on, or within, the human body in terms of its relationship to other macroscopic anatomical landmarks.">
+                comment = <"More than one relative location may be required to provide an accurate cross reference.">
+            >
+            ["at0021"] = <
+                text = <"Landmark name">
+                description = <"Identified body site used as a reference point for the actual body site.">
+                comment = <"'Landmark name' can identify an anatomical structure (such as the umbilicus), an anatomical line (such as the mid-clavicular line), a well defined anatomical point (such as McBurney's point). This data element should be coded with a terminology capable of triggering decision support, where possible - an appropriate termset for use here could comprise individual concepts or a list of precoordinated terms. Free text should be used only if there is no appropriate terminology available. It is strongly recommended that 'Landmark name' be recorded as specifically as is anatomically possible. For example: record 'upper eyelid' rather than recording 'eyelid' with 'upper' as a qualifier; 'fifth rib' rather than 'rib' with a numeric qualifier.">
+            >
+            ["at0022"] = <
+                text = <"Distance from landmark">
+                description = <"Distance of location from the identified landmark.">
+            >
+            ["at0023"] = <
+                text = <"Description">
+                description = <"Narrative description that can be used to further refine and support the relative location structured data.">
+                comment = <"For example: a tattoo covers the bottom half of this area.">
+            >
+            ["at0054"] = <
+                text = <"Multimedia representation">
+                description = <"Image or other media used to support identification of the location on the body.">
+            >
+            ["at0055"] = <
+                text = <"Proximal to">
+                description = <"Closer to the body, relative to the landmark.">
+            >
+            ["at0056"] = <
+                text = <"Distal to">
+                description = <"Further from the body, relative to the landmark.">
+            >
+            ["at0057"] = <
+                text = <"Superficial to">
+                description = <"Nearer the outer surface, relative to the landmark.">
+            >
+            ["at0058"] = <
+                text = <"Deep to">
+                description = <"Further away from the outer surface, relative to the landmark.">
+            >
+            ["at0059"] = <
+                text = <"Within">
+                description = <"Inwards from the outer opening of a body cavity, for example outer ear canal, fistula or wound, relative to the landmark.">
+            >
+            ["at0060"] = <
+                text = <"External to">
+                description = <"Outwards from the inner opening of a body cavity, for example anal fistula or nasal cavity, relative to the landmark.">
+            >
+            ["at0062"] = <
+                text = <"Laterality">
+                description = <"The side of the body on which the identified landmark is located.">
+                comment = <"If the identified landmark has no laterality, this data element should not have a value. If the 'Landmark name' data element uses pre-coordinated terms that include laterality, then this data element is redundant.">
+            >
+            ["at0063"] = <
+                text = <"Oral to">
+                description = <"Towards the mouth, relative to the landmark. Usually used to describe locations within the digestive system.">
+            >
+            ["at0064"] = <
+                text = <"Anal to">
+                description = <"Towards the anus, relative to the landmark. Usually used to describe locations within the digestive system.">
+            >
+            ["at0065"] = <
+                text = <"Caudal to">
+                description = <"Towards the tail, relative to the landmark.">
+            >
+            ["at0066"] = <
+                text = <"Cranial to">
+                description = <"Towards the head, relative to the landmark.">
+            >
+            ["at0067"] = <
+                text = <"Rostral to">
+                description = <"Towards the front of the head, relative to the landmark.">
+            >
+            ["at0068"] = <
+                text = <"Left">
+                description = <"Left side of the body.">
+            >
+            ["at0069"] = <
+                text = <"Right">
+                description = <"Right side of the body.">
+            >
+            ["at9000"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac9007"] = <
+                text = <"Laterality (synthesised)">
+                description = <"The side of the body on which the identified landmark is located. (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"Direction (synthesised)">
+                description = <"Detail about the relative direction of the body site to the landmark. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/122>
+        >
+        ["SNOMED-CT"] = <
+            ["at0062"] = <http://snomed.info/id/272741003>
+            ["at0068"] = <http://snomed.info/id/7771000>
+            ["at0069"] = <http://snomed.info/id/24028007>
+        >
+    >
+    value_sets = <
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0007", "at0008", "at0009", "at0010", "at0012", "at0013", "at0055", "at0056", "at0057", "at0058", "at0059", "at0060", "at0063", "at0064", "at0065", "at0066", "at0067">
+        >
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at0068", "at0069">
+        >
+    >

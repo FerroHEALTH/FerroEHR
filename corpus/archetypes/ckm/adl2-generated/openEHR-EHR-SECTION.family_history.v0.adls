@@ -1,0 +1,82 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=8631ae3c-edaa-4792-a74c-cd09c734c57e; build_uid=cd1df45d-d4e7-4ea1-a489-eca49f05b6d8)
+    openEHR-EHR-SECTION.family_history.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-04-12">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"8BCB58E2E9EBD31E373ADB1EA2ACB437">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To provide a framework and design guidance for consistent modelling of content within a template for a persistent Family history record.">
+            keywords = <"family,history,pedigree,prevalence", ...>
+            use = <"Use as a framework and suggested design guidance for consistent modelling of content within a template for a persistent Family history record.
+
+This archetype is intended to be used within the COMPOSITION.family_history or as one component of other COMPOSITION archetypes. For example: complex documents, such as a discharge summary or referral.
+
+This list can be comprised of three types of statements, each represented by specific archetypes:
+- a statement about the positive presence of family history issues can be recorded using a single instance of the EVALUATION.family_history; OR
+- statements about the positive exclusion of family history issues can be recorded using the specific EVALUATION.exclusion-global ; OR
+- statements about no information being available - neither a positive presence of family history issues nor a positive exclusion - can be recorded using the EVALUATION.absence archetype.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Family history
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype EVALUATION[at0007] occurrences matches {0..1} matches {    -- Family history
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.family_history(-[a-zA-Z0-9_]+)*\.v2\..*/}
+            }
+            allow_archetype EVALUATION[at0008] matches {    -- Exclusion statement
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.exclusion_global(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype EVALUATION[at0009] matches {    -- Absence statement
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.absence(-[a-zA-Z0-9_]+)*\.v2\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Family history">
+                description = <"Framework for consistent modelling of content within a template for a persistent Family history record.">
+            >
+            ["at0007"] = <
+                text = <"Family history">
+                description = <"A positive statement about the presence of family health issues.">
+            >
+            ["at0008"] = <
+                text = <"Exclusion statement">
+                description = <"A positive statement about the exclusion of known family history.">
+                comment = <"For example: 'No known family history'.">
+            >
+            ["at0009"] = <
+                text = <"Absence statement">
+                description = <"A positive statement that no information is available about family history.">
+                comment = <"For example: 'No information available about family history'.">
+            >
+        >
+    >

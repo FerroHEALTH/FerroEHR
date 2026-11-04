@@ -1,0 +1,499 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3ffb15ea-178b-4e50-ad00-7468e04b5e62; build_uid=84277e48-3029-4b96-aeca-e5acc90e50bb)
+    openEHR-EHR-OBSERVATION.murray_score.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Sarah Ballout">
+                ["email"] = <"ballout.sarah@mh-hannover.de">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sarah Ballout">
+        ["organisation"] = <"MHH-Hannover">
+        ["email"] = <"ballout.sarah@mh-hannover.de">
+        ["date"] = <"2020-04-23">
+    >
+    original_namespace = <"org.highmed">
+    original_publisher = <"HiGHmed,">
+    other_contributors = <"Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.highmed">
+    custodian_organisation = <"HiGHmed">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Murray JF, Matthay MA, Luce JM, Flick MR. An expanded definition of the adult respiratory distress syndrome. Am Rev Respir Dis. 1988 Sep;138(3):720-3. doi: 10.1164/ajrccm/138.3.720. Erratum in: Am Rev Respir Dis 1989 Apr;139(4):1065. PMID: 3202424. Available from: https://pubmed.ncbi.nlm.nih.gov/3202424/.">
+        ["2"] = <"Peek GJ, Clemens F, Elbourne D, Firmin R, Hardy P, Hibbert C, Killer H, Mugford M, Thalanany M, Tiruvoipati R, Truesdale A, Wilson A. CESAR: conventional ventilatory support vs extracorporeal membrane oxygenation for severe adult respiratory failure. BMC Health Serv Res. 2006 Dec 23;6:163. doi: 10.1186/1472-6963-6-163. PMID: 17187683; PMCID: PMC1766357. Available from: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1766357/.">
+        ["3"] = <"Raghavendran K, Napolitano LM. Definition of ALI/ARDS. Crit Care Clin. 2011 Jul;27(3):429-37. doi: 10.1016/j.ccc.2011.05.006. PMID: 21742209; PMCID: PMC3173767. Available from https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3173767/.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"F1A2397AE5B83DBE7E41229434F931F0">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Repräsentation jeder einzelne Parameter der Elemente und der berechneten Endbewertung für Murray-Score.">
+            keywords = <"Lunge", "Verletzung", "ARDS">
+            use = <"Zur Repräsentation jeder einzelne Parameter der Elemente und der berechneten Endbewertung für Murray-Score.">
+            misuse = <"Der Murray-Score ist lediglich ein Leitfaden und sollte die klinische Beurteilung der Angemessenheit der ECMO-Initiation durch Kliniker nicht ersetzen.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the score for each component parameter and the calculated final score for the Murray score.">
+            keywords = <"lung", "injury", "ARDS">
+            use = <"Use to record the score for each component parameter and the calculated final score for the Murray score.">
+            misuse = <"The Murray score is a guide only and should not replace clinical evaluation by clinicians on the appropriateness of ECMO initiation.">
+            copyright = <"HiGHmed, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Murray score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Consolidation on CXR
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0006]}],    -- None
+                                                    [{1}, {[at0008]}],    -- 1 quadrant
+                                                    [{2}, {[at0009]}],    -- 2 quadrants
+                                                    [{3}, {[at0010]}],    -- 3 quadrants
+                                                    [{4}, {[at0011]}]    -- 4 quadrants
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- PaO₂/FiO₂ ratio
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0014]}],    -- ≥300
+                                                    [{1}, {[at0015]}],    -- 225-299
+                                                    [{2}, {[at0016]}],    -- 175-224
+                                                    [{3}, {[at0017]}],    -- 100-174
+                                                    [{4}, {[at0018]}]    -- <100
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- PEEP
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0021]}],    -- ≤5
+                                                    [{1}, {[at0022]}],    -- 6–8
+                                                    [{2}, {[at0023]}],    -- 9–11
+                                                    [{3}, {[at0024]}],    -- 12–14
+                                                    [{4}, {[at0025]}]    -- ≥15
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Compliance
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0028]}],    -- ≥80
+                                                    [{1}, {[at0029]}],    -- 60–79
+                                                    [{2}, {[at0030]}],    -- 40–59
+                                                    [{3}, {[at0031]}],    -- 20–39
+                                                    [{4}, {[at0032]}]    -- ≤19
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0039] occurrences matches {0..1} matches {    -- Score
+                                        value matches {
+                                            DV_QUANTITY[at9015] matches {
+                                                property matches {[at9013]}    -- Qualified real
+                                                magnitude matches {|0.0..4.0|}
+                                                units matches {"1"}
+                                                precision matches {1}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0046] occurrences matches {0..1} matches {    -- Severity assessment
+                                        value matches {
+                                            DV_CODED_TEXT[at9016] matches {
+                                                defining_code matches {[ac9014]}    -- Severity assessment (synthesised)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0044] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0045] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Murray-Score">
+                description = <"Ein klinisches Instrument zur Abschätzung des Schweregrads eines akuten Lungenschadens.">
+                comment = <"Auch bekannt als der \"Lung injury score\".">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Ein undefiniertes Zeitpunktereignis, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Röntgenbefund der Lunge">
+                description = <"Röntgenergebnisse auf dem Röntgenbild der Lunge.">
+            >
+            ["at0006"] = <
+                text = <"Keine">
+                description = <"keine alveolären Verschattungen.">
+            >
+            ["at0008"] = <
+                text = <"1 Quadrant">
+                description = <"Alveoläre Verschattungen in 1 Quadranten.">
+            >
+            ["at0009"] = <
+                text = <"2 Quadranten">
+                description = <"Alveoläre Verschattungen in 2 Quadranten.">
+            >
+            ["at0010"] = <
+                text = <"3 Quadranten">
+                description = <"Alveoläre Verschattungen in 3 Quadranten.">
+            >
+            ["at0011"] = <
+                text = <"4 Quadranten">
+                description = <"Alveoläre Verschattungen in allen Quadranten.">
+            >
+            ["at0012"] = <
+                text = <"Oxygenierungsindex (PaO₂/FiO₂)">
+                description = <"Index der Sauerstoffanreicherung (PaO2/FIO2).">
+            >
+            ["at0014"] = <
+                text = <"≥300 mmHg">
+                description = <"Ratio ist größer oder gleich 300.">
+            >
+            ["at0015"] = <
+                text = <"225-299 mmHg">
+                description = <"Ratio liegt zwischen 225 und 299.">
+            >
+            ["at0016"] = <
+                text = <"175-224 mmHg">
+                description = <"Ratio liegt zwischen 175 und 225.">
+            >
+            ["at0017"] = <
+                text = <"100-174 mmHg">
+                description = <"Ratio liegt zwischen 100 und 174.">
+            >
+            ["at0018"] = <
+                text = <"<100 mmHg">
+                description = <"Ratio ist weniger als 100.">
+            >
+            ["at0019"] = <
+                text = <"PEEP">
+                description = <"Der Positive Endexspiratorische Druck (PEEP), gemessen in cm H₂O.">
+            >
+            ["at0021"] = <
+                text = <"≤5 cmH₂O">
+                description = <"PEEP ist kleiner oder gleich 5 cmH₂O.">
+            >
+            ["at0022"] = <
+                text = <"6–8 cmH₂O">
+                description = <"PEEP liegt zwischen 6 und 8 cmH₂O.">
+            >
+            ["at0023"] = <
+                text = <"9–11 cmH₂O">
+                description = <"PEEP liegt zwischen 9 und 11 cmH₂O">
+            >
+            ["at0024"] = <
+                text = <"12–14 cmH₂O">
+                description = <"PEEP liegt zwischen 12 und 14 cmH₂O.">
+            >
+            ["at0025"] = <
+                text = <"≥15 cmH₂O">
+                description = <"PEEP ist größer oder gleich 15 cmH₂O.">
+            >
+            ["at0026"] = <
+                text = <"Effektive Compliance">
+                description = <"Die Lungen-Compliance, berechnet in ml/cm H₂O.">
+                comment = <"Berechneter Wert, aus VT / ( PIP - PEEP).">
+            >
+            ["at0028"] = <
+                text = <"≥80 ml/cmH₂O">
+                description = <"Die Compliance ist größer oder gleich 80 ml/cmH₂O.">
+            >
+            ["at0029"] = <
+                text = <"60–79 ml/cmH₂O">
+                description = <"Die Compliance liegt zwischen 60 und 79 ml/cmH₂O.">
+            >
+            ["at0030"] = <
+                text = <"40–59 ml/cmH₂O">
+                description = <"Die Compliance liegt zwischen 40 und 59 ml/cmH₂O.">
+            >
+            ["at0031"] = <
+                text = <"20–39 ml/cmH₂O">
+                description = <"Die Compliance liegt zwischen 20 und 39 ml/cmH₂O.">
+            >
+            ["at0032"] = <
+                text = <"≤19 ml/cmH₂O">
+                description = <"Die Compliance ist kleiner oder gleich 19 ml/cmH₂O.">
+            >
+            ["at0039"] = <
+                text = <"Score">
+                description = <"Der Scorewert ergibt sich aus der Summe der Punktwerte 
+geteilt durch die Anzahl der erhobenen Untersuchungsparameter.">
+            >
+            ["at0040"] = <
+                text = <"0">
+                description = <"Keine Lungenverletzung.">
+            >
+            ["at0041"] = <
+                text = <"1–2.5">
+                description = <"Leichte bis mittelschwere Lungenverletzung.">
+            >
+            ["at0042"] = <
+                text = <">2.5">
+                description = <"Schwere Lungenverletzung (ARDS).">
+            >
+            ["at0045"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+            ["at0046"] = <
+                text = <"Beurteilung des Schweregrades">
+                description = <"Die Beurteilung des Schweregrades der Lungenschädigung, basierend auf dem Murray-Score.
+">
+            >
+            ["at9013"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9019"] = <
+                text = <"Röntgenbefund der Lunge (synthesised)">
+                description = <"Röntgenergebnisse auf dem Röntgenbild der Lunge. (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"Oxygenierungsindex (PaO₂/FiO₂) (synthesised)">
+                description = <"Index der Sauerstoffanreicherung (PaO2/FIO2). (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"PEEP (synthesised)">
+                description = <"Der Positive Endexspiratorische Druck (PEEP), gemessen in cm H₂O. (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"Effektive Compliance (synthesised)">
+                description = <"Die Lungen-Compliance, berechnet in ml/cm H₂O. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Beurteilung des Schweregrades (synthesised)">
+                description = <"Die Beurteilung des Schweregrades der Lungenschädigung, basierend auf dem Murray-Score.
+ (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Murray score">
+                description = <"Clinical tool used to estimate the severity of acute lung injury.">
+                comment = <"Also known as the 'Lung injury score'.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Consolidation on CXR">
+                description = <"Radiographic findings on Xray of the lung.">
+            >
+            ["at0006"] = <
+                text = <"None">
+                description = <"No alveolar consolidation.">
+            >
+            ["at0008"] = <
+                text = <"1 quadrant">
+                description = <"Alveolar consolidation confined to 1 quadrant.">
+            >
+            ["at0009"] = <
+                text = <"2 quadrants">
+                description = <"Alveolar consolidation confined to 2 quadrants.">
+            >
+            ["at0010"] = <
+                text = <"3 quadrants">
+                description = <"Alveolar consolidation confined to 3 quadrants.">
+            >
+            ["at0011"] = <
+                text = <"4 quadrants">
+                description = <"Alveolar consolidation in all 4 quadrants.">
+            >
+            ["at0012"] = <
+                text = <"PaO₂/FiO₂ ratio">
+                description = <"Index of oxygenation (PaO2/FIO2).">
+            >
+            ["at0014"] = <
+                text = <"≥300">
+                description = <"Ratio is greater than or equal to 300.">
+            >
+            ["at0015"] = <
+                text = <"225-299">
+                description = <"Ratio is between 225 and 299.">
+            >
+            ["at0016"] = <
+                text = <"175-224">
+                description = <"Ratio is between 175 and 225.">
+            >
+            ["at0017"] = <
+                text = <"100-174">
+                description = <"Ratio is between 100 and 174.">
+            >
+            ["at0018"] = <
+                text = <"<100">
+                description = <"Ratio is less than 100.">
+            >
+            ["at0019"] = <
+                text = <"PEEP">
+                description = <"The Positive End Expiratory Pressure (PEEP), measured in cm H₂O.">
+            >
+            ["at0021"] = <
+                text = <"≤5">
+                description = <"PEEP is less than or equal to 5 cmH₂O.">
+            >
+            ["at0022"] = <
+                text = <"6–8">
+                description = <"PEEP is between 6 and 8 cmH₂O.">
+            >
+            ["at0023"] = <
+                text = <"9–11">
+                description = <"PEEP is between 9 and 11 cmH₂O.">
+            >
+            ["at0024"] = <
+                text = <"12–14">
+                description = <"PEEP is between 12 and 14 cmH₂O.">
+            >
+            ["at0025"] = <
+                text = <"≥15">
+                description = <"PEEP is greater than or equal to 15 cmH₂O.">
+            >
+            ["at0026"] = <
+                text = <"Compliance">
+                description = <"Lung compliance, calculated in ml/cm H₂O.">
+                comment = <"Calculated value, from VT / ( PIP – PEEP ).">
+            >
+            ["at0028"] = <
+                text = <"≥80">
+                description = <"Compliance is greater than or equal to 80 ml/cmH₂O.">
+            >
+            ["at0029"] = <
+                text = <"60–79">
+                description = <"Compliance is between 60 and 79 ml/cmH₂O.">
+            >
+            ["at0030"] = <
+                text = <"40–59">
+                description = <"Compliance is between 40 and 59 ml/cmH₂O.">
+            >
+            ["at0031"] = <
+                text = <"20–39">
+                description = <"Compliance is between 20 and 39 ml/cmH₂O.">
+            >
+            ["at0032"] = <
+                text = <"≤19">
+                description = <"Compliance is less than or equal to 19 ml/cmH₂O.">
+            >
+            ["at0039"] = <
+                text = <"Score">
+                description = <"Sum of points assigned for each of the component parameters divided by the number of parameters.">
+            >
+            ["at0045"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0046"] = <
+                text = <"Severity assessment">
+                description = <"The assessment about severity of the lung injury, based on the Murray score.">
+            >
+            ["at0040"] = <
+                text = <"0">
+                description = <"No lung injury.">
+            >
+            ["at0041"] = <
+                text = <"1–2.5">
+                description = <"Mild to moderate lung injury.">
+            >
+            ["at0042"] = <
+                text = <">2.5">
+                description = <"Severe lung injury (ARDS).">
+            >
+            ["at9013"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+            ["ac9019"] = <
+                text = <"Consolidation on CXR (synthesised)">
+                description = <"Radiographic findings on Xray of the lung. (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"PaO₂/FiO₂ ratio (synthesised)">
+                description = <"Index of oxygenation (PaO2/FIO2). (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"PEEP (synthesised)">
+                description = <"The Positive End Expiratory Pressure (PEEP), measured in cm H₂O. (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"Compliance (synthesised)">
+                description = <"Lung compliance, calculated in ml/cm H₂O. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Severity assessment (synthesised)">
+                description = <"The assessment about severity of the lung injury, based on the Murray score. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9013"] = <http://openehr.org/id/380>
+        >
+    >
+    value_sets = <
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0040", "at0041", "at0042">
+        >
+        ["ac9020"] = <
+            id = <"ac9020">
+            members = <"at0014", "at0015", "at0016", "at0017", "at0018">
+        >
+        ["ac9022"] = <
+            id = <"ac9022">
+            members = <"at0028", "at0029", "at0030", "at0031", "at0032">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0021", "at0022", "at0023", "at0024", "at0025">
+        >
+        ["ac9019"] = <
+            id = <"ac9019">
+            members = <"at0006", "at0008", "at0009", "at0010", "at0011">
+        >
+    >

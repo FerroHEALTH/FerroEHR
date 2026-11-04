@@ -1,0 +1,455 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=34026fc4-b577-4b85-aaa9-c77e0aef379f; build_uid=ed4f8453-a533-43f1-a59a-d5b6aa175340)
+    openEHR-EHR-OBSERVATION.fagerstrom.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Nina Schewe">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"schewe.nina@mh-hannover.de">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2016-06-06">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Heatherton TF, Kozlowski LT, Frecker RC, Fagerström KO. The Fagerström Test for Nicotine Dependence: a revision of the Fagerström Tolerance Questionnaire. Br J Addict. 1991 Sep; 86 (9):1119-27. PubMed PMID: 1932883.">
+        ["2"] = <"Pomerleau CS, Majchrzak MJ, Pomerleau OF. Nicotine dependence and the Fagerström Tolerance Questionnaire: a brief review. J Subst Abuse. 1989;1(4):471-7. Review. PubMed PMID: 2485293.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"A131EE7853877C0F6E9B93D7250380BB">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Bewertung der körperlichen Abhängigkeit von Nikotin.">
+            keywords = <"Nikotin", "Tabak", "Rauchen", "Abhängigkeit", "Fagerström">
+            use = <"Wird verwendet, um den Grad der Nikotinabhängigkeit einer Person einzuschätzen, sobald diese als Zigarettenraucher identifiziert wurde.
+
+Dieser Test kann vom Arzt verwendet werden, um Indikationen für die Verschreibung von Medikamenten für den Nikotinentzug zu dokumentieren.
+
+Während alle openEHR-Archetypen unter einer offenen Lizenz frei verfügbar sind, ist der spezifische Inhalt dieses Archetypen Fagerström-Test für Nikotinabhängigkeit urheberrechtlich geschützt. Jegliche Verwendung dieses Archetyps in Implementierungen muss in Übereinstimmung mit den von den Urheberrechtsinhabern festgelegten Bedingungen erfolgen:
+- The Fagerström Tolerance Questionnaire was developed by Karl-Olov Fagerström. This instrument was modified to the Fagerström Test for Nicotine Dependence by Todd Heatherton, et al. in 1991. The FTND is copyrighted by Taylor and Francis Ltd., but may be reproduced without permission, as available from the source reference (Heatherton, et al., 1991).">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To assess physical dependence on nicotine.">
+            keywords = <"nicotine", "tobacco", "smoking", "dependence", "fagerstrom">
+            use = <"Use to estimate a individual's level of nicotine dependence once they have been identified as a cigarette smoker.
+
+This test may be used by the physician to document indications for prescribing medication for nicotine withdrawal.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this Fagerström test for nicotine dependence archetype is copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners:
+- The Fagerström Tolerance Questionnaire was developed by Karl-Olov Fagerström. This instrument was modified to the Fagerström Test for Nicotine Dependence by Todd Heatherton, et al. in 1991. The FTND is copyrighted by Taylor and Francis Ltd., but may be reproduced without permission, as available from the source reference (Heatherton, et al., 1991).">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Fagerström test for nicotine dependence
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Morning cigarette
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- After 60 Minutes
+                                                    [{1}, {[at0007]}],    -- Within 31-60 Minutes
+                                                    [{2}, {[at0006]}],    -- Within 6-30 Minutes
+                                                    [{3}, {[at0008]}]    -- Within 5 Minutes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Difficult to refrain
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0010]}],    -- No
+                                                    [{1}, {[at0011]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Hate to give up
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0013]}],    -- Any other
+                                                    [{1}, {[at0014]}]    -- The first in the morning
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Daily consumption
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0016]}],    -- 10 or Less
+                                                    [{1}, {[at0017]}],    -- 11-20
+                                                    [{2}, {[at0018]}],    -- 21-30
+                                                    [{3}, {[at0019]}]    -- 31 or more
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Early morning pattern
+                                        value matches {
+                                            DV_ORDINAL[at9010] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0021]}],    -- No
+                                                    [{1}, {[at0022]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- During illness
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0024]}],    -- No
+                                                    [{1}, {[at0025]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Total
+                                        value matches {
+                                            DV_COUNT[at9012] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0027] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0028] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Fagerström Test für Nikotinabhängigkeit">
+                description = <"Standardinstrument zur Bewertung der körperlichen Abhängigkeit von Nikotin.">
+            >
+            ["at0002"] = <
+                text = <"Jedes Ereignis">
+                description = <"Standard, nicht spezifizierter Zeitpunkt oder Intervallereignis, das explizit in einer Vorlage oder zur Laufzeit definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Morgendliche Zigarette">
+                description = <"Wann rauchen Sie Ihre erste Zigarette nach dem Aufstehen?">
+            >
+            ["at0005"] = <
+                text = <"Nach mehr als 60 Minuten">
+                description = <"Die erste Zigarette wird mehr als 60 Minuten nach dem Aufwachen geraucht.">
+            >
+            ["at0006"] = <
+                text = <"Innerhalb von 6-30 Minuten.">
+                description = <"Die erste Zigarette wird nach dem Aufwachen innerhalb von 6-30 Minuten geraucht.">
+            >
+            ["at0007"] = <
+                text = <"Innerhalb von 31-60 Minuten">
+                description = <"Die erste Zigarette wird zwischen 31 und 60 Minuten nach dem Aufwachen geraucht.">
+            >
+            ["at0008"] = <
+                text = <"Innerhalb von 5 Minuten">
+                description = <"Die erste Zigarette wird in den ersten 5 Minuten nach dem Aufwachen geraucht.">
+            >
+            ["at0009"] = <
+                text = <"Schwer zu unterlassen">
+                description = <"Finden Sie es schwierig, an Orten, wo das Rauchen verboten ist (z.B. in der Kirche, in der Bibliothek, im Kino, usw.) auf das Rauchen zu verzichten?">
+            >
+            ["at0010"] = <
+                text = <"Nein">
+                description = <"Es ist nicht schwer, auf das Rauchen zu verzichten.">
+            >
+            ["at0011"] = <
+                text = <"Ja">
+                description = <"Es ist schwer, auf das Rauchen zu verzichten.">
+            >
+            ["at0012"] = <
+                text = <"Ungern aufgeben">
+                description = <"Auf welche Zigarette würden Sie nicht verzichten wollen?">
+            >
+            ["at0013"] = <
+                text = <"Andere">
+                description = <"Jede andere Zigarette als die erste am Morgen wäre am schwierigsten aufzugeben.">
+            >
+            ["at0014"] = <
+                text = <"Die Erste am Morgen">
+                description = <"Die erste Zigarette am Morgen wäre am schwierigsten aufzugeben.">
+            >
+            ["at0015"] = <
+                text = <"Täglicher Konsum">
+                description = <"Wie viele Zigaretten rauchen Sie pro Tag?">
+            >
+            ["at0016"] = <
+                text = <"10 oder weniger">
+                description = <"Rauchen von 10 oder weniger Zigaretten pro Tag.">
+            >
+            ["at0017"] = <
+                text = <"11-20">
+                description = <"Rauchen von 11-20 Zigaretten pro Tag.">
+            >
+            ["at0018"] = <
+                text = <"21-30">
+                description = <"Rauchen von 21-30 Zigaretten pro Tag.">
+            >
+            ["at0019"] = <
+                text = <"31 oder mehr">
+                description = <"Rauchen von mehr als 30 Zigaretten pro Tag.">
+            >
+            ["at0020"] = <
+                text = <"Frühmorgendiche Muster">
+                description = <"Rauchen Sie in den ersten Stunden nach dem Erwachen im Allgemeinen mehr als am Rest des Tages?">
+            >
+            ["at0021"] = <
+                text = <"Nein">
+                description = <"Sie rauchen in den ersten Stunden nach dem Aufwachen nicht mehr.">
+            >
+            ["at0022"] = <
+                text = <"Ja">
+                description = <"Sie rauchen mehr in den ersten Stunden nach dem Aufwachen.">
+            >
+            ["at0023"] = <
+                text = <"Während Krankheit">
+                description = <"Kommt es vor, dass Sie rauchen, wenn Sie krank sind und tagsüber im Bett bleiben müssen?">
+            >
+            ["at0024"] = <
+                text = <"Nein">
+                description = <"Sie rauchen nicht, wenn Sie so krank sind, dass Sie die meiste Zeit des Tages im Bett liegen.">
+            >
+            ["at0025"] = <
+                text = <"Ja">
+                description = <"Sie rauchen weiter, auch wenn Sie so krank sind, dass Sie die meiste Zeit des Tages im Bett liegen.">
+            >
+            ["at0026"] = <
+                text = <"Gesamtpunktzahl">
+                description = <"Gesamtsumme aus allen Komponenten.">
+            >
+            ["at0028"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+            ["ac9012"] = <
+                text = <"Morgendliche Zigarette (synthesised)">
+                description = <"Wann rauchen Sie Ihre erste Zigarette nach dem Aufstehen? (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Schwer zu unterlassen (synthesised)">
+                description = <"Finden Sie es schwierig, an Orten, wo das Rauchen verboten ist (z.B. in der Kirche, in der Bibliothek, im Kino, usw.) auf das Rauchen zu verzichten? (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Ungern aufgeben (synthesised)">
+                description = <"Auf welche Zigarette würden Sie nicht verzichten wollen? (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Täglicher Konsum (synthesised)">
+                description = <"Wie viele Zigaretten rauchen Sie pro Tag? (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Frühmorgendiche Muster (synthesised)">
+                description = <"Rauchen Sie in den ersten Stunden nach dem Erwachen im Allgemeinen mehr als am Rest des Tages? (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Während Krankheit (synthesised)">
+                description = <"Kommt es vor, dass Sie rauchen, wenn Sie krank sind und tagsüber im Bett bleiben müssen? (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Fagerström test for nicotine dependence">
+                description = <"Standard instrument for assessing physical dependence on nicotine.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Morning cigarette">
+                description = <"How soon after you wake up do you smoke your first cigarette?">
+            >
+            ["at0005"] = <
+                text = <"After 60 Minutes">
+                description = <"First cigarette is smoked more than 60 minutes after waking.">
+            >
+            ["at0006"] = <
+                text = <"Within 6-30 Minutes">
+                description = <"First cigarette is smoked between 6 and 30 minutes after waking.">
+            >
+            ["at0007"] = <
+                text = <"Within 31-60 Minutes">
+                description = <"First cigarette is smoked between 31 and 60 minutes after waking.">
+            >
+            ["at0008"] = <
+                text = <"Within 5 Minutes">
+                description = <"First cigarette is smoked in the first 5 minutes after waking.">
+            >
+            ["at0009"] = <
+                text = <"Difficult to refrain">
+                description = <"Do you find it difficult to refrain from smoking in places where it is forbidden (e.g., in church, at the library, in cinema, etc)?">
+            >
+            ["at0010"] = <
+                text = <"No">
+                description = <"It is not difficult to refrain from smoking.">
+            >
+            ["at0011"] = <
+                text = <"Yes">
+                description = <"It is difficult to refrain from smoking.">
+            >
+            ["at0012"] = <
+                text = <"Hate to give up">
+                description = <"Which cigarette would you hate most to give up?">
+            >
+            ["at0013"] = <
+                text = <"Any other">
+                description = <"Any cigarette other than the first cigarette in the morning would be most difficult to give up.">
+            >
+            ["at0014"] = <
+                text = <"The first in the morning">
+                description = <"First cigarette in the morning would be most difficult to give up.">
+            >
+            ["at0015"] = <
+                text = <"Daily consumption">
+                description = <"How many cigarettes per day do you smoke?">
+            >
+            ["at0016"] = <
+                text = <"10 or Less">
+                description = <"Smoking <=10 cigarettes per day.">
+            >
+            ["at0017"] = <
+                text = <"11-20">
+                description = <"Smoking 11-20 cigarettes per day.">
+            >
+            ["at0018"] = <
+                text = <"21-30">
+                description = <"Smoking 21-30 cigarettes per day.">
+            >
+            ["at0019"] = <
+                text = <"31 or more">
+                description = <"Smoking >30 cigarettes per day.">
+            >
+            ["at0020"] = <
+                text = <"Early morning pattern">
+                description = <"Do you smoke more during the first hours after waking than during the rest of the day?">
+            >
+            ["at0021"] = <
+                text = <"No">
+                description = <"Not smoking more during the first hours after waking.">
+            >
+            ["at0022"] = <
+                text = <"Yes">
+                description = <"Smoke more during the first hours after waking.">
+            >
+            ["at0023"] = <
+                text = <"During illness">
+                description = <"Do you smoke even when you are ill enough to be in bed most of the day?">
+            >
+            ["at0024"] = <
+                text = <"No">
+                description = <"Not smoking if ill enough to be in bed most of the day.">
+            >
+            ["at0025"] = <
+                text = <"Yes">
+                description = <"Smoke continues, even if ill enough to be in bed most of the day.">
+            >
+            ["at0026"] = <
+                text = <"Total">
+                description = <"Aggregate total from all components.">
+            >
+            ["at0028"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9012"] = <
+                text = <"Morning cigarette (synthesised)">
+                description = <"How soon after you wake up do you smoke your first cigarette? (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Difficult to refrain (synthesised)">
+                description = <"Do you find it difficult to refrain from smoking in places where it is forbidden (e.g., in church, at the library, in cinema, etc)? (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Hate to give up (synthesised)">
+                description = <"Which cigarette would you hate most to give up? (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Daily consumption (synthesised)">
+                description = <"How many cigarettes per day do you smoke? (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Early morning pattern (synthesised)">
+                description = <"Do you smoke more during the first hours after waking than during the rest of the day? (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"During illness (synthesised)">
+                description = <"Do you smoke even when you are ill enough to be in bed most of the day? (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0010", "at0011">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0005", "at0007", "at0006", "at0008">
+        >
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0024", "at0025">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0021", "at0022">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0016", "at0017", "at0018", "at0019">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0013", "at0014">
+        >
+    >

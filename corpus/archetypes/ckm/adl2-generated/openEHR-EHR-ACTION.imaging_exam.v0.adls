@@ -1,0 +1,855 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6a9764e8-0424-4642-afc3-39f1d0786c28; build_uid=04d3db66-ba80-4bd3-b405-c1ae65733372)
+    openEHR-EHR-ACTION.imaging_exam.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Alina Rehberg">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"rehberg.alina@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Linda Aulin">
+                ["organisation"] = <"Region Stockholm">
+                ["email"] = <"linda.aulin@sll.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Ingrid Heitmann">
+                ["organisation"] = <"Oslo University Hospital">
+                ["email"] = <"iheitman@ous-hf.no">
+            >
+            accreditation = <"Registered Nurse">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2006-04-10">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Ocean Informatics, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Derived from Imaging Examination (action) , draft archetype, National eHealth Transition Authority [Internet]. NEHTA Clinical Knowledge Manager. Authored: 08 Nov 2010. Available at: http://dcm.nehta.org.au/ckm/OKM.html#showarchetype_1013.1.999 (accessed Jan 16, 2012).">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"77F317DE94099766AE76A1F1B352E6C1">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Erfassung der Aktivität in Bezug auf die Durchführung von bildgebenden Untersuchungen.">
+            keywords = <"Radiologie", "Ultraschall", "MRI", "CT", "Scannen", "Tomographie">
+            use = <"Zur Darstellung einer Aktivität in Bezug auf die Durchführung von bildgebenden Untersuchungen.">
+            misuse = <"">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera bilddiagnostiska aktiviteter.">
+            keywords = <"radiologi", "ultraljud", "UL", "MR", "CT", "röntgen", "tomografi", "bildbehandling", "bilddiagnostik">
+            use = <"Används för att registrera registrera bilddiagnostiska aktiviteter.">
+            misuse = <"">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere aktiviteter knyttet til gjennomføringen av bildediagnostikk.">
+            keywords = <"Radiologi", "Ultralyd", "UL", "MR", "CT", "røngten", "tomografi", "røngtenfotograferingsteknikk", "billeddiagnostikk">
+            use = <"Brukes til å registrere aktiviteter knyttet til gjennomføringen av bildediagnostikk.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record activity regarding the performance of imaging examinations.">
+            keywords = <"Radiology", "Ultrasound", "MRI", "CT", "scan", "tomography">
+            use = <"Use to record activity regarding the performance of imaging examinations.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            purpose = <"*To record activity regarding the performance of imaging examinations.(en)">
+            keywords = <"*Radiology(en)", "*Ultrasound(en)", "*MRI(en)", "*CT(en)", "*scan(en)", "*tomography(en)">
+            use = <"*Use to record activity regarding the performance of imaging examinations.(en)">
+            misuse = <"">
+        >
+    >
+
+definition
+    ACTION[at0000] matches {    -- Imaging examination
+        ism_transition matches {
+            ISM_TRANSITION[at0002] matches {    -- Examination planned
+                current_state matches {
+                    DV_CODED_TEXT[at9008] matches {
+                        defining_code matches {[at9000]}    -- planned
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9009] matches {
+                        defining_code matches {[at0002]}    -- Examination planned
+                    }
+                }
+            }
+            ISM_TRANSITION[at0003] matches {    -- Examination requested
+                current_state matches {
+                    DV_CODED_TEXT[at9010] matches {
+                        defining_code matches {[at9000]}    -- planned
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9011] matches {
+                        defining_code matches {[at0003]}    -- Examination requested
+                    }
+                }
+            }
+            ISM_TRANSITION[at0009] matches {    -- Examination postponed
+                current_state matches {
+                    DV_CODED_TEXT[at9012] matches {
+                        defining_code matches {[at9001]}    -- postponed
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9013] matches {
+                        defining_code matches {[at0009]}    -- Examination postponed
+                    }
+                }
+            }
+            ISM_TRANSITION[at0011] matches {    -- Examination cancelled
+                current_state matches {
+                    DV_CODED_TEXT[at9014] matches {
+                        defining_code matches {[at9002]}    -- cancelled
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9015] matches {
+                        defining_code matches {[at0011]}    -- Examination cancelled
+                    }
+                }
+            }
+            ISM_TRANSITION[at0004] matches {    -- Appointment scheduled
+                current_state matches {
+                    DV_CODED_TEXT[at9016] matches {
+                        defining_code matches {[at9003]}    -- scheduled
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9017] matches {
+                        defining_code matches {[at0004]}    -- Appointment scheduled
+                    }
+                }
+            }
+            ISM_TRANSITION[at0005] matches {    -- Appointment rescheduled
+                current_state matches {
+                    DV_CODED_TEXT[at9018] matches {
+                        defining_code matches {[at9003]}    -- scheduled
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9019] matches {
+                        defining_code matches {[at0005]}    -- Appointment rescheduled
+                    }
+                }
+            }
+            ISM_TRANSITION[at0008] matches {    -- Examination performed
+                current_state matches {
+                    DV_CODED_TEXT[at9020] matches {
+                        defining_code matches {[at9004]}    -- active
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9021] matches {
+                        defining_code matches {[at0008]}    -- Examination performed
+                    }
+                }
+            }
+            ISM_TRANSITION[at0014] matches {    -- Failed attempt
+                current_state matches {
+                    DV_CODED_TEXT[at9022] matches {
+                        defining_code matches {[at9004]}    -- active
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9023] matches {
+                        defining_code matches {[at0014]}    -- Failed attempt
+                    }
+                }
+            }
+            ISM_TRANSITION[at0010] matches {    -- Examination suspended
+                current_state matches {
+                    DV_CODED_TEXT[at9024] matches {
+                        defining_code matches {[at9005]}    -- suspended
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9025] matches {
+                        defining_code matches {[at0010]}    -- Examination suspended
+                    }
+                }
+            }
+            ISM_TRANSITION[at0012] matches {    -- Examination aborted
+                current_state matches {
+                    DV_CODED_TEXT[at9026] matches {
+                        defining_code matches {[at9006]}    -- aborted
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9027] matches {
+                        defining_code matches {[at0012]}    -- Examination aborted
+                    }
+                }
+            }
+            ISM_TRANSITION[at0007] matches {    -- Examination complete
+                current_state matches {
+                    DV_CODED_TEXT[at9028] matches {
+                        defining_code matches {[at9007]}    -- complete
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9029] matches {
+                        defining_code matches {[at0007]}    -- Examination complete
+                    }
+                }
+            }
+        }
+        description matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Examination name
+                        value matches {
+                            DV_TEXT[at9030]
+                        }
+                    }
+                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9031]
+                        }
+                    }
+                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Reason
+                        value matches {
+                            DV_TEXT[at9032]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0022] matches {    -- Anatomical location
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0021] matches {    -- Examination detail
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9033]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0015] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Start date/time
+                        value matches {
+                            DV_DATE_TIME[at9034]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Bildgebende Untersuchung">
+                description = <"Klinische Aktivität zur Durchführung einer bildgebenden Untersuchung.">
+            >
+            ["at0002"] = <
+                text = <"Geplante Untersuchung">
+                description = <"Eine bildgebende Untersuchung ist geplant.">
+            >
+            ["at0003"] = <
+                text = <"Untersuchung angefordert">
+                description = <"Eine bildgebende Untersuchung wurde angefordert.">
+            >
+            ["at0004"] = <
+                text = <"Termin der Untersuchung geplant">
+                description = <"Der Termin für die bildgebende Untersuchung wurde geplant.">
+            >
+            ["at0005"] = <
+                text = <"Termin der Untersuchung verschoben">
+                description = <"Der Termin für die bildgebende Untersuchung wurde verschoben.">
+            >
+            ["at0007"] = <
+                text = <"Untersuchung beendet">
+                description = <"Die bildgebende Untersuchung wurde durchgeführt und alle damit verbundenen klinischen Aktivitäten wurden beendet.">
+            >
+            ["at0008"] = <
+                text = <"Untersuchung durchgeführt">
+                description = <"Die Untersuchuung wurde durchgeführt, aber die damit verbundenen klinischen Aktivitäten nicht abgeschlossen.">
+            >
+            ["at0009"] = <
+                text = <"Untersuchung verschoben">
+                description = <"Die Untersuchung wurde verschoben.">
+            >
+            ["at0010"] = <
+                text = <"Untersuchung unterbrochen">
+                description = <"Die Untersuchung wurde unterbrochen.">
+            >
+            ["at0011"] = <
+                text = <"Untersuchung storniert">
+                description = <"Die geplante Untersuchung wurde vor ihrem Beginn storniert.">
+            >
+            ["at0012"] = <
+                text = <"Untersuchung abgebrochen">
+                description = <"Die Untersuchung wurde abgebrochen.">
+            >
+            ["at0014"] = <
+                text = <"Fehlgeschlagener Versuch">
+                description = <"Die Untersuchung wurde begonnen, aber nicht erfolgreich abgeschlossen.">
+            >
+            ["at0016"] = <
+                text = <"Startdatum/Uhrzeit">
+                description = <"Das Startdatum und / oder die Uhrzeit für die Untersuchung. Dies gibt das geplante Datum / die geplante Uhrzeit an, wenn es unter dem \"Pathway\"-Verlaufsschritte \"Termin geplant\" oder dem tatsächlichen Startdatum / -zeitpunkt im Schritt \"Untersuchung durchgeführt\" aufgezeichnet wird.">
+            >
+            ["at0017"] = <
+                text = <"Name der Untersuchung">
+                description = <"Der Name der durchzuführenden Untersuchung. Wenn möglich, wird die Kodierung mit einer Terminologie bevorzugt.
+">
+            >
+            ["at0018"] = <
+                text = <"Beschreibung">
+                description = <"Beschreibung der Aktivität oder der Verlaufsschritte für die identifizierte Untersuchung, z. B. Beschreibung der Durchführung und der Ergebnisse der Untersuchung, des fehlgeschlagenen Versuchs oder des Abbruchs der Untersuchung.
+">
+            >
+            ["at0019"] = <
+                text = <"Grund">
+                description = <"Grund, warum die angegebene Aktivität für diese Untersuchung durchgeführt wurde, beispielsweise der Grund für den Abbruch oder die Aussetzung der Untersuchung.">
+            >
+            ["at0020"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Beschreibung der Aktivität oder der \"Pathway\"-Verlaufsschritte, die in anderen Bereichen nicht erfasst wurden.">
+            >
+            ["at0021"] = <
+                text = <"Details zur Untersuchung">
+                description = <"Strukturierte Informationen über die Untersuchung. Zur Erfassung detaillierter, strukturierter Informationen über die Methode und Technik usw.
+
+">
+            >
+            ["at0022"] = <
+                text = <"Anatomische Lokalisation">
+                description = <"Strukturierte Informationen über die spezifische anatomische Lokalisation der Untersuchung.">
+            >
+            ["at9004"] = <
+                text = <"* active (en)">
+                description = <"* active (en)">
+            >
+            ["at9000"] = <
+                text = <"* planned (en)">
+                description = <"* planned (en)">
+            >
+            ["at9001"] = <
+                text = <"* postponed (en)">
+                description = <"* postponed (en)">
+            >
+            ["at9002"] = <
+                text = <"* cancelled (en)">
+                description = <"* cancelled (en)">
+            >
+            ["at9003"] = <
+                text = <"* scheduled (en)">
+                description = <"* scheduled (en)">
+            >
+            ["at9005"] = <
+                text = <"* suspended (en)">
+                description = <"* suspended (en)">
+            >
+            ["at9006"] = <
+                text = <"* aborted (en)">
+                description = <"* aborted (en)">
+            >
+            ["at9007"] = <
+                text = <"* complete (en)">
+                description = <"* complete (en)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Bilddiagnostisk undersökning">
+                description = <"Klinisk aktivitet relaterad till utförande av bilddiagnostisk undersökning.">
+            >
+            ["at0002"] = <
+                text = <"Undersökning planerad">
+                description = <"Bilddiagnostisk undersökning är planerad.">
+            >
+            ["at0003"] = <
+                text = <"Undersökning beställd">
+                description = <"Bilddiagnostisk undersökning är beställd.">
+            >
+            ["at0004"] = <
+                text = <"Besök bokat">
+                description = <"Besök för bilddiagnostisk undersökning är bokat.">
+            >
+            ["at0005"] = <
+                text = <"Besök ombokat">
+                description = <"Besök för bilddiagnostisk undersökning har flyttats till annan tidpunkt.">
+            >
+            ["at0007"] = <
+                text = <"Undersökningen slutförd">
+                description = <"Den bilddiagnostiska undersökningen har utförts och alla relaterade aktiviteter är slutförda.">
+            >
+            ["at0008"] = <
+                text = <"Undersökning utförd">
+                description = <"Undersökningen är utförd, men relaterade aktiviteter är inte avslutade.">
+            >
+            ["at0009"] = <
+                text = <"Undersökning framflyttad">
+                description = <"Undersökningen har blivit framflyttad.">
+            >
+            ["at0010"] = <
+                text = <"Undersökning tillfälligt stoppad">
+                description = <"Undersökning har tillfälligt stoppats.">
+            >
+            ["at0011"] = <
+                text = <"Undersökning inställd">
+                description = <"Den planerade undersökningen är inställd.">
+            >
+            ["at0012"] = <
+                text = <"Undersökning avbruten">
+                description = <"Undersökningen har avbrutits.">
+            >
+            ["at0014"] = <
+                text = <"Misslyckat försök">
+                description = <"Undersökningen påbörjades, men slutfördes inte på rätt sätt.">
+            >
+            ["at0016"] = <
+                text = <"Startdatum/tid">
+                description = <"Datum och/eller tid för undersökningens slutförande. Registreringen kommer, i samband med processteget \"Ställ in tid för undersökning\", ange det planerade datumet/tiden för undersökningen eller det faktiska datumet/tiden för undersökningen när den används i samband med processteget \"Undersökning utförd\".">
+            >
+            ["at0017"] = <
+                text = <"Undersökningsnamn">
+                description = <"Namnet på den undersökningen som ska utföras/har blivit utförd. Kodning av det specifika förfarandet med en terminologi är att föredra, där det är möjligt.">
+            >
+            ["at0018"] = <
+                text = <"Beskrivning">
+                description = <"Fritextbeskrivning av undersökningen, anpassad till relevant processteg. Till exempel en beskrivning av genomförandet och undersökningsresultaten, det avbrutna försöket eller annulleringen av undersökningen.
+
+">
+            >
+            ["at0019"] = <
+                text = <"Orsak">
+                description = <"Motivering för aktivitets- eller processteget för att relevant undersökning genomfördes. Till exempel anledningen till att undersökningen avbröts eller tillfälligt stoppades.
+
+">
+            >
+            ["at0020"] = <
+                text = <"Kommentar">
+                description = <"Ytterligare fritextbeskrivning av aktiviteter eller processteg som inte har registrerats i andra fält.">
+            >
+            ["at0021"] = <
+                text = <"Undersökningsdetaljer">
+                description = <"Strukturerad information om undersökningen. Används för att registrerade detaljerad och strukturerad information avseende metod, teknik etc.">
+            >
+            ["at0022"] = <
+                text = <"Anatomisk lokalisation">
+                description = <"Strukturerade detaljer om den specifika anatomiska lokalisationen som undersökts.">
+            >
+            ["at9004"] = <
+                text = <"* active (en)">
+                description = <"* active (en)">
+            >
+            ["at9000"] = <
+                text = <"* planned (en)">
+                description = <"* planned (en)">
+            >
+            ["at9001"] = <
+                text = <"* postponed (en)">
+                description = <"* postponed (en)">
+            >
+            ["at9002"] = <
+                text = <"* cancelled (en)">
+                description = <"* cancelled (en)">
+            >
+            ["at9003"] = <
+                text = <"* scheduled (en)">
+                description = <"* scheduled (en)">
+            >
+            ["at9005"] = <
+                text = <"* suspended (en)">
+                description = <"* suspended (en)">
+            >
+            ["at9006"] = <
+                text = <"* aborted (en)">
+                description = <"* aborted (en)">
+            >
+            ["at9007"] = <
+                text = <"* complete (en)">
+                description = <"* complete (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Bildediagnostikk">
+                description = <"Klinisk aktivitet knyttet til gjennomføringen av bildediagnostikk.">
+            >
+            ["at0002"] = <
+                text = <"Undersøkelse planlagt">
+                description = <"Undersøkelsen er planlagt.">
+            >
+            ["at0003"] = <
+                text = <"Undersøkelsesrekvisisjon sendt">
+                description = <"Det er sendt rekvisisjon for undersøkelsen.">
+            >
+            ["at0004"] = <
+                text = <"Fastsatt tidspunkt for undersøkelse">
+                description = <"Tidspunkt for undersøkelsen er fastsatt.">
+            >
+            ["at0005"] = <
+                text = <"Undersøkelse replanlagt">
+                description = <"Tidspunkt for undersøkelsen har blitt replanlagt.">
+            >
+            ["at0007"] = <
+                text = <"Undersøkelse fullført">
+                description = <"Undersøkelsen er utført og alle tilknyttede kliniske handlinger er fullførte.">
+            >
+            ["at0008"] = <
+                text = <"Undersøkelse utført">
+                description = <"Undersøkelsen, eller en del av undersøkelsen, har blitt utført.">
+            >
+            ["at0009"] = <
+                text = <"Undersøkelse utsatt">
+                description = <"Undersøkelsen er utsatt.">
+            >
+            ["at0010"] = <
+                text = <"Undersøkelse midlertidig stanset">
+                description = <"Undersøkelsen er suspendert/ midlertidig stanset.">
+            >
+            ["at0011"] = <
+                text = <"Undersøkelse avlyst">
+                description = <"Den planlagte undersøkelsen har blitt avlyst før den ble igangsatt.">
+            >
+            ["at0012"] = <
+                text = <"Undersøkelse avbrutt">
+                description = <"Undersøkelsen har blitt avbrutt.">
+            >
+            ["at0014"] = <
+                text = <"Undersøkelse mislykket">
+                description = <"Undersøkelsen har blitt påstartet men ikke fullført.">
+            >
+            ["at0016"] = <
+                text = <"Start dato/tid">
+                description = <"Dato og/eller tidspunkt for gjennomføringen av undersøkelsen. Registreringen vil, i forbindelse med prosesstrinnet \"Fastsatt tidspunkt for undersøkelse\" indikere den planlagte dato/tid for undersøkelsen eller den faktiske dato/tid for undersøkelsen ved bruk i forbindelse med prosesstrinnet \"Undersøkelse utført\".">
+            >
+            ["at0017"] = <
+                text = <"Undersøkelsesnavn">
+                description = <"Navnet på undersøkelsen. Det bør om mulig benyttes terminologi for å angi undersøkelsesnavnet.">
+            >
+            ["at0018"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse av undersøkelsen, tilpasset det aktuelle prosesstrinnet. For eksempel en beskrivelse av utførelsen og funnene fra undersøkelsen, det avbrutte forsøket eller avlysningen av undersøkelsen.">
+            >
+            ["at0019"] = <
+                text = <"Begrunnelse">
+                description = <"Begrunnelse for aktiviteten eller prosesstrinnet for den aktuelle undersøkelsen ble utført. For eksempel grunnen til at undersøkelsen ble avlyst eller midlertidig stanset.">
+            >
+            ["at0020"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekstbeskrivelse av aktivitet eller prosesstrinn som ikke er registrert i andre felt.">
+            >
+            ["at0021"] = <
+                text = <"Undersøkelsesdetaljer">
+                description = <"Strukturert informasjon om undersøkelsen. Bruk for å registrere detaljert, strukturert informasjon om metode og teknikker, utstyr som ble benyttet, funn etc.">
+            >
+            ["at0022"] = <
+                text = <"Anatomisk lokalisering">
+                description = <"Strukturert informasjon om den spesifikke anatomiske lokaliseringen undersøkelsen har blitt utført på.">
+            >
+            ["at9004"] = <
+                text = <"* active (en)">
+                description = <"* active (en)">
+            >
+            ["at9000"] = <
+                text = <"* planned (en)">
+                description = <"* planned (en)">
+            >
+            ["at9001"] = <
+                text = <"* postponed (en)">
+                description = <"* postponed (en)">
+            >
+            ["at9002"] = <
+                text = <"* cancelled (en)">
+                description = <"* cancelled (en)">
+            >
+            ["at9003"] = <
+                text = <"* scheduled (en)">
+                description = <"* scheduled (en)">
+            >
+            ["at9005"] = <
+                text = <"* suspended (en)">
+                description = <"* suspended (en)">
+            >
+            ["at9006"] = <
+                text = <"* aborted (en)">
+                description = <"* aborted (en)">
+            >
+            ["at9007"] = <
+                text = <"* complete (en)">
+                description = <"* complete (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Imaging examination">
+                description = <"Clinical activity about performing an imaging examination.">
+            >
+            ["at0002"] = <
+                text = <"Examination planned">
+                description = <"Imaging examination is planned.">
+            >
+            ["at0003"] = <
+                text = <"Examination requested">
+                description = <"Imaging examination has been requested.">
+            >
+            ["at0004"] = <
+                text = <"Appointment scheduled">
+                description = <"Imaging examination appointment has been made.">
+            >
+            ["at0005"] = <
+                text = <"Appointment rescheduled">
+                description = <"Appointment for imaging examination has been rescheduled.">
+            >
+            ["at0007"] = <
+                text = <"Examination complete">
+                description = <"The imaging examination has been performed and all associated activities completed.">
+            >
+            ["at0008"] = <
+                text = <"Examination performed">
+                description = <"The examation was performed but related activities not completed.">
+            >
+            ["at0009"] = <
+                text = <"Examination postponed">
+                description = <"The examination has been postponed.">
+            >
+            ["at0010"] = <
+                text = <"Examination suspended">
+                description = <"The examination has been suspended.">
+            >
+            ["at0011"] = <
+                text = <"Examination cancelled">
+                description = <"The planned examination has been cancelled prior to commencement.">
+            >
+            ["at0012"] = <
+                text = <"Examination aborted">
+                description = <"The examination has been aborted.">
+            >
+            ["at0014"] = <
+                text = <"Failed attempt">
+                description = <"The examation was commenced but not completed successfully.">
+            >
+            ["at0016"] = <
+                text = <"Start date/time">
+                description = <"The start date and/or time for the procedure. This will indicate the scheduled date/time when recorded against the 'Appointment scheduled' care pathway step or the actual Start date/time in the 'Examination performed' step.">
+            >
+            ["at0017"] = <
+                text = <"Examination name">
+                description = <"The name of the examination (to be) performed. Coding of the specific procedure with a terminology is preferred, where possible.">
+            >
+            ["at0018"] = <
+                text = <"Description">
+                description = <"Narrative description about the activity or care pathway step for the identified examination, for example description about the performance and findings from the the examination, the failed attempt or the cancellation of the examination.">
+            >
+            ["at0019"] = <
+                text = <"Reason">
+                description = <"Reason that the activity or care pathway step for the identified examination was carried out, for example, the reason for the cancellation or suspension of the examination.">
+            >
+            ["at0020"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the activity or care pathway step not captured in other fields.">
+            >
+            ["at0021"] = <
+                text = <"Examination detail">
+                description = <"Structured information about the examination. Use to capture detailed, structured information about method & technique etc.">
+            >
+            ["at0022"] = <
+                text = <"Anatomical location">
+                description = <"Structured information about the specific anatomical location of the examination.">
+            >
+            ["at9004"] = <
+                text = <"active">
+                description = <"active">
+            >
+            ["at9000"] = <
+                text = <"planned">
+                description = <"planned">
+            >
+            ["at9001"] = <
+                text = <"postponed">
+                description = <"postponed">
+            >
+            ["at9002"] = <
+                text = <"cancelled">
+                description = <"cancelled">
+            >
+            ["at9003"] = <
+                text = <"scheduled">
+                description = <"scheduled">
+            >
+            ["at9005"] = <
+                text = <"suspended">
+                description = <"suspended">
+            >
+            ["at9006"] = <
+                text = <"aborted">
+                description = <"aborted">
+            >
+            ["at9007"] = <
+                text = <"complete">
+                description = <"complete">
+            >
+        >
+        ["sl"] = <
+            ["at0000"] = <
+                text = <"*Imaging examination(en)">
+                description = <"*Clinical activity about performing an imaging examination.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Examination planned(en)">
+                description = <"*Imaging examination is planned.(en)">
+            >
+            ["at0003"] = <
+                text = <"*Examination requested(en)">
+                description = <"*Imaging examination has been requested.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Appointment scheduled(en)">
+                description = <"*Imaging examination appointment has been made.(en)">
+            >
+            ["at0005"] = <
+                text = <"*Appointment rescheduled(en)">
+                description = <"*Appointment for imaging examination has been rescheduled.(en)">
+            >
+            ["at0007"] = <
+                text = <"*Examination complete(en)">
+                description = <"*The imaging examination has been performed and all associated activities completed.(en)">
+            >
+            ["at0008"] = <
+                text = <"*Examination performed(en)">
+                description = <"*The examation was performed but related activities not completed.(en)">
+            >
+            ["at0009"] = <
+                text = <"*Examination postponed(en)">
+                description = <"*The examination has been postponed.(en)">
+            >
+            ["at0010"] = <
+                text = <"*Examination suspended(en)">
+                description = <"*The examination has been suspended.(en)">
+            >
+            ["at0011"] = <
+                text = <"*Examination cancelled(en)">
+                description = <"*The planned examination has been cancelled prior to commencement.(en)">
+            >
+            ["at0012"] = <
+                text = <"*Examination aborted(en)">
+                description = <"*The examination has been aborted.(en)">
+            >
+            ["at0014"] = <
+                text = <"*Failed attempt(en)">
+                description = <"*The examation was commenced but not completed successfully.(en)">
+            >
+            ["at0016"] = <
+                text = <"*Start date/time(en)">
+                description = <"*The start date and/or time for the procedure. This will indicate the scheduled date/time when recorded against the 'Appointment scheduled' care pathway step or the actual Start date/time in the 'Examination performed' step.(en)">
+            >
+            ["at0017"] = <
+                text = <"Preiskava">
+                description = <"*The name of the examination (to be) performed. Coding of the specific procedure with a terminology is preferred, where possible.(en)">
+            >
+            ["at0018"] = <
+                text = <"Opis">
+                description = <"*Narrative description about the activity or care pathway step for the identified examination, for example description about the performance and findings from the the examination, the failed attempt or the cancellation of the examination.(en)">
+            >
+            ["at0019"] = <
+                text = <"Razlog">
+                description = <"*Reason that the activity or care pathway step for the identified examination was carried out, for example, the reason for the cancellation or suspension of the examination.(en)">
+            >
+            ["at0020"] = <
+                text = <"Opombe">
+                description = <"*Additional narrative about the activity or care pathway step not captured in other fields.(en)">
+            >
+            ["at0021"] = <
+                text = <"Podrobnosti pregleda">
+                description = <"*Structured information about the examination. Use to capture detailed, structured information about method & technique etc.(en)">
+            >
+            ["at0022"] = <
+                text = <"Anatomska lokacija">
+                description = <"*Structured information about the specific anatomical location of the examination.(en)">
+            >
+            ["at9004"] = <
+                text = <"* active (en)">
+                description = <"* active (en)">
+            >
+            ["at9000"] = <
+                text = <"* planned (en)">
+                description = <"* planned (en)">
+            >
+            ["at9001"] = <
+                text = <"* postponed (en)">
+                description = <"* postponed (en)">
+            >
+            ["at9002"] = <
+                text = <"* cancelled (en)">
+                description = <"* cancelled (en)">
+            >
+            ["at9003"] = <
+                text = <"* scheduled (en)">
+                description = <"* scheduled (en)">
+            >
+            ["at9005"] = <
+                text = <"* suspended (en)">
+                description = <"* suspended (en)">
+            >
+            ["at9006"] = <
+                text = <"* aborted (en)">
+                description = <"* aborted (en)">
+            >
+            ["at9007"] = <
+                text = <"* complete (en)">
+                description = <"* complete (en)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9004"] = <http://openehr.org/id/245>
+            ["at9000"] = <http://openehr.org/id/526>
+            ["at9001"] = <http://openehr.org/id/527>
+            ["at9002"] = <http://openehr.org/id/528>
+            ["at9003"] = <http://openehr.org/id/529>
+            ["at9005"] = <http://openehr.org/id/530>
+            ["at9006"] = <http://openehr.org/id/531>
+            ["at9007"] = <http://openehr.org/id/532>
+        >
+    >

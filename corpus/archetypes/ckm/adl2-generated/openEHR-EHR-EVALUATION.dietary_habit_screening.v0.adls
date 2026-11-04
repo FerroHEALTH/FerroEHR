@@ -1,0 +1,274 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=2eb57d7a-1f31-4fda-9dd5-60d5dec8cbce; build_uid=219ea32b-3ade-4460-82ee-836447bec9fb)
+    openEHR-EHR-EVALUATION.dietary_habit_screening.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::sv]>
+
+description
+    original_author = <
+        ["name"] = <"Erik Sundvall">
+        ["date"] = <"2018-12-04">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Formalized/transcribed from guidelines by Annika Terner, Erik Sundvall, Carrick Gillespie and others in the Standin3 project", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"http://www.socialstyrelsen.se/nationellariktlinjerpreventionochbehandlingvidohalsosammalevnadsvanor/stodiarbetetmedlevnadsvanor/samtal-om-matvanor">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"F8C57C8DD20850DC571B3BAD135EC40C">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Avsedd för screening baserad på Socialstyrelsens stöd för samtal om matvanor, med hjälp av svar på frågor \"kostindex\" och frukostvanor. 
+Screening of dietary habits based on a Swedish dietary index etc. The archetype is likely not of international interest, thus not translated to English.">
+            keywords = <"screening", "kostvanor", "matvanor", "kost">
+            use = <"Endast avsedd för enkel screening.">
+            misuse = <"Använd ej dessa screeningfrågor för detaljerad kartlägning av matvanor, nutrition eller undernäring, för sådant finns särskilda (internationella) arketyper.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Kostvanor, screening
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    CLUSTER[at0002] occurrences matches {0..1} matches {    -- Kostindex
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Grönsaker och rotfrukter
+                                value matches {
+                                    DV_ORDINAL[at9005] matches {
+                                        [value, symbol] matches {
+                                            [{0}, {[at0008]}],    -- En gång i veckan eller mer sällan
+                                            [{1}, {[at0007]}],    -- Några gånger i veckan
+                                            [{2}, {[at0006]}],    -- En gång per dag
+                                            [{3}, {[at0005]}]    -- Två gånger per dag eller oftare
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Frukt och bär
+                                value matches {
+                                    DV_ORDINAL[at9006] matches {
+                                        [value, symbol] matches {
+                                            [{0}, {[at0010]}],    -- En gång i veckan eller mer sällan
+                                            [{1}, {[at0011]}],    -- Några gånger i veckan
+                                            [{2}, {[at0012]}],    -- En gång per dag
+                                            [{3}, {[at0013]}]    -- Två gånger per dag eller oftare
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Fisk och skaldjur
+                                value matches {
+                                    DV_ORDINAL[at9007] matches {
+                                        [value, symbol] matches {
+                                            [{0}, {[at0018]}],    -- Några gånger i månaden eller mer sällan
+                                            [{1}, {[at0017]}],    -- En gång i veckan
+                                            [{2}, {[at0016]}],    -- Två gånger i veckan
+                                            [{3}, {[at0015]}]    -- Tre gånger i veckan eller oftare
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0019] occurrences matches {0..1} matches {    -- Kaffebröd, choklad, godis, chips, läsk, saft
+                                value matches {
+                                    DV_ORDINAL[at9008] matches {
+                                        [value, symbol] matches {
+                                            [{0}, {[at0020]}],    -- Två gånger per dag eller oftare
+                                            [{1}, {[at0021]}],    -- En gång per dag
+                                            [{2}, {[at0022]}],    -- Några gånger i veckan
+                                            [{3}, {[at0023]}]    -- En gång i veckan eller mer sällan
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0024] occurrences matches {0..12} matches {    -- Kostindexberäkning
+                                value matches {
+                                    DV_COUNT[at9009] matches {
+                                        magnitude matches {|0..12|}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Frukostvanor
+                        value matches {
+                            DV_CODED_TEXT[at9010] matches {
+                                defining_code matches {[ac9004]}    -- Frukostvanor (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0029]
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Kostvanor, screening">
+                description = <"Screening av en individs matvanor.">
+            >
+            ["at0002"] = <
+                text = <"Kostindex">
+                description = <"">
+            >
+            ["at0003"] = <
+                text = <"Frukostvanor">
+                description = <"Hur ofta individen äter frukost.">
+            >
+            ["at0004"] = <
+                text = <"Grönsaker och rotfrukter">
+                description = <"Konsumtion av grönsaker och rotfrukter.">
+            >
+            ["at0005"] = <
+                text = <"Två gånger per dag eller oftare">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"En gång per dag">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Några gånger i veckan">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"En gång i veckan eller mer sällan">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Frukt och bär">
+                description = <"Konsumtion av frukt och bär.">
+            >
+            ["at0010"] = <
+                text = <"En gång i veckan eller mer sällan">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Några gånger i veckan">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"En gång per dag">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Två gånger per dag eller oftare">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Fisk och skaldjur">
+                description = <"Konsumtion av fisk och skaldjur.">
+            >
+            ["at0015"] = <
+                text = <"Tre gånger i veckan eller oftare">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Två gånger i veckan">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"En gång i veckan">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Några gånger i månaden eller mer sällan">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Kaffebröd, choklad, godis, chips, läsk, saft">
+                description = <"Konsumtion av kaffebröd, choklad, godis, chips, läsk, saft.">
+            >
+            ["at0020"] = <
+                text = <"Två gånger per dag eller oftare">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"En gång per dag">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Några gånger i veckan">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"En gång i veckan eller mer sällan">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Kostindexberäkning">
+                description = <"Summa av poängen från samtliga kategorier.">
+            >
+            ["at0025"] = <
+                text = <"Dagligen">
+                description = <"Äter frukost varje dag.">
+            >
+            ["at0026"] = <
+                text = <"Nästan varje dag">
+                description = <"Äter frukost nästan varje dag.">
+            >
+            ["at0027"] = <
+                text = <"Några gånger i veckan">
+                description = <"Äter frukost några gånger i veckan.">
+            >
+            ["at0028"] = <
+                text = <"En gång i veckan eller mer sällan">
+                description = <"Äter ftukost en gång i veckan eller mer sällan.">
+            >
+            ["ac9010"] = <
+                text = <"Grönsaker och rotfrukter (synthesised)">
+                description = <"Konsumtion av grönsaker och rotfrukter. (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Frukt och bär (synthesised)">
+                description = <"Konsumtion av frukt och bär. (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Fisk och skaldjur (synthesised)">
+                description = <"Konsumtion av fisk och skaldjur. (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Kaffebröd, choklad, godis, chips, läsk, saft (synthesised)">
+                description = <"Konsumtion av kaffebröd, choklad, godis, chips, läsk, saft. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Frukostvanor (synthesised)">
+                description = <"Hur ofta individen äter frukost. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0020", "at0021", "at0022", "at0023">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0018", "at0017", "at0016", "at0015">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0010", "at0011", "at0012", "at0013">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0008", "at0007", "at0006", "at0005">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0025", "at0026", "at0027", "at0028">
+        >
+    >

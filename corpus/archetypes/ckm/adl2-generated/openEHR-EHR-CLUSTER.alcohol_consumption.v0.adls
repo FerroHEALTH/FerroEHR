@@ -1,0 +1,107 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d5ed6f2c-1415-4f1d-8589-4a58553b048b; build_uid=7a04a0fa-925d-4c0d-9206-16c16be155ea)
+    openEHR-EHR-CLUSTER.alcohol_consumption.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-07-16">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"8254FF4B7F985557537F5811B608AE02">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the volume, ABV and frequency of alcohol consumed.">
+            keywords = <"alcohol", ...>
+            use = <"Use to record details about the amount of alcohol consumed.
+
+This archetype has been designed to capture the actual amount of alcohol consumed per drink when nested within the context of an Alcohol Intake diary (OBSERVATION.alcohol_intake), or the typical amount consumed when nested within the context of the Alcohol consumption summary (EVALUATION.alcohol_consumption_summary). These parameters can be used to calculate the mass of alcohol consumed.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Alcohol consumption
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Volume
+                value matches {
+                    DV_QUANTITY[at9002] matches {
+                        property matches {[at9000]}    -- Volume
+                        [magnitude, units, precision] matches {
+                            [{|>=0.0|}, {"ml"}, {0}],
+                            [{|>=0.0|}, {"L"}, {2}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Alcohol by volume (ABV)
+                value matches {
+                    DV_QUANTITY[at9003] matches {
+                        property matches {[at9001]}    -- Proportion
+                        magnitude matches {|0.0..100.0|}
+                        units matches {"%"}
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Frequency
+                value matches {
+                    DV_QUANTITY[at9004] matches {
+                        [units] matches {
+                            [{"1/d"}],
+                            [{"1/wk"}],
+                            [{"1/mo"}]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Alcohol consumption">
+                description = <"Details about the amount of alcohol consumed.">
+            >
+            ["at0001"] = <
+                text = <"Volume">
+                description = <"The amount of volume consumed.">
+            >
+            ["at0002"] = <
+                text = <"Alcohol by volume (ABV)">
+                description = <"Measure of the amount of alcohol (by volume) within a given volume of a beverage, expressed as volume percent.">
+            >
+            ["at0003"] = <
+                text = <"Frequency">
+                description = <"Frequency of alcohol consumed.">
+            >
+            ["at9000"] = <
+                text = <"Volume">
+                description = <"Volume">
+            >
+            ["at9001"] = <
+                text = <"Proportion">
+                description = <"Proportion">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/129>
+            ["at9001"] = <http://openehr.org/id/507>
+        >
+    >

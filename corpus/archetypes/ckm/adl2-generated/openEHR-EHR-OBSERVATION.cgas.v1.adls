@@ -1,0 +1,201 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7b920caf-9c5b-4fa3-9857-84d7b4511fe1; build_uid=8a177e7b-9778-4546-b9ab-48898ac3add7)
+    openEHR-EHR-OBSERVATION.cgas.v1.0.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            author = <
+                ["name"] = <"Vesa Peltola">
+                ["organisation"] = <"Tieto Finland">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Nasjonal IKT HF">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"John Tore Valand / Silje Ljosland Bakke">
+        ["organisation"] = <"Helse Bergen HF / Nasjonal IKT HF">
+        ["email"] = <"john.tore.valand@helse-bergen.no / silje.ljosland.bakke@nasjonalikt.no">
+        ["date"] = <"2016-02-15">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Morten Aas, Oslo Universitetssykehus, Norway", "Tomas Alme, DIPS, Norway", "Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (Nasjonal IKT Editor)", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Bjørn Christensen, Helse Bergen HF, Norway", "Sigrund Drivenes, Helse-Fonna/BUP Haugesund, Norway", "Sebastian Garde, Ocean Informatics, Germany", "Heather Grain, Llewelyn Grain Informatics, Australia", "Cecilie Graver, Oslo universitetssykehus HF, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Morgan Karlsen, DIPS ASA, Norway", "Heather Leslie, Ocean Informatics, Australia", "Siv Marie Lien, DIPS ASA, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Anne Pauline Anderssen, Helse Nord RHF, Norway", "Phuong Pedersen, DIPS, Norway", "Tanja Riise, Nasjonal IKT HF, Norway", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Micaela Thierley, Helse Bergen/Haraldsplass sykehus, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Shaffer, D, M. Gould, J. Brasic, P. Ambrosini, P. Fisher, H. Bird, S. Aluwahlia: “A Children's Global Assessment Scale (CGAS)”. Psychopharmacology Bulletin 1985, 21,747-48. https://www.researchgate.net/profile/James_Brasic/publication/16557623_Children%27s_global_assessment_scale_%28CGAS%29/links/55b7e04e08aec0e5f43934b5.pdf">
+        ["2"] = <"Vandvik, I H. Akse 6 – CGAS (Children’s Global Assessment Scale) - Norsk oversettelse. [Internet]. The Norwegian Directorate of eHealth; 2007. Available from: https://ehelse.no/Documents/Helsefaglig%20kodeverk/retningslinjer-for-multiaksial-klass-bup.pdf  [Accessed 2016-09-16].">
+        ["3"] = <"Hanssen-Bauer, K. (2008). \"Multiaksial klassifikasjon i psykisk helsevern for barn og unge\". Regionsenter for barn og unges psykiske helse, Helse Sør-Øst. https://helsedirektoratet.no/Documents/Medisinske%20koder%20og%20kodeverk/BUP/bup-klass.pdf.">
+        ["4"] = <"CGAS, Draft Archetype [Internet]. Nasjonal IKT, Nasjonal IKT Clinical Knowledge Manager [cited: 2016-10-31]. Available from: http://arketyper.no/ckm/#showArchetype_1078.36.1289">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"51CB3524A1380123554F0E5F71E76EB9">
+    >
+    details = <
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"Pisteyttämään lapsen eniten heikentynyttä emotionaalisen ja käyttäytymisen tasoa määritetyn ajan kuluessa.">
+            keywords = <"CGAS", ...>
+            use = <"Käytä pisteyttääksesi lapsen heikoimmassa asemassa olevan emotionaalisen ja käyttäytymisen toiminnan määritetyllä ajanjaksolla valitsemalla alimman tason, joka kuvaa hänen toimintaansa sairauden hypoteettisessa jatkumossa. Pisteet voivat vaihdella 1: stä, joka on pahin, 100: een, mikä on paras. Käytä välitasoja (esim. 35, 58, 62).
+
+Pisteytystä käytetään yli 4-vuotiaille lapsille. Eri lähteillä on erilaiset ylärajat pisteytetyn yksilön iälle, yleisimpiä on 16 tai 18-vuotiaat.">
+            misuse = <"Ei pidä käyttää alle 4-vuotiaille lapsille.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å finne personens dårligste, generelle funksjonsnivå for en angitt tidsperiode. Funksjonsnivået uttrykkes ved en skår.">
+            keywords = <"CGAS, funksjonsnivå, akse 6", ...>
+            use = <"Brukes for å finne personens dårligste, generelle funksjonsnivå for den angitte tidsperioden ved å velge laveste nivå som beskriver hans eller hennes funksjon på et hypotetisk kontinuum av helse /sykdom. Bruk mellomliggende tall når det passer (for eksempel 35, 58, 62). Det er den faktiske funksjonsevne som skal skåres, uten hensyn til behandling eller prognose.
+
+Skåringen benyttes på personer over 4 år. Ulike kilder har ulik øvre begrensing på alder for bruk av skåringen. I Norge benyttes skåringen på personer mellom 4 og 18 år.">
+            misuse = <"Brukes ikke til personer under 4 år.">
+            copyright = <"© Nasjonal IKT HF, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To score a child's most impaired level of emotional and behavioural functioning in the specified period of time.">
+            keywords = <"CGAS", ...>
+            use = <"Use to score a child's most impaired level of emotional and behavioural functioning in the specified time period by selecting the lowest level which describes his/her functioning on a hypothetical continuum of health-illness. The scores can range from 1, which is the very worst, to 100, which is the very best. Use intermediary levels (e.g. 35, 58, 62).
+
+The score is used for children over the age of 4. Different sources have different upper limits for the age of the individual being scored, the most common being 16 or 18 years of age.">
+            misuse = <"Not to be used for children under the age of 4.">
+            copyright = <"© Nasjonal IKT HF, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Children's Global Assessment Scale
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Unspecified event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Score
+                                        value matches {
+                                            DV_COUNT[at9000] matches {
+                                                magnitude matches {|1..100|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9001]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0012] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0013] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"Children's Global Assessment Scale (CGAS) -arvio">
+                description = <"Children's Global Assessment Scale (CGAS) -asteikolla arvioidaan tutkittavan lapsen tai nuoren psykologisen ja sosiaalisen toimintakyvyn
+tasoa tiettynä ajanjaksona. ">
+            >
+            ["at0002"] = <
+                text = <"Tarkemmin määrittämätön tapahtuma">
+                description = <"Oletusarvoinen, määrittämättömänä ajanhetkenä tai ajanjaksolla ilmenevä tapahtuma, joka voi olla määritetty tarkasti jossakin mallissa tai suorituksen aikana.">
+            >
+            ["at0004"] = <
+                text = <"Pisteet">
+                description = <"Lapsen tai nuoren heikoin psykologinen ja sosiaalinen toimintakyky tiettynä ajanjaksona.">
+            >
+            ["at0005"] = <
+                text = <"Kommentti">
+                description = <"CGAS-pisteiden kertomusmuodossa olevat lisätiedot, joita ei voida ilmoittaa muissa kentissä.">
+                comment = <"Esimerkki: ”Lapsi on alle 4-vuotias” tai ”Pisteytystä ei voida tehdä, koska tietoja ei ole tarpeeksi”. ”Kommentti”-kenttään voidaan tarvittaessa antaa jokin koodiston mukainen koodi.">
+            >
+            ["at0013"] = <
+                text = <"Laajennus">
+                description = <"Lisätiedot, joita tarvitaan paikallisen sisällön kirjaamiseksi tai yhtenäistämiseksi muiden viitemallien tai formalismien kanssa.">
+                comment = <"Esimerkiksi paikalliset tietovaatimukset tai muu metadata, joilla saadaan aikaan vastaavuus vastaavien FHIR- tai CIMI-tietojen kanssa.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"CGAS">
+                description = <"Children's Global Assessment Scale (CGAS) for å skåre et barns dårligste, generelle funksjonsnivå for en angitt tidsperiode.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i en template eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Skår">
+                description = <"Personens dårligste, generelle funksjonsnivå for den angitte tidsperioden.">
+            >
+            ["at0005"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere kommentar til CGAS-skåringen som ikke er fanget opp i andre felt.">
+                comment = <"For eksempel: \"Barnet er under 4 år gammelt\" eller \"Ikke nok informasjon til gjengelig for å utføre skåringen\". Koding av \"Kommentar\" med et kodeverk kan gjøres der det er hensiktsmessig.">
+            >
+            ["at0013"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Children's Global Assessment Scale">
+                description = <"Children's Global Assessment Scale (CGAS) to score a subject's most impaired level of emotional and behavioural functioning in a specified period of time.">
+            >
+            ["at0002"] = <
+                text = <"Unspecified event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Score">
+                description = <"The child's most impaired level of emotional and behavioural functioning in a specified period of time.">
+            >
+            ["at0005"] = <
+                text = <"Comment">
+                description = <"Additional comment about the overall CGAS score not captured in other fields.">
+                comment = <"For example: \"The child is under the age of 4\" or \"Not enough information available to perform the score\". Coding of the \"Comment\" with a codeset is possible, where appropriate.">
+            >
+            ["at0013"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"e.g. Local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0000"] = <http://snomed.info/id/450740006>
+        >
+    >

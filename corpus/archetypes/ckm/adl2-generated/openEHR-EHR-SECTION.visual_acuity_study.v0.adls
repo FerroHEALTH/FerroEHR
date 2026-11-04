@@ -1,0 +1,99 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c9f1a0f5-4158-4a63-9c41-f9558b275e22; build_uid=9691e23a-10ac-4403-990f-b85cb1d07ce0)
+    openEHR-EHR-SECTION.visual_acuity_study.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2015-06-28">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B458DE9DFED79AB0F2C269E7166E6DFF">
+    >
+    details = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Gestionar el proceso de llevar a cabo y posteriormente valorar los resultados de la prueba de agudeza visual.">
+            keywords = <"agudeza visual", ...>
+            use = <"Utilícese en cualquier estudio clínico que requiera el valor de la agudeza visual de un paciente.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Manage the process of carrying out and then reviewing the results of the visual acuity test.">
+            keywords = <"visual acuity", ...>
+            use = <"Any healthcare study that requires the visual acuity value from a patient.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Visual acuity study
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype ACTION[at0001] matches {    -- Procedure undertaken
+                include
+                    archetype_id/value matches {/openEHR-EHR-ACTION\.procedure(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype OBSERVATION[at0002] matches {    -- Visual acuity test
+                include
+                    archetype_id/value matches {/openEHR-EHR-OBSERVATION\.visual_acuity(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Visual acuity study">
+                description = <"Defines the process which involves the visual acuity test and the subsequent study of results.">
+            >
+            ["at0001"] = <
+                text = <"Procedure undertaken">
+                description = <"Manages the realization of the activities aimed at obtain the visual acuity value from the patient.">
+            >
+            ["at0002"] = <
+                text = <"Visual acuity test">
+                description = <"Examination of results for the visual acuity test.">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Estudio de la agudeza visual">
+                description = <"Define el proceso que implica la prueba y el posterior estudio de los resultados de agudeza visual.">
+            >
+            ["at0001"] = <
+                text = <"Procedimiento realizado">
+                description = <"Gestiona la realización de las actividades destinadas a obtener el valor de la agudeza visual del paciente.">
+            >
+            ["at0002"] = <
+                text = <"Prueba de agudeza visual">
+                description = <"Estudio de los resultados de la prueba de agudeza visual.">
+            >
+        >
+    >

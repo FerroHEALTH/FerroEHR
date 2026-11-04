@@ -1,0 +1,215 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-CLUSTER.exam_anterior_chamber.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, UK">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"2013-03-01">
+    >
+    lifecycle_state = <"AuthorDraft">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"A6E3F361903B9034060D8A1CCAD985B2">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For recording the findings on physical examination of the anterior chamber.">
+            keywords = <"eye", "examination", "physical">
+            use = <"Use to record the findings on physical examination of the anterior chamber.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Description' data element.
+
+Specifically designed to be used within the OBSERVATION.exam archetype, but may be used within any clinically appropriate ENTRY or CLUSTER archetype.">
+            misuse = <"Not to be used to record findings of the physical examination of other parts of the eye, such as the retina or conjunctiva - use other specific archetypes for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Examination Findings  -  Anterior Chamber
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Eye Examined
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9000]}    -- Eye Examined (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Clarity
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0020] matches {    -- Appearance
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            ELEMENT[at0021] matches {    -- Abnormal contents
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Aqueous gap/cornea ratio
+                value matches {
+                    DV_PROPORTION[at9007] matches {
+                        numerator matches {|0.0..1.0|}
+                        denominator matches {|0.0..1.0|}
+                        is_integral matches {False}
+                        type matches {1, 3}
+                    }
+                }
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Angle Grade
+                value matches {
+                    DV_ORDINAL[at9008] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0019]}],    -- Closed
+                            [{1}, {[at0017]}],    -- Less than 1/4 over 1
+                            [{2}, {[at0018]}],    -- 1/4 / over 1
+                            [{3}, {[at0016]}],    -- 1/2-1/4 over 1
+                            [{4}, {[at0015]}]    -- Greater than 1/2 over 1
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Angle Interpretation
+                value matches {
+                    DV_CODED_TEXT[at9009] matches {
+                        defining_code matches {[ac9002]}    -- Angle Interpretation (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0002] matches {    -- Interpretation
+                value matches {
+                    DV_TEXT[at9010]
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9011]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Examination Findings  -  Anterior Chamber">
+                description = <"Findings on physical examination of the anterior chamber.">
+            >
+            ["at0001"] = <
+                text = <"Description">
+                description = <"An overall narrative description of  findings of examination of the cornea.">
+            >
+            ["at0002"] = <
+                text = <"Interpretation">
+                description = <"An interpretation of the anterior chamber examination findings, preferably coded.">
+            >
+            ["at0003"] = <
+                text = <"Eye Examined">
+                description = <"The eye examined.">
+            >
+            ["at0004"] = <
+                text = <"Left eye">
+                description = <"The left eye was examined.">
+            >
+            ["at0005"] = <
+                text = <"Right eye">
+                description = <"The right eye was examined.">
+            >
+            ["at0007"] = <
+                text = <"Aqueous gap/cornea ratio">
+                description = <"Measurement depth of anterior chamber, by van Herricks method, to grade ratio of aqueous gap/cornea into ranges of variation.">
+            >
+            ["at0008"] = <
+                text = <"Angle Interpretation">
+                description = <"Assessment of the openness of the anterior chamber angle.">
+            >
+            ["at0009"] = <
+                text = <"Open">
+                description = <"The anterior chamber angle is open.">
+            >
+            ["at0010"] = <
+                text = <"Occlusable">
+                description = <"The anterior chamber angle is occlusable.">
+            >
+            ["at0011"] = <
+                text = <"Closed">
+                description = <"The anterior chamber angle is closed.">
+            >
+            ["at0012"] = <
+                text = <"Clarity">
+                description = <"Clarity of the anterior chamber.">
+            >
+            ["at0013"] = <
+                text = <"Closure likely with full dilation">
+                description = <"Closure of the angle is likely with full dilation.">
+            >
+            ["at0014"] = <
+                text = <"Angle Grade">
+                description = <"A scored estimation of the anterior chamber angle.">
+            >
+            ["at0015"] = <
+                text = <"Greater than 1/2 over 1">
+                description = <"ratio is greater than  1/2 over 1.">
+            >
+            ["at0016"] = <
+                text = <"1/2-1/4 over 1">
+                description = <"ratio is between 1/4 over 1 and 1/2 over 1">
+            >
+            ["at0017"] = <
+                text = <"Less than 1/4 over 1">
+                description = <"The aqueous gap/cornea ratio is less than 1/4 over 1.">
+            >
+            ["at0018"] = <
+                text = <"1/4 / over 1">
+                description = <"ratio is exactly 1/4 over 1.">
+            >
+            ["at0019"] = <
+                text = <"Closed">
+                description = <"The aqueous gap/cornea ratio is zero.">
+            >
+            ["at0020"] = <
+                text = <"Appearance">
+                description = <"Finding of the appearance of the anterior chamber.">
+            >
+            ["at0021"] = <
+                text = <"Abnormal contents">
+                description = <"Findings of abnormal contents or foreign bodies in the anterior chamber.">
+            >
+            ["ac9000"] = <
+                text = <"Eye Examined (synthesised)">
+                description = <"The eye examined. (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Angle Grade (synthesised)">
+                description = <"A scored estimation of the anterior chamber angle. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Angle Interpretation (synthesised)">
+                description = <"Assessment of the openness of the anterior chamber angle. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0009", "at0010", "at0013", "at0011">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0004", "at0005">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0019", "at0017", "at0018", "at0016", "at0015">
+        >
+    >

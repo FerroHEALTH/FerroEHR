@@ -1,0 +1,619 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=4bbe6b8c-c3f5-4892-9d8a-3fe638a3a68a; build_uid=8fae43f1-a928-4b8b-a870-f5ff090fe46c)
+    openEHR-EHR-INSTRUCTION.assisted_ventilation.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["date"] = <"2021-10-05">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"892A5F978C41DB0061273B2DBB465568">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    INSTRUCTION[at0000] matches {    -- Assisted ventilation order
+        activities cardinality matches {0..*; unordered} matches {
+            ACTIVITY[at0007] occurrences matches {0..1} matches {    -- Current Activity
+                description matches {
+                    ITEM_TREE[at0008] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Assistance Type
+                                value matches {
+                                    DV_CODED_TEXT[at9012] matches {
+                                        defining_code matches {[ac9000]}    -- Assistance Type (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Inflation Type
+                                value matches {
+                                    DV_CODED_TEXT[at9013] matches {
+                                        defining_code matches {[ac9001]}    -- Inflation Type (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Ventilator Pattern
+                                value matches {
+                                    DV_CODED_TEXT[at9014] matches {
+                                        defining_code matches {[ac9002]}    -- Ventilator Pattern (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Ventilator Adjunct
+                                value matches {
+                                    DV_CODED_TEXT[at9015] matches {
+                                        defining_code matches {[ac9003]}    -- Ventilator Adjunct (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0032] occurrences matches {0..1} matches {    -- Trigger Type
+                                value matches {
+                                    DV_CODED_TEXT[at9016] matches {
+                                        defining_code matches {[ac9004]}    -- Trigger Type (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0041] occurrences matches {0..1} matches {    -- Trigger Value
+                                value matches {
+                                    DV_QUANTITY[at9017]
+                                }
+                            }
+                            ELEMENT[at0049] occurrences matches {0..1} matches {    -- Group
+                                value matches {
+                                    DV_CODED_TEXT[at9018] matches {
+                                        defining_code matches {[ac9005]}    -- Group (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0059] occurrences matches {0..1} matches {    -- Systematic Code
+                                value matches {
+                                    DV_CODED_TEXT[at9019] matches {
+                                        defining_code matches {[ac9006]}    -- Systematic Code (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0066] occurrences matches {0..1} matches {    -- Set Rate
+                                value matches {
+                                    DV_QUANTITY[at9020] matches {
+                                        property matches {[at9007]}    -- Frequency
+                                        units matches {"/min"}
+                                        precision matches {0}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0067] occurrences matches {0..1} matches {    -- Inspiratory Pressure
+                                value matches {
+                                    DV_QUANTITY[at9021] matches {
+                                        property matches {[at9008]}    -- Pressure
+                                        units matches {"cm[H2O]"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0068] occurrences matches {0..1} matches {    -- Maximum Inspiratory Pressure Pmax
+                                value matches {
+                                    DV_QUANTITY[at9022] matches {
+                                        property matches {[at9008]}    -- Pressure
+                                        units matches {"cm[H2O]"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0069] occurrences matches {0..1} matches {    -- Plateau Airway Pressure
+                                value matches {
+                                    DV_QUANTITY[at9023] matches {
+                                        property matches {[at9008]}    -- Pressure
+                                        units matches {"cm[H2O]"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0070] occurrences matches {0..1} matches {    -- Peak End-Expiratory Pressure (PEEP)
+                                value matches {
+                                    DV_QUANTITY[at9024] matches {
+                                        property matches {[at9008]}    -- Pressure
+                                        units matches {"cm[H2O]"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0071] occurrences matches {0..1} matches {    -- Tidal Volume
+                                value matches {
+                                    DV_QUANTITY[at9025] matches {
+                                        property matches {[at9009]}    -- Volume
+                                        units matches {"ml"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0072] occurrences matches {0..1} matches {    -- Baseline Airway Pressure (BAP)
+                                value matches {
+                                    DV_QUANTITY[at9026] matches {
+                                        property matches {[at9008]}    -- Pressure
+                                        units matches {"cm[H2O]"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0073] occurrences matches {0..1} matches {    -- Assured Constant Airway Pressure (ACAP)
+                                value matches {
+                                    DV_QUANTITY[at9027]
+                                }
+                            }
+                            ELEMENT[at0074] occurrences matches {0..1} matches {    -- Inspiratory Time
+                                value matches {
+                                    DV_QUANTITY[at9028] matches {
+                                        property matches {[at9010]}    -- Time
+                                        units matches {"s"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0075] occurrences matches {0..1} matches {    -- Expiratory Time
+                                value matches {
+                                    DV_QUANTITY[at9029] matches {
+                                        property matches {[at9010]}    -- Time
+                                        units matches {"s"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0077] occurrences matches {0..1} matches {    -- Inspiratory Pause Time
+                                value matches {
+                                    DV_QUANTITY[at9030] matches {
+                                        property matches {[at9010]}    -- Time
+                                        units matches {"s"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0079] occurrences matches {0..1} matches {    -- I:E Ratio
+                                value matches {
+                                    DV_PROPORTION[at9031] matches {
+                                        type matches {0}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0080] occurrences matches {0..1} matches {    -- Inspiratory Time Fraction
+                                value matches {
+                                    DV_PROPORTION[at9032] matches {
+                                        type matches {2}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0083] occurrences matches {0..1} matches {    -- Breathing System
+                                value matches {
+                                    DV_CODED_TEXT[at9033] matches {
+                                        defining_code matches {[ac9011]}    -- Breathing System (synthesised)
+                                    }
+                                }
+                            }
+                            allow_archetype CLUSTER[at0057] matches {    -- Ventilation Device
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.device\.v1\..*/}
+                            }
+                            allow_archetype CLUSTER[at0082] matches {    -- Humidification
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.humidification\.v0\..*/}
+                            }
+                            allow_archetype CLUSTER[at0091] matches {    -- Airway Device
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.airway_device\.v1\..*/}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0004] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0092] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Assisted ventilation order">
+                description = <"Assisted Ventilation">
+            >
+            ["at0007"] = <
+                text = <"Current Activity">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Inflation Type">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Volume Control">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Pressure Control">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Pressure Support">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Effort Support">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Other">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Ventilator Pattern">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Ventilator Adjunct">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Assistance Type">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Invasive">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Non-Invasive">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Assured Constant Airway Pressure (ACAP)">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Tube Compensation">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Leak Compensation">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Compliance Compensation">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Other">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Trigger Type">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Flow">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Pressure">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Electromyogram">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Neural">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Complex Computed">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Chest wall Motion">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Transthoracic Impedance">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Trigger Value">
+                description = <"">
+                comment = <"Has to allow for a range of units e.g.
+Flow: L/min
+Pressure: cmH2O
+Complex computed and others: Simple sensitivity scale, e.g.,
+Expanding-width scale; Linearly-numbered scale">
+            >
+            ["at0042"] = <
+                text = <"CMV">
+                description = <"Continuous Mandatory Ventilation Group 1a">
+            >
+            ["at0043"] = <
+                text = <"A/C">
+                description = <"Assist Control Group 1b">
+            >
+            ["at0044"] = <
+                text = <"IMV">
+                description = <"Intermittent Mandatory Ventilation Group 2a">
+            >
+            ["at0045"] = <
+                text = <"SIMV">
+                description = <"Synchronised Intermittent Mandatory Ventilation Group 2b">
+            >
+            ["at0046"] = <
+                text = <"S/T">
+                description = <"Spontaneous Timed Ventilation Group 3">
+            >
+            ["at0047"] = <
+                text = <"CSV">
+                description = <"Continuous Spontaneous Ventilation group 4a">
+            >
+            ["at0048"] = <
+                text = <"CPAP">
+                description = <"Continuous Positive Airway Pressure Group 4b">
+            >
+            ["at0049"] = <
+                text = <"Group">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"1A">
+                description = <"e.g. CMV">
+            >
+            ["at0051"] = <
+                text = <"1B">
+                description = <"e.g. Assist/Control (A/C)">
+            >
+            ["at0052"] = <
+                text = <"2A">
+                description = <"e.g. IMV (intermittent mandatory ventilation)">
+            >
+            ["at0053"] = <
+                text = <"2B">
+                description = <"e.g. SIMV (synchronized intermittent mandatory ventilation)">
+            >
+            ["at0054"] = <
+                text = <"3">
+                description = <"typically for patients that need some support with each breath and might need assured ventilation during short periods of apnoea">
+            >
+            ["at0055"] = <
+                text = <"4A">
+                description = <"e.g. Pressure Support or Effort Support">
+            >
+            ["at0056"] = <
+                text = <"4B">
+                description = <"e.g. CPAP">
+            >
+            ["at0057"] = <
+                text = <"Ventilation Device">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Systematic Code">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"CMV-VC">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"CMV-PC">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"A/C-PC">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"A/C-vtPC">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"IMV-PC(S)">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"IMV-PC(S)\\PS">
+                description = <"">
+            >
+            ["at0066"] = <
+                text = <"Set Rate">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"Inspiratory Pressure">
+                description = <"">
+            >
+            ["at0068"] = <
+                text = <"Maximum Inspiratory Pressure Pmax">
+                description = <"">
+            >
+            ["at0069"] = <
+                text = <"Plateau Airway Pressure">
+                description = <"">
+            >
+            ["at0070"] = <
+                text = <"Peak End-Expiratory Pressure (PEEP)">
+                description = <"">
+            >
+            ["at0071"] = <
+                text = <"Tidal Volume">
+                description = <"">
+            >
+            ["at0072"] = <
+                text = <"Baseline Airway Pressure (BAP)">
+                description = <"">
+            >
+            ["at0073"] = <
+                text = <"Assured Constant Airway Pressure (ACAP)">
+                description = <"">
+            >
+            ["at0074"] = <
+                text = <"Inspiratory Time">
+                description = <"">
+            >
+            ["at0075"] = <
+                text = <"Expiratory Time">
+                description = <"">
+            >
+            ["at0077"] = <
+                text = <"Inspiratory Pause Time">
+                description = <"">
+            >
+            ["at0079"] = <
+                text = <"I:E Ratio">
+                description = <"">
+            >
+            ["at0080"] = <
+                text = <"Inspiratory Time Fraction">
+                description = <"">
+            >
+            ["at0082"] = <
+                text = <"Humidification">
+                description = <"">
+            >
+            ["at0083"] = <
+                text = <"Breathing System">
+                description = <"">
+            >
+            ["at0084"] = <
+                text = <"Circle/Circuit">
+                description = <"">
+            >
+            ["at0085"] = <
+                text = <"Facemask">
+                description = <"">
+            >
+            ["at0086"] = <
+                text = <"Nasal Cannula">
+                description = <"">
+            >
+            ["at0087"] = <
+                text = <"T-piece">
+                description = <"">
+            >
+            ["at0088"] = <
+                text = <"C-Circuit">
+                description = <"">
+            >
+            ["at0089"] = <
+                text = <"Other (e.g. Mapleson 'D')">
+                description = <"">
+            >
+            ["at0091"] = <
+                text = <"Airway Device">
+                description = <"">
+            >
+            ["at0092"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at9007"] = <
+                text = <"Frequency">
+                description = <"Frequency">
+            >
+            ["at9008"] = <
+                text = <"Pressure">
+                description = <"Pressure">
+            >
+            ["at9009"] = <
+                text = <"Volume">
+                description = <"Volume">
+            >
+            ["at9010"] = <
+                text = <"Time">
+                description = <"Time">
+            >
+            ["ac9000"] = <
+                text = <"Assistance Type (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Inflation Type (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Ventilator Pattern (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Ventilator Adjunct (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Trigger Type (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Group (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Systematic Code (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Breathing System (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9007"] = <http://openehr.org/id/382>
+            ["at9008"] = <http://openehr.org/id/125>
+            ["at9009"] = <http://openehr.org/id/129>
+            ["at9010"] = <http://openehr.org/id/128>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0042", "at0043", "at0044", "at0045", "at0046", "at0047", "at0048">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0015", "at0016", "at0017", "at0018", "at0019">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0025", "at0026">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0084", "at0085", "at0086", "at0087", "at0088", "at0089">
+        >
+        ["ac9006"] = <
+            id = <"ac9006">
+            members = <"at0060", "at0061", "at0062", "at0063", "at0064", "at0065">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0050", "at0051", "at0052", "at0053", "at0054", "at0055", "at0056">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0033", "at0034", "at0035", "at0036", "at0037", "at0038", "at0039">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0027", "at0028", "at0029", "at0030", "at0031">
+        >
+    >

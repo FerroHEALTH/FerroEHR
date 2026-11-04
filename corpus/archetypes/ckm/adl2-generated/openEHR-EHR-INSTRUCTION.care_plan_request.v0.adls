@@ -1,0 +1,181 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f5e8b3e2-a22c-454d-b39c-c5ff2adc7875; build_uid=5ddc05d4-8a3c-4677-a696-230455786f3e)
+    openEHR-EHR-INSTRUCTION.care_plan_request.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Adriana Kitajima, Débora Farage, Fernanda Maia, Laíse Figueiredo, Marivan Abrahão">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"contato@coreconsulting.com.br">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sistine Barretto-Daniels">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"Sistine.Barretto-Daniels@oceaninformatics.com">
+        ["date"] = <"2010-07-28">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Atomica Informatics, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: Care plan, Draft Archetype [Internet]. Australian Digital Health Agency, Australian Digital Health Agency Clinical Knowledge Manager [cited: 2016-08-22]. No longer available.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"79CCC1762AFD328C6AB3C495A8B89C3C">
+    >
+    details = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Para gravar a ordem ou instrução em relação o planejamento, abertura e execução de um único plano de cuidados como um todo.">
+            keywords = <"cuidado", "plano">
+            use = <"Usar para gravar a ordem ou instrução para o planejamento, início e a realização de um único plano de cuidados como um todo.
+">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the order or instruction regarding the planning, initiation and carrying out of a single care plan as a whole.">
+            keywords = <"care", "plan">
+            use = <"Use to record the order or instruction for the planning, initiation and carrying out of a single care plan as a whole.">
+            misuse = <"">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation">
+        >
+    >
+
+definition
+    INSTRUCTION[at0000] matches {    -- Care plan request
+        activities cardinality matches {0..*; unordered} matches {
+            ACTIVITY[at0001] occurrences matches {0..1} matches {    -- Activity
+                action_archetype_id matches {/openEHR-EHR-ACTION\.care_plan\.v1/}
+                description matches {
+                    ITEM_TREE[at0004] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Plan name
+                                value matches {
+                                    DV_TEXT[at9000]
+                                }
+                            }
+                            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9001]
+                                }
+                            }
+                            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Indication
+                                value matches {
+                                    DV_TEXT[at9002]
+                                }
+                            }
+                            ELEMENT[at0018] occurrences matches {0..1} matches {    -- Date of onset
+                                value matches {
+                                    DV_DATE_TIME[at9003]
+                                }
+                            }
+                            ELEMENT[at0019] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_TEXT[at9004]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0020] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0021] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Plano de cuidados">
+                description = <"Ordem ou instrução para a criação e série de atividades para alcançar uma meta específica de gestão ou resultado do tratamento, realizado por profissionais de saúde e / ou do assunto.">
+            >
+            ["at0001"] = <
+                text = <"Atividade">
+                description = <"Atividade atual.">
+            >
+            ["at0007"] = <
+                text = <"Descrição">
+                description = <"Descrição do escopo do plano de cuidados, intenção e propostas de atividades.">
+            >
+            ["at0011"] = <
+                text = <"Indicação">
+                description = <"Indicação para o plano de cuidados.">
+                comment = <"Por exemplo: um diagnóstico conhecido; ou um objetivo específico.">
+            >
+            ["at0017"] = <
+                text = <"Nome do plano de cuidados">
+                description = <"Identificação do plano de cuidados.">
+            >
+            ["at0018"] = <
+                text = <"Data do início">
+                description = <"Data do início do plano de cuidados.">
+            >
+            ["at0019"] = <
+                text = <"Comentário">
+                description = <"Narrativa adicional sobre a ordem de plano de cuidados não capturados em outros campos.">
+            >
+            ["at0021"] = <
+                text = <"*Cluster(en)">
+                description = <"**(en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Care plan request">
+                description = <"Order or instruction for the creation and sequence of activities to achieve a specified management goal or treatment outcome, carried out by health professionals and/or the subject.">
+            >
+            ["at0001"] = <
+                text = <"Activity">
+                description = <"Current Activity.">
+            >
+            ["at0007"] = <
+                text = <"Description">
+                description = <"Description of the care plan scope, intent and proposed activities.">
+            >
+            ["at0011"] = <
+                text = <"Indication">
+                description = <"Indication for the care plan.">
+                comment = <"For example: a known diagnosis; or a specific goal.">
+            >
+            ["at0017"] = <
+                text = <"Plan name">
+                description = <"Identification of the care plan.">
+            >
+            ["at0018"] = <
+                text = <"Date of onset">
+                description = <"Date of onset for the care plan.">
+            >
+            ["at0019"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the care plan request, not captured in other fields.">
+            >
+            ["at0021"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+        >
+    >

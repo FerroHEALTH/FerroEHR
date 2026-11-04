@@ -1,0 +1,141 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=acad3c82-f669-4103-95bc-b5cb14692b43; build_uid=4b5992e3-256a-4710-98b0-54c8b191ff26)
+    openEHR-EHR-CLUSTER.diabetic_retinopathy_classification.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2016-07-28">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"- Wilkinson C, Ferris F, Klein R, Lee P, Agardh C, Davis M, et al. Proposed international clinical diabetic retinopathy and diabetic macular edema disease severity scales. Ophthalmology. 2003;110:1677-82.">
+        ["2"] = <"- Li HK, Horton M, Bursell SE, Cavallerano J, Zimmer-Galler I, Tennant M, et al. Telehealth practice recommendations for diabetic retinopathy, second edition. Telemed J E Health. 2011;17:814-37.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"37EAF45D5669DE6997A6B5687ECB7462">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Register the severity for diabetic retinopathy and diabetic macular edema according to the international scale of that disease.">
+            keywords = <"diabetic retinopathy", "diabetic macular oedema">
+            use = <"Specify a diagnosis within diabetic retinopathy follow up.">
+            misuse = <"Do not use to classify diseases besides diabetic retinopathy or diabetic macular edema.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar la severidad de la retinopatía diabética según la clasificación internacional dispuesta para la misma.">
+            keywords = <"retinopatía diabética", "edema macular diabético">
+            use = <"Concretar el diagnóstico de la retinopatía diabética en circuitos de seguimiento de la misma.">
+            misuse = <"No utilizar para clasificar afecciones diferentes a la retinopatía diabética o el edema macular diabético.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Classification of Diabetic Retinopathy
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Diagnosis of DR
+                value matches {
+                    DV_CODED_TEXT[at9000] matches {
+                        defining_code matches {[ac2]}    -- Clinical grading for diabetic retinopathy
+                    }
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Macular edema classification
+                value matches {
+                    DV_CODED_TEXT[at9001] matches {
+                        defining_code matches {[ac3]}    -- Classification for diabetic macular edema
+                    }
+                }
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Comments
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Classification of Diabetic Retinopathy">
+                description = <"International clinical disease severity scale for diabetic retinopathy and diabetic macular edema.">
+            >
+            ["at0001"] = <
+                text = <"Diagnosis of DR">
+                description = <"Specification of the clinical grade for diabetic retinopathy.">
+            >
+            ["at0008"] = <
+                text = <"Macular edema classification">
+                description = <"Classification levels for the presence of macular edema as defined by the international scale.">
+            >
+            ["at0014"] = <
+                text = <"Comments">
+                description = <"Comments directed to reviewers specialized on classifying DR. It may include test details or issues that provoke uncertainty while classifying the disease. It is useful as feedback channel  to improve the quality of the DR classification service.">
+            >
+            ["ac2"] = <
+                text = <"Clinical grading for diabetic retinopathy">
+                description = <"List of possible diagnoses for diabetic retinopathy. Those can be formalized with diverse levels of accuracy depending on the guidelines chosen for diabetic retinopathy grading.">
+            >
+            ["ac3"] = <
+                text = <"Classification for diabetic macular edema">
+                description = <"List of possible diagnoses for diabetic macular edema. Those can be formalized with diverse levels of accuracy depending on the guidelines chosen for such grading.">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Clasificación de la retinopatía diabética">
+                description = <"Clasificación internacional de gravedad de la retinopatía diabética y edema macular diabético.">
+            >
+            ["at0001"] = <
+                text = <"Diagnóstico de RD">
+                description = <"Escala internacional para la clasificación de la retinopatía diabética.">
+            >
+            ["at0008"] = <
+                text = <"Clasificación del edema macular">
+                description = <"Niveles de clasificación para la presencia de edema macular definidos por la escala internacional.">
+            >
+            ["at0014"] = <
+                text = <"Comentarios">
+                description = <"Comentarios dirigidos a los revisores especializados en la clasificación de la RD. Se pueden incluir particularidades de la prueba o cuestiones que provocaran incertidumbre al clasificar la afección. Sirve de canal de feedback para mejorar la calidad del servicio de clasificación de la RD.">
+            >
+            ["ac2"] = <
+                text = <"Clasificación de la retinopatía diabética">
+                description = <"Listado de posibles diagnósticos para la retinopatía diabética. El diagnóstico resultante puede incorporar diferentes niveles de precisión en función de las directrices clínicas escogidas para la clasificación. ">
+            >
+            ["ac3"] = <
+                text = <"Clasificación para el edema macular diabético">
+                description = <"Listado de posibles diagnósticos para el edema macular diabético. El diagnóstico resultante puede incorporar diferentes niveles de precisión en función de las directrices clínicas escogidas para la clasificación. ">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["/items[at0001]"] = <http://snomed.info/id/59276001>
+            ["at0000"] = <http://snomed.info/id/4855003>
+            ["at0008"] = <http://snomed.info/id/37231002>
+        >
+    >

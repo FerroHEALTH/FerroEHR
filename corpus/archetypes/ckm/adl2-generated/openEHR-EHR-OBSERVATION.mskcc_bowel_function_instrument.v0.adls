@@ -1,0 +1,575 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d47e6702-2ca8-4b7e-9b05-e2d187c30066; build_uid=8ccac409-68a8-47b1-b576-5a9b11f6e86a)
+    openEHR-EHR-OBSERVATION.mskcc_bowel_function_instrument.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Bassem Khouzam">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Vanessa Pereira">
+        ["organisation"] = <"Pathfinder - Better">
+        ["email"] = <"vanessa.pereira@better.care">
+        ["date"] = <"2020-04-03">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Danielle Santos Alves - Federal University of Pernambuco / Pathfinder - Better by Marand", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Temple LK, Bacik J, Savatta SG, Gottesman L, Paty PB, Weiser MR, Guillem JG, Minsky BD, Kalman M, Thaler HT, Schrag D, Wong WD. The development of a validated instrument to evaluate bowel function after sphincter-preserving surgery for rectal cancer. Dis Colon Rectum. 2005 Jul;48(7):1353-65. doi: 10.1007/s10350-004-0942-z. PubMed PMID: 15868235.">
+        ["2"] = <"Chen TY, Emmertsen KJ, Laurberg S. What Are the Best Questionnaires To Capture Anorectal Function After Surgery in Rectal Cancer?. Curr Colorectal Cancer Rep. 2015;11:37-43. doi: 10.1007/s11888-014-0217-6. Review. PubMed PMID: 25663833; PubMed Central PMCID: PMC4317515.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"15585fbf71ab50bcb42ba9648a50eddc">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter and their total sum for the MSKCC Bowel Function Instrument.">
+            keywords = <"Memorial Sloan Kettering Cancer Centre Bowel Function Instrument, MSKCC BFI, MSKCC, cancer, rectal, colorectal", ...>
+            use = <"Use to record the results for each component parameter and their total sum for the MSKCC Bowel Function Instrument.">
+            misuse = <"">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- MSKCC Bowel Function Instrument
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    INTERVAL_EVENT[at0002] matches {    -- Over the last 4 weeks
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- How many bowel movements in 24h?
+                                        value matches {
+                                            DV_QUANTITY[at9001] matches {
+                                                magnitude matches {|>=0.0|}
+                                                units matches {"/d"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Certain solid foods increase the number of bowel movements in a day
+                                        value matches {
+                                            DV_ORDINAL[at9002] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0023]}],    -- Always
+                                                    [{2}, {[at0024]}],    -- Most of the time
+                                                    [{3}, {[at0025]}],    -- Sometimes
+                                                    [{4}, {[at0026]}],    -- Rarely
+                                                    [{5}, {[at0027]}]    -- Never
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Certain liquids increase the number of bowel movements in a day
+                                        value matches {
+                                            DV_ORDINAL[at9003] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0023]}],    -- Always
+                                                    [{2}, {[at0024]}],    -- Most of the time
+                                                    [{3}, {[at0025]}],    -- Sometimes
+                                                    [{4}, {[at0026]}],    -- Rarely
+                                                    [{5}, {[at0027]}]    -- Never
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Feel like had totally emptied your bowels after a bowel movement
+                                        value matches {
+                                            DV_ORDINAL[at9004] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0023]}],    -- Always
+                                                    [{2}, {[at0024]}],    -- Most of the time
+                                                    [{3}, {[at0025]}],    -- Sometimes
+                                                    [{4}, {[at0026]}],    -- Rarely
+                                                    [{5}, {[at0027]}]    -- Never
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Go to the toilet on time
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0023]}],    -- Always
+                                                    [{2}, {[at0024]}],    -- Most of the time
+                                                    [{3}, {[at0025]}],    -- Sometimes
+                                                    [{4}, {[at0026]}],    -- Rarely
+                                                    [{5}, {[at0027]}]    -- Never
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Had another bowel movement within 15 min of your last bowel movement
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0023]}],    -- Always
+                                                    [{2}, {[at0024]}],    -- Most of the time
+                                                    [{3}, {[at0025]}],    -- Sometimes
+                                                    [{4}, {[at0026]}],    -- Rarely
+                                                    [{5}, {[at0027]}]    -- Never
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Know the difference between gas and bowel movement
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0023]}],    -- Always
+                                                    [{2}, {[at0024]}],    -- Most of the time
+                                                    [{3}, {[at0025]}],    -- Sometimes
+                                                    [{4}, {[at0026]}],    -- Rarely
+                                                    [{5}, {[at0027]}]    -- Never
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Had used medicines to decrease the number of bowel movements
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0023]}],    -- Always
+                                                    [{2}, {[at0024]}],    -- Most of the time
+                                                    [{3}, {[at0025]}],    -- Sometimes
+                                                    [{4}, {[at0026]}],    -- Rarely
+                                                    [{5}, {[at0027]}]    -- Never
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Had diarrhea
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0023]}],    -- Always
+                                                    [{2}, {[at0024]}],    -- Most of the time
+                                                    [{3}, {[at0025]}],    -- Sometimes
+                                                    [{4}, {[at0026]}],    -- Rarely
+                                                    [{5}, {[at0027]}]    -- Never
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Had loose stool
+                                        value matches {
+                                            DV_ORDINAL[at9010] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0023]}],    -- Always
+                                                    [{2}, {[at0024]}],    -- Most of the time
+                                                    [{3}, {[at0025]}],    -- Sometimes
+                                                    [{4}, {[at0026]}],    -- Rarely
+                                                    [{5}, {[at0027]}]    -- Never
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Had been able to wait 15 min to get to the toilet
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0023]}],    -- Always
+                                                    [{2}, {[at0024]}],    -- Most of the time
+                                                    [{3}, {[at0025]}],    -- Sometimes
+                                                    [{4}, {[at0026]}],    -- Rarely
+                                                    [{5}, {[at0027]}]    -- Never
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Were able to control the passage of gas
+                                        value matches {
+                                            DV_ORDINAL[at9012] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0023]}],    -- Always
+                                                    [{2}, {[at0024]}],    -- Most of the time
+                                                    [{3}, {[at0025]}],    -- Sometimes
+                                                    [{4}, {[at0026]}],    -- Rarely
+                                                    [{5}, {[at0027]}]    -- Never
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Had limited the types of solid foods to control bowel movements
+                                        value matches {
+                                            DV_ORDINAL[at9013] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0023]}],    -- Always
+                                                    [{2}, {[at0024]}],    -- Most of the time
+                                                    [{3}, {[at0025]}],    -- Sometimes
+                                                    [{4}, {[at0026]}],    -- Rarely
+                                                    [{5}, {[at0027]}]    -- Never
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Had limited the types of liquids to control bowel movements
+                                        value matches {
+                                            DV_ORDINAL[at9014] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0023]}],    -- Always
+                                                    [{2}, {[at0024]}],    -- Most of the time
+                                                    [{3}, {[at0025]}],    -- Sometimes
+                                                    [{4}, {[at0026]}],    -- Rarely
+                                                    [{5}, {[at0027]}]    -- Never
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Had soilage of your undergarments during the day
+                                        value matches {
+                                            DV_ORDINAL[at9015] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0023]}],    -- Always
+                                                    [{2}, {[at0024]}],    -- Most of the time
+                                                    [{3}, {[at0025]}],    -- Sometimes
+                                                    [{4}, {[at0026]}],    -- Rarely
+                                                    [{5}, {[at0027]}]    -- Never
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Had used tissue, napkin, pad during day
+                                        value matches {
+                                            DV_ORDINAL[at9016] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0023]}],    -- Always
+                                                    [{2}, {[at0024]}],    -- Most of the time
+                                                    [{3}, {[at0025]}],    -- Sometimes
+                                                    [{4}, {[at0026]}],    -- Rarely
+                                                    [{5}, {[at0027]}]    -- Never
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Had had soil undergarments in bed
+                                        value matches {
+                                            DV_ORDINAL[at9017] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0023]}],    -- Always
+                                                    [{2}, {[at0024]}],    -- Most of the time
+                                                    [{3}, {[at0025]}],    -- Sometimes
+                                                    [{4}, {[at0026]}],    -- Rarely
+                                                    [{5}, {[at0027]}]    -- Never
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Had altered activities because of bowel function
+                                        value matches {
+                                            DV_ORDINAL[at9018] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0023]}],    -- Always
+                                                    [{2}, {[at0024]}],    -- Most of the time
+                                                    [{3}, {[at0025]}],    -- Sometimes
+                                                    [{4}, {[at0026]}],    -- Rarely
+                                                    [{5}, {[at0027]}]    -- Never
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0110] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9019]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        width matches {
+                            DV_DURATION[at9020] matches {
+                                value matches {P28D; P28D}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0108] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0111] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"MSKCC Bowel Function Instrument">
+                description = <"Questionnaire for assessing bowel function after sphincter-preserving surgery for rectal cancer.">
+            >
+            ["at0002"] = <
+                text = <"Over the last 4 weeks">
+                description = <"The standard \"over the last 4 weeks\" recording of the MSKCC Bowel Function Instrument.">
+            >
+            ["at0004"] = <
+                text = <"How many bowel movements in 24h?">
+                description = <"How many bowel movements do you generally have in 24 hours?">
+                Question_number = <"1">
+            >
+            ["at0005"] = <
+                text = <"Certain solid foods increase the number of bowel movements in a day">
+                description = <"Do certain solid foods increase the number of bowel movements in a day?">
+                Question_number = <"2">
+            >
+            ["at0006"] = <
+                text = <"Certain liquids increase the number of bowel movements in a day">
+                description = <"Do certain liquids that you drink increase the number of bowel movements in a day?">
+                Question_number = <"3">
+            >
+            ["at0007"] = <
+                text = <"Feel like had totally emptied your bowels after a bowel movement">
+                description = <"Do you feel like you have totally emptied your bowels after a bowel movement?">
+                Question_number = <"4">
+            >
+            ["at0008"] = <
+                text = <"Go to the toilet on time">
+                description = <"Do you get to the toilet on time?">
+                Question_number = <"5">
+            >
+            ["at0009"] = <
+                text = <"Had another bowel movement within 15 min of your last bowel movement">
+                description = <"Do you have another bowel movement within 15 minutes of your last bowel movement?">
+                Question_number = <"6">
+            >
+            ["at0010"] = <
+                text = <"Know the difference between gas and bowel movement">
+                description = <"Do you know the difference between having to pass gas (air) and needing to have a bowel movement?">
+                Question_number = <"7">
+            >
+            ["at0011"] = <
+                text = <"Had used medicines to decrease the number of bowel movements">
+                description = <"Have you used medicines to decrease the number of bowel movements (drugs like Imodium®, Lomotil®)?">
+                Question_number = <"8">
+            >
+            ["at0012"] = <
+                text = <"Had diarrhea">
+                description = <"Have you had diarrhea (no form, watery stool)?">
+                Question_number = <"9">
+            >
+            ["at0013"] = <
+                text = <"Had loose stool">
+                description = <"Have you had loose stool (slight form, but mushy)?">
+                Question_number = <"10">
+            >
+            ["at0014"] = <
+                text = <"Had been able to wait 15 min to get to the toilet">
+                description = <"Have you been able to wait 15 minutes to get to the toilet when you feel like you are going to have a bowel movement?">
+                Question_number = <"11">
+            >
+            ["at0015"] = <
+                text = <"Were able to control the passage of gas">
+                description = <"Have you been able to control the passage of gas (air)?">
+                Question_number = <"12">
+            >
+            ["at0016"] = <
+                text = <"Had limited the types of solid foods to control bowel movements">
+                description = <"Have you limited the types of solid foods you eat to control your bowel movements?">
+                Question_number = <"13">
+            >
+            ["at0017"] = <
+                text = <"Had limited the types of liquids to control bowel movements">
+                description = <"Have you limited the types of liquids you drink to control your bowel movements?">
+                Question_number = <"14">
+            >
+            ["at0018"] = <
+                text = <"Had soilage of your undergarments during the day">
+                description = <"Have you had soilage (leakage of stool) of your undergarments during the day?">
+                Question_number = <"15">
+            >
+            ["at0019"] = <
+                text = <"Had used tissue, napkin, pad during day">
+                description = <"Have you used a tissue, napkin, and/or pad in your undergarments during the day in case of stool leakage?">
+                Question_number = <"16">
+            >
+            ["at0020"] = <
+                text = <"Had had soil undergarments in bed">
+                description = <"Have you had soilage (leakage of stool) of your undergarments when you go to bed?">
+                Question_number = <"17">
+            >
+            ["at0021"] = <
+                text = <"Had altered activities because of bowel function">
+                description = <"Have you had to alter your activities because of your bowel function?">
+                Question_number = <"18">
+            >
+            ["at0023"] = <
+                text = <"Always">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Most of the time">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Sometimes">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Rarely">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Never">
+                description = <"">
+            >
+            ["at0110"] = <
+                text = <"Total score">
+                description = <"The total score of the MSKCC Bowel Function Instrument.">
+            >
+            ["at0111"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9020"] = <
+                text = <"Certain solid foods increase the number of bowel movements in a day (synthesised)">
+                description = <"Do certain solid foods increase the number of bowel movements in a day? (synthesised)">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Instrument de mesure de la fonction intestinale du MSKCC">
+                description = <"Questionnaire pour l'évaluation de la fonction intestinale après une chirurgie de préservation du sphincter pour un cancer du rectum. ">
+            >
+            ["at0002"] = <
+                text = <"*(en)">
+                description = <"*The standard \"over the last 4 weeks\" recording of the MSKCC Bowel Function Instrument. (en)">
+            >
+            ["at0004"] = <
+                text = <"Fréquence des selles en 24H">
+                description = <"Combien de fois allez-vous généralement à la selle en 24 heures ?">
+            >
+            ["at0005"] = <
+                text = <"Effet des aliments sur la fréquence des selles">
+                description = <"Certains aliments vous font-ils aller plus souvent à la selle ?">
+            >
+            ["at0006"] = <
+                text = <"Effet des boissons sur la fréquence des selles">
+                description = <"Certaines boissons vous font-elles aller plus souvent à la selle ?">
+            >
+            ["at0007"] = <
+                text = <"Intestins vides après la selle">
+                description = <"Avez-vous l'impression d'avoir totalement vidé vos intestins après une selle ?">
+            >
+            ["at0008"] = <
+                text = <"Arrivée aux toilettes à temps">
+                description = <"Arrivez-vous aux toilettes à temps ? ">
+            >
+            ["at0009"] = <
+                text = <"Selle 15 minutes après une selle">
+                description = <"Avez-vous une autre selle dans les 15 minutes qui suivent votre dernière selle ?">
+            >
+            ["at0010"] = <
+                text = <"Perception de la différence entre gazs et selles">
+                description = <"Connaissez-vous la différence entre devoir évacuer des gaz (air) et aller à la selle ? ">
+            >
+            ["at0011"] = <
+                text = <"Prise de médicaments pour contrôler les selles">
+                description = <"Avez-vous pris des médicaments pour diminuer le nombre de selles (médicaments comme Imodium®, Lomotil®) ?">
+            >
+            ["at0012"] = <
+                text = <"Diarrhée">
+                description = <"Avez-vous eu la diarrhée (pas de forme, selles liquides) ">
+            >
+            ["at0013"] = <
+                text = <"Selles molles">
+                description = <"Avez-vous eu des selles molles (forme légère, mais molles) ? ">
+            >
+            ["at0014"] = <
+                text = <"Possibilité d'attendre 15 min avant d'aller aux toilettes quand envie présente">
+                description = <"Avez-vous pu attendre 15 minutes pour aller aux toilettes lorsque vous avez l'impression que vous devez aller à la selle ?">
+            >
+            ["at0015"] = <
+                text = <"Contrôle des gazs">
+                description = <"Avez-vous pu contrôler vos gazs (air) ?">
+            >
+            ["at0016"] = <
+                text = <"Limitation des aliments pour contrôler les selles">
+                description = <"Limitez-vous la consommation de certains aliments pour contrôler la fréquence de vos selles ?">
+            >
+            ["at0017"] = <
+                text = <"Limitation des boissons pour contrôler les selles">
+                description = <"Limitez-vous la consommation de certaines boissons pour contrôler la fréquence de vos selles ?">
+            >
+            ["at0018"] = <
+                text = <"Fuites de selles en journée">
+                description = <"Avez-vous eu des souillures (fuites de selles) dans vos sous-vêtements pendant la journée ?">
+            >
+            ["at0019"] = <
+                text = <"Utilisation de protections en cas de fuite de selles">
+                description = <"Avez-vous utilisé un mouchoir, une serviette et/ou un tampon dans vos sous-vêtements pendant la journée en cas de fuite de selles ? ">
+            >
+            ["at0020"] = <
+                text = <"Fuites de selles dans le lit">
+                description = <"Avez-vous eu des souillures (fuites de selles) dans vos sous-vêtements lorsque vous êtes dans le lit ?">
+            >
+            ["at0021"] = <
+                text = <"Modification des activités à cause de la fonction intestinale">
+                description = <"Avez-vous dû modifier vos activités en raison de votre fonction intestinale ?">
+            >
+            ["at0023"] = <
+                text = <"Toujours">
+                description = <"*">
+            >
+            ["at0024"] = <
+                text = <"Souvent">
+                description = <"*">
+            >
+            ["at0025"] = <
+                text = <"Parfois">
+                description = <"*">
+            >
+            ["at0026"] = <
+                text = <"Rarement">
+                description = <"*">
+            >
+            ["at0027"] = <
+                text = <"Jamais">
+                description = <"*">
+            >
+            ["at0110"] = <
+                text = <"Score total">
+                description = <"*">
+            >
+            ["at0111"] = <
+                text = <"Extension">
+                description = <"*">
+            >
+            ["ac9020"] = <
+                text = <"Effet des aliments sur la fréquence des selles (synthesised)">
+                description = <"Certains aliments vous font-ils aller plus souvent à la selle ? (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9020"] = <
+            id = <"ac9020">
+            members = <"at0023", "at0024", "at0025", "at0026", "at0027">
+        >
+    >

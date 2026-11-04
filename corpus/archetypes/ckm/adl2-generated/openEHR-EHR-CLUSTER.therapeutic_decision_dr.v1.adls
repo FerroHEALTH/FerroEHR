@@ -1,0 +1,175 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-CLUSTER.therapeutic_decision_dr.v1.0.0
+
+language
+    original_language = <[ISO_639-1::es]>
+    translations = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2014-05-26">
+    >
+    lifecycle_state = <"AuthorDraft">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"83F3635BD51C959B3A61D5AE13175CE3">
+    >
+    details = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar la declaración del tratamiento más adecuado para cada paciente afectado de retinopatía diabética.">
+            use = <"Se utiliza para registrar la declaraciónacerca del tratamiento para la DR en un instante específico en el tiempo del historial clínico del paciente.
+La declaración se considera sólo para el momento del registro. Es decir, el tratamiento puede cambiar con el tiempo dependiendo de la progresión de la enfermedad.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Register the statement/s about the most suitable treatment for each patient with diabetic retinopathy.">
+            keywords = <"diabetic retinopathy", "treatment">
+            use = <"Use to record statement/s about the DR treatment, at a specific point in time of its clinical history.
+
+The statement is considered only at the time it is registered. That is to say, the treatment can change over time depending on the progression of the disease.">
+            misuse = <"*(es)">
+            copyright = <"*(es)">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Decisión terapéutica DR
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Decisión terapéutica
+                value matches {
+                    DV_CODED_TEXT[at9001] matches {
+                        defining_code matches {[ac9000]}    -- Decisión terapéutica (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Comentarios
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Therapeutic decision DR">
+                description = <"Decision-making process to decide a suitable treatment for patients affected with diabetic retinopathy">
+            >
+            ["at0001"] = <
+                text = <"Therapeutic decision">
+                description = <"Selection of the most effective treatment based on diagnostic criteria and classification of DR.">
+            >
+            ["at0002"] = <
+                text = <"Comments">
+                description = <"Additional information about the decision made regarding the therapeutic recommendation.">
+            >
+            ["at0003"] = <
+                text = <"Intravitreal injection: antiangiogenics">
+                description = <"**(es)">
+            >
+            ["at0004"] = <
+                text = <"Surgery: vitrectomy">
+                description = <"**(es)">
+            >
+            ["at0005"] = <
+                text = <"Laser treatment: panretinal photocoagulation for diabetes">
+                description = <"**(es)">
+            >
+            ["at0006"] = <
+                text = <"Laser treatment: macular drusen photocoagulation">
+                description = <"**(es)">
+            >
+            ["at0007"] = <
+                text = <"Intravitreal injection: corticoids">
+                description = <"**(es)">
+            >
+            ["at0008"] = <
+                text = <"Surgery: cryotherapy to retina">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"Do not treat">
+                description = <"No treatment is indicated or the afection is not tratable">
+            >
+            ["ac9000"] = <
+                text = <"Therapeutic decision (synthesised)">
+                description = <"Selection of the most effective treatment based on diagnostic criteria and classification of DR. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Decisión terapéutica DR">
+                description = <"Proceso de toma de decisiones para asignar un tratamiento adecuado para los pacientes afectados de retinopatía diabética.">
+            >
+            ["at0001"] = <
+                text = <"Decisión terapéutica">
+                description = <"Selección del tratamiento más eficaz en base a los criterios y clasificación diagnóstica de la RD.">
+            >
+            ["at0002"] = <
+                text = <"Comentarios">
+                description = <"Información adicional acerca de la decisión tomada respecto a la recomendación terapéutica.">
+            >
+            ["at0003"] = <
+                text = <"Inyección intravítrea de antiangiogénicos">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Cirugía: vitrectomía">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"Tratamiento láser: fotocoagulación panretiniana para diabetes">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"Tratamiento láser: fotocoagulación drusas maculares">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Inyección intravítrea de corticoides">
+                description = <"*">
+            >
+            ["at0008"] = <
+                text = <"Cirugía: crioterapia en retina">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"No intervenir">
+                description = <"No se indica tratamiento o la afection no es tratable.">
+            >
+            ["ac9000"] = <
+                text = <"Decisión terapéutica (synthesised)">
+                description = <"Selección del tratamiento más eficaz en base a los criterios y clasificación diagnóstica de la RD. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0001"] = <http://snomed.info/id/118910000>
+            ["at0004"] = <http://snomed.info/id/75732000>
+            ["at0005"] = <http://snomed.info/id/413180006>
+            ["at0006"] = <http://snomed.info/id/440578004>
+            ["at0008"] = <http://snomed.info/id/231760002>
+            ["at0009"] = <http://snomed.info/id/428119001>
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0009", "at0003", "at0007", "at0004", "at0008", "at0005", "at0006">
+        >
+    >

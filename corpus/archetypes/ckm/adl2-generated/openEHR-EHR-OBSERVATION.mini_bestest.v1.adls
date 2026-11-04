@@ -1,0 +1,1353 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=9a1f0b6f-cb2d-4773-9ff3-1cf9608f2e8a; build_uid=f80d5685-345b-426a-bdb6-07bdaa2f3cd5)
+    openEHR-EHR-OBSERVATION.mini_bestest.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Karsten Ovretveit">
+                ["organisation"] = <"Helse Vest IKT">
+                ["email"] = <"karsten.ovretveit@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Karsten Ovretveit">
+        ["organisation"] = <"Helse Vest IKT">
+        ["email"] = <"karsten.ovretveit@helse-vest-ikt.no">
+        ["date"] = <"2025-04-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "Clara Calleja Vega, CatSalut. Servei Català de la Salut., Spain", "Ciprian Gerstenberger, Helse Nord IKT, Norway (openEHR Editor)", "Evelyn Hovenga, EJSH Consulting, Australia", "June Marie Nepstad Knappskog, Helse Nord IKT AS, Norway (openEHR Editor), Norway (openEHR Editor)", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Eli Larsen, UNN, Norway (openEHR Editor)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Michael Lutz, BITsoft, Germany", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Vuk Radnić, Better, Slovenia", "Stein Arne Rimehaug, Sunnaas sykehus, Norway", "Anneli Rønstad, Helse Fonna, Norway", "Terje Sagmyr, Helse Vest IKT, Norway (openEHR Editor)", "Lena Schell-Majoor, University of Oldenburg, Germany", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Nyree Taylor, CSIRo, Australia", "John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)", "Karsten Øvretveit, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Horak FB, Wrisley DM, Frank J. The Balance Evaluation Systems Test (BESTest) to differentiate balance deficits. Phys Ther. 2009 May;89(5):484-98.">
+        ["2"] = <"Franchignoni F, Horak F, Godi M, Nardone A, Giordano A. Using psychometric techniques to improve the Balance Evaluation Systems Test: the mini-BESTest. J Rehabil Med. 2010 Apr;42(4):323-31.">
+        ["3"] = <"King L, Horak F. On the Mini-BESTest: scoring and the reporting of total scores. Phys Ther. 2013 Apr;93(4):571-5.">
+        ["4"] = <"Hamre C, Botolfsen P, Tangen GG, Helbostad JL. Interrater and test-retest reliability and validity of the Norwegian version of the BESTest and mini-BESTest in people with increased risk of falling. BMC Geriatr. 2017 Apr 20;17:92.">
+        ["5"] = <"Balance Evaluation Systems Test [Internet]. BESTest [cited 2025 May 28]. Available from: https://www.bestest.us/">
+        ["6"] = <"Mini-BESTest: Balance Evaluation Systems Test – Norsk Versjon. BESTest [cited 2025 May 28]. Available from: https://bestest.us/files/5414/5651/1621/Mini-BESTest_Norwegian_version.pdf">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"8377C316AD164F5C29D890772D42C7BB">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere resultater for hver enkelt parameter, delskårer og deres totale sum for Mini-BESTest.">
+            keywords = <"balanse, postural kontroll, mobilitet, gange, fysisk funksjon, stabilitet, fallforebygging, sensorisk orientering", ...>
+            use = <"Brukes til å registrere resultater for hver enkeltkomponent, delskårer og totalsummen for Mini-BESTest.">
+            misuse = <"Skal ikke brukes til BESTest. Bruk en spesifikk arketype for dette formålet.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record results for each component parameter, sub scores and their total sum for the Mini-BESTest.">
+            keywords = <"balance, postural control, mobility, gait, physical function, stability, fall prevention, sensory orientation", ...>
+            use = <"Used to record results for each component parameter, sub scores and their total sum for the Mini-BESTest.">
+            misuse = <"Not to be used for the BESTest. Use a specific archetype for this purpose.">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Mini-Balance Evaluation Systems Test (Mini-BESTest)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    CLUSTER[at0005] occurrences matches {0..1} matches {    -- Anticipatory
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0006] occurrences matches {0..1} matches {    -- 1. Sit to stand
+                                                value matches {
+                                                    DV_ORDINAL[at9018] matches {
+                                                        [value, symbol] matches {
+                                                            [{2}, {[at0007]}],    -- Normal
+                                                            [{1}, {[at0008]}],    -- Moderate
+                                                            [{0}, {[at0009]}]    -- Severe
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0010] occurrences matches {0..1} matches {    -- 2. Rise to toes
+                                                value matches {
+                                                    DV_ORDINAL[at9019] matches {
+                                                        [value, symbol] matches {
+                                                            [{2}, {[at0011]}],    -- Normal
+                                                            [{1}, {[at0012]}],    -- Moderate
+                                                            [{0}, {[at0013]}]    -- Severe
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            CLUSTER[at0015] occurrences matches {0..1} matches {    -- 3. Stand on one leg
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Time left leg trial 1
+                                                        value matches {
+                                                            DV_QUANTITY[at9020] matches {
+                                                                property matches {[at9002]}    -- Time
+                                                                magnitude matches {|>=0.0|}
+                                                                units matches {"s"}
+                                                                precision matches {0}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Time left leg trial 2
+                                                        value matches {
+                                                            DV_QUANTITY[at9021] matches {
+                                                                property matches {[at9002]}    -- Time
+                                                                magnitude matches {|>=0.0|}
+                                                                units matches {"s"}
+                                                                precision matches {0}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Left stand on one leg
+                                                        value matches {
+                                                            DV_ORDINAL[at9022] matches {
+                                                                [value, symbol] matches {
+                                                                    [{2}, {[at0017]}],    -- Normal
+                                                                    [{1}, {[at0018]}],    -- Moderate
+                                                                    [{0}, {[at0019]}]    -- Severe
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Time right leg trial 1
+                                                        value matches {
+                                                            DV_QUANTITY[at9023] matches {
+                                                                property matches {[at9002]}    -- Time
+                                                                magnitude matches {|>=0.0|}
+                                                                units matches {"s"}
+                                                                precision matches {0}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Time right leg trial 2
+                                                        value matches {
+                                                            DV_QUANTITY[at9024] matches {
+                                                                property matches {[at9002]}    -- Time
+                                                                magnitude matches {|>=0.0|}
+                                                                units matches {"s"}
+                                                                precision matches {0}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Right stand on one leg
+                                                        value matches {
+                                                            DV_ORDINAL[at9025] matches {
+                                                                [value, symbol] matches {
+                                                                    [{2}, {[at0021]}],    -- Normal
+                                                                    [{1}, {[at0022]}],    -- Moderate
+                                                                    [{0}, {[at0023]}]    -- Severe
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0028] occurrences matches {0..1} matches {    -- Sub score
+                                                value matches {
+                                                    DV_COUNT[at9026] matches {
+                                                        magnitude matches {|0..6|}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0029] occurrences matches {0..1} matches {    -- Reactive postural control
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0030] occurrences matches {0..1} matches {    -- 4. Compensatory stepping correction - forward
+                                                value matches {
+                                                    DV_ORDINAL[at9027] matches {
+                                                        [value, symbol] matches {
+                                                            [{2}, {[at0031]}],    -- Normal
+                                                            [{1}, {[at0032]}],    -- Moderate
+                                                            [{0}, {[at0033]}]    -- Severe
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0034] occurrences matches {0..1} matches {    -- 5. Compensatory stepping correction - backward
+                                                value matches {
+                                                    DV_ORDINAL[at9028] matches {
+                                                        [value, symbol] matches {
+                                                            [{2}, {[at0035]}],    -- Normal
+                                                            [{1}, {[at0036]}],    -- Moderate
+                                                            [{0}, {[at0037]}]    -- Severe
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            CLUSTER[at0039] occurrences matches {0..1} matches {    -- 6. Compensatory stepping correction - lateral
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0040] occurrences matches {0..1} matches {    -- Left
+                                                        value matches {
+                                                            DV_ORDINAL[at9029] matches {
+                                                                [value, symbol] matches {
+                                                                    [{2}, {[at0041]}],    -- Normal
+                                                                    [{1}, {[at0042]}],    -- Moderate
+                                                                    [{0}, {[at0043]}]    -- Severe
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0044] occurrences matches {0..1} matches {    -- Right
+                                                        value matches {
+                                                            DV_ORDINAL[at9030] matches {
+                                                                [value, symbol] matches {
+                                                                    [{2}, {[at0045]}],    -- Normal
+                                                                    [{1}, {[at0046]}],    -- Moderate
+                                                                    [{0}, {[at0047]}]    -- Severe
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0052] occurrences matches {0..1} matches {    -- Sub score
+                                                value matches {
+                                                    DV_COUNT[at9031] matches {
+                                                        magnitude matches {|0..6|}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0055] occurrences matches {0..1} matches {    -- Sensory orientation
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0102] occurrences matches {0..1} matches {    -- Stance time - eyes open
+                                                value matches {
+                                                    DV_QUANTITY[at9032] matches {
+                                                        property matches {[at9002]}    -- Time
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"s"}
+                                                        precision matches {0}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0056] occurrences matches {0..1} matches {    -- 7. Stance (feet together); eyes open, firm surface
+                                                value matches {
+                                                    DV_ORDINAL[at9033] matches {
+                                                        [value, symbol] matches {
+                                                            [{2}, {[at0057]}],    -- Normal
+                                                            [{1}, {[at0058]}],    -- Moderate
+                                                            [{0}, {[at0059]}]    -- Severe
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0103] occurrences matches {0..1} matches {    -- Stance time - eyes closed
+                                                value matches {
+                                                    DV_QUANTITY[at9034] matches {
+                                                        property matches {[at9002]}    -- Time
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"s"}
+                                                        precision matches {0}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0060] occurrences matches {0..1} matches {    -- 8. Stance (feet together); eyes closed, foam surface
+                                                value matches {
+                                                    DV_ORDINAL[at9035] matches {
+                                                        [value, symbol] matches {
+                                                            [{2}, {[at0061]}],    -- Normal
+                                                            [{1}, {[at0062]}],    -- Moderate
+                                                            [{0}, {[at0063]}]    -- Severe
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0104] occurrences matches {0..1} matches {    -- Incline time
+                                                value matches {
+                                                    DV_QUANTITY[at9036] matches {
+                                                        property matches {[at9002]}    -- Time
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"s"}
+                                                        precision matches {0}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0064] occurrences matches {0..1} matches {    -- 9. Incline - eyes closed
+                                                value matches {
+                                                    DV_ORDINAL[at9037] matches {
+                                                        [value, symbol] matches {
+                                                            [{2}, {[at0065]}],    -- Normal
+                                                            [{1}, {[at0066]}],    -- Moderate
+                                                            [{0}, {[at0067]}]    -- Severe
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0068] occurrences matches {0..1} matches {    -- Sub score
+                                                value matches {
+                                                    DV_COUNT[at9038] matches {
+                                                        magnitude matches {|0..6|}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0069] occurrences matches {0..1} matches {    -- Dynamic gait
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0070] occurrences matches {0..1} matches {    -- 10. Change in gait speed
+                                                value matches {
+                                                    DV_ORDINAL[at9039] matches {
+                                                        [value, symbol] matches {
+                                                            [{2}, {[at0071]}],    -- Normal
+                                                            [{1}, {[at0072]}],    -- Moderate
+                                                            [{0}, {[at0073]}]    -- Severe
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0079] occurrences matches {0..1} matches {    -- 11. Walk with head turns - horizontal
+                                                value matches {
+                                                    DV_ORDINAL[at9040] matches {
+                                                        [value, symbol] matches {
+                                                            [{2}, {[at0080]}],    -- Normal
+                                                            [{1}, {[at0081]}],    -- Moderate
+                                                            [{0}, {[at0082]}]    -- Severe
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0074] occurrences matches {0..1} matches {    -- 12. Walk with pivot turns
+                                                value matches {
+                                                    DV_ORDINAL[at9041] matches {
+                                                        [value, symbol] matches {
+                                                            [{2}, {[at0075]}],    -- Normal
+                                                            [{1}, {[at0076]}],    -- Moderate
+                                                            [{0}, {[at0077]}]    -- Severe
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0083] occurrences matches {0..1} matches {    -- 13. Step over obstacles
+                                                value matches {
+                                                    DV_ORDINAL[at9042] matches {
+                                                        [value, symbol] matches {
+                                                            [{2}, {[at0084]}],    -- Normal
+                                                            [{1}, {[at0085]}],    -- Moderate
+                                                            [{0}, {[at0086]}]    -- Severe
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            CLUSTER[at0088] occurrences matches {0..1} matches {    -- 14. Timed up & go with dual task [3 meter walk]
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0097] occurrences matches {0..1} matches {    -- Time TUG
+                                                        value matches {
+                                                            DV_QUANTITY[at9043] matches {
+                                                                property matches {[at9002]}    -- Time
+                                                                magnitude matches {|>=0.0|}
+                                                                units matches {"s"}
+                                                                precision matches {0}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0098] occurrences matches {0..1} matches {    -- Time Dual Task TUG
+                                                        value matches {
+                                                            DV_QUANTITY[at9045] matches {
+                                                                property matches {[at9002]}    -- Time
+                                                                magnitude matches {|>=0.0|}
+                                                                units matches {"s"}
+                                                                precision matches {0}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0105] occurrences matches {0..1} matches {    -- Speed change
+                                                        value matches {
+                                                            DV_QUANTITY[at9050] matches {
+                                                                property matches {[at9049]}    -- Qualified real
+                                                                units matches {"%"}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0093] occurrences matches {0..1} matches {    -- Dual Task TUG
+                                                        value matches {
+                                                            DV_ORDINAL[at9046] matches {
+                                                                [value, symbol] matches {
+                                                                    [{2}, {[at0094]}],    -- Normal
+                                                                    [{1}, {[at0095]}],    -- Moderate
+                                                                    [{0}, {[at0096]}]    -- Severe
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0099] occurrences matches {0..1} matches {    -- Sub score
+                                                value matches {
+                                                    DV_COUNT[at9047] matches {
+                                                        magnitude matches {|0..10|}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0100] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9048] matches {
+                                                magnitude matches {|0..28|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0004]
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Mini-Balance Evaluation Systems Test (Mini-BESTest)">
+                description = <"Et kvantitativt verktøy for vurdering av balanse.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard uspesifisert tidspunkt- eller intervallhendelse som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0005"] = <
+                text = <"Antisipatorisk stillingsendring">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"1. Sittende til stående">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Normal">
+                description = <"Reiser seg opp uten å bruke hendene og finner balansen selvstendig.">
+            >
+            ["at0008"] = <
+                text = <"Moderat">
+                description = <"Reiser seg opp på første forsøk MED bruk av hendene.">
+            >
+            ["at0009"] = <
+                text = <"Alvorlig">
+                description = <"Kan ikke reise seg opp uten støtte ELLER trenger flere forsøk ved bruk av hendene.">
+            >
+            ["at0010"] = <
+                text = <"2. Reise seg opp på tå">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Normal">
+                description = <"Stabil i 3 sek. med full høyde.">
+            >
+            ["at0012"] = <
+                text = <"Moderat">
+                description = <"Reiser seg opp på tå, men ikke full høyde (kommer høyere opp hvis pasienten får støtte) ELLER kan stå med lett instabilitet i 3 sek.">
+            >
+            ["at0013"] = <
+                text = <"Alvorlig">
+                description = <"< 3 sek.">
+            >
+            ["at0015"] = <
+                text = <"3. Stå på et ben">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Venstre stå på et ben">
+                description = <"">
+                comment = <"Bruk forsøket med lengst tid.">
+            >
+            ["at0017"] = <
+                text = <"Normal">
+                description = <"20 sek.">
+            >
+            ["at0018"] = <
+                text = <"Moderat">
+                description = <"< 20 sek.">
+            >
+            ["at0019"] = <
+                text = <"Alvorlig">
+                description = <"Kan ikke.">
+            >
+            ["at0020"] = <
+                text = <"Høyre stå på et ben">
+                description = <"">
+                comment = <"Bruk forsøket med lengst tid.">
+            >
+            ["at0021"] = <
+                text = <"Normal">
+                description = <"20 sek.">
+            >
+            ["at0022"] = <
+                text = <"Moderat">
+                description = <"< 20 sek.">
+            >
+            ["at0023"] = <
+                text = <"Alvorlig">
+                description = <"Kan ikke.">
+            >
+            ["at0024"] = <
+                text = <"Tid venstre fot forsøk 1">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Tid venstre fot forsøk 2">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Tid høyre fot forsøk 1">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Tid høyre fot forsøk 2">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Delskår">
+                description = <"Summen av alle elementene under antisipatorisk stillingsendring.">
+                comment = <"For å beregne delskåren, bruk den dårligste siden (høyre eller venstre) med lavest poengskår.">
+            >
+            ["at0029"] = <
+                text = <"Reaktiv postural kontroll">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"4. Korreksjon ved hjelp av kompensatorisk skritt - fremover">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Normal">
+                description = <"Gjenvinner balansen selvstendig med et enkelt, langt skritt (et andre justeringsskritt er tillatt).">
+            >
+            ["at0032"] = <
+                text = <"Moderat">
+                description = <"Bruker mer enn ett skritt for å gjenvinne balansen.">
+            >
+            ["at0033"] = <
+                text = <"Alvorlig">
+                description = <"Tar ingen skritt ELLER ville falt hvis ikke tatt imot ELLER faller umiddelbart.">
+            >
+            ["at0034"] = <
+                text = <"5. Korreksjon ved hjelp av kompensatorisk skritt - bakover">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Normal">
+                description = <"Gjenvinner balansen selvstendig med et enkelt, langt skritt.">
+            >
+            ["at0036"] = <
+                text = <"Moderat">
+                description = <"Bruker mer enn ett skritt for å gjenvinne balansen.">
+            >
+            ["at0037"] = <
+                text = <"Alvorlig">
+                description = <"Tar ingen skritt ELLER ville falt hvis ikke tatt imot ELLER faller umiddelbart.">
+            >
+            ["at0039"] = <
+                text = <"6. Korreksjon ved hjelp av kompensatorisk skritt - til siden">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Venstre">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Normal">
+                description = <"Gjenvinner balansen selvstendig med 1 skritt (i kryss eller til siden er OK).">
+            >
+            ["at0042"] = <
+                text = <"Moderat">
+                description = <"Bruker flere skritt for å gjenvinne balansen.">
+            >
+            ["at0043"] = <
+                text = <"Alvorlig">
+                description = <"Faller, eller kan ikke ta et skritt.">
+            >
+            ["at0044"] = <
+                text = <"Høyre">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Normal">
+                description = <"Gjenvinner balansen selvstendig med 1 skritt (i kryss eller til siden er OK).">
+            >
+            ["at0046"] = <
+                text = <"Moderat">
+                description = <"Bruker flere skritt for å gjenvinne balansen.">
+            >
+            ["at0047"] = <
+                text = <"Alvorlig">
+                description = <"Faller, eller kan ikke ta et skritt.">
+            >
+            ["at0052"] = <
+                text = <"Delskår">
+                description = <"Summen av alle elementene under reaktiv postural kontroll.">
+                comment = <"Bruk siden med det laveste resultatet for å beregne delskår og totalskår.">
+            >
+            ["at0055"] = <
+                text = <"Sensorisk orientering">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"7. Stå med samlede føtter; åpne øyne, fast underlag">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"Normal">
+                description = <"30 sek.">
+            >
+            ["at0058"] = <
+                text = <"Moderat">
+                description = <"< 30 sek.">
+            >
+            ["at0059"] = <
+                text = <"Alvorlig">
+                description = <"Kan ikke.">
+            >
+            ["at0060"] = <
+                text = <"8. Stå med samlede føtter; lukkede øyne, balansepute">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Normal">
+                description = <"30 sek.">
+            >
+            ["at0062"] = <
+                text = <"Moderat">
+                description = <"< 30 sek.">
+            >
+            ["at0063"] = <
+                text = <"Alvorlig">
+                description = <"Kan ikke.">
+            >
+            ["at0064"] = <
+                text = <"9. Skråbrett - lukkede øyne">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Normal">
+                description = <"Står selvstendig i 30 sek. og justerer seg i forhold til loddlinjen.">
+            >
+            ["at0066"] = <
+                text = <"Moderat">
+                description = <"Står selvstendig < 30 sek. ELLER justerer seg i forhold til underlaget.">
+            >
+            ["at0067"] = <
+                text = <"Alvorlig">
+                description = <"Kan ikke.">
+            >
+            ["at0068"] = <
+                text = <"Delskår">
+                description = <"Summen av alle elementene under sensorisk orientering.">
+            >
+            ["at0069"] = <
+                text = <"Dynamisk gange">
+                description = <"">
+            >
+            ["at0070"] = <
+                text = <"10. Endring i ganghastighet">
+                description = <"">
+            >
+            ["at0071"] = <
+                text = <"Normal">
+                description = <"Betydelig endring i ganghastighet uten at det påvirker balansen.">
+            >
+            ["at0072"] = <
+                text = <"Moderat">
+                description = <"Kan ikke endre ganghastighet eller nedsatt balanse.">
+            >
+            ["at0073"] = <
+                text = <"Alvorlig">
+                description = <"Kan ikke oppnå betydelig endring i ganghastighet OG nedsatt balanse.">
+            >
+            ["at0074"] = <
+                text = <"12. Gange med 180 graders vending">
+                description = <"">
+            >
+            ["at0075"] = <
+                text = <"Normal">
+                description = <"Snur og har føttene samlet, RASKT (≤ 3 skritt) og med god balanse.">
+            >
+            ["at0076"] = <
+                text = <"Moderat">
+                description = <"Snur og har føttene samlet, SAKTE (≥ 4 skritt) og med god balanse.">
+            >
+            ["at0077"] = <
+                text = <"Alvorlig">
+                description = <"Kan ikke snu og ha føttene samlet, uansett hastighet, uten at balansen blir nedsatt.">
+            >
+            ["at0079"] = <
+                text = <"11. Gange med horisontale hodebevegelser">
+                description = <"">
+            >
+            ["at0080"] = <
+                text = <"Normal">
+                description = <"Utfører hodebevegelsene uten endring i ganghastighet og med god balanse.">
+            >
+            ["at0081"] = <
+                text = <"Moderat">
+                description = <"Utfører hodebevegelser med reduksjon i ganghastighet.">
+            >
+            ["at0082"] = <
+                text = <"Alvorlig">
+                description = <"Utfører hodebevegelsene med nedsatt balanse.">
+            >
+            ["at0083"] = <
+                text = <"13. Gå over hindring">
+                description = <"">
+            >
+            ["at0084"] = <
+                text = <"Normal">
+                description = <"Kan gå over hindring med minimal endring i ganghastighet og med god balanse.">
+            >
+            ["at0085"] = <
+                text = <"Moderat">
+                description = <"Går over hindringen men berører ELLER fremviser forsiktig atferd gjennom å redusere ganghastigheten.">
+            >
+            ["at0086"] = <
+                text = <"Alvorlig">
+                description = <"Kan ikke gå over hindringen ELLER går rundt hindringen.">
+            >
+            ["at0088"] = <
+                text = <"14. Timed up & go (TUG) med dual task">
+                description = <"">
+            >
+            ["at0093"] = <
+                text = <"Dual task TUG">
+                description = <"">
+            >
+            ["at0094"] = <
+                text = <"Normal">
+                description = <"Ingen tydelig endring mellom sittende, stående eller gående i å telle bakover sammenlignet med TUG uten Dual Task.">
+            >
+            ["at0095"] = <
+                text = <"Moderat">
+                description = <"Dual Task påvirker enten tellingen ELLER gangen (>10%) sammenlignet med TUG uten Dual Task.">
+            >
+            ["at0096"] = <
+                text = <"Alvorlig">
+                description = <"Stopper å telle mens de går ELLER stopper å gå mens de teller.">
+            >
+            ["at0097"] = <
+                text = <"Tid TUG">
+                description = <"">
+            >
+            ["at0098"] = <
+                text = <"Tid Dual Task TUG">
+                description = <"">
+            >
+            ["at0099"] = <
+                text = <"Delskår">
+                description = <"Summen av alle elementene under dynamisk gange.">
+            >
+            ["at0100"] = <
+                text = <"Total skår">
+                description = <"Summen av alle delskårer.">
+            >
+            ["at0102"] = <
+                text = <"Ståtid - åpne øyne">
+                description = <"Tiden, i sekunder, man kan opprettholde en stilling med føttene samlet og øynene åpne på et fast underlag.">
+            >
+            ["at0103"] = <
+                text = <"Ståtid - lukkede øyne">
+                description = <"Tiden, i sekunder, man kan opprettholde en stilling med føttene samlet og øynene lukket på et skumunderlag.">
+            >
+            ["at0104"] = <
+                text = <"Tid skråbrett">
+                description = <"Tiden, i sekunder, man kan opprettholde en stilling med føttene samlet og øynene lukket på et skråbrett.">
+            >
+            ["at0105"] = <
+                text = <"Hastighetsendring">
+                description = <"Relativ hastighetsreduksjon mellom TUG og dual task TUG.">
+            >
+            ["at9002"] = <
+                text = <"* Time (en)">
+                description = <"* Time (en)">
+            >
+            ["at9049"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9048"] = <
+                text = <"1. Sittende til stående (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9049"] = <
+                text = <"2. Reise seg opp på tå (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9050"] = <
+                text = <"Venstre stå på et ben (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9051"] = <
+                text = <"Høyre stå på et ben (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9052"] = <
+                text = <"4. Korreksjon ved hjelp av kompensatorisk skritt - fremover (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9053"] = <
+                text = <"5. Korreksjon ved hjelp av kompensatorisk skritt - bakover (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9054"] = <
+                text = <"Venstre (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9055"] = <
+                text = <"Høyre (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9056"] = <
+                text = <"7. Stå med samlede føtter; åpne øyne, fast underlag (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9057"] = <
+                text = <"8. Stå med samlede føtter; lukkede øyne, balansepute (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9058"] = <
+                text = <"9. Skråbrett - lukkede øyne (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9059"] = <
+                text = <"10. Endring i ganghastighet (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9060"] = <
+                text = <"11. Gange med horisontale hodebevegelser (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9061"] = <
+                text = <"12. Gange med 180 graders vending (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9062"] = <
+                text = <"13. Gå over hindring (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9064"] = <
+                text = <"Dual task TUG (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Mini-Balance Evaluation Systems Test (Mini-BESTest)">
+                description = <"A quantitative balance assessment tool.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0005"] = <
+                text = <"Anticipatory">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"1. Sit to stand">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Normal">
+                description = <"Comes to stand without use of hands and stabilizes independently.">
+            >
+            ["at0008"] = <
+                text = <"Moderate">
+                description = <"Comes to stand WITH use of hands on first attempt.">
+            >
+            ["at0009"] = <
+                text = <"Severe">
+                description = <"Unable to stand up from chair without assistance, OR needs several attempts with use of hands.">
+            >
+            ["at0010"] = <
+                text = <"2. Rise to toes">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Normal">
+                description = <"Stable for 3 s with maximum height.">
+            >
+            ["at0012"] = <
+                text = <"Moderate">
+                description = <"Heels up, but not full range (smaller than when holding hands), OR noticeable instability for 3 s.">
+            >
+            ["at0013"] = <
+                text = <"Severe">
+                description = <"≤ 3 s.">
+            >
+            ["at0015"] = <
+                text = <"3. Stand on one leg">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Left stand on one leg">
+                description = <"">
+                comment = <"Use the trial with the longest time.">
+            >
+            ["at0017"] = <
+                text = <"Normal">
+                description = <"20 s.">
+            >
+            ["at0018"] = <
+                text = <"Moderate">
+                description = <"< 20 s.">
+            >
+            ["at0019"] = <
+                text = <"Severe">
+                description = <"Unable.">
+            >
+            ["at0020"] = <
+                text = <"Right stand on one leg">
+                description = <"">
+                comment = <"Use the trial with the longest time.">
+            >
+            ["at0021"] = <
+                text = <"Normal">
+                description = <"20 s.">
+            >
+            ["at0022"] = <
+                text = <"Moderate">
+                description = <"< 20 s.">
+            >
+            ["at0023"] = <
+                text = <"Severe">
+                description = <"Unable.">
+            >
+            ["at0024"] = <
+                text = <"Time left leg trial 1">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Time left leg trial 2">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Time right leg trial 1">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Time right leg trial 2">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Sub score">
+                description = <"The sum of all items in the anticipatory section.">
+                comment = <"To calculate the sub-score use the side (left or right) with the lowest numerical score (i.e. the worse side).">
+            >
+            ["at0029"] = <
+                text = <"Reactive postural control">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"4. Compensatory stepping correction - forward">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Normal">
+                description = <"Recovers independently with a single, large step (second realignment step is allowed).">
+            >
+            ["at0032"] = <
+                text = <"Moderate">
+                description = <"More than one step used to recover equilibrium.">
+            >
+            ["at0033"] = <
+                text = <"Severe">
+                description = <"No step, OR would fall if not caught, OR falls spontaneously.">
+            >
+            ["at0034"] = <
+                text = <"5. Compensatory stepping correction - backward">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Normal">
+                description = <"Recovers independently with a single, large step.">
+            >
+            ["at0036"] = <
+                text = <"Moderate">
+                description = <"More than one step used to recover equilibrium.">
+            >
+            ["at0037"] = <
+                text = <"Severe">
+                description = <"No step, OR would fall if not caught, OR falls spontaneously.">
+            >
+            ["at0039"] = <
+                text = <"6. Compensatory stepping correction - lateral">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Left">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Normal">
+                description = <"Recovers independently with 1 step  (crossover or lateral OK).">
+            >
+            ["at0042"] = <
+                text = <"Moderate">
+                description = <"Several steps to recover equilibrium.">
+            >
+            ["at0043"] = <
+                text = <"Severe">
+                description = <"Falls, or cannot step.">
+            >
+            ["at0044"] = <
+                text = <"Right">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Normal">
+                description = <"Recovers independently with 1 step (crossover or lateral OK).">
+            >
+            ["at0046"] = <
+                text = <"Moderate">
+                description = <"Several steps to recover equilibrium.">
+            >
+            ["at0047"] = <
+                text = <"Severe">
+                description = <"Falls, or cannot step.">
+            >
+            ["at0052"] = <
+                text = <"Sub score">
+                description = <"The sum of all items in the reactive postural control section.">
+                comment = <"Use the side with the lowest score to calculate sub-score and total score.">
+            >
+            ["at0055"] = <
+                text = <"Sensory orientation">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"7. Stance (feet together); eyes open, firm surface">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"Normal">
+                description = <"30 s.">
+            >
+            ["at0058"] = <
+                text = <"Moderate">
+                description = <"< 30 s.">
+            >
+            ["at0059"] = <
+                text = <"Severe">
+                description = <"Unable.">
+            >
+            ["at0060"] = <
+                text = <"8. Stance (feet together); eyes closed, foam surface">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Normal">
+                description = <"30 s.">
+            >
+            ["at0062"] = <
+                text = <"Moderate">
+                description = <"< 30 s.">
+            >
+            ["at0063"] = <
+                text = <"Severe">
+                description = <"Unable.">
+            >
+            ["at0064"] = <
+                text = <"9. Incline - eyes closed">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Normal">
+                description = <"Stands independently 30 s and aligns with gravity.">
+            >
+            ["at0066"] = <
+                text = <"Moderate">
+                description = <"Stands independently <30 s OR aligns with surface.">
+            >
+            ["at0067"] = <
+                text = <"Severe">
+                description = <"Unable.">
+            >
+            ["at0068"] = <
+                text = <"Sub score">
+                description = <"The sum of all items in the sensory orientation section.">
+            >
+            ["at0069"] = <
+                text = <"Dynamic gait">
+                description = <"">
+            >
+            ["at0070"] = <
+                text = <"10. Change in gait speed">
+                description = <"">
+            >
+            ["at0071"] = <
+                text = <"Normal">
+                description = <"Significantly changes walking speed without imbalance.">
+            >
+            ["at0072"] = <
+                text = <"Moderate">
+                description = <"Unable to change walking speed or signs of imbalance.">
+            >
+            ["at0073"] = <
+                text = <"Severe">
+                description = <"Unable to achieve significant change in walking speed AND signs of imbalance.">
+            >
+            ["at0074"] = <
+                text = <"12. Walk with pivot turns">
+                description = <"">
+            >
+            ["at0075"] = <
+                text = <"Normal">
+                description = <"Turns with feet close FAST (< 3 steps) with good balance.">
+            >
+            ["at0076"] = <
+                text = <"Moderate">
+                description = <"Turns with feet close SLOW (>4 steps) with good balance.">
+            >
+            ["at0077"] = <
+                text = <"Severe">
+                description = <"Cannot turn with feet close at any speed without imbalance.">
+            >
+            ["at0079"] = <
+                text = <"11. Walk with head turns - horizontal">
+                description = <"">
+            >
+            ["at0080"] = <
+                text = <"Normal">
+                description = <"performs head turns with no change in gait speed and good balance.">
+            >
+            ["at0081"] = <
+                text = <"Moderate">
+                description = <"performs head turns with reduction in gait speed.">
+            >
+            ["at0082"] = <
+                text = <"Severe">
+                description = <"performs head turns with imbalance.">
+            >
+            ["at0083"] = <
+                text = <"13. Step over obstacles">
+                description = <"">
+            >
+            ["at0084"] = <
+                text = <"Normal">
+                description = <"Able to step over box with minimal change of gait speed and with good balance.">
+            >
+            ["at0085"] = <
+                text = <"Moderate">
+                description = <"Steps over box but touches box OR displays cautious behavior by slowing gait.">
+            >
+            ["at0086"] = <
+                text = <"Severe">
+                description = <"Unable to step over box OR steps around box.">
+            >
+            ["at0088"] = <
+                text = <"14. Timed up & go with dual task [3 meter walk]">
+                description = <"">
+                comment = <"Timed up & go (TUG)">
+            >
+            ["at0093"] = <
+                text = <"Dual Task TUG">
+                description = <"">
+            >
+            ["at0094"] = <
+                text = <"Normal">
+                description = <"No noticeable change in sitting, standing or walking while backward counting when compared to TUG without Dual Task.">
+            >
+            ["at0095"] = <
+                text = <"Moderate">
+                description = <"Dual Task affects either counting OR walking (>10%) when compared to the TUG without Dual Task.">
+            >
+            ["at0096"] = <
+                text = <"Severe">
+                description = <"Stops counting while walking OR stops walking while counting.">
+            >
+            ["at0097"] = <
+                text = <"Time TUG">
+                description = <"">
+            >
+            ["at0098"] = <
+                text = <"Time Dual Task TUG">
+                description = <"">
+            >
+            ["at0099"] = <
+                text = <"Sub score">
+                description = <"The sum of all items in the dynamic gait section.">
+            >
+            ["at0100"] = <
+                text = <"Total score">
+                description = <"The total sum of all sub scores.">
+            >
+            ["at0102"] = <
+                text = <"Stance time - eyes open">
+                description = <"Length of time, in seconds, can maintain a stance with feet together and eyes open on a firm surface.">
+            >
+            ["at0103"] = <
+                text = <"Stance time - eyes closed">
+                description = <"Length of time, in seconds, can maintain a stance with feet together and eyes closed on a foam surface.">
+            >
+            ["at0104"] = <
+                text = <"Incline time">
+                description = <"Length of time, in seconds, can maintain a stance with feet together and eyes closed on an incline ramp.">
+            >
+            ["at0105"] = <
+                text = <"Speed change">
+                description = <"The relative reduction in speed between TUG and dual task TUG.">
+            >
+            ["at9002"] = <
+                text = <"Time">
+                description = <"Time">
+            >
+            ["at9049"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+            ["ac9048"] = <
+                text = <"1. Sit to stand (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9049"] = <
+                text = <"2. Rise to toes (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9050"] = <
+                text = <"Left stand on one leg (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9051"] = <
+                text = <"Right stand on one leg (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9052"] = <
+                text = <"4. Compensatory stepping correction - forward (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9053"] = <
+                text = <"5. Compensatory stepping correction - backward (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9054"] = <
+                text = <"Left (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9055"] = <
+                text = <"Right (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9056"] = <
+                text = <"7. Stance (feet together); eyes open, firm surface (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9057"] = <
+                text = <"8. Stance (feet together); eyes closed, foam surface (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9058"] = <
+                text = <"9. Incline - eyes closed (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9059"] = <
+                text = <"10. Change in gait speed (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9060"] = <
+                text = <"11. Walk with head turns - horizontal (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9061"] = <
+                text = <"12. Walk with pivot turns (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9062"] = <
+                text = <"13. Step over obstacles (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9064"] = <
+                text = <"Dual Task TUG (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9002"] = <http://openehr.org/id/128>
+            ["at9049"] = <http://openehr.org/id/380>
+        >
+    >
+    value_sets = <
+        ["ac9053"] = <
+            id = <"ac9053">
+            members = <"at0035", "at0036", "at0037">
+        >
+        ["ac9052"] = <
+            id = <"ac9052">
+            members = <"at0031", "at0032", "at0033">
+        >
+        ["ac9051"] = <
+            id = <"ac9051">
+            members = <"at0021", "at0022", "at0023">
+        >
+        ["ac9050"] = <
+            id = <"ac9050">
+            members = <"at0017", "at0018", "at0019">
+        >
+        ["ac9057"] = <
+            id = <"ac9057">
+            members = <"at0061", "at0062", "at0063">
+        >
+        ["ac9056"] = <
+            id = <"ac9056">
+            members = <"at0057", "at0058", "at0059">
+        >
+        ["ac9055"] = <
+            id = <"ac9055">
+            members = <"at0045", "at0046", "at0047">
+        >
+        ["ac9054"] = <
+            id = <"ac9054">
+            members = <"at0041", "at0042", "at0043">
+        >
+        ["ac9059"] = <
+            id = <"ac9059">
+            members = <"at0071", "at0072", "at0073">
+        >
+        ["ac9058"] = <
+            id = <"ac9058">
+            members = <"at0065", "at0066", "at0067">
+        >
+        ["ac9060"] = <
+            id = <"ac9060">
+            members = <"at0080", "at0081", "at0082">
+        >
+        ["ac9064"] = <
+            id = <"ac9064">
+            members = <"at0094", "at0095", "at0096">
+        >
+        ["ac9062"] = <
+            id = <"ac9062">
+            members = <"at0084", "at0085", "at0086">
+        >
+        ["ac9061"] = <
+            id = <"ac9061">
+            members = <"at0075", "at0076", "at0077">
+        >
+        ["ac9049"] = <
+            id = <"ac9049">
+            members = <"at0011", "at0012", "at0013">
+        >
+        ["ac9048"] = <
+            id = <"ac9048">
+            members = <"at0007", "at0008", "at0009">
+        >
+    >

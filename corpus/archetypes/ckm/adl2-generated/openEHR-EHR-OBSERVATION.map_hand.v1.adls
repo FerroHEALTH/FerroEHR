@@ -1,0 +1,1424 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=db09f631-5778-479d-ad03-9673d51b0e5f; build_uid=c65f656c-f757-4a50-abc2-3af5e1375cbc)
+    openEHR-EHR-OBSERVATION.map_hand.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand">
+                ["organisation"] = <"Helse Vest IKT">
+                ["email"] = <"john.tore.valand@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"John Tore Valand">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["email"] = <"john.tore.valand@helse-vest-ikt.no">
+        ["date"] = <"2024-12-10">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Stein Arne Rimehaug, Sunnaas sykehus, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Aleksander Furnes, Helse Nord IKT, Norway", "Ciprian Gerstenberger, HN IKT, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Evelyn Hovenga, EJSH Consulting, Australia", "Ingvild Kjeken, Diakonhjemmet sykehus, Norway", "Ronald Krawec, Alberta Health Services, Canada", "Anne Kristine Brekka, SSHF, Norway", "Kanika Kuwelker, Helse Vest IKT, Norway", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Eli Larsen, UNN, Norway", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Michael Lutz, BITsoft, Germany", "June Marie Knappskog, Helse Nord IKT AS, Norway (Nasjonal IKT redaktør), Norway", "Hanne Marte Bårholm, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Vuk Radnić, Better, Slovenia", "Kanthan Theivendran, NHS, United Kingdom", "John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Paulsen T, Grotle M, Garratt A, Kjeken I. Development and psychometric testing of the patient-reported measure of activity performance of the hand (MAP-Hand) in rheumatoid arthritis. J Rehabil Med 2010;42:636-44.">
+        ["2"] = <"Fernandes L, Grotle M, Darre S, Nossum R, Kjeken I. Validity and responsiveness of the Measure of Activity Performance of the Hand (MAP-Hand) in patients with hand osteoarthritis. J Rehabil Med 2012 Oct;44(10):869-76 2013;2:93-9.">
+        ["3"] = <"Prior Y, Tennant A, Tyson S et al. Measure of activity performance of the hand (MAP-Hand) questionnaire: linguistic validation, cultural adaptation and psychometric testing in people with rheumatoid arthritis in the UK. BMC Musculoskelet Disord 2018; 19 (1): 275.">
+        ["4"] = <"Tveter AT, Nossum R, Eide REM et al. The Measure of Activity Performance of the hand (MAP-Hand) - A reliable and valid questionnaire for use in patients with hand osteoarthritis with specific involvement of the thumb. J Hand Ther 2022; 35 (1): 115-123.">
+        ["5"] = <"Tveter AT, Østerås N, Nossum R et al. The MAP-Hand: Psychometric properties and differences in activity performance between patients with carpometacarpal osteoarthritis and rheumatoid arthritis. J Rehabil Med 2020; 52 (6): jrm00070.">
+        ["6"] = <"Diakonhjemmet sykehus. MAP-Hand (Measure of activity performance of the hand). Retrieved from https://www.diakonhjemmetsykehus.no/avdelinger/nkrr/klinisk-verktoykasse/a-til-a/map-hand-measure-of-activity-performance-of-the-hand/.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"FF5A9AA17B3BD6627C887E866054A141">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere resultater fra MAP-Hand vurderingsverktøy.">
+            keywords = <"aktivitet, PROM", ...>
+            use = <"Brukes for å registrere resultater fra MAP-Hand vurderingsverktøy.
+
+Et pasientrapportert vurderingsverktøy for å vurdere utførelse av håndaktiviteter hos pasienter med revmatoid artritt eller håndartrose som har, eller står i fare for å få funksjonsproblemer på grunn av artritt i hendene.
+
+openEHR-arketyper er fritt tilgjengelige under en åpen lisens, men det spesifikke innholdet i denne \"Measure of activity performance of the hand (MAP-Hand)\"-arketypen er opphavsrettslig beskyttet. All bruk av denne arketypen i implementasjoner må gjøres i henhold til vilkår gitt av innehaverne av opphavsretten.
+
+Informasjon om opphavsretten: Ingvild Kjeken, Diakonhjemmet sykehus (forfatter).">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results of the MAP-Hand tool.">
+            keywords = <"activity, PROM, rheumatoid arthritis, osteoarthritis, hand, activity, function", ...>
+            use = <"Use to record the results of the MAP-Hand tool. 
+
+A patient-reported assessment tool for evaluating hand activity performance for patients with rheumatoid arthritis or osteoarthritis affecting the hands, particularly those who have, or are at risk of developing functional difficulties related to arthritis in the hands.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this Measure of activity performance of the hand (MAP-Hand) archetype is copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners. 
+Copyright information: Ingvild Kjeken, Diakonhjemmet sykehus (author).">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Measure of activity performance of the hand (MAP-Hand)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- 1. Buttoning buttons
+                                        value matches {
+                                            DV_ORDINAL[at9057] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0103]}],    -- No difficulty
+                                                    [{2}, {[at0104]}],    -- Some difficulty
+                                                    [{3}, {[at0105]}],    -- Great difficulty
+                                                    [{4}, {[at0106]}]    -- Not able to do
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- 2. Putting on socks or tights
+                                        value matches {
+                                            DV_ORDINAL[at9058] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0107]}],    -- No difficulty
+                                                    [{2}, {[at0108]}],    -- Some difficulty
+                                                    [{3}, {[at0109]}],    -- Great difficulty
+                                                    [{4}, {[at0110]}]    -- Not able to do
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- 3. Tying shoelaces
+                                        value matches {
+                                            DV_ORDINAL[at9059] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0111]}],    -- No difficulty
+                                                    [{2}, {[at0112]}],    -- Some difficulty
+                                                    [{3}, {[at0113]}],    -- Great difficulty
+                                                    [{4}, {[at0114]}]    -- Not able to do
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- 4. Squeezing out of tubes (e.g. toothpaste)
+                                        value matches {
+                                            DV_ORDINAL[at9060] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0115]}],    -- No difficulty
+                                                    [{2}, {[at0116]}],    -- Some difficulty
+                                                    [{3}, {[at0117]}],    -- Great difficulty
+                                                    [{4}, {[at0118]}]    -- Not able to do
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- 5. Brushing teeth
+                                        value matches {
+                                            DV_ORDINAL[at9061] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0119]}],    -- No difficulty
+                                                    [{2}, {[at0120]}],    -- Some difficulty
+                                                    [{3}, {[at0121]}],    -- Great difficulty
+                                                    [{4}, {[at0122]}]    -- Not able to do
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- 6. Wiping yourself after using the toilet
+                                        value matches {
+                                            DV_ORDINAL[at9062] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0123]}],    -- No difficulty
+                                                    [{2}, {[at0124]}],    -- Some difficulty
+                                                    [{3}, {[at0125]}],    -- Great difficulty
+                                                    [{4}, {[at0126]}]    -- Not able to do
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- 7. Opening bottle screw tops
+                                        value matches {
+                                            DV_ORDINAL[at9063] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0127]}],    -- No difficulty
+                                                    [{2}, {[at0128]}],    -- Some difficulty
+                                                    [{3}, {[at0129]}],    -- Great difficulty
+                                                    [{4}, {[at0130]}]    -- Not able to do
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0031] occurrences matches {0..1} matches {    -- 8. Opening hermetic cans
+                                        value matches {
+                                            DV_ORDINAL[at9064] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0131]}],    -- No difficulty
+                                                    [{2}, {[at0132]}],    -- Some difficulty
+                                                    [{3}, {[at0133]}],    -- Great difficulty
+                                                    [{4}, {[at0134]}]    -- Not able to do
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0032] occurrences matches {0..1} matches {    -- 9. Opening jam jars
+                                        value matches {
+                                            DV_ORDINAL[at9065] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0135]}],    -- No difficulty
+                                                    [{2}, {[at0136]}],    -- Some difficulty
+                                                    [{3}, {[at0137]}],    -- Great difficulty
+                                                    [{4}, {[at0138]}]    -- Not able to do
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0033] occurrences matches {0..1} matches {    -- 10. Slicing bread using a knife
+                                        value matches {
+                                            DV_ORDINAL[at9066] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0139]}],    -- No difficulty
+                                                    [{2}, {[at0140]}],    -- Some difficulty
+                                                    [{3}, {[at0141]}],    -- Great difficulty
+                                                    [{4}, {[at0142]}]    -- Not able to do
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0034] occurrences matches {0..1} matches {    -- 11. Peeling raw vegetables
+                                        value matches {
+                                            DV_ORDINAL[at9067] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0143]}],    -- No difficulty
+                                                    [{2}, {[at0144]}],    -- Some difficulty
+                                                    [{3}, {[at0145]}],    -- Great difficulty
+                                                    [{4}, {[at0146]}]    -- Not able to do
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0035] occurrences matches {0..1} matches {    -- 12. Stirring food in a pan
+                                        value matches {
+                                            DV_ORDINAL[at9068] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0147]}],    -- No difficulty
+                                                    [{2}, {[at0148]}],    -- Some difficulty
+                                                    [{3}, {[at0149]}],    -- Great difficulty
+                                                    [{4}, {[at0150]}]    -- Not able to do
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0036] occurrences matches {0..1} matches {    -- 13. Wringing out cloths
+                                        value matches {
+                                            DV_ORDINAL[at9069] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0151]}],    -- No difficulty
+                                                    [{2}, {[at0152]}],    -- Some difficulty
+                                                    [{3}, {[at0153]}],    -- Great difficulty
+                                                    [{4}, {[at0154]}]    -- Not able to do
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0037] occurrences matches {0..1} matches {    -- 14. Carrying shopping bags
+                                        value matches {
+                                            DV_ORDINAL[at9070] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0155]}],    -- No difficulty
+                                                    [{2}, {[at0156]}],    -- Some difficulty
+                                                    [{3}, {[at0157]}],    -- Great difficulty
+                                                    [{4}, {[at0158]}]    -- Not able to do
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0038] occurrences matches {0..1} matches {    -- 15. Writing by hand
+                                        value matches {
+                                            DV_ORDINAL[at9071] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0159]}],    -- No difficulty
+                                                    [{2}, {[at0160]}],    -- Some difficulty
+                                                    [{3}, {[at0161]}],    -- Great difficulty
+                                                    [{4}, {[at0162]}]    -- Not able to do
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0039] occurrences matches {0..1} matches {    -- 16. Typing on a computer
+                                        value matches {
+                                            DV_ORDINAL[at9072] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0163]}],    -- No difficulty
+                                                    [{2}, {[at0164]}],    -- Some difficulty
+                                                    [{3}, {[at0165]}],    -- Great difficulty
+                                                    [{4}, {[at0166]}]    -- Not able to do
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0040] occurrences matches {0..1} matches {    -- 17. Pushing with hands when getting up from a chair
+                                        value matches {
+                                            DV_ORDINAL[at9073] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0167]}],    -- No difficulty
+                                                    [{2}, {[at0168]}],    -- Some difficulty
+                                                    [{3}, {[at0169]}],    -- Great difficulty
+                                                    [{4}, {[at0170]}]    -- Not able to do
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0041] occurrences matches {0..1} matches {    -- 18. Carrying heavy objects like suitcases and bags (over 5 kg/10lbs)
+                                        value matches {
+                                            DV_ORDINAL[at9074] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0171]}],    -- No difficulty
+                                                    [{2}, {[at0172]}],    -- Some difficulty
+                                                    [{3}, {[at0173]}],    -- Great difficulty
+                                                    [{4}, {[at0174]}]    -- Not able to do
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0179] occurrences matches {0..1} matches {    -- Mean score of predefined activities
+                                        value matches {
+                                            DV_QUANTITY[at9075] matches {
+                                                property matches {[at9055]}    -- Qualified real
+                                                magnitude matches {|1.0..4.0|}
+                                                units matches {"1"}
+                                                precision matches {1}
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0097] occurrences matches {0..5} matches {    -- Self-defined activities
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0094] occurrences matches {0..1} matches {    -- Activity
+                                                value matches {
+                                                    DV_TEXT[at9037]
+                                                }
+                                            }
+                                            ELEMENT[at0096] occurrences matches {0..1} matches {    -- Grading
+                                                value matches {
+                                                    DV_ORDINAL[at9076] matches {
+                                                        [value, symbol] matches {
+                                                            [{1}, {[at0175]}],    -- No difficulty
+                                                            [{2}, {[at0176]}],    -- Some difficulty
+                                                            [{3}, {[at0177]}],    -- Great difficulty
+                                                            [{4}, {[at0178]}]    -- Not able to do
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0180] occurrences matches {0..1} matches {    -- Mean score of self-defined activites
+                                        value matches {
+                                            DV_QUANTITY[at9077] matches {
+                                                property matches {[at9055]}    -- Qualified real
+                                                magnitude matches {|1.0..4.0|}
+                                                units matches {"1"}
+                                                precision matches {1}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0095] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0102] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Measure of activity performance of the hand (MAP-Hand)">
+                description = <"Et pasientrapportert vurderingsverktøy for evaluering av håndfunksjon (MAP-Hand).">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert tidspunkthendelse">
+                description = <"Uspesifisert tidspunkt som kan defineres mer eksplisitt i en templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"2. Trekke på sokker eller strømpebukser">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"1. Kneppe knapper">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"3. Knyte skolisser">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"4. Klemme ut av tuber">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"5. Pusse tenner">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"6. Tørke deg ved toalettbesøk">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"7. Åpne skrukorker på flasker">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"8. Åpne hermetikkbokser">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"9. Åpne syltetøyglass">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"10. Skjære brød med kniv">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"11. Skrelle rå grønnsaker">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"12. Røre mat i en gryte">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"13. Vri kluter">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"14. Bære handleposer">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"15. Skrive for hånd">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"16. Skrive på PC">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"17. Skyve fra med hendene når du reiser deg fra en stol">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"18. Bære tunge gjenstander som kofferter og bager (over 5 kilo)">
+                description = <"">
+            >
+            ["at0094"] = <
+                text = <"Aktivitet">
+                description = <"">
+            >
+            ["at0096"] = <
+                text = <"Gradering">
+                description = <"">
+            >
+            ["at0097"] = <
+                text = <"Egendefinerte aktiviteter">
+                description = <"Andre viktige aktiviteter som du enten har problemer med å utføre, eller ikke kan utføre i det hele tatt på grunn av dine håndplager.">
+            >
+            ["at0102"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0103"] = <
+                text = <"Uten problemer">
+                description = <"">
+            >
+            ["at0104"] = <
+                text = <"Litt problemer">
+                description = <"">
+            >
+            ["at0105"] = <
+                text = <"Store problemer">
+                description = <"">
+            >
+            ["at0106"] = <
+                text = <"Kan ikke utføre">
+                description = <"">
+            >
+            ["at0107"] = <
+                text = <"Uten problemer">
+                description = <"">
+            >
+            ["at0108"] = <
+                text = <"Litt problemer">
+                description = <"">
+            >
+            ["at0109"] = <
+                text = <"Store problemer">
+                description = <"">
+            >
+            ["at0110"] = <
+                text = <"Kan ikke utføre">
+                description = <"">
+            >
+            ["at0111"] = <
+                text = <"Uten problemer">
+                description = <"">
+            >
+            ["at0112"] = <
+                text = <"Litt problemer">
+                description = <"">
+            >
+            ["at0113"] = <
+                text = <"Store problemer">
+                description = <"">
+            >
+            ["at0114"] = <
+                text = <"Kan ikke utføre">
+                description = <"">
+            >
+            ["at0115"] = <
+                text = <"Uten problemer">
+                description = <"">
+            >
+            ["at0116"] = <
+                text = <"Litt problemer">
+                description = <"">
+            >
+            ["at0117"] = <
+                text = <"Store problemer">
+                description = <"">
+            >
+            ["at0118"] = <
+                text = <"Kan ikke utføre">
+                description = <"">
+            >
+            ["at0119"] = <
+                text = <"Uten problemer">
+                description = <"">
+            >
+            ["at0120"] = <
+                text = <"Litt problemer">
+                description = <"">
+            >
+            ["at0121"] = <
+                text = <"Store problemer">
+                description = <"">
+            >
+            ["at0122"] = <
+                text = <"Kan ikke utføre">
+                description = <"">
+            >
+            ["at0123"] = <
+                text = <"Uten problemer">
+                description = <"">
+            >
+            ["at0124"] = <
+                text = <"Litt problemer">
+                description = <"">
+            >
+            ["at0125"] = <
+                text = <"Store problemer">
+                description = <"">
+            >
+            ["at0126"] = <
+                text = <"Kan ikke utføre">
+                description = <"">
+            >
+            ["at0127"] = <
+                text = <"Uten problemer">
+                description = <"">
+            >
+            ["at0128"] = <
+                text = <"Litt problemer">
+                description = <"">
+            >
+            ["at0129"] = <
+                text = <"Store problemer">
+                description = <"">
+            >
+            ["at0130"] = <
+                text = <"Kan ikke utføre">
+                description = <"">
+            >
+            ["at0131"] = <
+                text = <"Uten problemer">
+                description = <"">
+            >
+            ["at0132"] = <
+                text = <"Litt problemer">
+                description = <"">
+            >
+            ["at0133"] = <
+                text = <"Store problemer">
+                description = <"">
+            >
+            ["at0134"] = <
+                text = <"Kan ikke utføre">
+                description = <"">
+            >
+            ["at0135"] = <
+                text = <"Uten problemer">
+                description = <"">
+            >
+            ["at0136"] = <
+                text = <"Litt problemer">
+                description = <"">
+            >
+            ["at0137"] = <
+                text = <"Store problemer">
+                description = <"">
+            >
+            ["at0138"] = <
+                text = <"Kan ikke utføre">
+                description = <"">
+            >
+            ["at0139"] = <
+                text = <"Uten problemer">
+                description = <"">
+            >
+            ["at0140"] = <
+                text = <"Litt problemer">
+                description = <"">
+            >
+            ["at0141"] = <
+                text = <"Store problemer">
+                description = <"">
+            >
+            ["at0142"] = <
+                text = <"Kan ikke utføre">
+                description = <"">
+            >
+            ["at0143"] = <
+                text = <"Uten problemer">
+                description = <"">
+            >
+            ["at0144"] = <
+                text = <"Litt problemer">
+                description = <"">
+            >
+            ["at0145"] = <
+                text = <"Store problemer">
+                description = <"">
+            >
+            ["at0146"] = <
+                text = <"Kan ikke utføre">
+                description = <"">
+            >
+            ["at0147"] = <
+                text = <"Uten problemer">
+                description = <"">
+            >
+            ["at0148"] = <
+                text = <"Litt problemer">
+                description = <"">
+            >
+            ["at0149"] = <
+                text = <"Store problemer">
+                description = <"">
+            >
+            ["at0150"] = <
+                text = <"Kan ikke utføre">
+                description = <"">
+            >
+            ["at0151"] = <
+                text = <"Uten problemer">
+                description = <"">
+            >
+            ["at0152"] = <
+                text = <"Litt problemer">
+                description = <"">
+            >
+            ["at0153"] = <
+                text = <"Store problemer">
+                description = <"">
+            >
+            ["at0154"] = <
+                text = <"Kan ikke utføre">
+                description = <"">
+            >
+            ["at0155"] = <
+                text = <"Uten problemer">
+                description = <"">
+            >
+            ["at0156"] = <
+                text = <"Litt problemer">
+                description = <"">
+            >
+            ["at0157"] = <
+                text = <"Store problemer">
+                description = <"">
+            >
+            ["at0158"] = <
+                text = <"Kan ikke utføre">
+                description = <"">
+            >
+            ["at0159"] = <
+                text = <"Uten problemer">
+                description = <"">
+            >
+            ["at0160"] = <
+                text = <"Litt problemer">
+                description = <"">
+            >
+            ["at0161"] = <
+                text = <"Store problemer">
+                description = <"">
+            >
+            ["at0162"] = <
+                text = <"Kan ikke utføre">
+                description = <"">
+            >
+            ["at0163"] = <
+                text = <"Uten problemer">
+                description = <"">
+            >
+            ["at0164"] = <
+                text = <"Litt problemer">
+                description = <"">
+            >
+            ["at0165"] = <
+                text = <"Store problemer">
+                description = <"">
+            >
+            ["at0166"] = <
+                text = <"Kan ikke utføre">
+                description = <"">
+            >
+            ["at0167"] = <
+                text = <"Uten problemer">
+                description = <"">
+            >
+            ["at0168"] = <
+                text = <"Litt problemer">
+                description = <"">
+            >
+            ["at0169"] = <
+                text = <"Store problemer">
+                description = <"">
+            >
+            ["at0170"] = <
+                text = <"Kan ikke utføre">
+                description = <"">
+            >
+            ["at0171"] = <
+                text = <"Uten problemer">
+                description = <"">
+            >
+            ["at0172"] = <
+                text = <"Litt problemer">
+                description = <"">
+            >
+            ["at0173"] = <
+                text = <"Store problemer">
+                description = <"">
+            >
+            ["at0174"] = <
+                text = <"Kan ikke utføre">
+                description = <"">
+            >
+            ["at0175"] = <
+                text = <"Uten problemer">
+                description = <"">
+            >
+            ["at0176"] = <
+                text = <"Litt problemer">
+                description = <"">
+            >
+            ["at0177"] = <
+                text = <"Store problemer">
+                description = <"">
+            >
+            ["at0178"] = <
+                text = <"Kan ikke utføre">
+                description = <"">
+            >
+            ["at0179"] = <
+                text = <"Gjennomsnittskår standardiserte aktiviteter">
+                description = <"Gjennomsnittskår beregnes som gjennomsnitt av de standardiserte aktivitetsscorene. For å beregne skår må minimum 15 aktiviteter være utfyllt.">
+            >
+            ["at0180"] = <
+                text = <"Gjennomsnittskår egendefinerte aktiviteter">
+                description = <"Gjennomsnittskår av egendefinerte aktiviteter beregnes som gjennomsnitt av de utfyllte egendefinerte aktivitetene.">
+            >
+            ["at9055"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9077"] = <
+                text = <"1. Kneppe knapper (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9078"] = <
+                text = <"2. Trekke på sokker eller strømpebukser (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9079"] = <
+                text = <"3. Knyte skolisser (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9080"] = <
+                text = <"4. Klemme ut av tuber (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9081"] = <
+                text = <"5. Pusse tenner (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9082"] = <
+                text = <"6. Tørke deg ved toalettbesøk (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9083"] = <
+                text = <"7. Åpne skrukorker på flasker (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9084"] = <
+                text = <"8. Åpne hermetikkbokser (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9085"] = <
+                text = <"9. Åpne syltetøyglass (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9086"] = <
+                text = <"10. Skjære brød med kniv (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9087"] = <
+                text = <"11. Skrelle rå grønnsaker (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9088"] = <
+                text = <"12. Røre mat i en gryte (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9089"] = <
+                text = <"13. Vri kluter (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9090"] = <
+                text = <"14. Bære handleposer (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9091"] = <
+                text = <"15. Skrive for hånd (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9092"] = <
+                text = <"16. Skrive på PC (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9093"] = <
+                text = <"17. Skyve fra med hendene når du reiser deg fra en stol (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9094"] = <
+                text = <"18. Bære tunge gjenstander som kofferter og bager (over 5 kilo) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9095"] = <
+                text = <"Gradering (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Measure of activity performance of the hand (MAP-Hand)">
+                description = <"A patient-reported assessment tool for evaluating hand activity performance (MAP-Hand).">
+            >
+            ["at0002"] = <
+                text = <"Point in time event">
+                description = <"Default, unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"2. Putting on socks or tights">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"1. Buttoning buttons">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"3. Tying shoelaces">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"4. Squeezing out of tubes (e.g. toothpaste)">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"5. Brushing teeth">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"6. Wiping yourself after using the toilet">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"7. Opening bottle screw tops">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"8. Opening hermetic cans">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"9. Opening jam jars">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"10. Slicing bread using a knife">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"11. Peeling raw vegetables">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"12. Stirring food in a pan">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"13. Wringing out cloths">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"14. Carrying shopping bags">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"15. Writing by hand">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"16. Typing on a computer">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"17. Pushing with hands when getting up from a chair">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"18. Carrying heavy objects like suitcases and bags (over 5 kg/10lbs)">
+                description = <"">
+            >
+            ["at0094"] = <
+                text = <"Activity">
+                description = <"">
+            >
+            ["at0096"] = <
+                text = <"Grading">
+                description = <"">
+            >
+            ["at0097"] = <
+                text = <"Self-defined activities">
+                description = <"Other important activities that you either have difficulties with or that you cannot do at all because of your hand problem.">
+            >
+            ["at0102"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0103"] = <
+                text = <"No difficulty">
+                description = <"">
+            >
+            ["at0104"] = <
+                text = <"Some difficulty">
+                description = <"">
+            >
+            ["at0105"] = <
+                text = <"Great difficulty">
+                description = <"">
+            >
+            ["at0106"] = <
+                text = <"Not able to do">
+                description = <"">
+            >
+            ["at0107"] = <
+                text = <"No difficulty">
+                description = <"">
+            >
+            ["at0108"] = <
+                text = <"Some difficulty">
+                description = <"">
+            >
+            ["at0109"] = <
+                text = <"Great difficulty">
+                description = <"">
+            >
+            ["at0110"] = <
+                text = <"Not able to do">
+                description = <"">
+            >
+            ["at0111"] = <
+                text = <"No difficulty">
+                description = <"">
+            >
+            ["at0112"] = <
+                text = <"Some difficulty">
+                description = <"">
+            >
+            ["at0113"] = <
+                text = <"Great difficulty">
+                description = <"">
+            >
+            ["at0114"] = <
+                text = <"Not able to do">
+                description = <"">
+            >
+            ["at0115"] = <
+                text = <"No difficulty">
+                description = <"">
+            >
+            ["at0116"] = <
+                text = <"Some difficulty">
+                description = <"">
+            >
+            ["at0117"] = <
+                text = <"Great difficulty">
+                description = <"">
+            >
+            ["at0118"] = <
+                text = <"Not able to do">
+                description = <"">
+            >
+            ["at0119"] = <
+                text = <"No difficulty">
+                description = <"">
+            >
+            ["at0120"] = <
+                text = <"Some difficulty">
+                description = <"">
+            >
+            ["at0121"] = <
+                text = <"Great difficulty">
+                description = <"">
+            >
+            ["at0122"] = <
+                text = <"Not able to do">
+                description = <"">
+            >
+            ["at0123"] = <
+                text = <"No difficulty">
+                description = <"">
+            >
+            ["at0124"] = <
+                text = <"Some difficulty">
+                description = <"">
+            >
+            ["at0125"] = <
+                text = <"Great difficulty">
+                description = <"">
+            >
+            ["at0126"] = <
+                text = <"Not able to do">
+                description = <"">
+            >
+            ["at0127"] = <
+                text = <"No difficulty">
+                description = <"">
+            >
+            ["at0128"] = <
+                text = <"Some difficulty">
+                description = <"">
+            >
+            ["at0129"] = <
+                text = <"Great difficulty">
+                description = <"">
+            >
+            ["at0130"] = <
+                text = <"Not able to do">
+                description = <"">
+            >
+            ["at0131"] = <
+                text = <"No difficulty">
+                description = <"">
+            >
+            ["at0132"] = <
+                text = <"Some difficulty">
+                description = <"">
+            >
+            ["at0133"] = <
+                text = <"Great difficulty">
+                description = <"">
+            >
+            ["at0134"] = <
+                text = <"Not able to do">
+                description = <"">
+            >
+            ["at0135"] = <
+                text = <"No difficulty">
+                description = <"">
+            >
+            ["at0136"] = <
+                text = <"Some difficulty">
+                description = <"">
+            >
+            ["at0137"] = <
+                text = <"Great difficulty">
+                description = <"">
+            >
+            ["at0138"] = <
+                text = <"Not able to do">
+                description = <"">
+            >
+            ["at0139"] = <
+                text = <"No difficulty">
+                description = <"">
+            >
+            ["at0140"] = <
+                text = <"Some difficulty">
+                description = <"">
+            >
+            ["at0141"] = <
+                text = <"Great difficulty">
+                description = <"">
+            >
+            ["at0142"] = <
+                text = <"Not able to do">
+                description = <"">
+            >
+            ["at0143"] = <
+                text = <"No difficulty">
+                description = <"">
+            >
+            ["at0144"] = <
+                text = <"Some difficulty">
+                description = <"">
+            >
+            ["at0145"] = <
+                text = <"Great difficulty">
+                description = <"">
+            >
+            ["at0146"] = <
+                text = <"Not able to do">
+                description = <"">
+            >
+            ["at0147"] = <
+                text = <"No difficulty">
+                description = <"">
+            >
+            ["at0148"] = <
+                text = <"Some difficulty">
+                description = <"">
+            >
+            ["at0149"] = <
+                text = <"Great difficulty">
+                description = <"">
+            >
+            ["at0150"] = <
+                text = <"Not able to do">
+                description = <"">
+            >
+            ["at0151"] = <
+                text = <"No difficulty">
+                description = <"">
+            >
+            ["at0152"] = <
+                text = <"Some difficulty">
+                description = <"">
+            >
+            ["at0153"] = <
+                text = <"Great difficulty">
+                description = <"">
+            >
+            ["at0154"] = <
+                text = <"Not able to do">
+                description = <"">
+            >
+            ["at0155"] = <
+                text = <"No difficulty">
+                description = <"">
+            >
+            ["at0156"] = <
+                text = <"Some difficulty">
+                description = <"">
+            >
+            ["at0157"] = <
+                text = <"Great difficulty">
+                description = <"">
+            >
+            ["at0158"] = <
+                text = <"Not able to do">
+                description = <"">
+            >
+            ["at0159"] = <
+                text = <"No difficulty">
+                description = <"">
+            >
+            ["at0160"] = <
+                text = <"Some difficulty">
+                description = <"">
+            >
+            ["at0161"] = <
+                text = <"Great difficulty">
+                description = <"">
+            >
+            ["at0162"] = <
+                text = <"Not able to do">
+                description = <"">
+            >
+            ["at0163"] = <
+                text = <"No difficulty">
+                description = <"">
+            >
+            ["at0164"] = <
+                text = <"Some difficulty">
+                description = <"">
+            >
+            ["at0165"] = <
+                text = <"Great difficulty">
+                description = <"">
+            >
+            ["at0166"] = <
+                text = <"Not able to do">
+                description = <"">
+            >
+            ["at0167"] = <
+                text = <"No difficulty">
+                description = <"">
+            >
+            ["at0168"] = <
+                text = <"Some difficulty">
+                description = <"">
+            >
+            ["at0169"] = <
+                text = <"Great difficulty">
+                description = <"">
+            >
+            ["at0170"] = <
+                text = <"Not able to do">
+                description = <"">
+            >
+            ["at0171"] = <
+                text = <"No difficulty">
+                description = <"">
+            >
+            ["at0172"] = <
+                text = <"Some difficulty">
+                description = <"">
+            >
+            ["at0173"] = <
+                text = <"Great difficulty">
+                description = <"">
+            >
+            ["at0174"] = <
+                text = <"Not able to do">
+                description = <"">
+            >
+            ["at0175"] = <
+                text = <"No difficulty">
+                description = <"">
+            >
+            ["at0176"] = <
+                text = <"Some difficulty">
+                description = <"">
+            >
+            ["at0177"] = <
+                text = <"Great difficulty">
+                description = <"">
+            >
+            ["at0178"] = <
+                text = <"Not able to do">
+                description = <"">
+            >
+            ["at0179"] = <
+                text = <"Mean score of predefined activities">
+                description = <"The mean score of predefined activites is calculated based on the number of items with answers, a minimum of 15 completed items is required.">
+            >
+            ["at0180"] = <
+                text = <"Mean score of self-defined activites">
+                description = <"The mean score of the self defined activities is calculated based on the number of items with answers.">
+            >
+            ["at9055"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+            ["ac9077"] = <
+                text = <"1. Buttoning buttons (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9078"] = <
+                text = <"2. Putting on socks or tights (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9079"] = <
+                text = <"3. Tying shoelaces (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9080"] = <
+                text = <"4. Squeezing out of tubes (e.g. toothpaste) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9081"] = <
+                text = <"5. Brushing teeth (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9082"] = <
+                text = <"6. Wiping yourself after using the toilet (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9083"] = <
+                text = <"7. Opening bottle screw tops (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9084"] = <
+                text = <"8. Opening hermetic cans (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9085"] = <
+                text = <"9. Opening jam jars (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9086"] = <
+                text = <"10. Slicing bread using a knife (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9087"] = <
+                text = <"11. Peeling raw vegetables (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9088"] = <
+                text = <"12. Stirring food in a pan (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9089"] = <
+                text = <"13. Wringing out cloths (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9090"] = <
+                text = <"14. Carrying shopping bags (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9091"] = <
+                text = <"15. Writing by hand (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9092"] = <
+                text = <"16. Typing on a computer (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9093"] = <
+                text = <"17. Pushing with hands when getting up from a chair (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9094"] = <
+                text = <"18. Carrying heavy objects like suitcases and bags (over 5 kg/10lbs) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9095"] = <
+                text = <"Grading (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9055"] = <http://openehr.org/id/380>
+        >
+    >
+    value_sets = <
+        ["ac9079"] = <
+            id = <"ac9079">
+            members = <"at0111", "at0112", "at0113", "at0114">
+        >
+        ["ac9078"] = <
+            id = <"ac9078">
+            members = <"at0107", "at0108", "at0109", "at0110">
+        >
+        ["ac9077"] = <
+            id = <"ac9077">
+            members = <"at0103", "at0104", "at0105", "at0106">
+        >
+        ["ac9082"] = <
+            id = <"ac9082">
+            members = <"at0123", "at0124", "at0125", "at0126">
+        >
+        ["ac9081"] = <
+            id = <"ac9081">
+            members = <"at0119", "at0120", "at0121", "at0122">
+        >
+        ["ac9080"] = <
+            id = <"ac9080">
+            members = <"at0115", "at0116", "at0117", "at0118">
+        >
+        ["ac9086"] = <
+            id = <"ac9086">
+            members = <"at0139", "at0140", "at0141", "at0142">
+        >
+        ["ac9085"] = <
+            id = <"ac9085">
+            members = <"at0135", "at0136", "at0137", "at0138">
+        >
+        ["ac9084"] = <
+            id = <"ac9084">
+            members = <"at0131", "at0132", "at0133", "at0134">
+        >
+        ["ac9083"] = <
+            id = <"ac9083">
+            members = <"at0127", "at0128", "at0129", "at0130">
+        >
+        ["ac9089"] = <
+            id = <"ac9089">
+            members = <"at0151", "at0152", "at0153", "at0154">
+        >
+        ["ac9088"] = <
+            id = <"ac9088">
+            members = <"at0147", "at0148", "at0149", "at0150">
+        >
+        ["ac9087"] = <
+            id = <"ac9087">
+            members = <"at0143", "at0144", "at0145", "at0146">
+        >
+        ["ac9093"] = <
+            id = <"ac9093">
+            members = <"at0167", "at0168", "at0169", "at0170">
+        >
+        ["ac9092"] = <
+            id = <"ac9092">
+            members = <"at0163", "at0164", "at0165", "at0166">
+        >
+        ["ac9091"] = <
+            id = <"ac9091">
+            members = <"at0159", "at0160", "at0161", "at0162">
+        >
+        ["ac9090"] = <
+            id = <"ac9090">
+            members = <"at0155", "at0156", "at0157", "at0158">
+        >
+        ["ac9095"] = <
+            id = <"ac9095">
+            members = <"at0175", "at0176", "at0177", "at0178">
+        >
+        ["ac9094"] = <
+            id = <"ac9094">
+            members = <"at0171", "at0172", "at0173", "at0174">
+        >
+    >

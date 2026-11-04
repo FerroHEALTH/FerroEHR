@@ -1,0 +1,300 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=217e48d9-a3b5-48c5-bf7d-efef3c16b7b7; build_uid=80f141a3-30aa-4a8d-a8b5-921a03bac275)
+    openEHR-EHR-CLUSTER.exam_blastocyst.v1.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Peter Fedorcsak, Vebjørn Arntzen">
+                ["organisation"] = <"University of Oslo, Oslo University Hospital">
+                ["email"] = <"peterfe@uio.no, varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Peter Fedorcsak">
+        ["organisation"] = <"Oslo University Hospital">
+        ["email"] = <"peter.fedorcsak@medisin.uio.no">
+        ["date"] = <"2021-10-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Peter Fedorcsak, University of Oslo, Norway (openEHR Editor)", "Rosane Gotardo, Systema Ltda., Brazil", "Heather Grain, Llewelyn Grain Informatics, Australia", "Gareth Greggains, Oslo University Hospital", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Manisha Mantri, C-DAC, India", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Trine Skuland, Oslo University Hospital", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Julius Hreinsson, Laboratory Director at Reproductive Medicine, Sahlgrenska University Hospital, Sweden">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Alpha Scientists in Reproductive, M. and E.S.I.G.o. Embryology, The Istanbul consensus workshop on embryo assessment: proceedings of an expert meeting. Human Reproduction, 2011. 26(6): p. 1270-1283.">
+        ["2"] = <"Hardarson, T., L. Van Landuyt, and G. Jones, The blastocyst. Human Reproduction, 2012. 27(suppl_1): p. i72-i91.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"25DE1CB79E30B209FCE47B998AFF3008">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere strukturerte observasjoner av en human blastocyst.">
+            keywords = <"in vitro, befruktning, IVF, reproduksjon, zygote, fertilisert, befruktet, egg, eggcelle, oocytt, embryo, blastocyst, assistert", ...>
+            use = <"Brukes til å registrere morfologiske observasjoner av en human blastocyst , vanligvis som del av assistert befruktning.
+
+Arketypen er laget spesifikt for å brukes i SLOT'et \"Undersøkelsesdetaljer\" i arketypen \"OBSERVATION.embryo_assessment\" eller \"ACTION.procedure\", men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende.">
+            misuse = <"Skal ikke brukes til å registrere morfologiske observasjoner av oocytter, zygoter og embryoer i deling - bruk spesifikke CLUSTER arketyper.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record structured observations about a human blastocyst.">
+            keywords = <"in vitro, fertilization, IVF, reproductive medicine, zygote, fertilised, fertilized, oocyte, egg, fertilisation, embryo, reproduction, ART, blastocyst", ...>
+            use = <"Use to record morphological observations about a human blastocyst, usually as part of assisted reproduction treatment.
+
+This archetype has been specifically designed to be used in the 'Observations detail' SLOT within the 'OBSERVATION.embryo_assessment' or 'ACTION.procedure' archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.">
+            misuse = <"Not to be used for recording observations on oocytes, zygotes and cleavage stage embryos - use specific CLUSTER archetypes for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Examination of a blastocyst
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0049] occurrences matches {0..1} matches {    -- Degree of expansion
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9000]}    -- Degree of expansion (synthesised)
+                    }
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0056] occurrences matches {0..1} matches {    -- Inner cell mass morphology
+                value matches {
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[ac9001]}    -- Inner cell mass morphology (synthesised)
+                    }
+                    DV_TEXT[at9006]
+                }
+            }
+            ELEMENT[at0060] occurrences matches {0..1} matches {    -- Trophectoderm morphology
+                value matches {
+                    DV_CODED_TEXT[at9007] matches {
+                        defining_code matches {[ac9002]}    -- Trophectoderm morphology (synthesised)
+                    }
+                    DV_TEXT[at9008]
+                }
+            }
+            ELEMENT[at0064] matches {    -- Other morphological features
+                value matches {
+                    DV_TEXT[at9009]
+                }
+            }
+            ELEMENT[at0068] occurrences matches {0..1} matches {    -- Morphology grade
+                value matches {
+                    DV_TEXT[at9010]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Undersøkelse av en blastocyst">
+                description = <"Morfologiske funn ved mikroskopisk undersøkelse av en human blastocyst.">
+            >
+            ["at0049"] = <
+                text = <"Ekspanderingsgrad">
+                description = <"Grad av ekspandering i blastocysten.">
+            >
+            ["at0050"] = <
+                text = <"Grad 1">
+                description = <"Blastocystkaviteten opptar mindre enn halvparten av blastocystens volum.">
+            >
+            ["at0051"] = <
+                text = <"Grad 2">
+                description = <"Blastocystkaviteten opptar > 50% av blastocystens volum.">
+            >
+            ["at0052"] = <
+                text = <"Grad 3">
+                description = <"Blastocystkaviteten fyller blastocystens hele volum.">
+            >
+            ["at0053"] = <
+                text = <"Grad 4">
+                description = <"Blastocystkaviteten er større enn blastocystens opprinnelig volum, og zona pellucida har blitt tynnere.">
+            >
+            ["at0054"] = <
+                text = <"Grad 5">
+                description = <"Klekkende blastocyst, celler er på vei at av zona pellucida.">
+            >
+            ["at0055"] = <
+                text = <"Grad 6">
+                description = <"Fullstendig klekket blastocyst, hele blastocysten har kommet ut av sona pellucida.">
+            >
+            ["at0056"] = <
+                text = <"Morfologi av den indre cellemassen">
+                description = <"Morfologi av den indre cellemassen.">
+            >
+            ["at0057"] = <
+                text = <"A">
+                description = <"Den indre cellemasse består av mange, tett pakkede celler.">
+            >
+            ["at0058"] = <
+                text = <"B">
+                description = <"Den indre cellemasse består av flere, løst grupperte celler.">
+            >
+            ["at0059"] = <
+                text = <"C">
+                description = <"Den indre cellemasse består av få, løst tilknyttede celler.">
+            >
+            ["at0060"] = <
+                text = <"Morfologi av trofektodermen">
+                description = <"Morfologi av blastocystens trofektoderm.">
+            >
+            ["at0061"] = <
+                text = <"A">
+                description = <"Trofektodermen består av flere celler som danner et sammenhengende epitel.">
+            >
+            ["at0062"] = <
+                text = <"B">
+                description = <"Trofektodermen består av få celler som danner et løst epitel.">
+            >
+            ["at0063"] = <
+                text = <"C">
+                description = <"Trofektodermen består av få, veldig store celler som knapt danner et sammenhengende epitel.">
+            >
+            ["at0064"] = <
+                text = <"Andre morfologiske observasjoner">
+                description = <"Ytterligere morfologiske observasjoner av blastocysten som ikke dekkes av de andre spesifiserte elementene.">
+                comment = <"Kan brukes til å beskrive for eksempel tegn til degenerering, slik som nekrose og utstøtelse av celler, cellulære broer, vakuoler og flere klekkingspunkter. Dette dataelementet er satt til å kunne repeteres fordi det kan være flere observasjoner, både fritekst og kodede.">
+            >
+            ["at0067"] = <
+                text = <"Utilgjengelig">
+                description = <"Den indre cellemassen kan ikke vurderes.">
+            >
+            ["at0068"] = <
+                text = <"Morfologisk gradering">
+                description = <"Overordnet gradering eller skår basert på blastocystens registrerte, morfologiske egenskaper.">
+                comment = <"Bruk av en etablert skala for vurdering av blastocystens morfologi anbefales.">
+            >
+            ["ac9000"] = <
+                text = <"Ekspanderingsgrad (synthesised)">
+                description = <"Grad av ekspandering i blastocysten. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Morfologi av den indre cellemassen (synthesised)">
+                description = <"Morfologi av den indre cellemassen. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Morfologi av trofektodermen (synthesised)">
+                description = <"Morfologi av blastocystens trofektoderm. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Examination of a blastocyst">
+                description = <"Morphological findings obtained by microscopy of a human blastocyst.">
+            >
+            ["at0049"] = <
+                text = <"Degree of expansion">
+                description = <"Degree of expansion of the blastocyst.">
+            >
+            ["at0050"] = <
+                text = <"Grade 1">
+                description = <"The blastocoel cavity is less than the half of the embryo volume.">
+            >
+            ["at0051"] = <
+                text = <"Grade 2">
+                description = <"The blastocoel cavity is > 50% of the embryo volume.">
+            >
+            ["at0052"] = <
+                text = <"Grade 3">
+                description = <"The blastocoel cavity completely fills the embryo volume.">
+            >
+            ["at0053"] = <
+                text = <"Grade 4">
+                description = <"The blastocoel cavity is larger than the original volume of the embryo, thinned zona pellucida.">
+            >
+            ["at0054"] = <
+                text = <"Grade 5">
+                description = <"Hatching blastocyst.">
+            >
+            ["at0055"] = <
+                text = <"Grade 6">
+                description = <"Completely hatched blastocyst.">
+            >
+            ["at0056"] = <
+                text = <"Inner cell mass morphology">
+                description = <"Morphology of the inner cell mass.">
+            >
+            ["at0057"] = <
+                text = <"A">
+                description = <"The inner call mass contains many tightly packed cells.">
+            >
+            ["at0058"] = <
+                text = <"B">
+                description = <"The inner call mass contains several loosely grouped cells.">
+            >
+            ["at0059"] = <
+                text = <"C">
+                description = <"The inner call mass contains few loosely bound cells.">
+            >
+            ["at0060"] = <
+                text = <"Trophectoderm morphology">
+                description = <"Morphology of the trophectoderm of the blastocyst.">
+            >
+            ["at0061"] = <
+                text = <"A">
+                description = <"Trophectoderm contains many cells that form a cohesive epithelium.">
+            >
+            ["at0062"] = <
+                text = <"B">
+                description = <"Trophectoderm contains few cells that form a loose epithelium.">
+            >
+            ["at0063"] = <
+                text = <"C">
+                description = <"Trophectoderm contains very few large cells that struggle to form a cohesive epithelium.">
+            >
+            ["at0064"] = <
+                text = <"Other morphological features">
+                description = <"Additional morphological features of the blastocyst not captured by specific parameters.">
+                comment = <"For example: signs of degeneration, such as presence of necrosis and exclusion of cells; cellular bridges, vacuolation; or multiple hatching points. The occurrences for this data element is set to 0..* to allow for more than one morphological attribute to be added as a coded value.">
+            >
+            ["at0067"] = <
+                text = <"Not accessible">
+                description = <"Inner cell mass morphology is not accessible.">
+            >
+            ["at0068"] = <
+                text = <"Morphology grade">
+                description = <"Overall grading or score based on recorded morphological features of the blastocyst.">
+                comment = <"Use of an established morphology assessment classification is preferred.">
+            >
+            ["ac9000"] = <
+                text = <"Degree of expansion (synthesised)">
+                description = <"Degree of expansion of the blastocyst. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Inner cell mass morphology (synthesised)">
+                description = <"Morphology of the inner cell mass. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Trophectoderm morphology (synthesised)">
+                description = <"Morphology of the trophectoderm of the blastocyst. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0061", "at0062", "at0063">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0057", "at0058", "at0059", "at0067">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0050", "at0051", "at0052", "at0053", "at0054", "at0055">
+        >
+    >

@@ -1,0 +1,434 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=82275b1b-765c-42fe-8a3f-2a2b19d54ac1; build_uid=686f707f-d458-4dad-93b7-10e4ade4d6ac)
+    openEHR-EHR-EVALUATION.occupation_summary.v1.0.3
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Therese Lindberg">
+                ["organisation"] = <"Cambio CDS">
+                ["email"] = <"therese.lindberg@cambio.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Nasjonal IKT HF">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            author = <
+                ["name"] = <"Cecilia Mascia">
+                ["organisation"] = <"CRS4 - Center for advanced studies, research and development in Sardinia, Pula (Cagliari), Italy">
+                ["email"] = <"cecilia.mascia@crs4.it">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Vanessa Pereira">
+                ["organisation"] = <"Luxembourg Institute of Health (LIH)">
+                ["email"] = <"vanessapereira@protonmail.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2010-12-17">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Paula Anderson, UCLH, United Kingdom", "Erling Are Hole, Helse Bergen, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Koray Atalag, University of Auckland, New Zealand", "Heidi Aursand, Oslo universitetssykehus, Norway", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Marcus Baw, openGPSoC / BawMedical Ltd, United Kingdom", "Maria Beate Nupen-Stieng, Oslo Universitetssykehus, Norway", "Ivar Berge, Oslo Universitetssykehus, Norway", "Anita Bjørnnes, Helse Bergen, Norway", "Bjørn Christensen, Helse Bergen HF, Norway", "Angela Crovetti, CDC/NIOSH, United States", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Jayne Donaldson, University of Stirling, United Kingdom", "Bjørg Eli Hollund, helse-bergen, Norway", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom", "Sergio Freire, State University of Rio de Janeiro, Brazil", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)", "Heather Grain, Llewelyn Grain Informatics, Australia", "Anne Gunn Haugland, Helse Bergen HF, Norway", "Kristian Heldal, Telemark Hospital Trust, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Kaja Irgens-Hansen, Yrkesmedisinsk avdeling, Haukeland universitetssykehus, Norway", "Susanna Jönsson, Landstinget i Värmland, Sweden", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Harmony Kosola, Alberta Health Services, Canada", "Ron Krawec, Alberta Health Services, Canada", "Liv Laugen, Oslo universitetssykehus, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Rose Mari Eikås, Helse Bergen, Norway", "Siv Marie Lien, DIPS ASA, Norway", "Hildegard McNicoll, freshEHR Clinical Informatics Ltd., United Kingdom", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "John Meredith, NHS Wales Informatics Service, United Kingdom", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Erik Nissen, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Martin Paulson, Sykehuset i Vestfold, Norway", "Tanja Riise, Nasjonal IKT HF, Norway", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Gro-Hilde Severinsen, Norwegian center for ehealthresearch, Norway", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Niclas Skyttberg, Karolinska Institutet, Sweden", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia", "Tesfay Teame, Folkehelseinstittutet, Norway", "Jon Tysdahl, Furst medlab AS, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Pelle Viana Lindén, Capio, Sweden">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: Employment Summary, Draft Archetype [Internet].  Australian Digital Health Agency (NEHTA), ADHA Clinical Knowledge Manager. Authored: 2010 Dec 17 (discontinued).">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"65F6678D2160D38515F5E4BD22EA1F45">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung einer Zusammenfassung oder beständiger Information zu aktuellen und früheren Jobs und / oder Rollen einer Person.">
+            keywords = <"Beschäftigung", "Studium", "Job", "Arbeit", "Pflegekraft", "Rolle", "Pensionär", "Schüler", "Mitarbeiter", "Arbeitgeber", "Beruf", "Arbeitslosigkeit", "Berufstätigkeit", "Kind", "Rentner", "Behinderte">
+            use = <"Zur Darstellung einer Zusammenfassung oder beständiger Information zu aktuellen und früheren Jobs und / oder Rollen einer Person.
+
+Dieser Archetyp wurde entwickelt, um als eigenständiger Archetyp im Kontext einer sozialen Vorgeschichte (oder ähnlich) in einem Template verwendet zu werden. Es ist beabsichtigt, eine Zusammenfassung aller Beschäftigungen im weitesten Sinne zu bieten. Verwenden Sie für jeden Job oder jede Rolle eine separate Instanz des CLUSTER.occupation_record im SLOT für \"Beschäftigungsepisode\".">
+            misuse = <"Nicht zur Darstellung strukturierter Angaben zu einem bestimmten Job oder einer bestimmten Rolle verwenden. Verwenden Sie zu diesem Zweck den Archetyp CLUSTER.occupation_record im SLOT \"Beschäftigung\".
+
+Nicht zur detaillierten Beschreibung von Gesundheitsrisiken oder der Exposition gegenüber gefährlichen Substanzen am Arbeitsplatz verwenden. Verwenden Sie für diese Zwecke den Archetyp EVALUATION.health_risk oder EVALUATION.exposure.
+
+Darf nicht verwendet werden, um Informationen über Einkommensquellen oder Einkommensangaben für die Person darzustellen. Verwenden Sie dafür den Archetyp CLUSTER.income_summary.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera en sammanfattning eller ihållande information om en individs nuvarande och tidigare jobb och/eller roller.">
+            keywords = <"sysselsättning", "studera", "jobb", "arbete", "vårdgivare", "roll", "pensionär", "studerande", "anställd", "arbetsgivare", "yrke", "arbetslöshet", "ockupation", "barn", "pensionär", "inaktiverad">
+            use = <"Används för att spela in en sammanfattning eller ihållande information om en individs nuvarande och tidigare jobb och/eller roller.
+
+Denna arketyp har utformats för att användas som en fristående arketyp inom ramen för en socialhistorisk (eller liknande) mall. Den är avsedd att ge en sammanfattning av alla yrken, betraktade i vidaste bemärkelse. För varje jobb eller roll använder du en separat instans av CLUSTER.occupation_record inom SLOT för 'Yrkesepisod'.">
+            misuse = <"Inte avsedd att användas för att spela in strukturerade detaljer om ett specifikt jobb eller roll. Använd CLUSTER.occupation_record-arketypen inom 'Yrkesregistrering' SLOT för detta ändamål.
+
+Får inte användas för detaljerade beskrivningar av hälsorisker eller exponering för farliga ämnen på arbetsplatsen. Använd arketypen EVALUATION.health_risk eller EVALUATION.exposure för dessa ändamål.
+
+Får inte användas för att registrera information om inkomstkällor eller inkomstuppgifter för individen. Använd arketypen CLUSTER.income_summary för detta ändamål.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere et sammendrag eller varig (persistent) informasjon om et individs nåværende eller tidligere arbeid og/eller roller.">
+            keywords = <"arbeid", "arbeidstaker", "arbeidsgiver", "arbeidsforhold", "arbeidshistorikk", "jobb", "ansatt", "yrke", "arbeidsløs", "studerer", "student", "elev", "trygdet", "ufør", "arbeidssituasjon", "erverv", "yrkestilknytning", "pensjon", "pensjonist", "attføring", "bransje", "arbeidsledig", "hjemmeværende", "stilling", "profesjon", "frivillig">
+            use = <"Brukes for å registrere et sammendrag eller varig (persistent) informasjon om et individs nåværende eller tidligere arbeid og/eller roller.
+
+Arketypen er laget for å være en frittstående arketype, og kan benyttes som del av individets sosialanamnese i en templat.
+Den er ment å gi et sammendrag over alle former for arbeid/roller. For hver enkelt jobb eller rolle brukes én instans av arketypen CLUSTER.occupation_record (Arbeidsforhold/rolle) i SLOTet \"Arbeidsepisode\".">
+            misuse = <"Brukes ikke for å registrere strukturerte detaljer om en spesifikk rolle eller bidrag. Bruk arketypen CLUSTER.occupation_record (Arbeidsforhold/rolle) i SLOTet \"Arbeidsepisode\" for dette formålet.
+	
+Brukes ikke for detaljerte beskrivelser av helserisikoer eller eksponering for farlige substanser i arbeidssituasjonen. Til dette brukes henholdsvis arketypene EVALUATION.health_risk (Helserisiko) eller EVALUATION.exposure.
+
+Brukes ikke for å registrere informasjon om individets inntekt eller inntektskilder. Bruk arketypen CLUSTER.income_summary for dette formålet.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a summary or persistent information about an individual's current and past jobs and/or roles.">
+            keywords = <"employment", "study", "job", "work", "carer", "role", "pensioner", "student", "employee", "employer", "profession", "unemployment", "occupation", "child", "retiree", "disabled">
+            use = <"Use to record a summary or persistent information about an individual's current and past jobs and/or roles.
+
+This archetype has been designed to be used as a standalone archetype within the context of a Social History (or similar) template. It is intended to provide a summary of all occupations, considered in the broadest sense. For each job or role, use a separate instance of the CLUSTER.occupation_record within the SLOT for 'Occupation episode'.">
+            misuse = <"Not to be used for recording structured details about a specific job or role. Use the CLUSTER.occupation_record archetype within 'Occupation record' SLOT for this purpose.
+
+Not to be used for detailed descriptions of health risks or exposure to hazardous substances in the workplace. Use the EVALUATION.health_risk or EVALUATION.exposure archetype for these purposes.
+
+Not to be used to record information about sources of income or income details for the individual. Use the CLUSTER.income_summary archetype for this purpose.">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"Registrare un sommario o informazioni persistenti sulle attività lavorative e/o ruoli presenti e passati di un individuo.">
+            keywords = <"impiego, studio, lavoro, occupazione, badante, ruolo, pensionato, studente, impiegato, datore di lavoro, professione, disoccupazione, occupazione, figlio, disabile", ...>
+            use = <"Usato per registrare un sommario o informazioni persistenti sulle attività lavorative e/o ruoli presenti e passati di un individuo.
+
+Questo archetipo è stato ideato per essere usato come archetipo a sé stante all'interno di un template per la 'Storia sociale' (o simili). L'archetipo intende fornire un sommario  di tutte le occupazioni, considerate nel senso più ampio del termine. Per ogni professione o ruolo, usare una istanza separata dell'archetipo CLUSTER.occupation_record all'interno dello SLOT 'Episodio lavorativo'.">
+            misuse = <"Non utilizzare per memorizzare dettagli strutturati riguardanti una specifica professione o ruolo. Per questo scopo, usare invece l'archetipo CLUSTER.occupation_record all'interno dello SLOT 'Episodio lavorativo'.
+
+Non utilizzare per descrizioni dettagliate dei rischi per la salute o dell'esposizione a sostanze pericolose nel luogo di lavoro. Utilizzare invece gli archetipi EVALUATION.health_risk o EVALUATION.exposure.
+
+Non utilizzare per memorizzare informazioni sulle fonti o dettagli del reddito dell'individuo. Per questo scopo, utilizzare l'archetipo EVALUATION.income_summary.">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Enregistrer un résumé ou des informations persistantes sur les emplois et/ou rôles actuels et passés d'une personne.">
+            keywords = <"emploi", "étude", "emploi", "travail", "soignant", "rôle", "retraité", "étudiant", "employé", "employeur", "profession", "chômage", "profession", "enfant", "retraité", "handicapé">
+            use = <"À utiliser pour enregistrer un résumé ou des informations persistantes sur les emplois et/ou les rôles actuels et passés d'une personne.
+
+Cet archétype a été conçu pour être utilisé de manière autonome dans le contexte d'un modèle d'histoire sociale (ou d'un modèle similaire). Il est destiné à fournir un résumé de toutes les professions, considérées dans leur sens le plus large. Pour chaque emploi ou rôle, utilisez une instance distincte de l'enregistrement CLUSTER.occupation_record dans le SLOT pour \"Occupation episode\".">
+            misuse = <"Ne doit pas être utilisé pour enregistrer des détails structurés sur un emploi ou un rôle spécifique. Utiliser l'archétype CLUSTER.occupation_record dans le SLOT 'Occupation record' à cette fin.
+
+Ne pas utiliser pour des descriptions détaillées des risques pour la santé ou de l'exposition à des substances dangereuses sur le lieu de travail. Utiliser l'archétype EVALUATION.health_risk ou EVALUATION.exposure à cette fin.
+
+Ne pas utiliser pour enregistrer des informations sur les sources de revenus ou des détails sur les revenus de l'individu. Utilisez l'archétype CLUSTER.income_summary à cette fin.">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Occupation summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0004] matches {    -- Employment status
+                        value matches {
+                            DV_TEXT[at9000]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0003] matches {    -- Occupation episode
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.occupation_record(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0005] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0007] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0008] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9003]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Zusammenfassung der Beschäftigung">
+                description = <"Zusammenfassung oder beständige Information zu aktuellen und früheren Jobs und / oder Rollen einer Person.">
+            >
+            ["at0002"] = <
+                text = <"Beschreibung">
+                description = <"Beschreibung des gesamten Beschäftigungsverlaufs der Person.">
+            >
+            ["at0003"] = <
+                text = <"Beschäftigungsepisode">
+                description = <"Strukturierte Angaben zu jedem Job oder jeder Rolle, sowohl aktuell als auch in der Vergangenheit.">
+                comment = <"Eine Person kann mehrere aktive Episoden eines Berufs gleichzeitig haben, wenn sie eine Vielzahl von Jobs oder Rollen hat. Zum Beispiel: Betreuer an 2 Tagen pro Woche und 3 Tage in der Woche in einem Einzelhandelsjob beschäftigt; Teilzeitbeschäftigung zur Unterstützung des Studiums.">
+            >
+            ["at0004"] = <
+                text = <"Beschäftigungsstatus">
+                description = <"Aussage über die aktuelle Beschäftigung der Person.">
+                comment = <"Zum Beispiel: beschäftigt, arbeitslos oder nicht erwerbstätig. Eine Codierung mit einer Terminologie ist nach Möglichkeit wünschenswert. Angaben zu jeder Beschäftigung können im Archetyp CLUSTER.occupation_record dargestellt werden.">
+            >
+            ["at0005"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Weitere Angaben zu den aktuellen Jobs oder Rollen oder zum vorherigen Beschäftigungsverlauf einer Person.
+">
+            >
+            ["at0006"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Beschreibung der aktuellen Beschäftigung einer Person oder des Beschäftigungsverlaufs, die nicht in anderen Feldern erfasst wurde.">
+            >
+            ["at0008"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+            ["at0009"] = <
+                text = <"Zuletzt aktualisiert">
+                description = <"Das Datum, an dem die Zusammenfassung der Beschäftigung oder der zugehörige Beschäftigungsdatensatz aktualisiert wurde.">
+                comment = <"Bei der Implementierung wird davon ausgegangen, dass dieses Datum ebenfalls aktualisiert wird, wenn ein zugehöriger Beschäftigungsdatensatz hinzugefügt oder aktualisiert wird.">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Yrkesöversikt">
+                description = <"Sammanfattning eller ihållande information om en individs nuvarande och tidigare jobb och/eller roller.">
+            >
+            ["at0002"] = <
+                text = <"Beskrivning">
+                description = <"Berättande beskrivning om hela individens yrkeshistoria..">
+            >
+            ["at0003"] = <
+                text = <"Yrkesepisod">
+                description = <"Strukturerade detaljer om varje jobb eller roll, både nuvarande och tidigare.">
+                comment = <"En individ kan ha flera, samtidiga aktiva episoder av ett yrke om de har olika jobb eller roller. Till exempel: vårdnadshavare i 2 dagar per vecka och anställd i detaljhandelsjobb 3 dagar i veckan; arbetat deltid för att stödja studier.">
+            >
+            ["at0004"] = <
+                text = <"Anställningsstatus">
+                description = <"Uttalande om individens nuvarande anställning.">
+                comment = <"Till exempel: anställd; arbetslös; eller inte i arbetskraften. Kodning med en terminologi är önskvärd, där det är möjligt. Detalj om varje yrke kan spelas in inom CLUSTER.occupation_record-arketypen.">
+            >
+            ["at0005"] = <
+                text = <"Ytterligare detaljer">
+                description = <"Ytterligare information om aktuella jobb eller roller, eller tidigare yrkeshistoria för en individ.">
+            >
+            ["at0006"] = <
+                text = <"Kommentar">
+                description = <"Ytterligare beskrivning om en individs aktuella sysselsättning eller historia av yrken som inte redan inkluderats.">
+            >
+            ["at0008"] = <
+                text = <"Extension">
+                description = <"Ytterligare information krävs för att fånga lokalt innehåll eller anpassa sig till andra referensmodeller/formalismer.">
+                comment = <"Till exempel: lokala informationskrav eller ytterligare metadata för att anpassas till FHIR- eller CIMI-ekvivalenter.">
+            >
+            ["at0009"] = <
+                text = <"Senast uppdaterad">
+                description = <"Datum då yrkesöversikten eller tillhörande yrkesregister uppdaterades.">
+                comment = <"Vid implementeringen antas det att om ett associerad yrkesregister läggs till eller uppdateras kommer detta datum också att uppdateras.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Arbeidssammendrag">
+                description = <"Sammendrag eller varig (persistent) informasjon om et individs nåværende eller tidligere arbeid og/eller roller.">
+            >
+            ["at0002"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse av hele historikken av arbeid og/eller roller til individet.
+ 
+">
+            >
+            ["at0003"] = <
+                text = <"Arbeidsepisode">
+                description = <"Strukturerte detaljer om hver enkelt jobb eller rolle, både tidligere og nåværende.">
+                comment = <"Et individ kan ha flere aktive arbeidsepisoder samtidig. For eksempel \"Hjemmeværende 2 dager i uken og butikkansatt 3 dager i uken\", eller \"Deltidsansatt i en bedrift mens man studerer\".">
+            >
+            ["at0004"] = <
+                text = <"Arbeidsstatus">
+                description = <"Utsagn om individets nåværende jobb/rolle.">
+                comment = <"For eksempel: \"Inntektsgivende arbeid\", \"Arbeidsledig\", \"Pensjonist\". Koding med en terminologi er ønskelig, der det er mulig, for eksempel OID 8150 (Volven.no). Detaljene om hver enkel jobb/ rolle kan registreres i arketypen CLUSTER.occupation_record (Arbeidsforhold/rolle).">
+            >
+            ["at0005"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere strukturerte detaljer om individets nåværende eller tidligere arbeid og/eller roller.">
+            >
+            ["at0006"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekstkommentar til individets nåværende eller tidligere jobber/roller, som ikke er fanget i andre felt.">
+            >
+            ["at0008"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at0009"] = <
+                text = <"Sist oppdatert">
+                description = <"Datoen da arbeidssammendraget eller tilknyttede arbeidsepisoder sist ble oppdatert.">
+                comment = <"Ved implementering av arketypen forutsettes det at dersom en arbeidsepisode legges til eller oppdateres, vil også denne datoen oppdateres.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Occupation summary">
+                description = <"Summary or persistent information about an individual's current and past jobs and/or roles.">
+            >
+            ["at0002"] = <
+                text = <"Description">
+                description = <"Narrative description about the entire occupation history of the individual.">
+            >
+            ["at0003"] = <
+                text = <"Occupation episode">
+                description = <"Structured details about each job or role, both current and past.">
+                comment = <"An individual may have multiple, concurrent active episodes of an occupation if they have a variety of jobs or roles. For example: carer for 2 days per week and employed in a retail job for 3 days a week; employed part-time to support studies.">
+            >
+            ["at0004"] = <
+                text = <"Employment status">
+                description = <"Statement about the individual's current employment.">
+                comment = <"For example: employed; unemployed; or not in labour force. Coding with a terminology is desirable, where possible. Detail about each occupation can be recorded within the CLUSTER.occupation_record archetype.">
+            >
+            ["at0005"] = <
+                text = <"Additional details">
+                description = <"Additional details about the current jobs or roles, or previous occupation history of an individual.">
+            >
+            ["at0006"] = <
+                text = <"Comment">
+                description = <"Additional narrative about an individual's current occupation or history of occupations not captured in other fields.">
+            >
+            ["at0008"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0009"] = <
+                text = <"Last updated">
+                description = <"Date when the occupation summary or associated occupation records were was updated.">
+                comment = <"At implementation, it is assumed that if an associated occupation record is added or updated then this date will also be updated.">
+            >
+        >
+        ["it"] = <
+            ["at0000"] = <
+                text = <"Occupazione - sommario">
+                description = <"Informazioni riepilogative o persistenti sull'attuale stato occupazionale (professione o ruolo) di un individuo.">
+            >
+            ["at0002"] = <
+                text = <"Descrizione">
+                description = <"Descrizione della storia occupazionale dell'individuo.">
+            >
+            ["at0003"] = <
+                text = <"Episodio lavorativo">
+                description = <"Dettagli strutturati circa ogni professione svolta o ruolo ricoperto dall'individuo, attuali e passati.">
+                comment = <"Un individuo può avere più episodi lavorativi attivi e simultanei se svolge più di una professione o ricopre più di un ruolo. Ad esempio: badante per 2 giorni alla settimana e impiegato in un lavoro di vendita al dettaglio per 3 giorni alla settimana; impiegato a tempo parziale per sostenere gli studi">
+            >
+            ["at0004"] = <
+                text = <"Stato occupazionale">
+                description = <"Stato del'occupazione attuale dell'individuo.">
+                comment = <"Ad esempio: occupato; disoccupato; o non in forza lavoro.  La codifica con una terminologia è preferibile, quando possibile. I dettagli circa ogni occupazione possono essere inseriti all'interno dell'archetipo CLUSTER.occupation_record.">
+            >
+            ["at0005"] = <
+                text = <"Ulteriori dettagli">
+                description = <"Ulteriori dettagli sull'attuale professione o ruolo ricoperto, o sulla storia lavorativa dell'individuo.">
+            >
+            ["at0006"] = <
+                text = <"Commento">
+                description = <"Note aggiuntive sull'occupazione attuale o sulla storia lavorativa non rilevate dagli altri campi. ">
+            >
+            ["at0008"] = <
+                text = <"Estensione">
+                description = <"Informazioni aggiuntive necessarie per registrare specifici contenuti locali o per allinearsi con altri modelli/formalismi di riferimento.">
+                comment = <"Ad esempio: requisiti informativi locali o metadati addizionali per l'allineamento ai corrispondenti modelli FHIR o CIMI.">
+            >
+            ["at0009"] = <
+                text = <"Data ultimo aggiornamento">
+                description = <"Data in cui il riepilogo occupazionale e i singoli record degli episodi lavorativi associati sono stati aggiornati.">
+                comment = <"Si assume che, al momento dell'implementazione, questa data venga aggiornata ogni volta che un record di un'episodio lavorativo viene aggiunto o aggiornato.">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Résumé de l'occupation">
+                description = <"Informations sommaires ou persistantes sur les emplois et/ou rôles actuels et passés d'une personne.">
+            >
+            ["at0002"] = <
+                text = <"Description">
+                description = <"Description narrative de l'ensemble de l'histoire professionnelle de l'individu.">
+            >
+            ["at0003"] = <
+                text = <"Épisode de la profession">
+                description = <"Détails structurés sur chaque emploi ou rôle, actuel et passé.">
+                comment = <"Une personne peut avoir plusieurs épisodes actifs simultanés d'une profession si elle a une variété d'emplois ou de rôles. Par exemple : aide-soignant 2 jours par semaine et employé dans le commerce de détail 3 jours par semaine ; employé à temps partiel pour soutenir ses études.">
+            >
+            ["at0004"] = <
+                text = <"Situation professionnelle">
+                description = <"Déclaration sur l'emploi actuel de la personne.">
+                comment = <"Par exemple : employé, chômeur ou inactif. Il est souhaitable, dans la mesure du possible, de coder avec une terminologie. Les détails de chaque profession peuvent être enregistrés dans l'archétype CLUSTER.occupation_record.">
+            >
+            ["at0005"] = <
+                text = <"Détails supplémentaires">
+                description = <"Détails supplémentaires sur les emplois ou rôles actuels, ou sur l'historique des emplois précédents d'une personne.">
+            >
+            ["at0006"] = <
+                text = <"Commentaire">
+                description = <"Description supplémentaire de la profession actuelle d'un individu ou de ses antécédents professionnels qui n'ont pas été pris en compte dans d'autres champs.">
+            >
+            ["at0008"] = <
+                text = <"Extension">
+                description = <"Informations supplémentaires requises pour tenir compte du contenu local ou pour s'aligner sur d'autres modèles/formalismes de référence.">
+                comment = <"Par exemple : exigences locales en matière d'information ou métadonnées supplémentaires pour s'aligner sur les équivalents FHIR ou CIMI.">
+            >
+            ["at0009"] = <
+                text = <"Dernière mise à jour">
+                description = <"Date de mise à jour du résumé de la profession ou des enregistrements de la profession associée.">
+                comment = <"Lors de la mise en œuvre, on suppose que si un enregistrement de profession associé est ajouté ou mis à jour, cette date sera également mise à jour.">
+            >
+        >
+    >

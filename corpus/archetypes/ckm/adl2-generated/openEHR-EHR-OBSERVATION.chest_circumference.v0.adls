@@ -1,0 +1,219 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=cee3fc11-78e0-4b11-8cbb-b3389e447d8d; build_uid=3def62cf-97b7-4929-bbb1-baf1741ded76)
+    openEHR-EHR-OBSERVATION.chest_circumference.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2018-12-05">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"World Health Organization. (2011). chest circumference and chest-hip ratio: Report of a WHO expert consultation, Geneva, 8-11 December 2008 [cited 2017 oct 2]. Available from: http://apps.who.int/iris/bitstream/10665/44583/1/9789241501491_eng.pdf">
+        ["2"] = <"Júlíusson, P. B., Vinsjansen, S., Nilsen, B., Sælensminde, H., Vågset, R., & Eide, G. E. (2005). Måling av vekst og vekt: En oversikt over anbefalte teknikker. Pediatrisk Endokrinologi, 19, 23-9  [cited 2017 oct 2]. Available from: http://pediatrisk-endokrinologi.no/2005/1/Juliusson_et_al_2005_1.pdf">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"718352E081885737B788D3641A5C999C">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the measurement of the circumference of the chest.">
+            keywords = <"anthropometry", "measurement", "estimation", "circumference", "chest", "girth", "thorax">
+            use = <"Use to record the measurement of the circumference of the chest. 
+
+There is no clear agreement on exactly where the chest circumference should be measured. In cases where this is important to the interpretation of the results, this should be documented in the 'Method' element.
+
+Use to record change from repeated measurements. This can currently be modeled by constraining the 'any event' to an interval in a template with an associated mathematical function, as appropriate.
+
+This archetype can also be used for recording an approximation of the chest circumference measurement in a clinical scenario where it is not possible to measure an accurate chest circumference - for example, measuring an uncooperative child. This is not modelled explicitly in the archetype as the openEHR Reference model allows the attribute of Approximation for any Quantity data type. At implementation, for example, an application user interface could allow clinicians to select an appropriately labelled check box adjacent to the 'chest circumference' data field to indicate that the recorded chest circumference is an approximation, rather than actual.">
+            misuse = <"Not to be used to record the speed of which the chest circumference is increasing. Use a growth velocity archetype for this purpose.
+
+Not to be used to record the circumference of another body part. Use OBSERVATION.body_segment in these circumstances except where more specific archetypes exist such as OBSERVATION.hip_circumference.">
+            copyright = <"© openEHR Foundation, Nasjonal IKT HF, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Chest circumference
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0010] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {1} matches {    -- Chest circumference
+                                        value matches {
+                                            DV_QUANTITY[at9004] matches {
+                                                property matches {[at9000]}    -- Length
+                                                [magnitude, units, precision] matches {
+                                                    [{|0.0..500.0|}, {"cm"}, {1}],
+                                                    [{|0.0..<400.0|}, {"[in_i]"}, {|>=0|}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9005]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0008] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0009] matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9006]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    POINT_EVENT[at0016] occurrences matches {0..1} matches {    -- Full expiration
+                        data matches {
+                            use_node ITEM_TREE[at9007] /data[at0001]/events[at0010]/data[at0003]
+                        }
+                        state matches {
+                            use_node ITEM_TREE[at9008] /data[at0001]/events[at0010]/state[at0008]
+                        }
+                    }
+                    POINT_EVENT[at0015] occurrences matches {0..1} matches {    -- Full inspiration
+                        data matches {
+                            use_node ITEM_TREE[at9009] /data[at0001]/events[at0010]/data[at0003]
+                        }
+                        state matches {
+                            use_node ITEM_TREE[at9010] /data[at0001]/events[at0010]/state[at0008]
+                        }
+                    }
+                    INTERVAL_EVENT[at0014] occurrences matches {0..1} matches {    -- Chest expansion
+                        data matches {
+                            use_node ITEM_TREE[at9011] /data[at0001]/events[at0010]/data[at0003]
+                        }
+                        state matches {
+                            use_node ITEM_TREE[at9012] /data[at0001]/events[at0010]/state[at0008]
+                        }
+                        math_function matches {
+                            DV_CODED_TEXT[at9013] matches {
+                                defining_code matches {[ac9003]}    -- Chest expansion (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0005] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Method
+                        value matches {
+                            DV_TEXT[at9014]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0006] occurrences matches {0..1} matches {    -- Device
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0012] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Chest circumference">
+                description = <"The measurement of the distance around the chest.">
+            >
+            ["at0004"] = <
+                text = <"Chest circumference">
+                description = <"The measurement of the circumference of the chest.">
+            >
+            ["at0006"] = <
+                text = <"Device">
+                description = <"Details about the device used for the measurement.">
+            >
+            ["at0007"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the measurement of chest circumference not captured in other fields.">
+            >
+            ["at0009"] = <
+                text = <"Confounding factors">
+                description = <"Narrative description of any issues or factors that may impact on the measurement.">
+                comment = <"For example: uncooperative child.">
+            >
+            ["at0010"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0012"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0013"] = <
+                text = <"Method">
+                description = <"The method by which the chest circumference was measured.">
+            >
+            ["at0014"] = <
+                text = <"Chest expansion">
+                description = <"Event which captures the increase in chest circumference from full expiration to full inspiration.">
+            >
+            ["at0015"] = <
+                text = <"Full inspiration">
+                description = <"Point in time event which captures the chest circumference at full inspiration.">
+            >
+            ["at0016"] = <
+                text = <"Full expiration">
+                description = <"Point in time event which captures the chest circumference at full expiration.">
+            >
+            ["at9000"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["at9001"] = <
+                text = <"change">
+                description = <"change">
+            >
+            ["at9002"] = <
+                text = <"increase">
+                description = <"increase">
+            >
+            ["ac9003"] = <
+                text = <"Chest expansion (synthesised)">
+                description = <"Event which captures the increase in chest circumference from full expiration to full inspiration. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/122>
+            ["at9001"] = <http://openehr.org/id/147>
+            ["at9002"] = <http://openehr.org/id/522>
+        >
+    >
+    value_sets = <
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at9001", "at9002">
+        >
+    >

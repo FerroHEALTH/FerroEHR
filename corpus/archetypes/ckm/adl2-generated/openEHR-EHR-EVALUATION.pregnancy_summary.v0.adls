@@ -1,0 +1,2793 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=9122c39a-3817-426e-9ae4-d1f438b1d26b; build_uid=4ce2bdb4-90d8-44a7-ae4d-8951729a20ac)
+    openEHR-EHR-EVALUATION.pregnancy_summary.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Marit Alice Venheim">
+                ["organisation"] = <"Helse Vest IKT AS">
+                ["email"] = <"marit.alice.venheim@helse-vest-ikt.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Adriana Kitajima, Gabriela Alves, Maria Angela Scatena, Marivan Abrahäo">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"contato@coreconsulting.com.br">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Clara Calleja Vega">
+                ["organisation"] = <"CatSalut. Servei Català de la Salut.">
+                ["email"] = <"ccalleja@catsalut.cat">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Laura Moral Lopez">
+                ["organisation"] = <"Sistema de Salut de Catalunya">
+                ["email"] = <"lauramoral@catsalut.cat">
+            >
+        >
+        ["es-co"] = <
+            language = <[ISO_639-1::es-co]>
+            author = <
+                ["name"] = <"Francisco Ramirez ante">
+                ["organisation"] = <"SITIS SAS">
+                ["email"] = <"framirez74@gmail.com">
+            >
+            accreditation = <"Ingeniero de Sistemas">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2007-02-28">
+    >
+    original_namespace = <"openEHR Foundation">
+    original_publisher = <"org.openehr">
+    other_contributors = <"Sheryl Alexander, NT Department of Health, Australia", "Rita Apelt, Department of Health,NT, Australia", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Stephen Chu, NEHTA, Australia", "Margaret Cotter, AMSANT, Australia", "Michelle Dowden, Miwatj Health Ngalkanbuy Health, Australia", "Tim Garden, NTG Department of Health, Australia", "Tanya Gardner, CAAC, Australia", "Sam Heard, Ocean Informatics, Australia (Editor)", "Bernadette Lack, Department of Health, Australia", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hugh Leslie, Ocean Informatics, Australia", "Chunlan Ma, Ocean Informatics, Australia", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Jeremy Oats, NT Health, Australia", "Steven Schatz, Department of Health (Northern Territory), Australia", "Rosalie Schultz, Anyinginyi Health Aboriginal Corporation, Australia", "Gary Sinclair, NT DoH, Australia", "Cherie Whitbread, Royal Darwin Hospital, Australia", "Jo Wright, NT Dept of Health, Australia (Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Pregnancy Summary, Draft Archetype [Internet]. nehta, Australia, nehta Clinical Knowledge Manager [cited: 2016-02-21]. Available from: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.1013">
+        ["2"] = <"AIHW 2003. Perinatal National Minimum Data Set: National Health Data Dictionary, Version 12. National Health Data Dictionary. Cat. no. HWI 59. Canberra: AIHW.">
+        ["3"] = <"Northern Territory Government, Department of Health. Pregnancy Health Record. HM424-12/06.">
+        ["4"] = <"Queensland Government, Department of Health. Pregnancy Health Record. SW071 - v1.00 - 06/2010.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"3E03204F1560B046B7EF8A09A61D29A2">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å støtte registreringen av en oversikt eller oppsummering av en bekreftet graviditet og utfall, inkludert svangerskapsperioden, fødselen og den umiddelbare postpartum perioden.">
+            keywords = <"graviditet", "svangerskap", "foster", "spedbarn", "neonatal", "forløsning", "befruktning", "termin", "termindato", "forventet", "fødsel", "baby", "babyer">
+            use = <"*Use to record an overview or summary record of an identified pregnancy and outcome, including the antenatal period, labor, birth and the immediate postnatal period. 
+
+During an active pregnancy, this archetype supports the evolution of a persistent pregnancy-related health summary record, with information gradually accumulated or updated, throughout the duration of the pregnancy, labour, birth and the immediate postnatal period. As the data is committed to the persistent health record, the date of the update is also recorded in the 'Last Updated' data element in Protocol, to ensure that if this pregnancy summary is taken out of context of the health record for other purposes, such as data exchange, the date of the latest update is kept with the clinical data.
+
+After birth, this summary record can be used to share essential information with other healthcare providers about the pregnancy, labour, birth and immediate postnatal period. 
+
+Each completed pregnancy summary saved to the health record can be re-used to populate the Past Pregnancy History details in subsequent pregnancy records.
+
+In situations where completed pregnancy summaries are not available for each previous pregnancy, this archetype can also be used to record a relevant subset of information that can be used to populate the Past Pregnancy History details with new or active pregnancy records. (en)">
+            misuse = <"Brukes ikke for å dokumentere event-based informasjon i løpet av graviditeten, fødsel og den umiddelbare postpartum perioden. Disse vil bli dokumentert ved bruk av OBSERVATION arketyper, for eksempel informasjon som er relatert til historikk og undersøkelser ved svangerskapskontroller og under fødselen.
+
+Brukes ikke for å dokumentere sammenfattet informasjon om kvinnens obstetriske historie - bruk EVALUATION.obstetric_summary.
+
+Brukes ikke for å dokumentere detaljert informasjon om kvinnens menstruasjonssyklus - bruk OBSERVATION.menstrual_cycle.
+
+Brukes ikke for å dokumentere detaljert informasjon om spedbarns måltider/mating - en seperat arketype vil bli brukt til dette formålet.
+
+Brukes ikke for å dokumentere en generell sammenfattet menstruasjonshistorikk eller menstruasjonsdagbok - seperate arketyper vil bli brukt til dette formålet.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*To support the recording of an overview or summary record of an identified pregnancy and outcome, including the antenatal period, labor, birth and the immediate postnatal period. (en)">
+            keywords = <"gravidez", "feto", "feto", "infantil", "neonato", "parto", "concepção", "aguardado", "data", "esperado", "trabalho de parto", "parto", "nascimento", "bebê", "bebês", "data provável do parto", "data prevista do nascimento">
+            use = <"*Use to record an overview or summary record of an identified pregnancy and outcome, including the antenatal period, labor, birth and the immediate postnatal period. 
+
+During an active pregnancy, this archetype supports the evolution of a persistent pregnancy-related health summary record, with information gradually accumulated or updated, throughout the duration of the pregnancy, labour, birth and the immediate postnatal period. As the data is committed to the persistent health record, the date of the update is also recorded in the 'Last Updated' data element in Protocol, to ensure that if this pregnancy summary is taken out of context of the health record for other purposes, such as data exchange, the date of the latest update is kept with the clinical data.
+
+After birth, this summary record can be used to share essential information with other healthcare providers about the pregnancy, labour, birth and immediate postnatal period. 
+
+Each completed pregnancy summary saved to the health record can be re-used to populate the Past Pregnancy History details in subsequent pregnancy records.
+
+In situations where completed pregnancy summaries are not available for each previous pregnancy, this archetype can also be used to record a relevant subset of information that can be used to populate the Past Pregnancy History details with new or active pregnancy records. (en)">
+            misuse = <"Não deve ser utilizado para gravar informação baseada em eventos durante a gravidez, parto, nascimento e período pós-natal imediato. Estes serão gravados utilizando arquétipos de OBSERVAÇÃO - por exemplo, a informação relacionada com a história e exame durante consultas pré-natais ou durante o parto.
+
+Não deve ser usado para gravar resumo de informações sobre a história obstétrica de uma mulher - usar EVALUATION.obstetric_summary.
+
+Não deve ser usado para gravar informações detalhadas sobre o ciclo menstrual de uma mulher - usar OBSERVATION.menstrual_cycle.
+
+Não deve ser usado para registrar informações detalhadas sobre a alimentação infantil - um arquétipo separado deverá ser utilizado.
+
+Não deve ser usado para registrar um resumo ou um diário da história menstrual (geral ou diária) - um arquétipo separado deverá ser utilizado.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To support the recording of an overview or summary record of an identified pregnancy and outcome, including the antenatal period, labor, birth and the immediate postnatal period.">
+            keywords = <"pregnancy", "fetus", "foetus", "infant", "neonate", "delivery", "conception", "due", "date", "expected", "labor", "labour", "birth", "baby", "babies", "EDD", "EDB">
+            use = <"Use to record an overview or summary record of an identified pregnancy and outcome, including the antenatal period, labor, birth and the immediate postnatal period. 
+
+During an active pregnancy, this archetype supports the evolution of a persistent pregnancy-related health summary record, with information gradually accumulated or updated, throughout the duration of the pregnancy, labour, birth and the immediate postnatal period. As the data is committed to the persistent health record, the date of the update is also recorded in the 'Last Updated' data element in Protocol, to ensure that if this pregnancy summary is taken out of context of the health record for other purposes, such as data exchange, the date of the latest update is kept with the clinical data.
+
+After birth, this summary record can be used to share essential information with other healthcare providers about the pregnancy, labour, birth and immediate postnatal period. 
+
+Each completed pregnancy summary saved to the health record can be re-used to populate the Past Pregnancy History details in subsequent pregnancy records.
+
+In situations where completed pregnancy summaries are not available for each previous pregnancy, this archetype can also be used to record a relevant subset of information that can be used to populate the Past Pregnancy History details with new or active pregnancy records.">
+            misuse = <"Not to be used to record event-based information during the pregnancy, labor, birth and immediate postnatal period. These will be recorded using OBSERVATION archetypes - for example, the information related to history & examination during antenatal visits or during labour.
+
+Not to be used to record summary information about a woman's Obstetric history - use EVALUATION.obstetric_summary.
+
+Not to be used to record detailed information about a woman's Menstrual Cycle - use OBSERVATION.menstrual_cycle.
+
+Not to be used to record detailed information about infant feeding - a separate archetype will be used.
+
+Not to be used to record a general menstrual history summary or diary - separate archetypes will be used.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Per donar suport a l'enregistrament d'una visió general o un registre resum d'un determinat embaràs i resultat, inclòs el període prenatal, el treball de part, el naixementi el període postnatal immediat.">
+            keywords = <"embaràs", "fetus", "fetus", "infant", "nounat", "deslliurament", "concepció", "previst", "data", "esperat", "treball de part", "part", "naixement", "nadó", "nadons", "DPP">
+            use = <"Utilitzeu-lo per registrar una visió general o un registre resum d'un embaràs i resultat identificats, inclosos el període prenatal, el treball de part, el naixement i el període postnatal immediat.
+
+Durant un embaràs actiu, aquest arquetip dóna suport a l'evolució d'un registre persistent del resum de salut relacionat amb l'embaràs, amb informació acumulada o actualitzada progressivament, al llarg de la durada de l'embaràs, treball de part, part i postnatal immediat. Com que les dades estan compromeses amb la història clínica persistent, la data de l'actualització també es registra a l'element de dades \"Darrera actualització\" del Protocol, per garantir que si aquest resum de l'embaràs es treu fora de context de la història clínica per a altres finalitats, com ara l'intercanvi de dades, la data de l'última actualització es manté amb les dades clíniques.
+
+Després del part, aquest registre resum es pot utilitzar per compartir informació essencial amb altres proveïdors d'atenció mèdica sobre l'embaràs, el treball de part, el part i el període postnatal immediat.
+
+Cada resum de l'embaràs completat desat al registre de salut es pot reutilitzar per omplir els detalls de l'historial d'embaràs anterior als registres d'embaràs posteriors.
+
+En situacions en què els resums d'embaràs completats no estan disponibles per a cada embaràs anterior, aquest arquetip també es pot utilitzar per registrar un subconjunt d'informació rellevant que es pot utilitzar per omplir els detalls de l'historial d'embaràs anterior amb registres d'embaràs nous o actius.">
+            misuse = <"No s'ha d'utilitzar per registrar informació basada en esdeveniments durant l'embaràs, el treball de part, el naixement i el període postnatal immediat. Aquests es registraran mitjançant arquetips d'OBSERVATION, per exemple, la informació relacionada amb la història i l'examen durant les visites prenatals o durant el part.
+
+No s'ha d'utilitzar per registrar informació resumida sobre la història obstètrica d'una dona - utilitzeu EVALUATION.obstetric_summary.
+
+No s'ha d'utilitzar per registrar informació detallada sobre el cicle menstrual d'una dona - utilitzeu OBSERVATION.menstrual_cycle.
+
+No s'utilitzarà per registrar informació detallada sobre l'alimentació infantil - s'utilitzarà un arquetip separat.
+
+No s'utilitzarà per registrar un resum o un diari general de la història menstrual - s'utilitzaran arquetips separats.">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Para apoyar el registro de una visión general o un registro resumen de un determinado embarazo y resultado, incluido el período prenatal, el trabajo de parto, el nacimiento y el período posnatal inmediato.">
+            keywords = <"embarazo", "feto", "niño", "recién nacido", "neonato", "alumbramiento", "concepción", "prevista", "fecha", "esperada", "trabajo de parto", "nacimiento", "parto", "bebé", "bebés", "FPP">
+            use = <"Utilícelo para registrar una visión general o un registro resumen de un embarazo y resultado identificados, incluidos el período prenatal, el trabajo de parto, el nacimiento y el período postnatal inmediato.
+
+Durante un embarazo activo, este arquetipo apoya la evolución de un registro persistente del resumen de salud relacionado con el embarazo, con información acumulada o actualizada progresivamente, a lo largo de la duración del embarazo, trabajo de parto, parto y período postnatal inmediato. Puesto que los datos están comprometidos con la historia clínica persistente, la fecha de la actualización también se registra en el elemento de datos \"Última actualización\" del Protocolo, para garantizar que si este resumen del embarazo se saca fuera de contexto de la historia clínica para otros fines, tales como el intercambio de datos, la fecha de la última actualización se mantiene con los datos clínicos.
+
+Después del parto, este registro resumen se puede utilizar para compartir información esencial con otros proveedores de atención médica sobre el embarazo, el trabajo de parto, el parto y el período postnatal inmediato.
+
+Cada resumen del embarazo completado guardado en el registro de salud puede reutilizarse para llenar los detalles del historial de embarazo anterior a los registros de embarazo posteriores.
+
+En situaciones en las que los resúmenes de embarazo completados no están disponibles para cada embarazo anterior, este arquetipo también puede utilizarse para registrar un subconjunto de información relevante que se puede utilizar para llenar los detalles del historial de embarazo anterior con registros de embarazo nuevos o activos.">
+            misuse = <"No debe utilizarse para registrar información basada en eventos durante el embarazo, el trabajo de parto, el nacimiento y el período postnatal inmediato. Estos se registrarán mediante arquetipos de OBSERVATION, por ejemplo, la información relacionada con la historia y el examen durante las visitas prenatales o durante el parto.
+
+No debe utilizarse para registrar información resumida sobre la historia obstétrica de una mujer - utilice EVALUATION.obstetric_summary.
+
+No debe utilizarse para registrar información detallada sobre el ciclo menstrual de una mujer - utilice OBSERVATION.menstrual_cycle.
+
+No se utilizará para registrar información detallada sobre la alimentación infantil – se utilizará un arquetipo separado.
+
+No se utilizará para registrar un resumen o un diario general de la historia menstrual - se utilizarán arquetipos separados.">
+        >
+        ["es-co"] = <
+            language = <[ISO_639-1::es-co]>
+            purpose = <"*To support the recording of an overview or summary record of an identified pregnancy and outcome, including the antenatal period, labor, birth and the immediate postnatal period. (en)">
+            keywords = <"Embarazo", "Feto", "Infantil", "Recién nacido", "Entrega", "Concepción", "Trabajo de parto", "Labor de parto", "Nacimiento", "Bebé", "Neonato", "Fecha probable de parto", "Fecha Última Mestruación", "Fecha de Nacimiento">
+            use = <"*Use to record an overview or summary record of an identified pregnancy and outcome, including the antenatal period, labor, birth and the immediate postnatal period. 
+
+During an active pregnancy, this archetype supports the evolution of a persistent pregnancy-related health summary record, with information gradually accumulated or updated, throughout the duration of the pregnancy, labour, birth and the immediate postnatal period. As the data is committed to the persistent health record, the date of the update is also recorded in the 'Last Updated' data element in Protocol, to ensure that if this pregnancy summary is taken out of context of the health record for other purposes, such as data exchange, the date of the latest update is kept with the clinical data.
+
+After birth, this summary record can be used to share essential information with other healthcare providers about the pregnancy, labour, birth and immediate postnatal period. 
+
+Each completed pregnancy summary saved to the health record can be re-used to populate the Past Pregnancy History details in subsequent pregnancy records.
+
+In situations where completed pregnancy summaries are not available for each previous pregnancy, this archetype can also be used to record a relevant subset of information that can be used to populate the Past Pregnancy History details with new or active pregnancy records. (en)">
+            misuse = <"No debe utilizarse para registrar información de eventos durante el embarazo, trabajo de parto y el período postnatal inmediato. Estos se registraran utilizando arquetipos de observación - por ejemplo, la información relacionada con la historia y examen durante las visitas prenatales o controles durante el parto.
+
+No debe utilizarse para registrar la información de resumen sobre la historia obstétrica de la mujer - utilizar EVALUATION.obstetric_summary.
+
+No debe utilizarse para registrar la información detallada sobre el ciclo menstrual de una mujer - OBSERVATION.menstrual_cycle uso.
+
+No debe utilizarse para registrar información detallada acerca de la alimentación infantil - se utiliza un arquetipo diferente.
+
+No debe utilizarse para registrar un resumen general de la historia menstrual o un diario - se utilizarán arquetipos distintos.
+">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Pregnancy summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0181] occurrences matches {0..1} matches {    -- Pregnancy status
+                        value matches {
+                            DV_TEXT[at9127]
+                        }
+                    }
+                    ELEMENT[at0146] occurrences matches {0..1} matches {    -- Pregnancy label
+                        value matches {
+                            DV_TEXT[at9102]
+                            DV_COUNT[at9128]
+                        }
+                    }
+                    ELEMENT[at0158] occurrences matches {0..1} matches {    -- Pregnancy confirmed
+                        value matches {
+                            DV_DATE_TIME[at9112]
+                            DV_URI[at9113]
+                            DV_BOOLEAN[at9114]
+                        }
+                    }
+                    ELEMENT[at0083] occurrences matches {0..1} matches {    -- Pregnancy synopsis
+                        value matches {
+                            DV_TEXT[at9067]
+                        }
+                    }
+                    ELEMENT[at0104] occurrences matches {0..1} matches {    -- Assisted reproduction?
+                        value matches {
+                            DV_BOOLEAN[at9009] matches {
+                                value matches {True}
+                            }
+                        }
+                    }
+                    ELEMENT[at0105] occurrences matches {0..1} matches {    -- Assisted reproduction type
+                        value matches {
+                            DV_TEXT[at9010]
+                        }
+                    }
+                    ELEMENT[at0094] occurrences matches {0..1} matches {    -- Early pregnancy outcome
+                        value matches {
+                            DV_TEXT[at9032]
+                        }
+                    }
+                    ELEMENT[at0159] occurrences matches {0..1} matches {    -- Pregnancy duration
+                        value matches {
+                            DV_DURATION[at9106] matches {
+                                value matches {PWD/|P0D..P364D|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0174] occurrences matches {0..1} matches {    -- Pregnancy end date
+                        value matches {
+                            DV_DATE_TIME[at9120]
+                        }
+                    }
+                    ELEMENT[at0178] occurrences matches {0..1} matches {    -- Multiple pregnancy?
+                        value matches {
+                            DV_CODED_TEXT[at9124] matches {
+                                defining_code matches {[ac9123]}    -- Multiple pregnancy? (synthesised)
+                            }
+                            DV_TEXT[at9125]
+                            DV_BOOLEAN[at9126]
+                        }
+                    }
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Number of fetuses
+                        value matches {
+                            DV_COUNT[at9031] matches {
+                                magnitude matches {|>=0|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Onset of labour
+                        value matches {
+                            DV_CODED_TEXT[at9033] matches {
+                                defining_code matches {[ac9001]}    -- Onset of labour (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0096] matches {    -- Induction method
+                        value matches {
+                            DV_TEXT[at9034]
+                        }
+                    }
+                    ELEMENT[at0097] matches {    -- Reason for induction
+                        value matches {
+                            DV_TEXT[at9035]
+                        }
+                    }
+                    ELEMENT[at0022] matches {    -- Augmentation method
+                        value matches {
+                            DV_TEXT[at9036]
+                        }
+                    }
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Total duration of labor
+                        value matches {
+                            DV_DURATION[at9063] matches {
+                                value matches {PDTHM/|>=PT0S|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0118] occurrences matches {0..1} matches {    -- Perineum
+                        value matches {
+                            DV_TEXT[at9064]
+                            DV_CODED_TEXT[at9107] matches {
+                                defining_code matches {[ac9100]}    -- Perineum (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0157] occurrences matches {0..1} matches {    -- Episiotomy
+                        value matches {
+                            DV_BOOLEAN[at9108]
+                        }
+                    }
+                    ELEMENT[at0119] occurrences matches {0..1} matches {    -- Estimated blood loss
+                        value matches {
+                            DV_QUANTITY[at9065] matches {
+                                property matches {[at9008]}    -- Volume
+                                units matches {"ml"}
+                            }
+                        }
+                    }
+                    ELEMENT[at0175] occurrences matches {0..1} matches {    -- Place of outcome
+                        value matches {
+                            DV_TEXT[at9122]
+                        }
+                    }
+                    ELEMENT[at0173] occurrences matches {0..1} matches {    -- Place category
+                        value matches {
+                            DV_TEXT[at9121]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0172] matches {    -- Structured place of outcome
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.address(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0161] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.exam-placenta(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                    }
+                    CLUSTER[at0065] matches {    -- Maternal complication
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0066] occurrences matches {1} matches {    -- Complication
+                                value matches {
+                                    DV_TEXT[at9039]
+                                }
+                            }
+                            ELEMENT[at0068] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9040]
+                                }
+                            }
+                            ELEMENT[at0067] occurrences matches {0..1} matches {    -- Date/Time of onset
+                                value matches {
+                                    DV_DATE_TIME[at9041]
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0028] matches {    -- Per infant
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0036] occurrences matches {0..1} matches {    -- Label/name
+                                value matches {
+                                    DV_TEXT[at9042]
+                                }
+                            }
+                            ELEMENT[at0163] occurrences matches {0..1} matches {    -- Infant outcome
+                                value matches {
+                                    DV_TEXT[at9109]
+                                }
+                            }
+                            ELEMENT[at0029] occurrences matches {0..1} matches {    -- Date/time of delivery
+                                value matches {
+                                    DV_DATE_TIME[at9049]
+                                }
+                            }
+                            ELEMENT[at0037] occurrences matches {0..1} matches {    -- Assigned sex
+                                value matches {
+                                    DV_CODED_TEXT[at9048] matches {
+                                        defining_code matches {[ac9122]}    -- Assigned sex (synthesised)
+                                    }
+                                }
+                            }
+                            allow_archetype CLUSTER[at0160] matches {    -- Birth detail
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.birth_detail(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                            }
+                            ELEMENT[at0045] occurrences matches {0..1} matches {    -- Presenting part
+                                value matches {
+                                    DV_CODED_TEXT[at9046] matches {
+                                        defining_code matches {[ac9003]}    -- Presenting part (synthesised)
+                                    }
+                                    DV_TEXT[at9123]
+                                }
+                            }
+                            ELEMENT[at0149] occurrences matches {0..1} matches {    -- Position
+                                value matches {
+                                    DV_CODED_TEXT[at9110] matches {
+                                        defining_code matches {[ac9102]}    -- Position (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0038] occurrences matches {0..1} matches {    -- Birthweight
+                                value matches {
+                                    DV_QUANTITY[at9053] matches {
+                                        property matches {[at9007]}    -- Mass
+                                        [magnitude, units, precision] matches {
+                                            [{|0.0..10000.0|}, {"g"}, {0}],
+                                            [{|0.0..10.0|}, {"kg"}, {2}]
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0109] occurrences matches {0..1} matches {    -- Feeding
+                                value matches {
+                                    DV_TEXT[at9111]
+                                }
+                            }
+                            ELEMENT[at0165] occurrences matches {0..1} matches {    -- Neonatal outcome
+                                value matches {
+                                    DV_TEXT[at9115]
+                                    DV_CODED_TEXT[at9116] matches {
+                                        defining_code matches {[ac9114]}    -- Neonatal outcome (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0170] occurrences matches {0..1} matches {    -- Neonatal summary
+                                value matches {
+                                    DV_TEXT[at9117]
+                                }
+                            }
+                            ELEMENT[at0167] occurrences matches {0..1} matches {    -- Date/time of neonatal death
+                                value matches {
+                                    DV_DATE_TIME[at9118]
+                                }
+                            }
+                            ELEMENT[at0166] occurrences matches {0..1} matches {    -- Age at neonatal death
+                                value matches {
+                                    DV_DURATION[at9119]
+                                }
+                            }
+                            CLUSTER[at0061] matches {    -- Newborn complication
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0062] occurrences matches {1} matches {    -- Complication
+                                        value matches {
+                                            DV_TEXT[at9059]
+                                        }
+                                    }
+                                    ELEMENT[at0064] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at9060]
+                                        }
+                                    }
+                                    ELEMENT[at0063] occurrences matches {0..1} matches {    -- Date/time of onset
+                                        value matches {
+                                            DV_DATE_TIME[at9061]
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0182] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_TEXT[at9129]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0183] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9130]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0081] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0082] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9068]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0164] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Graviditetssammenfatning">
+                description = <"En oversikt eller oppsummering av en bekreftet graviditet og utfall, inkludert svangerskapsperioden, fødselen og den umiddelbare postpartum perioden.">
+            >
+            ["at0007"] = <
+                text = <"*Number of fetuses (en)">
+                description = <"Antall foster identifisert i livmoren.">
+            >
+            ["at0008"] = <
+                text = <"Fødselsstart">
+                description = <"Måten fødselen startet på.">
+            >
+            ["at0009"] = <
+                text = <"Spontant">
+                description = <"Spontan fødselssart, uten intervensjon.">
+            >
+            ["at0010"] = <
+                text = <"Indusert">
+                description = <"Indusert fødsel(start).">
+            >
+            ["at0016"] = <
+                text = <"Fødselens totale varighet">
+                description = <"Den totale varigheten av fødselens alle tre stadier.">
+            >
+            ["at0022"] = <
+                text = <"Riestimmulerende metode">
+                description = <"Metoden brukt for stimulering av rier etter fødselsstart.">
+                comment = <"Koding av \"Riestimmulerende metode\" med en ønsket terminologi, hvor det er mulig.">
+            >
+            ["at0028"] = <
+                text = <"*Per infant (en)">
+                description = <"*Information about a single fetus or newborn infant. (en)">
+                comment = <"Disse dataelementene kan brukes til å registrere detaljer om levedefødte eller dødfødte barn.">
+            >
+            ["at0029"] = <
+                text = <"Fødselstidspunkt">
+                description = <"*Date and time of delivery for the infant. (en)">
+                comment = <"Dette dataelementet kan bli brukt til å befolke den nyfødtes helsejournal ved å bruke dataelementet \"Fødselsdato\" i arketypen EVALUATION.birth_details (Fødselsdetaljer).">
+            >
+            ["at0036"] = <
+                text = <"Navn (label)">
+                description = <"*Identification of the infant. (en)">
+                comment = <"Identifikasjonen kan være navnet til det nyfødte barnet, eller en type identifikasjon gitt til ikke levedyktige foster.">
+            >
+            ["at0037"] = <
+                text = <"Tilordnet kjønn">
+                description = <"*Sex of the infant  by direct observation of external genitalia. (en)">
+                comment = <"Kodet med en terminologi er foretrukket, om det er mulig. For eksemplel: Gutt, Jente, Uavklart kjønn. Uavklart kjønn brukes når det ikke er mulig å avgjøre om det er en gutt eller en jente ved å undersøke de ytre kjønnsorganene. Dette dataelementet kan bli brukt til å befolke den nyfødtes helsejournal ved å bruke dataelementet \"Tilordnet kjønn ved fødsel\" i arketypen EVALUATION.gender (Kjønn).">
+            >
+            ["at0038"] = <
+                text = <"*Birthweight (en)">
+                description = <"*Weight of the infant at delivery. (en)">
+                comment = <"Dette dataelementet kan bli brukt til å befolke den nyfødtes helsejournal ved å bruke dataelementet \"Vekt\" og \"Fødsel\" Hendelse i arketypen EVALUATION.body_weight (Kroppsvekt).">
+            >
+            ["at0045"] = <
+                text = <"Ledende del">
+                description = <"*Presenting part of the infant at delivery. (en)">
+                comment = <"Den kliniske konteksten for å registrere dette dataelementet er kun ved forløsning, ikke ved andre tidspunkt i fødselsforløpet.">
+            >
+            ["at0046"] = <
+                text = <"Hodet">
+                description = <"*The vertex was the presenting part. (en)">
+            >
+            ["at0047"] = <
+                text = <"Sete">
+                description = <"*The breech was the presenting part. (en)">
+            >
+            ["at0048"] = <
+                text = <"Ansikt">
+                description = <"*The face was the presenting part. (en)">
+            >
+            ["at0049"] = <
+                text = <"Pannen">
+                description = <"*The brow was the presenting part. (en)">
+            >
+            ["at0061"] = <
+                text = <"Nyfødt komplikasjon">
+                description = <"Detaljer om enhver komplikasjon som angår det nyfødte barnet.">
+                comment = <"Nyfødt komplikasjoner registrert i denne maternelle \"Graviditets sammenfatning\" arketypen, kan brukes til å befolke EVALUATION.problem_diagnosis (Problem/diagnose) eller ACTION.procedure (Prosedyre) arketypene som en del av en problemliste eller lignende i den nyfødtes helsejournal.">
+            >
+            ["at0062"] = <
+                text = <"Komplikasjon">
+                description = <"Identifisering av komplikasjonen etter fødsel.">
+                comment = <"Koding av \"Komplikasjon\" med en ønsket terminologi, der det er mulig. For eksempel neonatal hypoglykemi eller hypotermi.">
+            >
+            ["at0063"] = <
+                text = <"Startidspunkt/dato">
+                description = <"Startidspunkt og/eller dato for komplikasjonen.">
+            >
+            ["at0064"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse av komplikasjonen.">
+            >
+            ["at0065"] = <
+                text = <"Maternell komplikasjon">
+                description = <"Detaljer angående graviditetskomplikasjoner eller fødselskomplikasjoner som påvirker moren.">
+                comment = <"Maternelle komplikasjoner registrert i denne maternelle \"Graviditets sammenfatning\" arketypen, kan brukes til å befolke EVALUATION.problem_diagnosis (Problem/diagnose) eller ACTION.procedure (Prosedyre) arketypene som en del av en maternell problemliste eller lignende. Alternativt, kan disse komplikasjonene hentes fra relevante registreringer fra tidligere dokumentert i den maternelle helsejournalen ved bruk av EVALUATION.problem_diagnosis (Problem/diagnose) or ACTION.procedure (Prosedyre) arketypene.">
+            >
+            ["at0066"] = <
+                text = <"Komplikasjon">
+                description = <"Identifisering av komplikasjon.">
+                comment = <"Koding av \"Komplikasjon\" med en ønsket terminologi, hvor det er mulig. For eksempel postpartum blødning eller pre-eklampsi.">
+            >
+            ["at0067"] = <
+                text = <"Starttidspunkt/dato">
+                description = <"Start tidspunkt/dato angående komplikasjonen, satt etter en vurdering gjort av en kliniker.">
+                comment = <"Finnes det bare et delvis/ufullstendig tidspunkt, så aksepteres det.">
+            >
+            ["at0068"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse av den maternelle komplikasjonen.">
+            >
+            ["at0082"] = <
+                text = <"Sist oppdatert">
+                description = <"Dato/tidspunktet graviditets sammenfatningen sist ble oppdatert.">
+            >
+            ["at0083"] = <
+                text = <"Graviditetssammenfattning">
+                description = <"Fritekst beskrivelse som omhandler hele svangerskapet og fødsel, inkludert komplikasjoner.">
+                comment = <"Dette dataelementet kan brukes til å befolke dataelementet \"Svangerskap/fødsel sammendrag\" i arketypen EVALUATION.birth_detalis i barnets helsejournal.">
+            >
+            ["at0094"] = <
+                text = <"*Early pregnancy outcome (en)">
+                description = <"*Outcome of the pregnancy as a whole. (en)">
+                comment = <"*This data element is only used to record the outcome of a pregnancy, before it is useful to record an outcome on a per fetus basis. For example: a 'miscarriage' or a 'missed abortion'. Coding of the 'Early pregnancy outcome' with an external terminology is recommended. If it is necessary to record outcome information per infant or fetus use the 'Infant outcome' data element instead.  This data element is redundant if 'Infant outcome' has been recorded.  (en)">
+            >
+            ["at0096"] = <
+                text = <"Induksjonsmetode">
+                description = <"Induksjonsmetoden som er brukt.">
+                comment = <"Koding av \"Induksjonsmetode\" med en ønsket teminologi, hvor dette er mulig.">
+            >
+            ["at0097"] = <
+                text = <"Induksjonsindikasjon">
+                description = <"Årsaken/indikasjonen til at fødselen blir indusert.">
+            >
+            ["at0104"] = <
+                text = <"Assistert reproduksjon?">
+                description = <"Var graviditeten et resultat av assistert befuktningsteknologi?">
+                comment = <"Sant, dersom assistert befruktning var avgjørende for å bli gravid.">
+            >
+            ["at0105"] = <
+                text = <"Assistert reproduksjon type">
+                description = <"Hvilken type assistert befruktning ble brukt for å oppnå graviditeten.">
+                comment = <"Kodet med terminologi er foretrukket, dersom det er mulig.">
+            >
+            ["at0106"] = <
+                text = <"Fot">
+                description = <"*A foot was the presenting part. (en)">
+            >
+            ["at0107"] = <
+                text = <"Arm">
+                description = <"*An arm was the presenting part. (en)">
+            >
+            ["at0109"] = <
+                text = <"Ernæring">
+                description = <"*Narrative description about feeding of the infant. (en)">
+            >
+            ["at0112"] = <
+                text = <"Ingen fødsel">
+                description = <"Ingen fødselsstart.">
+            >
+            ["at0113"] = <
+                text = <"Gutt">
+                description = <"Barnet er tilsynelatende fysisk en gutt.">
+            >
+            ["at0114"] = <
+                text = <"Jente">
+                description = <"Barnet er tilsynelatende fysisk en gutt.">
+            >
+            ["at0115"] = <
+                text = <"Uavklart kjønn">
+                description = <"Barnets kjønn er uavklart, da det ikke er mulig å avgjøre ved observasjon av fysiske karakteristika.">
+            >
+            ["at0118"] = <
+                text = <"Perineum">
+                description = <"Kodet eller fritekst beskrivelse av perineums tilstand etter fødsel, inkludert skader og reparasjoner.">
+            >
+            ["at0119"] = <
+                text = <"Estimert blødning">
+                description = <"Estimert total blødningmengde iløpet av fødselen og postpartum (første 24 timene).">
+            >
+            ["at0133"] = <
+                text = <"Skulder">
+                description = <"*A shoulder was the presenting part. (en)">
+            >
+            ["at0146"] = <
+                text = <"Graviditet (label)">
+                description = <"*An informal identifier assigned to the pregnancy, used to distinguish it from other pregnancies. (en)">
+                comment = <"*For example: '1', 'Triplet', or 'Sam'.\" (en)">
+            >
+            ["at0149"] = <
+                text = <"Leie">
+                description = <"*Position of the infant at delivery. (en)">
+            >
+            ["at0150"] = <
+                text = <"Venstre occiput anterior/transvers">
+                description = <"Barnets rygg var mot venstre side av uterus ved fødselsstart. Førsteleie.">
+            >
+            ["at0151"] = <
+                text = <"Høyre occiput anterior/transverse">
+                description = <"Barnets rygg var mot hørye side av uterus ved fødselsstart. Andre leie.">
+            >
+            ["at0152"] = <
+                text = <"Ukjent">
+                description = <"Det er ikke kjent hvilken side barnets rygg lå til ved fødselssart.">
+            >
+            ["at0153"] = <
+                text = <"Perinealruptur grad 1">
+                description = <"Overfladisk skade av hud i perineum eller vaginalslimhinne.">
+            >
+            ["at0154"] = <
+                text = <"Perinealruptur grad 2">
+                description = <"Dyp perinealskade med affeksjon av muskulatur i perineum, men uten affeksjon av m. sphincter ani eksternus (EAS) (eksterne sfinkter).">
+            >
+            ["at0155"] = <
+                text = <"Perinealruptur grad 3">
+                description = <"Skade av perineum som involverer analsfinkter
+3a: Ruptur av <50 % av EAS
+3b: Ruptur av ≥50 % av EAS
+3c: Ruptur av EAS og m. sphincter ani internus (IAS) (interne sfinkter).">
+            >
+            ["at0156"] = <
+                text = <"Perinealruptur grad 4">
+                description = <"Skade av perineum som involverer analsfinkter og anal/rektumslimhinne.">
+            >
+            ["at0157"] = <
+                text = <"Episiotomi">
+                description = <"Ble det utført en episiotomi?">
+            >
+            ["at0158"] = <
+                text = <"Graviditet bekreftet">
+                description = <"Bekreftelse på graviditet.">
+                comment = <"Bekreftelsen kan dokumenteres i form av en dato, en avkryssingsrute eller ved å linke til et bekreftende testresultat i den elektroniske journalen. Dataelementet kan brukes til å trigge \"Nåværende gravid\" status i arketypen EVALUATION.pregnancy_status (Graviditet status).">
+            >
+            ["at0159"] = <
+                text = <"Graviditetens varighet">
+                description = <"*The gestation when the pregnancy has ended. (en)">
+                comment = <"Også kjent som \"Gestasjonsalder ved fødsel\" for svangerskap som ender i fødsel.">
+            >
+            ["at0160"] = <
+                text = <"*Birth detail (en)">
+                description = <"En valgt undergruppe av vedvarende eller oppsummerende informasjon om svangerskapet og fødselen til et spedbarn for bruk i både den maternelle og spedbarnets helsejournal.">
+            >
+            ["at0161"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Strukturerte detaljer relatert til graviditets sammenfatningen.">
+                comment = <"For eksempel: funn fra undersøkelse av placenta.">
+            >
+            ["at0163"] = <
+                text = <"*Infant outcome (en)">
+                description = <"*Outcome of the pregnancy for the identified infant or fetus. (en)">
+                comment = <"*This data element is only used to record the outcome of a pregnancy for a single infant or fetus. For example: 'Live birth'; or 'Stillbirth'. Coding of the 'Infant outcome' with an external terminology is recommended.  If it is necessary to record outcome information for the pregnancy as a whole use the 'Early pregnancy outcome' data element instead. This data element is redundant if 'Early pregnancy outcome' has been recorded. (en)">
+            >
+            ["at0164"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0165"] = <
+                text = <"*Neonatal outcome (en)">
+                description = <"*Description of the outcome at the end of the neonatal period per newborn infant. (en)">
+            >
+            ["at0166"] = <
+                text = <"*Age at neonatal death (en)">
+                description = <"*The age of the infant if they died during the neonatal  period. (en)">
+            >
+            ["at0167"] = <
+                text = <"*Date/time of neonatal death (en)">
+                description = <"">
+            >
+            ["at0168"] = <
+                text = <"*Live (en)">
+                description = <"*The infant survived the neonatal period. (en)">
+            >
+            ["at0169"] = <
+                text = <"*Deceased (en)">
+                description = <"*The infant did not survive the neonatal period. (en)">
+            >
+            ["at0170"] = <
+                text = <"*Neonatal summary (en)">
+                description = <"*Narrative description about issues, concerns about the infant or events occurring during the neonatal period. (en)">
+            >
+            ["at0172"] = <
+                text = <"*Structured place of outcome (en)">
+                description = <"*Structured details about the  location where the pregnancy was delivered or an alternative outcome of the pregnancy was treated or managed. (en)">
+                comment = <"*For example: this data element will be renamed to 'Place of delivery' for a pregnancy that ends in the delivery of one or more newborns. (en)">
+            >
+            ["at0173"] = <
+                text = <"*Place category (en)">
+                description = <"*Category of the place where the pregnancy was delivered or an alternative outcome of the pregnancy was treated or managed. (en)">
+                comment = <"*It is strongly recommended that 'Place category' be coded with an external terminology. For example: hospital; birthing clinic; or home. (en)">
+            >
+            ["at0174"] = <
+                text = <"*Pregnancy end date (en)">
+                description = <"*The date and/or time marking the end of the pregnancy. (en)">
+                comment = <"*This data element may be renamed in a template, depending on the pregnancy outcome. For example: date of delivery for a live birth or stillbirth; date of miscarriage; or date of termination. (en)">
+            >
+            ["at0175"] = <
+                text = <"*Place of outcome (en)">
+                description = <"*Simple details about the  location where the pregnancy was delivered or an alternative outcome of the pregnancy was treated or managed. (en)">
+                comment = <"*For example: the name of the hospital or clinic. (en)">
+            >
+            ["at0176"] = <
+                text = <"*Intersex (en)">
+                description = <"">
+            >
+            ["at0177"] = <
+                text = <"*Unknown (en)">
+                description = <"">
+            >
+            ["at0178"] = <
+                text = <"*Multiple pregnancy? (en)">
+                description = <"*Assertion about whether the pregnancy is cateogrised as 'multiple pregnancy'. (en)">
+                comment = <"*This categorial data element is commonly required within registries or used in risk assessment, rather than recording the actual 'Number of fetuses'. (en)">
+            >
+            ["at0179"] = <
+                text = <"*Present (en)">
+                description = <"*The pregnancy has more than one fetus. (en)">
+            >
+            ["at0180"] = <
+                text = <"*Absent (en)">
+                description = <"*The pregnancy has only one fetus. (en)">
+            >
+            ["at0181"] = <
+                text = <"*Pregnancy status (en)">
+                description = <"*Statement about the current status of a single pregnancy. (en)">
+                comment = <"*For example: pre-pregnant, such as intending to get pregnant, not taking contraception, actively undertaking IVF treatment; pregnant; post-partum.
+This status could be designated as 'pre-pregnant' to initiate care pathways for a woman actively attempting to conceive, to ensure that clinical management carefully avoids treatment that could harm a mother or fetus in an unrecognised pregnancy.
+ (en)">
+            >
+            ["at0182"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the infant, not captured in other fields. (en)">
+            >
+            ["at0183"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the pregnancy, not captured in other fields. (en)">
+            >
+            ["at9007"] = <
+                text = <"* Mass (en)">
+                description = <"* Mass (en)">
+            >
+            ["at9008"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["ac9123"] = <
+                text = <"*Multiple pregnancy? (en) (synthesised)">
+                description = <"*Assertion about whether the pregnancy is cateogrised as 'multiple pregnancy'. (en) (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Fødselsstart (synthesised)">
+                description = <"Måten fødselen startet på. (synthesised)">
+            >
+            ["ac9100"] = <
+                text = <"Perineum (synthesised)">
+                description = <"Kodet eller fritekst beskrivelse av perineums tilstand etter fødsel, inkludert skader og reparasjoner. (synthesised)">
+            >
+            ["ac9122"] = <
+                text = <"Tilordnet kjønn (synthesised)">
+                description = <"*Sex of the infant  by direct observation of external genitalia. (en) (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Ledende del (synthesised)">
+                description = <"*Presenting part of the infant at delivery. (en) (synthesised)">
+            >
+            ["ac9102"] = <
+                text = <"Leie (synthesised)">
+                description = <"*Position of the infant at delivery. (en) (synthesised)">
+            >
+            ["ac9114"] = <
+                text = <"*Neonatal outcome (en) (synthesised)">
+                description = <"*Description of the outcome at the end of the neonatal period per newborn infant. (en) (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"*Pregnancy summary(en)">
+                description = <"*Overview or summary record of a pregnancy and outcome, including the antenatal period, labour, birth and the immediate postnatal period. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Number of fetuses (en)">
+                description = <"*Quantidade de fetos identificados no útero.">
+            >
+            ["at0008"] = <
+                text = <"*Onset of labour(en)">
+                description = <"*Maneira em que o trabalho de parto começou.">
+            >
+            ["at0009"] = <
+                text = <"Espontâneo">
+                description = <"Início sem intervenção.">
+            >
+            ["at0010"] = <
+                text = <"Induzido">
+                description = <"Início através da indução.">
+            >
+            ["at0016"] = <
+                text = <"*Total duration of labor(en)">
+                description = <"*Duração total dos três estágios do trabalho de parto.">
+            >
+            ["at0022"] = <
+                text = <"*Augmentation method(en)">
+                description = <"*Condução do trabalho de parto.">
+                comment = <"Codificação do \"Condução do trabalho de parto\" com uma terminologia é desejável, sempre que possível.">
+            >
+            ["at0028"] = <
+                text = <"*Per infant (en)">
+                description = <"*Information about a single fetus or newborn infant. (en)">
+                comment = <"*These data elements may be used to record details about live births or stillborn infants. (en)">
+            >
+            ["at0029"] = <
+                text = <"*Date/time of delivery (en)">
+                description = <"*Date and time of delivery for the infant. (en)">
+                comment = <"*This data element may be used to populate the newborn's health record using the 'Date of birth' data element within the EVALUATION.birth_details archetype. (en)">
+            >
+            ["at0036"] = <
+                text = <"*Label/name (en)">
+                description = <"*Identification of the infant. (en)">
+                comment = <"*Identification might be by the name of the neonate or a label given to a non-viable fetus. (en)">
+            >
+            ["at0037"] = <
+                text = <"*Assigned sex (en)">
+                description = <"*Sex of the infant  by direct observation of external genitalia. (en)">
+                comment = <"*Coding with a terminology is preferred, where possible. For example: Male; female; intersex; indeterminate. Indeterminate is to be used in the situation where the infant has ambiguous external genitalia. This data element may be used to populate the newborn health record using the 'Sex assigned at birth' data element within the EVALUATION.gender archetype. (en)">
+            >
+            ["at0038"] = <
+                text = <"*Birthweight (en)">
+                description = <"*Weight of the infant at delivery. (en)">
+                comment = <"*This data element may be used to populate the newborn health record using both the 'Weight' data element and 'Birth' EVENT within the OBSERVATION.body_weight archetype. (en)">
+            >
+            ["at0045"] = <
+                text = <"*Presenting part(en)">
+                description = <"*Presenting part of the infant at delivery. (en)">
+                comment = <"*The clinical context for recording this data element is only presentation at delivery, not at any other phase of labour. (en)">
+            >
+            ["at0046"] = <
+                text = <"Vértice">
+                description = <"*The vertex was the presenting part. (en)">
+            >
+            ["at0047"] = <
+                text = <"Nádegas">
+                description = <"*The breech was the presenting part. (en)">
+            >
+            ["at0048"] = <
+                text = <"Face">
+                description = <"*The face was the presenting part. (en)">
+            >
+            ["at0049"] = <
+                text = <"Testa">
+                description = <"*The brow was the presenting part. (en)">
+            >
+            ["at0061"] = <
+                text = <"*Newborn complication (en)">
+                description = <"*Details about any complications affecting the newborn. (en)">
+                comment = <"*Newborn complications recorded within this maternal 'Pregnancy summary' archetype may be used to populate EVALUATION.problem_diagnosis or ACTION.procedure archetypes to initiate a Problem list, or similar, within a newborn health record. (en)">
+            >
+            ["at0062"] = <
+                text = <"*Complication(en)">
+                description = <"*Identificação da complicação após o nascimento .">
+                comment = <"Codificação das \"complicação\" com uma terminologia é desejável , sempre que possível . Por exemplo, hipoglicemia neonatal ou hipotermia .">
+            >
+            ["at0063"] = <
+                text = <"*Date/time of onset (en)">
+                description = <"*Data/Hora do início da complicação.">
+            >
+            ["at0064"] = <
+                text = <"Descrição">
+                description = <"Descrição narrativa da complicação.">
+            >
+            ["at0065"] = <
+                text = <"*Maternal complication(en)">
+                description = <"*Detalhes sobre complicações na gravidez ou complicações no parto que afetam a mãe.">
+                comment = <"*Maternal complications recorded within this maternal 'Pregnancy summary' archetype may be used to populate EVALUATION.problem_diagnosis or ACTION.procedure archetypes as part of a maternal Problem list, or similar. Alternatively these complications may be derived from relevant entries previously documented in the maternal health record using EVALUATION.problem_diagnosis or ACTION.procedure archetypes. (en)">
+            >
+            ["at0066"] = <
+                text = <"Complicação">
+                description = <"Identificação da complicação.">
+                comment = <"A codificação de \"complicação\" com uma terminologia é desejável , sempre que possível . Por exemplo, hemorragia pós-parto ou pré -eclampsia.">
+            >
+            ["at0067"] = <
+                text = <"*Date/Time of onset(en)">
+                description = <"*Data de início da complicação, como avaliada por um clínico.">
+                comment = <"Se apenas uma data parcial estiver disponível, isto é aceitável.">
+            >
+            ["at0068"] = <
+                text = <"Descrição">
+                description = <"Descrição narrativa da complicação materna.">
+            >
+            ["at0082"] = <
+                text = <"*Last updated(en)">
+                description = <"*The date/time the pregnancy summary was last updated. (en)">
+            >
+            ["at0083"] = <
+                text = <"*Pregnancy synopsis(en)">
+                description = <"*Narrative description about the entire pregnancy, labour and delivery, including complications. (en)">
+                comment = <"*This data element may be used to populate the 'Pregnancy/birth synopsis' data element within the EVALUATION.birth_details archetype in an infant health record. (en)">
+            >
+            ["at0094"] = <
+                text = <"*Early pregnancy outcome (en)">
+                description = <"*Outcome of the pregnancy as a whole. (en)">
+                comment = <"*This data element is only used to record the outcome of a pregnancy, before it is useful to record an outcome on a per fetus basis. For example: a 'miscarriage' or a 'missed abortion'. Coding of the 'Early pregnancy outcome' with an external terminology is recommended. If it is necessary to record outcome information per infant or fetus use the 'Infant outcome' data element instead.  This data element is redundant if 'Infant outcome' has been recorded.  (en)">
+            >
+            ["at0096"] = <
+                text = <"*Induction method(en)">
+                description = <"*Método de indução do trabalho de parto.">
+                comment = <"A codificação do \"método de indução\" com uma terminologia é desejável , sempre que possível .">
+            >
+            ["at0097"] = <
+                text = <"*Reason for induction(en)">
+                description = <"*Motivo para a indução do parto.">
+            >
+            ["at0104"] = <
+                text = <"*Assisted reproduction?(en)">
+                description = <"*A gravidez foi resultado do uso de tecnologia de reprodução assistida?">
+                comment = <"Verdade, se para alcançar a gravidez foi necessário reprodução assistida.">
+            >
+            ["at0105"] = <
+                text = <"*Assisted reproduction type(en)">
+                description = <"*Tipo de tecnologia de reprodução assistida utilizada para conseguir a gravidez.">
+                comment = <"Codificação com uma terminologia é preferível, quando possível.">
+            >
+            ["at0106"] = <
+                text = <"Pé">
+                description = <"*A foot was the presenting part. (en)">
+            >
+            ["at0107"] = <
+                text = <"Braço">
+                description = <"*An arm was the presenting part. (en)">
+            >
+            ["at0109"] = <
+                text = <"Alimentação">
+                description = <"*Narrative description about feeding of the infant. (en)">
+            >
+            ["at0112"] = <
+                text = <"Não há trabalho de parto">
+                description = <"Trabalho de parto não iniciado.">
+            >
+            ["at0113"] = <
+                text = <"Masculino">
+                description = <"Aparencia do recém-nascido parece fisicamente masculina.">
+            >
+            ["at0114"] = <
+                text = <"Feminina">
+                description = <"Aparência do recém-nascido parece fisicamente feminina.">
+            >
+            ["at0115"] = <
+                text = <"Indeterminada">
+                description = <"Não possível ainda determinar o sexo do recém-nascido a partir da observação das características físicas.">
+            >
+            ["at0118"] = <
+                text = <"Períneo">
+                description = <"*Coded or narrative description about the condition of the perineum after birth, including injuries and repairs. (en)">
+            >
+            ["at0119"] = <
+                text = <"*Estimated blood loss (en)">
+                description = <"*Estimation of total maternal blood loss during birth and immediately postpartum. (en)">
+            >
+            ["at0133"] = <
+                text = <"Ombro">
+                description = <"*A shoulder was the presenting part. (en)">
+            >
+            ["at0146"] = <
+                text = <"*Pregnancy label (en)">
+                description = <"*An informal identifier assigned to the pregnancy, used to distinguish it from other pregnancies. (en)">
+                comment = <"*For example: '1', 'Triplet', or 'Sam'.\" (en)">
+            >
+            ["at0149"] = <
+                text = <"*Position (en)">
+                description = <"*Position of the infant at delivery. (en)">
+            >
+            ["at0150"] = <
+                text = <"*Left occiput anterior/transverse (en)">
+                description = <"*The baby's back was toward the left side of the uterus at onset of labour. (en)">
+            >
+            ["at0151"] = <
+                text = <"*Right occiput anterior/transverse (en)">
+                description = <"*The baby's back was toward the right side of the uterus at onset of labour. (en)">
+            >
+            ["at0152"] = <
+                text = <"*Unknown (en)">
+                description = <"*It is not known which side the baby's back was positioned by onset of labour. (en)">
+            >
+            ["at0153"] = <
+                text = <"*First degree vaginal tear (en)">
+                description = <"*Involve just the skin of the vaginal opening and perineum. (en)">
+            >
+            ["at0154"] = <
+                text = <"*Second degree vaginal tear (en)">
+                description = <"*Involve the skin and muscle of the perineum and might extend deep into the vagina. (en)">
+            >
+            ["at0155"] = <
+                text = <"*Third degree vaginal tear (en)">
+                description = <"*Tear in the vaginal tissue, perineal skin, and perineal muscles that extends into the anal sphincter. (en)">
+            >
+            ["at0156"] = <
+                text = <"*Fourth degree vaginal tear (en)">
+                description = <"*Extend through the anal sphincter and into the mucous membrane that lines the rectum. (en)">
+            >
+            ["at0157"] = <
+                text = <"*Episiotomy (en)">
+                description = <"*Was an episiotomy performed? (en)">
+            >
+            ["at0158"] = <
+                text = <"*Pregnancy confirmed (en)">
+                description = <"*Confirmation of the pregnancy. (en)">
+                comment = <"*Confirmation may be documented either by date, boolean selection or a link to a confirmatory test result within the health record. This data element may be used to trigger a 'Current' 'Pregnancy status' within the EVALUATION.pregnancy_status archetype. (en)">
+            >
+            ["at0159"] = <
+                text = <"*Pregnancy duration (en)">
+                description = <"*The gestation when the pregnancy has ended. (en)">
+                comment = <"*Also known as 'Gestation at birth' for pregnancies resulting in viable outcomes. (en)">
+            >
+            ["at0160"] = <
+                text = <"*Birth detail (en)">
+                description = <"*A subset of persistent or summary information about the pregnancy and birth of an infant, selected for utility of use within both the maternal and infant health records. (en)">
+            >
+            ["at0161"] = <
+                text = <"*Additional details (en)">
+                description = <"*Structured details about additional information related to the pregnancy summary. (en)">
+                comment = <"*For example: findings from examination of the placenta. (en)">
+            >
+            ["at0163"] = <
+                text = <"*Infant outcome (en)">
+                description = <"*Outcome of the pregnancy for the identified infant or fetus. (en)">
+                comment = <"*This data element is only used to record the outcome of a pregnancy for a single infant or fetus. For example: 'Live birth'; or 'Stillbirth'. Coding of the 'Infant outcome' with an external terminology is recommended.  If it is necessary to record outcome information for the pregnancy as a whole use the 'Early pregnancy outcome' data element instead. This data element is redundant if 'Early pregnancy outcome' has been recorded. (en)">
+            >
+            ["at0164"] = <
+                text = <"*Extension (en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms. (en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR.  (en)">
+            >
+            ["at0165"] = <
+                text = <"*Neonatal outcome (en)">
+                description = <"*Description of the outcome at the end of the neonatal period per newborn infant. (en)">
+            >
+            ["at0166"] = <
+                text = <"*Age at neonatal death (en)">
+                description = <"*The age of the infant if they died during the neonatal  period. (en)">
+            >
+            ["at0167"] = <
+                text = <"*Date/time of neonatal death (en)">
+                description = <"">
+            >
+            ["at0168"] = <
+                text = <"*Live (en)">
+                description = <"*The infant survived the neonatal period. (en)">
+            >
+            ["at0169"] = <
+                text = <"*Deceased (en)">
+                description = <"*The infant did not survive the neonatal period. (en)">
+            >
+            ["at0170"] = <
+                text = <"*Neonatal summary (en)">
+                description = <"*Narrative description about issues, concerns about the infant or events occurring during the neonatal period. (en)">
+            >
+            ["at0172"] = <
+                text = <"*Structured place of outcome (en)">
+                description = <"*Structured details about the  location where the pregnancy was delivered or an alternative outcome of the pregnancy was treated or managed. (en)">
+                comment = <"*For example: this data element will be renamed to 'Place of delivery' for a pregnancy that ends in the delivery of one or more newborns. (en)">
+            >
+            ["at0173"] = <
+                text = <"*Place category (en)">
+                description = <"*Category of the place where the pregnancy was delivered or an alternative outcome of the pregnancy was treated or managed. (en)">
+                comment = <"*It is strongly recommended that 'Place category' be coded with an external terminology. For example: hospital; birthing clinic; or home. (en)">
+            >
+            ["at0174"] = <
+                text = <"*Pregnancy end date (en)">
+                description = <"*The date and/or time marking the end of the pregnancy. (en)">
+                comment = <"*This data element may be renamed in a template, depending on the pregnancy outcome. For example: date of delivery for a live birth or stillbirth; date of miscarriage; or date of termination. (en)">
+            >
+            ["at0175"] = <
+                text = <"*Place of outcome (en)">
+                description = <"*Simple details about the  location where the pregnancy was delivered or an alternative outcome of the pregnancy was treated or managed. (en)">
+                comment = <"*For example: the name of the hospital or clinic. (en)">
+            >
+            ["at0176"] = <
+                text = <"*Intersex (en)">
+                description = <"">
+            >
+            ["at0177"] = <
+                text = <"*Unknown (en)">
+                description = <"">
+            >
+            ["at0178"] = <
+                text = <"*Multiple pregnancy? (en)">
+                description = <"*Assertion about whether the pregnancy is cateogrised as 'multiple pregnancy'. (en)">
+                comment = <"*This categorial data element is commonly required within registries or used in risk assessment, rather than recording the actual 'Number of fetuses'. (en)">
+            >
+            ["at0179"] = <
+                text = <"*Present (en)">
+                description = <"*The pregnancy has more than one fetus. (en)">
+            >
+            ["at0180"] = <
+                text = <"*Absent (en)">
+                description = <"*The pregnancy has only one fetus. (en)">
+            >
+            ["at0181"] = <
+                text = <"*Pregnancy status (en)">
+                description = <"*Statement about the current status of a single pregnancy. (en)">
+                comment = <"*For example: pre-pregnant, such as intending to get pregnant, not taking contraception, actively undertaking IVF treatment; pregnant; post-partum.
+This status could be designated as 'pre-pregnant' to initiate care pathways for a woman actively attempting to conceive, to ensure that clinical management carefully avoids treatment that could harm a mother or fetus in an unrecognised pregnancy.
+ (en)">
+            >
+            ["at0182"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the infant, not captured in other fields. (en)">
+            >
+            ["at0183"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the pregnancy, not captured in other fields. (en)">
+            >
+            ["at9007"] = <
+                text = <"* Mass (en)">
+                description = <"* Mass (en)">
+            >
+            ["at9008"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["ac9123"] = <
+                text = <"*Multiple pregnancy? (en) (synthesised)">
+                description = <"*Assertion about whether the pregnancy is cateogrised as 'multiple pregnancy'. (en) (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"*Onset of labour(en) (synthesised)">
+                description = <"*Maneira em que o trabalho de parto começou. (synthesised)">
+            >
+            ["ac9100"] = <
+                text = <"Períneo (synthesised)">
+                description = <"*Coded or narrative description about the condition of the perineum after birth, including injuries and repairs. (en) (synthesised)">
+            >
+            ["ac9122"] = <
+                text = <"*Assigned sex (en) (synthesised)">
+                description = <"*Sex of the infant  by direct observation of external genitalia. (en) (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"*Presenting part(en) (synthesised)">
+                description = <"*Presenting part of the infant at delivery. (en) (synthesised)">
+            >
+            ["ac9102"] = <
+                text = <"*Position (en) (synthesised)">
+                description = <"*Position of the infant at delivery. (en) (synthesised)">
+            >
+            ["ac9114"] = <
+                text = <"*Neonatal outcome (en) (synthesised)">
+                description = <"*Description of the outcome at the end of the neonatal period per newborn infant. (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Pregnancy summary">
+                description = <"Overview or summary record of a pregnancy and outcome, including the antenatal period, labour, birth and the immediate postnatal period.">
+            >
+            ["at0007"] = <
+                text = <"Number of fetuses">
+                description = <"Number of fetuses identified in utero.">
+            >
+            ["at0008"] = <
+                text = <"Onset of labour">
+                description = <"Manner in which labour started.">
+            >
+            ["at0009"] = <
+                text = <"Spontaneous">
+                description = <"Onset without intervention.">
+            >
+            ["at0010"] = <
+                text = <"Induced">
+                description = <"Onset through intervention.">
+            >
+            ["at0016"] = <
+                text = <"Total duration of labor">
+                description = <"Total duration of all three stages of labour.">
+            >
+            ["at0022"] = <
+                text = <"Augmentation method">
+                description = <"Method of labour augmentation.">
+                comment = <"Coding of the 'Augmentation Method' with a terminology is desirable, where possible.">
+            >
+            ["at0028"] = <
+                text = <"Per infant">
+                description = <"Information about a single fetus or newborn infant.">
+                comment = <"These data elements may be used to record details about live births or stillborn infants.">
+            >
+            ["at0029"] = <
+                text = <"Date/time of delivery">
+                description = <"Date and time of delivery for the infant.">
+                comment = <"This data element may be used to populate the newborn's health record using the 'Date of birth' data element within the EVALUATION.birth_details archetype.">
+            >
+            ["at0036"] = <
+                text = <"Label/name">
+                description = <"Identification of the infant.">
+                comment = <"Identification might be by the name of the neonate or a label given to a non-viable fetus.">
+            >
+            ["at0037"] = <
+                text = <"Assigned sex">
+                description = <"Sex of the infant  by direct observation of external genitalia.">
+                comment = <"Coding with a terminology is preferred, where possible. For example: Male; female; intersex; indeterminate. Indeterminate is to be used in the situation where the infant has ambiguous external genitalia. This data element may be used to populate the newborn health record using the 'Sex assigned at birth' data element within the EVALUATION.gender archetype.">
+            >
+            ["at0038"] = <
+                text = <"Birthweight">
+                description = <"Weight of the infant at delivery.">
+                comment = <"This data element may be used to populate the newborn health record using both the 'Weight' data element and 'Birth' EVENT within the OBSERVATION.body_weight archetype.">
+            >
+            ["at0045"] = <
+                text = <"Presenting part">
+                description = <"Presenting part of the infant at delivery.">
+                comment = <"The clinical context for recording this data element is only presentation at delivery, not at any other phase of labour.">
+            >
+            ["at0046"] = <
+                text = <"Vertex">
+                description = <"The vertex was the presenting part.">
+            >
+            ["at0047"] = <
+                text = <"Breech">
+                description = <"The breech was the presenting part.">
+            >
+            ["at0048"] = <
+                text = <"Face">
+                description = <"The face was the presenting part.">
+            >
+            ["at0049"] = <
+                text = <"Brow">
+                description = <"The brow was the presenting part.">
+            >
+            ["at0061"] = <
+                text = <"Newborn complication">
+                description = <"Details about any complications affecting the newborn.">
+                comment = <"Newborn complications recorded within this maternal 'Pregnancy summary' archetype may be used to populate EVALUATION.problem_diagnosis or ACTION.procedure archetypes to initiate a Problem list, or similar, within a newborn health record.">
+            >
+            ["at0062"] = <
+                text = <"Complication">
+                description = <"Identification of the complication after birth.">
+                comment = <"Coding of the 'Complication' with a terminology is desirable, where possible. For example, neonatal hypoglycaemia or hypothermia.">
+            >
+            ["at0063"] = <
+                text = <"Date/time of onset">
+                description = <"Date and/or time of onset of the complication.">
+            >
+            ["at0064"] = <
+                text = <"Description">
+                description = <"Narrative description of complication.">
+            >
+            ["at0065"] = <
+                text = <"Maternal complication">
+                description = <"Details about pregnancy complications or birth complications affecting the mother.">
+                comment = <"Maternal complications recorded within this maternal 'Pregnancy summary' archetype may be used to populate EVALUATION.problem_diagnosis or ACTION.procedure archetypes as part of a maternal Problem list, or similar. Alternatively these complications may be derived from relevant entries previously documented in the maternal health record using EVALUATION.problem_diagnosis or ACTION.procedure archetypes.">
+            >
+            ["at0066"] = <
+                text = <"Complication">
+                description = <"Identification of the complication.">
+                comment = <"Coding of the 'Complication' with a terminology is desirable, where possible. For example, post partum haemorrhage or pre-eclampsia.">
+            >
+            ["at0067"] = <
+                text = <"Date/Time of onset">
+                description = <"Date of onset of complication, as assessed by a clinician.">
+                comment = <"If only a partial date is available, this is acceptable.">
+            >
+            ["at0068"] = <
+                text = <"Description">
+                description = <"Narrative description of the maternal complication.">
+            >
+            ["at0082"] = <
+                text = <"Last updated">
+                description = <"The date/time the pregnancy summary was last updated.">
+            >
+            ["at0083"] = <
+                text = <"Pregnancy synopsis">
+                description = <"Narrative description about the entire pregnancy, labour and delivery, including complications.">
+                comment = <"This data element may be used to populate the 'Pregnancy/birth synopsis' data element within the EVALUATION.birth_details archetype in an infant health record.">
+            >
+            ["at0094"] = <
+                text = <"Early pregnancy outcome">
+                description = <"Outcome of the pregnancy as a whole.">
+                comment = <"This data element is only used to record the outcome of a pregnancy, before it is useful to record an outcome on a per fetus basis. For example: a 'miscarriage' or a 'missed abortion'. Coding of the 'Early pregnancy outcome' with an external terminology is recommended. If it is necessary to record outcome information per infant or fetus use the 'Infant outcome' data element instead.  This data element is redundant if 'Infant outcome' has been recorded. ">
+            >
+            ["at0096"] = <
+                text = <"Induction method">
+                description = <"Method of labour induction.">
+                comment = <"Coding of the 'Induction Method' with a terminology is desirable, where possible.">
+            >
+            ["at0097"] = <
+                text = <"Reason for induction">
+                description = <"Reason for induction of labour.">
+            >
+            ["at0104"] = <
+                text = <"Assisted reproduction?">
+                description = <"Was the pregnancy a result of assisted reproductive technology?">
+                comment = <"True, if assisted reproduction was required to achieve the pregnancy.">
+            >
+            ["at0105"] = <
+                text = <"Assisted reproduction type">
+                description = <"Type of assisted reproductive technology used to achieve pregnancy.">
+                comment = <"Coding with a terminology is preferred, where possible.">
+            >
+            ["at0106"] = <
+                text = <"Foot">
+                description = <"A foot was the presenting part.">
+            >
+            ["at0107"] = <
+                text = <"Arm">
+                description = <"An arm was the presenting part.">
+            >
+            ["at0109"] = <
+                text = <"Feeding">
+                description = <"Narrative description about feeding of the infant.">
+            >
+            ["at0112"] = <
+                text = <"No labour">
+                description = <"No onset of labour.">
+            >
+            ["at0113"] = <
+                text = <"Male">
+                description = <"Baby appears physically male.">
+            >
+            ["at0114"] = <
+                text = <"Female">
+                description = <"Baby appears physically female.">
+            >
+            ["at0115"] = <
+                text = <"Indeterminate">
+                description = <"Sex of the baby has not yet been able to be determined from observation of physical characteristics.">
+            >
+            ["at0118"] = <
+                text = <"Perineum">
+                description = <"Coded or narrative description about the condition of the perineum after birth, including injuries and repairs.">
+            >
+            ["at0119"] = <
+                text = <"Estimated blood loss">
+                description = <"Estimation of total maternal blood loss during birth and immediately postpartum.">
+            >
+            ["at0133"] = <
+                text = <"Shoulder">
+                description = <"A shoulder was the presenting part.">
+            >
+            ["at0146"] = <
+                text = <"Pregnancy label">
+                description = <"An informal identifier assigned to the pregnancy, used to distinguish it from other pregnancies.">
+                comment = <"For example: '1', 'Triplet', or 'Sam'.\"">
+            >
+            ["at0149"] = <
+                text = <"Position">
+                description = <"Position of the infant at delivery.">
+            >
+            ["at0150"] = <
+                text = <"Left occiput anterior/transverse">
+                description = <"The baby's back was toward the left side of the uterus at onset of labour.">
+            >
+            ["at0151"] = <
+                text = <"Right occiput anterior/transverse">
+                description = <"The baby's back was toward the right side of the uterus at onset of labour.">
+            >
+            ["at0152"] = <
+                text = <"Unknown">
+                description = <"It is not known which side the baby's back was positioned by onset of labour.">
+            >
+            ["at0153"] = <
+                text = <"First degree vaginal tear">
+                description = <"Involve just the skin of the vaginal opening and perineum.">
+            >
+            ["at0154"] = <
+                text = <"Second degree vaginal tear">
+                description = <"Involve the skin and muscle of the perineum and might extend deep into the vagina.">
+            >
+            ["at0155"] = <
+                text = <"Third degree vaginal tear">
+                description = <"Tear in the vaginal tissue, perineal skin, and perineal muscles that extends into the anal sphincter.">
+            >
+            ["at0156"] = <
+                text = <"Fourth degree vaginal tear">
+                description = <"Extend through the anal sphincter and into the mucous membrane that lines the rectum.">
+            >
+            ["at0157"] = <
+                text = <"Episiotomy">
+                description = <"Was an episiotomy performed?">
+            >
+            ["at0158"] = <
+                text = <"Pregnancy confirmed">
+                description = <"Confirmation of the pregnancy.">
+                comment = <"Confirmation may be documented either by date, boolean selection or a link to a confirmatory test result within the health record. This data element may be used to trigger a 'Current' 'Pregnancy status' within the EVALUATION.pregnancy_status archetype.">
+            >
+            ["at0159"] = <
+                text = <"Pregnancy duration">
+                description = <"The gestation when the pregnancy has ended.">
+                comment = <"Also known as 'Gestation at birth' for pregnancies resulting in viable outcomes.">
+            >
+            ["at0160"] = <
+                text = <"Birth detail">
+                description = <"A subset of persistent or summary information about the pregnancy and birth of an infant, selected for utility of use within both the maternal and infant health records.">
+            >
+            ["at0161"] = <
+                text = <"Additional details">
+                description = <"Structured details about additional information related to the pregnancy summary.">
+                comment = <"For example: findings from examination of the placenta.">
+            >
+            ["at0163"] = <
+                text = <"Infant outcome">
+                description = <"Outcome of the pregnancy for the identified infant or fetus.">
+                comment = <"This data element is only used to record the outcome of a pregnancy for a single infant or fetus. For example: 'Live birth'; or 'Stillbirth'. Coding of the 'Infant outcome' with an external terminology is recommended.  If it is necessary to record outcome information for the pregnancy as a whole use the 'Early pregnancy outcome' data element instead. This data element is redundant if 'Early pregnancy outcome' has been recorded.">
+            >
+            ["at0164"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR. ">
+            >
+            ["at0165"] = <
+                text = <"Neonatal outcome">
+                description = <"Description of the outcome at the end of the neonatal period per newborn infant.">
+            >
+            ["at0166"] = <
+                text = <"Age at neonatal death">
+                description = <"The age of the infant if they died during the neonatal  period.">
+            >
+            ["at0167"] = <
+                text = <"Date/time of neonatal death">
+                description = <"">
+            >
+            ["at0168"] = <
+                text = <"Live">
+                description = <"The infant survived the neonatal period.">
+            >
+            ["at0169"] = <
+                text = <"Deceased">
+                description = <"The infant did not survive the neonatal period.">
+            >
+            ["at0170"] = <
+                text = <"Neonatal summary">
+                description = <"Narrative description about issues, concerns about the infant or events occurring during the neonatal period.">
+            >
+            ["at0172"] = <
+                text = <"Structured place of outcome">
+                description = <"Structured details about the  location where the pregnancy was delivered or an alternative outcome of the pregnancy was treated or managed.">
+                comment = <"For example: this data element will be renamed to 'Place of delivery' for a pregnancy that ends in the delivery of one or more newborns.">
+            >
+            ["at0173"] = <
+                text = <"Place category">
+                description = <"Category of the place where the pregnancy was delivered or an alternative outcome of the pregnancy was treated or managed.">
+                comment = <"It is strongly recommended that 'Place category' be coded with an external terminology. For example: hospital; birthing clinic; or home.">
+            >
+            ["at0174"] = <
+                text = <"Pregnancy end date">
+                description = <"The date and/or time marking the end of the pregnancy.">
+                comment = <"This data element may be renamed in a template, depending on the pregnancy outcome. For example: date of delivery for a live birth or stillbirth; date of miscarriage; or date of termination.">
+            >
+            ["at0175"] = <
+                text = <"Place of outcome">
+                description = <"Simple details about the  location where the pregnancy was delivered or an alternative outcome of the pregnancy was treated or managed.">
+                comment = <"For example: the name of the hospital or clinic.">
+            >
+            ["at0176"] = <
+                text = <"Intersex">
+                description = <"">
+            >
+            ["at0177"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0178"] = <
+                text = <"Multiple pregnancy?">
+                description = <"Assertion about whether the pregnancy is cateogrised as 'multiple pregnancy'.">
+                comment = <"This categorial data element is commonly required within registries or used in risk assessment, rather than recording the actual 'Number of fetuses'.">
+            >
+            ["at0179"] = <
+                text = <"Present">
+                description = <"The pregnancy has more than one fetus.">
+            >
+            ["at0180"] = <
+                text = <"Absent">
+                description = <"The pregnancy has only one fetus.">
+            >
+            ["at0181"] = <
+                text = <"Pregnancy status">
+                description = <"Statement about the current status of a single pregnancy.">
+                comment = <"For example: pre-pregnant, such as intending to get pregnant, not taking contraception, actively undertaking IVF treatment; pregnant; post-partum.
+This status could be designated as 'pre-pregnant' to initiate care pathways for a woman actively attempting to conceive, to ensure that clinical management carefully avoids treatment that could harm a mother or fetus in an unrecognised pregnancy.
+">
+            >
+            ["at0182"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the infant, not captured in other fields.">
+            >
+            ["at0183"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the pregnancy, not captured in other fields.">
+            >
+            ["at9007"] = <
+                text = <"Mass">
+                description = <"Mass">
+            >
+            ["at9008"] = <
+                text = <"Volume">
+                description = <"Volume">
+            >
+            ["ac9123"] = <
+                text = <"Multiple pregnancy? (synthesised)">
+                description = <"Assertion about whether the pregnancy is cateogrised as 'multiple pregnancy'. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Onset of labour (synthesised)">
+                description = <"Manner in which labour started. (synthesised)">
+            >
+            ["ac9100"] = <
+                text = <"Perineum (synthesised)">
+                description = <"Coded or narrative description about the condition of the perineum after birth, including injuries and repairs. (synthesised)">
+            >
+            ["ac9122"] = <
+                text = <"Assigned sex (synthesised)">
+                description = <"Sex of the infant  by direct observation of external genitalia. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Presenting part (synthesised)">
+                description = <"Presenting part of the infant at delivery. (synthesised)">
+            >
+            ["ac9102"] = <
+                text = <"Position (synthesised)">
+                description = <"Position of the infant at delivery. (synthesised)">
+            >
+            ["ac9114"] = <
+                text = <"Neonatal outcome (synthesised)">
+                description = <"Description of the outcome at the end of the neonatal period per newborn infant. (synthesised)">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Resum de l'embaràs">
+                description = <"Resum o registre resum d'un embaràs i el seu resultat, inclòs el període prenatal, el treball de part, el part i el període postnatal immediat.">
+            >
+            ["at0007"] = <
+                text = <"*Number of fetuses (en)">
+                description = <"Nombre de fetus identificats a l'úter.">
+            >
+            ["at0008"] = <
+                text = <"Inici del treball de part">
+                description = <"Manera en què va començar el part.">
+            >
+            ["at0009"] = <
+                text = <"Espontani">
+                description = <"Començament sense intervenció.">
+            >
+            ["at0010"] = <
+                text = <"Induït">
+                description = <"Inici a través de la intervenció.">
+            >
+            ["at0016"] = <
+                text = <"Durada total del treball de part">
+                description = <"Durada total de les tres etapes del part.">
+            >
+            ["at0022"] = <
+                text = <"Mètode d'acceleració">
+                description = <"Mètode d'acceleració del treball de part.">
+                comment = <"La codificació del \"Mètode d'acceleració\" amb una terminologia és desitjable, sempre que sigui possible.">
+            >
+            ["at0028"] = <
+                text = <"Per nadó">
+                description = <"Informació sobre un fetus únic o nadó.">
+                comment = <"Aquests elements de dades es poden utilitzar per registrar detalls sobre nascuts vius o nadons morts.">
+            >
+            ["at0029"] = <
+                text = <"Data/hora del part">
+                description = <"Data i hora del part del nadó.">
+                comment = <"Aquest element de dades es pot utilitzar per omplir el registre de salut del nounat mitjançant l'element de dades \"Data de naixement\" dins de l'arquetip EVALUATION.birth_details.">
+            >
+            ["at0036"] = <
+                text = <"Etiqueta/nom">
+                description = <"Identificació del nadó.">
+                comment = <"La identificació pot ser pel nom del nounat o una etiqueta donada a un fetus no viable.">
+            >
+            ["at0037"] = <
+                text = <"Sexe assignat">
+                description = <"Sexe del nadó per observació directa dels genitals externs.">
+                comment = <"Es prefereix codificar amb una terminologia, sempre que sigui possible. Per exemple: Mascle; femella; intersexual; indeterminat. Indeterminat s'ha d'utilitzar en la situació en què el nadó té genitals externs ambigus. Aquest element de dades es pot utilitzar per emplenar l'expedient sanitari del nounat mitjançant l'element de dades \"Sexe assignat al naixement\" dins de l'arquetip EVALUATION.gender.">
+            >
+            ["at0038"] = <
+                text = <"Pes en néixer">
+                description = <"Pes del nadó al part.">
+                comment = <"Aquest element de dades es pot utilitzar per omplir el registre de salut del nounat utilitzant tant l'element de dades EVENT \"Pes\" o \"Naixement\" dins de l'arquetip OBSERVATION.body_weight.">
+            >
+            ["at0045"] = <
+                text = <"Presentació">
+                description = <"Presentació del nadó en el part.">
+                comment = <"El context clínic per registrar aquest element de dades és només la presentació en el part, no en cap altra fase del part.">
+            >
+            ["at0046"] = <
+                text = <"Cafàlica">
+                description = <"La part de presentació era el vèrtex cefàlic.">
+            >
+            ["at0047"] = <
+                text = <"Natges">
+                description = <"La part de presentació eren les natges.">
+            >
+            ["at0048"] = <
+                text = <"Cara">
+                description = <"La part de presentació era la cara.">
+            >
+            ["at0049"] = <
+                text = <"Cella">
+                description = <"La part de presentació era la cella.">
+            >
+            ["at0061"] = <
+                text = <"Complicació del nounat">
+                description = <"Detalls sobre qualsevol complicació que afecti el nounat.">
+                comment = <"Les complicacions del nounat registrades dins d'aquest arquetip matern \"Resum de l'embaràs\" es poden utilitzar per omplir els arquetips EVALUATION.problem_diagnosis o ACTION.procedure per iniciar una llista de problemes, o similar, dins d'un registre de salut del nounat.">
+            >
+            ["at0062"] = <
+                text = <"Complicació">
+                description = <"Identificació de la complicació després del part.">
+                comment = <"La codificació de la \"Complicació\" amb una terminologia és desitjable, sempre que sigui possible. Per exemple, hipoglucèmia o hipotèrmia neonatal.">
+            >
+            ["at0063"] = <
+                text = <"Data/hora d'inici">
+                description = <"Data i/o hora d'inici de la complicació.">
+            >
+            ["at0064"] = <
+                text = <"Descripció">
+                description = <"Descripció narrativa de la complicació.">
+            >
+            ["at0065"] = <
+                text = <"Complicació materna">
+                description = <"Detalls sobre complicacions de l'embaràs o del part que afecten la mare.">
+                comment = <"Les complicacions maternes registrades dins d'aquest arquetip matern \"Resum de l'embaràs\" es poden utilitzar per omplir els arquetips EVALUATION.problem_diagnosis o ACTION.procedure com a part d'una llista de problemes materns, o similar. Alternativament, aquestes complicacions es poden derivar d'entrades rellevants documentades prèviament a l'historial de salut materna mitjançant els arquetips EVALUATION.problem_diagnosis o ACTION.procedure.">
+            >
+            ["at0066"] = <
+                text = <"Complicació">
+                description = <"Identificació de la complicació.">
+                comment = <"La codificació de la \"Complicació\" amb una terminologia és desitjable, sempre que sigui possible. Per exemple, hemorràgia postpart o preeclampsia.">
+            >
+            ["at0067"] = <
+                text = <"Data/hora d'inici">
+                description = <"Data d'inici de la complicació, avaluada per un metge.">
+                comment = <"Si només hi ha una data parcial disponible, és acceptable.">
+            >
+            ["at0068"] = <
+                text = <"Descripció">
+                description = <"Descripció narrativa de la complicació materna.">
+            >
+            ["at0082"] = <
+                text = <"Última actualització">
+                description = <"La data/hora de l'última actualització del resum de l'embaràs.">
+            >
+            ["at0083"] = <
+                text = <"Sinopsi de l'embaràs">
+                description = <"Descripció narrativa sobre tot l'embaràs, treball de part i part, incloses les complicacions.">
+                comment = <"Aquest element de dades es pot utilitzar per emplenar l'element de dades \"Sinopsi de l'embaràs/naixement\" dins de l'arquetip EVALUATION.birth_details en un registre de salut infantil.">
+            >
+            ["at0094"] = <
+                text = <"Resultat de fases tempranes de l'embaràs">
+                description = <"Resultat de l'embaràs en el seu conjunt.">
+                comment = <"Aquest element de dades només s'utilitza per registrar el resultat d'un embaràs, abans que sigui útil registrar un resultat per fetus. Per exemple: un \"avortament involuntari\" o un \"avortament perdut\". Es recomana codificar el \"Resultat de fases tempranes de l'embaràs\" amb una terminologia externa. Si és necessari registrar la informació del resultat per nadó o fetus, utilitzeu l'element de dades \"Resultat del nadó\". Aquest element de dades és redundant si s'ha registrat \"Resultat infantil\".">
+            >
+            ["at0096"] = <
+                text = <"Mètode d'inducció">
+                description = <"Mètode d'inducció del treball de part.">
+                comment = <"La codificació del \"Mètode d'inducció\" amb una terminologia és desitjable, sempre que sigui possible.">
+            >
+            ["at0097"] = <
+                text = <"Motiu de la inducció">
+                description = <"Motiu de la inducció del treball de part.">
+            >
+            ["at0104"] = <
+                text = <"Reproducció assistida?">
+                description = <"L'embaràs va ser fruit d'una tècnica de reproducció assistida?">
+                comment = <"És cert, si va ser necessària la reproducció assistida per aconseguir l'embaràs.">
+            >
+            ["at0105"] = <
+                text = <"Tipus de reproducció assitida">
+                description = <"Tipus de tècnica de reproducció asistida utilitzada per a aconseguir aquest embaràs.">
+                comment = <"Es preferible codificar amb una terminologia, sempre que sigui possible.">
+            >
+            ["at0106"] = <
+                text = <"Podàlica">
+                description = <"La part de presentació era un peu.">
+            >
+            ["at0107"] = <
+                text = <"Braç">
+                description = <"La part de presentació era un braç.">
+            >
+            ["at0109"] = <
+                text = <"Alimentació">
+                description = <"Descripció narrativa sobre l'alimentació del nadó.">
+            >
+            ["at0112"] = <
+                text = <"No treball de part">
+                description = <"No inici de treball de part.">
+            >
+            ["at0113"] = <
+                text = <"Masculí">
+                description = <"El nadó sembla físicament masculí.">
+            >
+            ["at0114"] = <
+                text = <"Femení">
+                description = <"El nadó sembla físicament femení.">
+            >
+            ["at0115"] = <
+                text = <"Indeterminat">
+                description = <"Encara no s'ha pogut determinar el sexe del nadó a partir de l'observació de les característiques físiques.">
+            >
+            ["at0118"] = <
+                text = <"Perineu">
+                description = <"Descripció codificada o narrativa sobre l'estat del perineu després del naixement, incloses les lesions i reparacions.">
+            >
+            ["at0119"] = <
+                text = <"Pèrdua de sang estimada">
+                description = <"Estimació de la pèrdua total de sang materna durant el part i postpart immediat.">
+            >
+            ["at0133"] = <
+                text = <"Espatlla">
+                description = <"La part de presentació era una espatlla.">
+            >
+            ["at0146"] = <
+                text = <"Etiqueta de l'embaràs">
+                description = <"*An informal identifier assigned to the pregnancy, used to distinguish it from other pregnancies. (en)">
+                comment = <"*For example: '1', 'Triplet', or 'Sam'.\" (en)">
+            >
+            ["at0149"] = <
+                text = <"Posició">
+                description = <"Posició del nadó durant el part.">
+            >
+            ["at0150"] = <
+                text = <"Occipital esquerre anterior/transvers">
+                description = <"L'esquena del nadó estava cap al costat esquerre de l'úter a l'inici del part.">
+            >
+            ["at0151"] = <
+                text = <"Occipital dret anterior/transvers">
+                description = <"L'esquena del nadó estava cap al costat dret de l'úter a l'inici del part.">
+            >
+            ["at0152"] = <
+                text = <"Desconegut">
+                description = <"No es coneix de quin costat es va col·locar l'esquena del nadó a l'inici del part.">
+            >
+            ["at0153"] = <
+                text = <"Esquinçament vaginal de primer grau">
+                description = <"Implica només la pell de l'obertura vaginal i el perineu.">
+            >
+            ["at0154"] = <
+                text = <"Esquinçament vaginal de segon grau">
+                description = <"Implica la pell i el múscul del perineu i es pot estendre profundament a la vagina.">
+            >
+            ["at0155"] = <
+                text = <"Esquinçament vaginal de tercer grau">
+                description = <"Esquinçament del teixit vaginal, la pell perineal i els músculs perineals que s'estén a l'esfínter anal.">
+            >
+            ["at0156"] = <
+                text = <"Esquinçament vaginal de quart grau">
+                description = <"S'estén a través de l'esfínter anal i cap a la membrana mucosa que recobreix el recte.">
+            >
+            ["at0157"] = <
+                text = <"Episiotomia">
+                description = <"Es va fer una episiotomia?">
+            >
+            ["at0158"] = <
+                text = <"Embaràs confirmat">
+                description = <"Confirmació de l'embaràs.">
+                comment = <"La confirmació es pot documentar per data, selecció booleana o un enllaç a un resultat de la prova de confirmació dins del registre sanitari. Aquest element de dades es pot utilitzar per activar un \"Estat de l'embaràs\" \"Actual\" dins de l'arquetip EVALUATION.pregnancy_status.">
+            >
+            ["at0159"] = <
+                text = <"Durada de l'embaràs">
+                description = <"La gestació quan s'ha acabat l'embaràs.">
+                comment = <"També coneguda com a \"gestació al néixer\" per als embarassos que tenen resultats viables.">
+            >
+            ["at0160"] = <
+                text = <"Detall del naixement">
+                description = <"Un subconjunt d'informació persistent o resumida sobre l'embaràs i el naixement d'un nadó, seleccionada per a la utilitat d'ús tant als registres de salut materna com infantil.">
+            >
+            ["at0161"] = <
+                text = <"Detalls addicionals">
+                description = <"Detalls estructurats sobre informació addicional relacionada amb el resum de l'embaràs.">
+                comment = <"Per exemple: troballes de l'examen de la placenta.">
+            >
+            ["at0163"] = <
+                text = <"*Infant outcome(en)">
+                description = <"Resultat de l'embaràs per al nadó o fetus identificat.">
+                comment = <"Aquest element de dades només s'utilitza per registrar el resultat d'un embaràs d'un sol nadó o fetus. Per exemple: 'Naixement viu'; o 'Nascut mort'. Es recomana codificar el \"Desenllaç del nadó\" amb una terminologia externa. Si és necessari registrar la informació del resultat de l'embaràs en el seu conjunt, utilitzeu l'element de dades \"Desenllaç de les primeres fases de l'embaràs\". Aquest element de dades és redundant si s'ha registrat \"Desenllaç de les primeres fases de l'embaràs\".">
+            >
+            ["at0164"] = <
+                text = <"Extensió">
+                description = <"Informació addicional necessària per capturar contingut local o per alinear-se amb altres models/formalismes de referència.">
+                comment = <"Per exemple: requisits d'informació local o metadades addicionals per alinear-se amb FHIR.">
+            >
+            ["at0165"] = <
+                text = <"Desenllaç neonatal">
+                description = <"Descripció del desenllaç al final del període neonatal per nounat.">
+            >
+            ["at0166"] = <
+                text = <"Edat a la mort neonatal">
+                description = <"L'edat del nadó si va morir durant el període neonatal.">
+            >
+            ["at0167"] = <
+                text = <"Data/hora de la mort neonatal">
+                description = <"">
+            >
+            ["at0168"] = <
+                text = <"Viu">
+                description = <"El nadó va sobreviure al període neonatal.">
+            >
+            ["at0169"] = <
+                text = <"Difunt">
+                description = <"El nadó no va sobreviure al període neonatal.">
+            >
+            ["at0170"] = <
+                text = <"Resum neonatal">
+                description = <"Descripció narrativa sobre problemes, preocupacions sobre el nadó o fets ocorreguts durant el període neonatal.">
+            >
+            ["at0172"] = <
+                text = <"*Structured place of outcome(en)">
+                description = <"Detalls estructurats sobre el lloc on va esdevenir el deslliurament o es va tractar o gestionar un resultat alternatiu de l'embaràs.">
+                comment = <"Per exemple: aquest element de dades es canviarà de nom a \"Lloc del part\" per a un embaràs que acabi amb el part d'un o més nadons.">
+            >
+            ["at0173"] = <
+                text = <"Categoria de lloc">
+                description = <"*Category of the place where the pregnancy was delivered or an alternative outcome of the pregnancy was treated or managed. (en)">
+                comment = <"És molt recomanable que la \"categoria de lloc\" estigui codificada amb una terminologia externa. Per exemple: hospital; clínica de part; o a casa.">
+            >
+            ["at0174"] = <
+                text = <"Data final de l'embaràs">
+                description = <"La data i/o hora que marca el final de l'embaràs.">
+                comment = <"Aquest element de dades es pot canviar de nom en una plantilla, en funció del resultat de l'embaràs. Per exemple: data de part per a un nascut viu o mort; data de l'avortament involuntari; o data de finalització.">
+            >
+            ["at0175"] = <
+                text = <"*Place of outcome(en)">
+                description = <"Detalls senzills sobre el lloc on va esdevenir el deslliurament o es va tractar o gestionar un resultat alternatiu de l'embaràs.">
+                comment = <"Per exemple: el nom de l'hospital o clínica.">
+            >
+            ["at0176"] = <
+                text = <"Intersexual">
+                description = <"">
+            >
+            ["at0177"] = <
+                text = <"Desconegut">
+                description = <"">
+            >
+            ["at0178"] = <
+                text = <"Embaràs múltiple?">
+                description = <"Afirmació sobre si l'embaràs es classifica com a \"embaràs múltiple\".">
+                comment = <"Aquest element de dades categorials sol ser necessari als registres o s'utilitza en l'avaluació de riscos, en lloc de registrar el \"Nombre de fetus\" real.">
+            >
+            ["at0179"] = <
+                text = <"Present">
+                description = <"L'embaràs té més d'un fetus.">
+            >
+            ["at0180"] = <
+                text = <"Absent">
+                description = <"L'embaràs només té un fetus.">
+            >
+            ["at0181"] = <
+                text = <"*Pregnancy status (en)">
+                description = <"*Statement about the current status of a single pregnancy. (en)">
+                comment = <"*For example: pre-pregnant, such as intending to get pregnant, not taking contraception, actively undertaking IVF treatment; pregnant; post-partum.
+This status could be designated as 'pre-pregnant' to initiate care pathways for a woman actively attempting to conceive, to ensure that clinical management carefully avoids treatment that could harm a mother or fetus in an unrecognised pregnancy.
+ (en)">
+            >
+            ["at0182"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the infant, not captured in other fields. (en)">
+            >
+            ["at0183"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the pregnancy, not captured in other fields. (en)">
+            >
+            ["at9007"] = <
+                text = <"* Mass (en)">
+                description = <"* Mass (en)">
+            >
+            ["at9008"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["ac9123"] = <
+                text = <"Embaràs múltiple? (synthesised)">
+                description = <"Afirmació sobre si l'embaràs es classifica com a \"embaràs múltiple\". (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Inici del treball de part (synthesised)">
+                description = <"Manera en què va començar el part. (synthesised)">
+            >
+            ["ac9100"] = <
+                text = <"Perineu (synthesised)">
+                description = <"Descripció codificada o narrativa sobre l'estat del perineu després del naixement, incloses les lesions i reparacions. (synthesised)">
+            >
+            ["ac9122"] = <
+                text = <"Sexe assignat (synthesised)">
+                description = <"Sexe del nadó per observació directa dels genitals externs. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Presentació (synthesised)">
+                description = <"Presentació del nadó en el part. (synthesised)">
+            >
+            ["ac9102"] = <
+                text = <"Posició (synthesised)">
+                description = <"Posició del nadó durant el part. (synthesised)">
+            >
+            ["ac9114"] = <
+                text = <"Desenllaç neonatal (synthesised)">
+                description = <"Descripció del desenllaç al final del període neonatal per nounat. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Resumen del embarazo">
+                description = <"Resumen o registro resumido de un embarazo y su registro, incluido el período prenatal, el trabajo de parto, el nacimiento y el período posnatal inmediato.">
+            >
+            ["at0007"] = <
+                text = <"*Number of fetuses (en)">
+                description = <"Número de fetos identificados en el útero.">
+            >
+            ["at0008"] = <
+                text = <"Inicio del trabajo de parto">
+                description = <"Manera en que el trabajo de parto comienza.">
+            >
+            ["at0009"] = <
+                text = <"Espontaneo">
+                description = <"Inicio sin intervención.">
+            >
+            ["at0010"] = <
+                text = <"Inducido">
+                description = <"Inicio a través de la intervención.">
+            >
+            ["at0016"] = <
+                text = <"Duración total del trabajo de parto">
+                description = <"Duración total de las tres etapas del parto.">
+            >
+            ["at0022"] = <
+                text = <"Método de aceleración">
+                description = <"Método de aceleración del trabajo de parto.">
+                comment = <"Codificación del \"Método de aceleración\" con una terminología es deseable, cuando sea posible.">
+            >
+            ["at0028"] = <
+                text = <"Por bebé">
+                description = <"Información sobre un feto único o un recién nacido.">
+                comment = <"Estos elementos de datos se pueden utilizar para registrar detalles sobre nacidos vivos o bebés nacidos muertos.">
+            >
+            ["at0029"] = <
+                text = <"*Date/time of delivery(en)">
+                description = <"*Date and time of delivery for the infant.(en)">
+                comment = <"*This data element may be used to populate the newborn's health record using the 'Date of birth' data element within the EVALUATION.birth_details archetype.(en)">
+            >
+            ["at0036"] = <
+                text = <"*Label/name(en)">
+                description = <"*Identification of the infant.(en)">
+                comment = <"*Identification might be by the name of the neonate or a label given to a non-viable fetus.(en)">
+            >
+            ["at0037"] = <
+                text = <"*Assigned sex(en)">
+                description = <"*Sex of the infant  by direct observation of external genitalia.(en)">
+                comment = <"*Coding with a terminology is preferred, where possible. For example: Male; female; intersex; indeterminate. Indeterminate is to be used in the situation where the infant has ambiguous external genitalia. This data element may be used to populate the newborn health record using the 'Sex assigned at birth' data element within the EVALUATION.gender archetype.(en)">
+            >
+            ["at0038"] = <
+                text = <"*Birthweight(en)">
+                description = <"*Weight of the infant at delivery.(en)">
+                comment = <"*This data element may be used to populate the newborn health record using both the 'Weight' data element and 'Birth' EVENT within the OBSERVATION.body_weight archetype.(en)">
+            >
+            ["at0045"] = <
+                text = <"*Presenting part(en)">
+                description = <"*Presenting part of the infant at delivery.(en)">
+                comment = <"*The clinical context for recording this data element is only presentation at delivery, not at any other phase of labour.(en)">
+            >
+            ["at0046"] = <
+                text = <"*Vertex(en)">
+                description = <"*The vertex was the presenting part.(en)">
+            >
+            ["at0047"] = <
+                text = <"*Breech(en)">
+                description = <"*The breech was the presenting part.(en)">
+            >
+            ["at0048"] = <
+                text = <"*Face(en)">
+                description = <"*The face was the presenting part.(en)">
+            >
+            ["at0049"] = <
+                text = <"*Brow(en)">
+                description = <"*The brow was the presenting part.(en)">
+            >
+            ["at0061"] = <
+                text = <"*Newborn complication(en)">
+                description = <"*Details about any complications affecting the newborn.(en)">
+                comment = <"*Newborn complications recorded within this maternal 'Pregnancy summary' archetype may be used to populate EVALUATION.problem_diagnosis or ACTION.procedure archetypes to initiate a Problem list, or similar, within a newborn health record.(en)">
+            >
+            ["at0062"] = <
+                text = <"*Complication(en)">
+                description = <"*Identification of the complication after birth.(en)">
+                comment = <"*Coding of the 'Complication' with a terminology is desirable, where possible. For example, neonatal hypoglycaemia or hypothermia.(en)">
+            >
+            ["at0063"] = <
+                text = <"*Date/time of onset(en)">
+                description = <"*Date and/or time of onset of the complication.(en)">
+            >
+            ["at0064"] = <
+                text = <"*Description(en)">
+                description = <"*Narrative description of complication.(en)">
+            >
+            ["at0065"] = <
+                text = <"Complicación materna">
+                description = <"Detalles sobre complicaciones del embarazo o del parto que afectan a la madre.">
+                comment = <"Las complicaciones maternales registradas en el arquetipo \"Resumen del embarazo\" pueden ser usadas para rellenar los arquetipos EVALUATION.problem_diagnosis o ACTION.procedure como parte de una lista de problemas maternos, o similar. Alternativamente, estas complicaciones se pueden derivar de entradas relevantes documentadas previamente en el historial de salud materno mediante los arquetipos EVALUATION.problem_diagnosis o ACTION.procedure archetypes.">
+            >
+            ["at0066"] = <
+                text = <"Complicación">
+                description = <"Identificación de una complicación.">
+                comment = <"Codificación de una \"Complicación\" con una terminología es deseable, cuando sea posible. Por ejemplo, hemorragia postparto o preeclampsia.">
+            >
+            ["at0067"] = <
+                text = <"Fecha/Hora del inicio">
+                description = <"Fecha del inicio de la complicación, evaluada por un clínico.">
+                comment = <"Si únicamente hay una data parcial disponible, es aceptable.">
+            >
+            ["at0068"] = <
+                text = <"Descripción">
+                description = <"Descripción narrativa de una complicación materna.">
+            >
+            ["at0082"] = <
+                text = <"*Last updated(en)">
+                description = <"*The date/time the pregnancy summary was last updated.(en)">
+            >
+            ["at0083"] = <
+                text = <"Sinopsis del embarazo">
+                description = <"Descripción narrativa sobre todo el embarazo, trabajo de parto y parto, incluidas las complicaciones.">
+                comment = <"Este elemento de datos se puede utilizar para rellenar el elemento de datos \"Sinopsis del embarazo/nacimiento\" dentro del arquetipo EVALUATION.birth_details en un registro de salud infantil.">
+            >
+            ["at0094"] = <
+                text = <"Resultado de fases tempranas de embarazo">
+                description = <"Resultado del embarazo en su conjunto.">
+                comment = <"Este elemento de datos se utiliza solamente para registrar el resultado de un embarazo, antes que sea útil registrar un resultado por feto. Por ejemplo, un \"aborto involuntario\" o \"aborto perdido\". Se recomienda codificar el \"Resultado de fases tempranas del embarazo\" con una terminología externa. Si es necesario registrar la información del resultado por recién nacido o feto, utilizar el elemento de datos \"Resultado del recién nacido\". Este elemento de datos es redundante si se ha registrado \"Resultado del recién nacido\".">
+            >
+            ["at0096"] = <
+                text = <"Método de inducción">
+                description = <"Método de inducción del trabajo de parto.">
+                comment = <"La codificación del \"Método de inducción\" con una terminología es deseable, cuando sea posible.">
+            >
+            ["at0097"] = <
+                text = <"Motivo de la inducción">
+                description = <"Motivo de la inducción del trabajo de parto.">
+            >
+            ["at0104"] = <
+                text = <"¿Reproducción asistida?">
+                description = <"¿Ha sido el embarazo fruto de una técnica de reproducción asistida?">
+                comment = <"Cierto, si fue necesaria la reproducción asistida para conseguir el embarazo.">
+            >
+            ["at0105"] = <
+                text = <"Tipo de reproducción asistida">
+                description = <"Tipo de técnica de reproducción asistida utilizada para conseguir el embarazo.">
+                comment = <"Preferible codificar con una terminología, cuando sea posible.">
+            >
+            ["at0106"] = <
+                text = <"*Foot(en)">
+                description = <"*A foot was the presenting part.(en)">
+            >
+            ["at0107"] = <
+                text = <"*Arm(en)">
+                description = <"*An arm was the presenting part.(en)">
+            >
+            ["at0109"] = <
+                text = <"*Feeding(en)">
+                description = <"*Narrative description about feeding of the infant.(en)">
+            >
+            ["at0112"] = <
+                text = <"No trabajo de parto">
+                description = <"No inicio del trabajo de parto.">
+            >
+            ["at0113"] = <
+                text = <"*Male(en)">
+                description = <"*Baby appears physically male.(en)">
+            >
+            ["at0114"] = <
+                text = <"*Female(en)">
+                description = <"*Baby appears physically female.(en)">
+            >
+            ["at0115"] = <
+                text = <"*Indeterminate(en)">
+                description = <"*Sex of the baby has not yet been able to be determined from observation of physical characteristics.(en)">
+            >
+            ["at0118"] = <
+                text = <"Perineo">
+                description = <"Descripción codificada o narrativa sobre el estado del perineo después del nacimiento, incluidas las lesiones y reparaciones.">
+            >
+            ["at0119"] = <
+                text = <"Pérdida de sangre estimada">
+                description = <"Estimación del total de pérdida de sangre materna durante el parto y postparto inmediato.">
+            >
+            ["at0133"] = <
+                text = <"*Shoulder(en)">
+                description = <"*A shoulder was the presenting part.(en)">
+            >
+            ["at0146"] = <
+                text = <"Etiqueta del embarazo">
+                description = <"*An informal identifier assigned to the pregnancy, used to distinguish it from other pregnancies. (en)">
+                comment = <"*For example: '1', 'Triplet', or 'Sam'.\" (en)">
+            >
+            ["at0149"] = <
+                text = <"*Position(en)">
+                description = <"*Position of the infant at delivery.(en)">
+            >
+            ["at0150"] = <
+                text = <"*Left occiput anterior/transverse(en)">
+                description = <"*The baby's back was toward the left side of the uterus at onset of labour.(en)">
+            >
+            ["at0151"] = <
+                text = <"*Right occiput anterior/transverse(en)">
+                description = <"*The baby's back was toward the right side of the uterus at onset of labour.(en)">
+            >
+            ["at0152"] = <
+                text = <"*Unknown(en)">
+                description = <"*It is not known which side the baby's back was positioned by onset of labour.(en)">
+            >
+            ["at0153"] = <
+                text = <"Desgarro vaginal de primer grado">
+                description = <"Implica únicamente la piel de la obertura vaginal y el perineo.">
+            >
+            ["at0154"] = <
+                text = <"Desgarro vaginal de segundo grado">
+                description = <"Envuelve la piel y el músculo del perineo y se puede extender profundamente a la vagina.">
+            >
+            ["at0155"] = <
+                text = <"Desgarro vaginal de tercer grado">
+                description = <"Desgarro del tejido vaginal, la piel perineal y los músculos perineales que están en el esfínter anal.">
+            >
+            ["at0156"] = <
+                text = <"Desgarro de cuarto grado">
+                description = <"Se extiende a través del esfínter anal y hacia la membrana mucosa que recubre el recto.">
+            >
+            ["at0157"] = <
+                text = <"Episiotomía">
+                description = <"¿Se realizó una episiotomía?">
+            >
+            ["at0158"] = <
+                text = <"Embarazo confirmado">
+                description = <"Confirmación del embarazo">
+                comment = <"La confirmación se puede documentar por fecha, selección booleana o una inscripción a un resultado de la prueba de confirmación del registro sanitario. Este elemento se puede utilizar para activar un \"Estado de embarazo\" \"Actual\" en el archivo EVALUATION.pregnancy_status.">
+            >
+            ["at0159"] = <
+                text = <"Duración del embarazo">
+                description = <"La gestación cuando se acaba el embarazo">
+                comment = <"También conocido como \"gestación al nacer\" para los embarazos que tienen resultados viables.">
+            >
+            ["at0160"] = <
+                text = <"*Birth detail(en)">
+                description = <"*A subset of persistent or summary information about the pregnancy and birth of an infant, selected for utility of use within both the maternal and infant health records.(en)">
+            >
+            ["at0161"] = <
+                text = <"Detalles adicionales">
+                description = <"Detalles adicionales estructurados sobre información adicional relacionada con el resumen del embarazo">
+                comment = <"Por ejemplo: hallazgos del examen de la placenta.">
+            >
+            ["at0163"] = <
+                text = <"*Infant outcome(en)">
+                description = <"*Outcome of the pregnancy for the identified infant or fetus.(en)">
+                comment = <"*This data element is only used to record the outcome of a pregnancy for a single infant or fetus. For example: 'Live birth'; or 'Stillbirth'. Coding of the 'Infant outcome' with an external terminology is recommended.  If it is necessary to record outcome information for the pregnancy as a whole use the 'Early pregnancy outcome' data element instead. This data element is redundant if 'Early pregnancy outcome' has been recorded.(en)">
+            >
+            ["at0164"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR. (en)">
+            >
+            ["at0165"] = <
+                text = <"*Neonatal outcome(en)">
+                description = <"*Description of the outcome at the end of the neonatal period per newborn infant.(en)">
+            >
+            ["at0166"] = <
+                text = <"*Age at neonatal death(en)">
+                description = <"*The age of the infant if they died during the neonatal  period.(en)">
+            >
+            ["at0167"] = <
+                text = <"*Date/time of neonatal death(en)">
+                description = <"">
+            >
+            ["at0168"] = <
+                text = <"*Live(en)">
+                description = <"*The infant survived the neonatal period.(en)">
+            >
+            ["at0169"] = <
+                text = <"*Deceased(en)">
+                description = <"*The infant did not survive the neonatal period.(en)">
+            >
+            ["at0170"] = <
+                text = <"*Neonatal summary(en)">
+                description = <"*Narrative description about issues, concerns about the infant or events occurring during the neonatal period.(en)">
+            >
+            ["at0172"] = <
+                text = <"Lugar del resultado estructurado">
+                description = <"Detalles estructurados sobre la localización donde el alumbramiento se produjo o se trató o gestionó un resultado alternativo del embarazo.">
+                comment = <"Por ejemplo: este elemento de datos se cambiará de nombre a \"Lugar del parto\" para un embarazo que acabe con el parto de uno o más recién naciso.">
+            >
+            ["at0173"] = <
+                text = <"Categoría del lugar">
+                description = <"*Category of the place where the pregnancy was delivered or an alternative outcome of the pregnancy was treated or managed. (en)">
+                comment = <"Es muy recomendable que la \"Categoría del lugar\" esté codificada con una terminología externa. Por ejemplo: hospital, clínica de parto o en casa.">
+            >
+            ["at0174"] = <
+                text = <"Fecha final del embarazo">
+                description = <"La fecha y/u hora que marca el final del embarazo.">
+                comment = <"Este elemento de datos se puede cambiar de nombre en una plantilla, en función del resultado del embarazo. Por ejemplo: fecha de parto para un nacido vivo o muerto; fecha del aborto involuntario; o fecha de finalización.">
+            >
+            ["at0175"] = <
+                text = <"Lugar del resultado">
+                description = <"Detalles sencillos sobre la localización donde el alumbramiento se produjo o se trató o gestionó un resultado alternativo del embarazo.">
+                comment = <"Por ejemplo: nombre del hospital o clínica.">
+            >
+            ["at0176"] = <
+                text = <"*Intersex(en)">
+                description = <"">
+            >
+            ["at0177"] = <
+                text = <"*Unknown(en)">
+                description = <"">
+            >
+            ["at0178"] = <
+                text = <"¿Embarazo múltiple?">
+                description = <"Afirmación sobre si el embarazo se clasifica como un \"embarazo múltiple\".">
+                comment = <"Este elemento de datos categórico suele exigirse en los registros o utilizarse en la evaluación de riesgos, en lugar de registrar el \"Número de fetos\" real.">
+            >
+            ["at0179"] = <
+                text = <"Presente">
+                description = <"El embarazo tiene mas de un feto.">
+            >
+            ["at0180"] = <
+                text = <"Ausente">
+                description = <"El embarazo tiene solamente un feto.">
+            >
+            ["at0181"] = <
+                text = <"*Pregnancy status (en)">
+                description = <"*Statement about the current status of a single pregnancy. (en)">
+                comment = <"*For example: pre-pregnant, such as intending to get pregnant, not taking contraception, actively undertaking IVF treatment; pregnant; post-partum.
+This status could be designated as 'pre-pregnant' to initiate care pathways for a woman actively attempting to conceive, to ensure that clinical management carefully avoids treatment that could harm a mother or fetus in an unrecognised pregnancy.
+ (en)">
+            >
+            ["at0182"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the infant, not captured in other fields. (en)">
+            >
+            ["at0183"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the pregnancy, not captured in other fields. (en)">
+            >
+            ["at9007"] = <
+                text = <"Masa">
+                description = <"Masa">
+            >
+            ["at9008"] = <
+                text = <"Volumen">
+                description = <"Volumen">
+            >
+            ["ac9123"] = <
+                text = <"¿Embarazo múltiple? (synthesised)">
+                description = <"Afirmación sobre si el embarazo se clasifica como un \"embarazo múltiple\". (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Inicio del trabajo de parto (synthesised)">
+                description = <"Manera en que el trabajo de parto comienza. (synthesised)">
+            >
+            ["ac9100"] = <
+                text = <"Perineo (synthesised)">
+                description = <"Descripción codificada o narrativa sobre el estado del perineo después del nacimiento, incluidas las lesiones y reparaciones. (synthesised)">
+            >
+            ["ac9122"] = <
+                text = <"*Assigned sex(en) (synthesised)">
+                description = <"*Sex of the infant  by direct observation of external genitalia.(en) (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"*Presenting part(en) (synthesised)">
+                description = <"*Presenting part of the infant at delivery.(en) (synthesised)">
+            >
+            ["ac9102"] = <
+                text = <"*Position(en) (synthesised)">
+                description = <"*Position of the infant at delivery.(en) (synthesised)">
+            >
+            ["ac9114"] = <
+                text = <"*Neonatal outcome(en) (synthesised)">
+                description = <"*Description of the outcome at the end of the neonatal period per newborn infant.(en) (synthesised)">
+            >
+        >
+        ["es-co"] = <
+            ["at0000"] = <
+                text = <"*Pregnancy summary(en)">
+                description = <"*Overview or summary record of a pregnancy and outcome, including the antenatal period, labour, birth and the immediate postnatal period. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Number of fetuses (en)">
+                description = <"*Número de fetos o productos identificados en el útero">
+            >
+            ["at0008"] = <
+                text = <"*Onset of labour(en)">
+                description = <"*Se refiere al inicio del trabajo de parto, este podria ser Espontáneo o Inducido.">
+            >
+            ["at0009"] = <
+                text = <"Espontáneo">
+                description = <"Cuando el trabajo de Parto inicia de manera Espontánea sin intervencion o uso de Medicamentos.">
+            >
+            ["at0010"] = <
+                text = <"Inducido">
+                description = <"Cuando el trabajo de parto se empeza de manera artificial.">
+            >
+            ["at0016"] = <
+                text = <"*Total duration of labor(en)">
+                description = <"*Duracion total de todas las fases del trabajo de parto">
+            >
+            ["at0022"] = <
+                text = <"*Augmentation method(en)">
+                description = <"*Método de aumentol trabajo de parto">
+                comment = <"Siempre que sea posible, Se recomienda el uso de una terminología para codificar el Método de aumento del parto .">
+            >
+            ["at0028"] = <
+                text = <"*Per infant (en)">
+                description = <"*Information about a single fetus or newborn infant. (en)">
+                comment = <"*These data elements may be used to record details about live births or stillborn infants. (en)">
+            >
+            ["at0029"] = <
+                text = <"*Date/time of delivery (en)">
+                description = <"*Date and time of delivery for the infant. (en)">
+                comment = <"*This data element may be used to populate the newborn's health record using the 'Date of birth' data element within the EVALUATION.birth_details archetype. (en)">
+            >
+            ["at0036"] = <
+                text = <"*Label/name (en)">
+                description = <"*Identification of the infant. (en)">
+                comment = <"*Identification might be by the name of the neonate or a label given to a non-viable fetus. (en)">
+            >
+            ["at0037"] = <
+                text = <"*Assigned sex (en)">
+                description = <"*Sex of the infant  by direct observation of external genitalia. (en)">
+                comment = <"*Coding with a terminology is preferred, where possible. For example: Male; female; intersex; indeterminate. Indeterminate is to be used in the situation where the infant has ambiguous external genitalia. This data element may be used to populate the newborn health record using the 'Sex assigned at birth' data element within the EVALUATION.gender archetype. (en)">
+            >
+            ["at0038"] = <
+                text = <"*Birthweight (en)">
+                description = <"*Weight of the infant at delivery. (en)">
+                comment = <"*This data element may be used to populate the newborn health record using both the 'Weight' data element and 'Birth' EVENT within the OBSERVATION.body_weight archetype. (en)">
+            >
+            ["at0045"] = <
+                text = <"*Presenting part(en)">
+                description = <"*Presenting part of the infant at delivery. (en)">
+                comment = <"*The clinical context for recording this data element is only presentation at delivery, not at any other phase of labour. (en)">
+            >
+            ["at0046"] = <
+                text = <"Vertical">
+                description = <"*The vertex was the presenting part. (en)">
+            >
+            ["at0047"] = <
+                text = <"Nalgas">
+                description = <"*The breech was the presenting part. (en)">
+            >
+            ["at0048"] = <
+                text = <"Cara">
+                description = <"*The face was the presenting part. (en)">
+            >
+            ["at0049"] = <
+                text = <"Frente">
+                description = <"*The brow was the presenting part. (en)">
+            >
+            ["at0061"] = <
+                text = <"*Newborn complication (en)">
+                description = <"*Details about any complications affecting the newborn. (en)">
+                comment = <"*Newborn complications recorded within this maternal 'Pregnancy summary' archetype may be used to populate EVALUATION.problem_diagnosis or ACTION.procedure archetypes to initiate a Problem list, or similar, within a newborn health record. (en)">
+            >
+            ["at0062"] = <
+                text = <"*Complication(en)">
+                description = <"*Identifica las complicación después del nacimiento">
+                comment = <"Se recomienda el uso de una terminología para codificar la complicación, por ejemplo Hipoglicemia neonatal o hipotermia">
+            >
+            ["at0063"] = <
+                text = <"*Date/time of onset (en)">
+                description = <"*Fecha y hora de la compliación">
+            >
+            ["at0064"] = <
+                text = <"Descripción">
+                description = <"Naración descriptiva de la complicación">
+            >
+            ["at0065"] = <
+                text = <"*Maternal complication(en)">
+                description = <"*Los detalles acerca de las complicaciones del embarazo o complicaciones en el parto afectan a la madre">
+                comment = <"*Maternal complications recorded within this maternal 'Pregnancy summary' archetype may be used to populate EVALUATION.problem_diagnosis or ACTION.procedure archetypes as part of a maternal Problem list, or similar. Alternatively these complications may be derived from relevant entries previously documented in the maternal health record using EVALUATION.problem_diagnosis or ACTION.procedure archetypes. (en)">
+            >
+            ["at0066"] = <
+                text = <"Complicación">
+                description = <"Identificación de la Complicación">
+                comment = <"codigo de la complicación, es deseable el uso de una terminología . Por ejemplo , hemorragia puerperal o pre- eclampsia.">
+            >
+            ["at0067"] = <
+                text = <"*Date/Time of onset(en)">
+                description = <"*Fecha de inicio de la complicación, según lo evaluado por un médico.">
+                comment = <"Si sólo se tiene una fecha parcial disponible, es aceptable .">
+            >
+            ["at0068"] = <
+                text = <"Descripción">
+                description = <"Descripción narrativa de las complicaciones maternas">
+            >
+            ["at0082"] = <
+                text = <"*Last updated(en)">
+                description = <"*The date/time the pregnancy summary was last updated. (en)">
+            >
+            ["at0083"] = <
+                text = <"*Pregnancy synopsis(en)">
+                description = <"*Narrative description about the entire pregnancy, labour and delivery, including complications. (en)">
+                comment = <"*This data element may be used to populate the 'Pregnancy/birth synopsis' data element within the EVALUATION.birth_details archetype in an infant health record. (en)">
+            >
+            ["at0094"] = <
+                text = <"*Early pregnancy outcome (en)">
+                description = <"*Outcome of the pregnancy as a whole. (en)">
+                comment = <"*This data element is only used to record the outcome of a pregnancy, before it is useful to record an outcome on a per fetus basis. For example: a 'miscarriage' or a 'missed abortion'. Coding of the 'Early pregnancy outcome' with an external terminology is recommended. If it is necessary to record outcome information per infant or fetus use the 'Infant outcome' data element instead.  This data element is redundant if 'Infant outcome' has been recorded.  (en)">
+            >
+            ["at0096"] = <
+                text = <"*Induction method(en)">
+                description = <"*Metodo empleado para la inducción del trabajo de parto, por ejemplo empleando Medicamentos (administración de oxitocina) o La amniotomía">
+                comment = <"Siempre que sea posible, Se recomienda el uso de una terminología para codificar el metodo de Induccion del parto.">
+            >
+            ["at0097"] = <
+                text = <"*Reason for induction(en)">
+                description = <"*se registra la causa o causas por la cuales se realiza la inducción del trabajo de parto">
+            >
+            ["at0104"] = <
+                text = <"*Assisted reproduction?(en)">
+                description = <"*El embarazo fue resultado de emplear técnicas de reproducción asistida o fecundación artificial?">
+                comment = <"Verdadero, si fue requerida la reproducción asistida para lograr el embarazo.">
+            >
+            ["at0105"] = <
+                text = <"*Assisted reproduction type(en)">
+                description = <"*Tipo de tecnología de reproducción asistida empleada para lograr el embarazo">
+                comment = <"Siempre que sea posible, Se recomienda el uso de una terminología para codificar.">
+            >
+            ["at0106"] = <
+                text = <"Pies">
+                description = <"*A foot was the presenting part. (en)">
+            >
+            ["at0107"] = <
+                text = <"Brazos">
+                description = <"*An arm was the presenting part. (en)">
+            >
+            ["at0109"] = <
+                text = <"Alimentación">
+                description = <"*Narrative description about feeding of the infant. (en)">
+            >
+            ["at0112"] = <
+                text = <"No trabajo de PArto">
+                description = <"Sin inicio del parto">
+            >
+            ["at0113"] = <
+                text = <"Hombre">
+                description = <"Bebé con apariencia físicamente masculina">
+            >
+            ["at0114"] = <
+                text = <"Femenino">
+                description = <"Bebé con apariencia físicamente femenina">
+            >
+            ["at0115"] = <
+                text = <"Indeterminado">
+                description = <"el sexo del bebe no puede ser determinado inicialmente por la observacion de sus características fisicas">
+            >
+            ["at0118"] = <
+                text = <"perineo">
+                description = <"*Coded or narrative description about the condition of the perineum after birth, including injuries and repairs. (en)">
+            >
+            ["at0119"] = <
+                text = <"*Estimated blood loss (en)">
+                description = <"*Estimation of total maternal blood loss during birth and immediately postpartum. (en)">
+            >
+            ["at0133"] = <
+                text = <"Hombro">
+                description = <"*A shoulder was the presenting part. (en)">
+            >
+            ["at0146"] = <
+                text = <"*Pregnancy label (en)">
+                description = <"*An informal identifier assigned to the pregnancy, used to distinguish it from other pregnancies. (en)">
+                comment = <"*For example: '1', 'Triplet', or 'Sam'.\" (en)">
+            >
+            ["at0149"] = <
+                text = <"*Position (en)">
+                description = <"*Position of the infant at delivery. (en)">
+            >
+            ["at0150"] = <
+                text = <"*Left occiput anterior/transverse (en)">
+                description = <"*The baby's back was toward the left side of the uterus at onset of labour. (en)">
+            >
+            ["at0151"] = <
+                text = <"*Right occiput anterior/transverse (en)">
+                description = <"*The baby's back was toward the right side of the uterus at onset of labour. (en)">
+            >
+            ["at0152"] = <
+                text = <"*Unknown (en)">
+                description = <"*It is not known which side the baby's back was positioned by onset of labour. (en)">
+            >
+            ["at0153"] = <
+                text = <"*First degree vaginal tear (en)">
+                description = <"*Involve just the skin of the vaginal opening and perineum. (en)">
+            >
+            ["at0154"] = <
+                text = <"*Second degree vaginal tear (en)">
+                description = <"*Involve the skin and muscle of the perineum and might extend deep into the vagina. (en)">
+            >
+            ["at0155"] = <
+                text = <"*Third degree vaginal tear (en)">
+                description = <"*Tear in the vaginal tissue, perineal skin, and perineal muscles that extends into the anal sphincter. (en)">
+            >
+            ["at0156"] = <
+                text = <"*Fourth degree vaginal tear (en)">
+                description = <"*Extend through the anal sphincter and into the mucous membrane that lines the rectum. (en)">
+            >
+            ["at0157"] = <
+                text = <"*Episiotomy (en)">
+                description = <"*Was an episiotomy performed? (en)">
+            >
+            ["at0158"] = <
+                text = <"*Pregnancy confirmed (en)">
+                description = <"*Confirmation of the pregnancy. (en)">
+                comment = <"*Confirmation may be documented either by date, boolean selection or a link to a confirmatory test result within the health record. This data element may be used to trigger a 'Current' 'Pregnancy status' within the EVALUATION.pregnancy_status archetype. (en)">
+            >
+            ["at0159"] = <
+                text = <"*Pregnancy duration (en)">
+                description = <"*The gestation when the pregnancy has ended. (en)">
+                comment = <"*Also known as 'Gestation at birth' for pregnancies resulting in viable outcomes. (en)">
+            >
+            ["at0160"] = <
+                text = <"*Birth detail (en)">
+                description = <"*A subset of persistent or summary information about the pregnancy and birth of an infant, selected for utility of use within both the maternal and infant health records. (en)">
+            >
+            ["at0161"] = <
+                text = <"*Additional details (en)">
+                description = <"*Structured details about additional information related to the pregnancy summary. (en)">
+                comment = <"*For example: findings from examination of the placenta. (en)">
+            >
+            ["at0163"] = <
+                text = <"*Infant outcome (en)">
+                description = <"*Outcome of the pregnancy for the identified infant or fetus. (en)">
+                comment = <"*This data element is only used to record the outcome of a pregnancy for a single infant or fetus. For example: 'Live birth'; or 'Stillbirth'. Coding of the 'Infant outcome' with an external terminology is recommended.  If it is necessary to record outcome information for the pregnancy as a whole use the 'Early pregnancy outcome' data element instead. This data element is redundant if 'Early pregnancy outcome' has been recorded. (en)">
+            >
+            ["at0164"] = <
+                text = <"*Extension (en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms. (en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR.  (en)">
+            >
+            ["at0165"] = <
+                text = <"*Neonatal outcome (en)">
+                description = <"*Description of the outcome at the end of the neonatal period per newborn infant. (en)">
+            >
+            ["at0166"] = <
+                text = <"*Age at neonatal death (en)">
+                description = <"*The age of the infant if they died during the neonatal  period. (en)">
+            >
+            ["at0167"] = <
+                text = <"*Date/time of neonatal death (en)">
+                description = <"">
+            >
+            ["at0168"] = <
+                text = <"*Live (en)">
+                description = <"*The infant survived the neonatal period. (en)">
+            >
+            ["at0169"] = <
+                text = <"*Deceased (en)">
+                description = <"*The infant did not survive the neonatal period. (en)">
+            >
+            ["at0170"] = <
+                text = <"*Neonatal summary (en)">
+                description = <"*Narrative description about issues, concerns about the infant or events occurring during the neonatal period. (en)">
+            >
+            ["at0172"] = <
+                text = <"*Structured place of outcome (en)">
+                description = <"*Structured details about the  location where the pregnancy was delivered or an alternative outcome of the pregnancy was treated or managed. (en)">
+                comment = <"*For example: this data element will be renamed to 'Place of delivery' for a pregnancy that ends in the delivery of one or more newborns. (en)">
+            >
+            ["at0173"] = <
+                text = <"*Place category (en)">
+                description = <"*Category of the place where the pregnancy was delivered or an alternative outcome of the pregnancy was treated or managed. (en)">
+                comment = <"*It is strongly recommended that 'Place category' be coded with an external terminology. For example: hospital; birthing clinic; or home. (en)">
+            >
+            ["at0174"] = <
+                text = <"*Pregnancy end date (en)">
+                description = <"*The date and/or time marking the end of the pregnancy. (en)">
+                comment = <"*This data element may be renamed in a template, depending on the pregnancy outcome. For example: date of delivery for a live birth or stillbirth; date of miscarriage; or date of termination. (en)">
+            >
+            ["at0175"] = <
+                text = <"*Place of outcome (en)">
+                description = <"*Simple details about the  location where the pregnancy was delivered or an alternative outcome of the pregnancy was treated or managed. (en)">
+                comment = <"*For example: the name of the hospital or clinic. (en)">
+            >
+            ["at0176"] = <
+                text = <"*Intersex (en)">
+                description = <"">
+            >
+            ["at0177"] = <
+                text = <"*Unknown (en)">
+                description = <"">
+            >
+            ["at0178"] = <
+                text = <"*Multiple pregnancy? (en)">
+                description = <"*Assertion about whether the pregnancy is cateogrised as 'multiple pregnancy'. (en)">
+                comment = <"*This categorial data element is commonly required within registries or used in risk assessment, rather than recording the actual 'Number of fetuses'. (en)">
+            >
+            ["at0179"] = <
+                text = <"*Present (en)">
+                description = <"*The pregnancy has more than one fetus. (en)">
+            >
+            ["at0180"] = <
+                text = <"*Absent (en)">
+                description = <"*The pregnancy has only one fetus. (en)">
+            >
+            ["at0181"] = <
+                text = <"*Pregnancy status (en)">
+                description = <"*Statement about the current status of a single pregnancy. (en)">
+                comment = <"*For example: pre-pregnant, such as intending to get pregnant, not taking contraception, actively undertaking IVF treatment; pregnant; post-partum.
+This status could be designated as 'pre-pregnant' to initiate care pathways for a woman actively attempting to conceive, to ensure that clinical management carefully avoids treatment that could harm a mother or fetus in an unrecognised pregnancy.
+ (en)">
+            >
+            ["at0182"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the infant, not captured in other fields. (en)">
+            >
+            ["at0183"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the pregnancy, not captured in other fields. (en)">
+            >
+            ["at9007"] = <
+                text = <"* Mass (en)">
+                description = <"* Mass (en)">
+            >
+            ["at9008"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["ac9123"] = <
+                text = <"*Multiple pregnancy? (en) (synthesised)">
+                description = <"*Assertion about whether the pregnancy is cateogrised as 'multiple pregnancy'. (en) (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"*Onset of labour(en) (synthesised)">
+                description = <"*Se refiere al inicio del trabajo de parto, este podria ser Espontáneo o Inducido. (synthesised)">
+            >
+            ["ac9100"] = <
+                text = <"perineo (synthesised)">
+                description = <"*Coded or narrative description about the condition of the perineum after birth, including injuries and repairs. (en) (synthesised)">
+            >
+            ["ac9122"] = <
+                text = <"*Assigned sex (en) (synthesised)">
+                description = <"*Sex of the infant  by direct observation of external genitalia. (en) (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"*Presenting part(en) (synthesised)">
+                description = <"*Presenting part of the infant at delivery. (en) (synthesised)">
+            >
+            ["ac9102"] = <
+                text = <"*Position (en) (synthesised)">
+                description = <"*Position of the infant at delivery. (en) (synthesised)">
+            >
+            ["ac9114"] = <
+                text = <"*Neonatal outcome (en) (synthesised)">
+                description = <"*Description of the outcome at the end of the neonatal period per newborn infant. (en) (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9007"] = <http://openehr.org/id/124>
+            ["at9008"] = <http://openehr.org/id/129>
+        >
+    >
+    value_sets = <
+        ["ac9114"] = <
+            id = <"ac9114">
+            members = <"at0168", "at0169">
+        >
+        ["ac9123"] = <
+            id = <"ac9123">
+            members = <"at0179", "at0180">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0112", "at0009", "at0010">
+        >
+        ["ac9100"] = <
+            id = <"ac9100">
+            members = <"at0153", "at0154", "at0155", "at0156">
+        >
+        ["ac9122"] = <
+            id = <"ac9122">
+            members = <"at0113", "at0114", "at0115", "at0176", "at0177">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0046", "at0047", "at0048", "at0049", "at0106", "at0107", "at0133">
+        >
+        ["ac9102"] = <
+            id = <"ac9102">
+            members = <"at0150", "at0151", "at0152">
+        >
+    >

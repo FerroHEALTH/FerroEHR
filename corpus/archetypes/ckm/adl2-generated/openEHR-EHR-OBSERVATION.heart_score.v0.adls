@@ -1,0 +1,311 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=0085a539-4e1a-41e2-bf6b-10a6e116bc64; build_uid=71a2b5a3-86d9-473f-88eb-93acb4654136)
+    openEHR-EHR-OBSERVATION.heart_score.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Marit Alice Venheim">
+        ["organisation"] = <"Helse Vest IKT">
+        ["email"] = <"marit.alice.venheim@helse-vest-ikt.no">
+        ["date"] = <"2020-02-12">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Backus BE, Six AJ, Kelder JC, et al. A prospective validation of the HEART score for chest pain patients at the emergency department. Int J Cardiol. 2013;168(3):2153–2158. doi:10.1016/j.ijcard.2013.01.255.">
+        ["2"] = <"Backus BE, Six AJ, Kelder JC, et al. Chest pain in the emergency room: a multicenter validation of the HEART Score. Crit Pathw Cardiol. 2010;9(3):164–169. doi:10.1097/HPC.0b013e3181ec36d8.">
+        ["3"] = <"Brady W, de Souza K. The HEART score: A guide to its application in the emergency department. Turk J Emerg Med. 2018;18(2):47–51. Published 2018 Jun 14. doi:10.1016/j.tjem.2018.04.004.">
+        ["4"] = <"The Heart score [Internet]. Netherlands: Heart Study; 2019. Available from: www.heartscore.nl.">
+        ["5"] = <"Poldervaart JM, Reitsma JB, Koffijberg H, et al. The impact of the HEART risk score in the early assessment of patients with acute chest pain: design of a stepped wedge, cluster randomised trial. BMC Cardiovasc Disord. 2013;13:77. Published 2013 Sep 26. doi:10.1186/1471-2261-13-77.">
+        ["6"] = <"Six AJ, Backus BE, Kelder JC. Chest pain in the emergency room: value of the HEART score. Neth Heart J. 2008;16(6):191–196. doi:10.1007/bf03086144.">
+        ["7"] = <"Six AJ, Cullen L, Backus BE, et al. The HEART score for the assessment of patients with chest pain in the emergency department: a multinational validation study. Crit Pathw Cardiol. 2013;12(3):121–126. doi:10.1097/HPC.0b013e31828b327e.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"C59245AF23B53649899917563DC6CA35">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter and their total sum for the HEART score.">
+            use = <"Use to record the results for each component parameter and their total sum for the HEART score.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- HEART score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- History
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0009]}],    -- Nonspecific history for ACS.
+                                                    [{1}, {[at0010]}],    -- Mixed historic elements.
+                                                    [{2}, {[at0011]}]    -- Specific history for ACS
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Electrocardiogram
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0012]}],    -- Normal ECG.
+                                                    [{1}, {[at0013]}],    -- Abnormal ECG.
+                                                    [{2}, {[at0014]}]    -- Abnormal ECG, with significant ST deviation (depression ± elevation).
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Age
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0015]}],    -- <45 years.
+                                                    [{1}, {[at0016]}],    -- Between 45 and 64 years.
+                                                    [{2}, {[at0017]}]    -- ≤65 years or older.
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Risk factors
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0018]}],    -- No risk factors.
+                                                    [{1}, {[at0019]}],    -- 1 to 2 risk factors
+                                                    [{2}, {[at0020]}]    -- 3 or more risk factors
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Troponin
+                                        value matches {
+                                            DV_ORDINAL[at9010] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0021]}],    -- Troponin < discriminative level.
+                                                    [{1}, {[at0022]}],    -- Troponin elevated 1–3 times discriminative level.
+                                                    [{2}, {[at0023]}]    -- Troponin elevated > 3 times discriminative Level.
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9011] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Risk category
+                                        value matches {
+                                            DV_CODED_TEXT[at9012] matches {
+                                                defining_code matches {[ac9005]}    -- Risk category (synthesised)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0032] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0033] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"HEART score">
+                description = <"An assessment tool tool used to identify patients at low, intermediate, and high risk for short-term adverse outcome resulting from Acute Coronary Syndrome (ACS).">
+                comment = <"HEART is an acronym for each of the data element names - History, ECG, Age, Risk factors, Troponin.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time event">
+                description = <"Default, unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Troponin">
+                description = <"The single serum troponin obtained during the emergency department assessment.">
+                comment = <"It is recommended to use the local hospital's standard for determination of normal limit.">
+            >
+            ["at0005"] = <
+                text = <"Electrocardiogram">
+                description = <"The interpretation of an electrocardiograph.">
+            >
+            ["at0006"] = <
+                text = <"Age">
+                description = <"The age of the patient, defined in years.">
+                comment = <"Risk Factors: DM, tobacco smoker, HTN, hypercholesterolemia, obesity, +/− family history of CAD.">
+            >
+            ["at0007"] = <
+                text = <"Risk factors">
+                description = <"Presence of risk factors for the development of coronary artery disease (CAD).">
+                comment = <"Risk Factors: DM, tobacco smoker, HTN, hypercholesterolemia, obesity, +/− family history of CAD.">
+            >
+            ["at0008"] = <
+                text = <"History">
+                description = <"The level of suspicion from patient history or anamnesis.">
+                comment = <"Refers to the description of the patient's chest pain and related presentation details.">
+            >
+            ["at0009"] = <
+                text = <"Nonspecific history for ACS.">
+                description = <"A history that is not consistent with chest pain concerning for ACS.">
+            >
+            ["at0010"] = <
+                text = <"Mixed historic elements.">
+                description = <"A history that contains traditional & non-traditional elements of typical ACS presentation.">
+            >
+            ["at0011"] = <
+                text = <"Specific history for ACS">
+                description = <"A history with traditional features of ACS.">
+            >
+            ["at0012"] = <
+                text = <"Normal ECG.">
+                description = <"A normal ECG tracing.">
+            >
+            ["at0013"] = <
+                text = <"Abnormal ECG.">
+                description = <"Abnormal ECG, with repolarization abnormalities* yet lacking significant ST depression. *BBB, LVH, digoxin effect, implanted right-ventricular pacemaker, past Ml, +/− unchanged repolarization abnormalities.">
+            >
+            ["at0014"] = <
+                text = <"Abnormal ECG, with significant ST deviation (depression ± elevation).">
+                description = <"Either new or not known to be old significant ST deviation (i.e., no prior ECG available for comparison).">
+            >
+            ["at0015"] = <
+                text = <"<45 years.">
+                description = <"The patient is less than 45 years of age.">
+            >
+            ["at0016"] = <
+                text = <"Between 45 and 64 years.">
+                description = <"The patient is aged between 45 and 64 years.">
+            >
+            ["at0017"] = <
+                text = <"≤65 years or older.">
+                description = <"The patient is 65 years of age or older.">
+            >
+            ["at0018"] = <
+                text = <"No risk factors.">
+                description = <"The patient has no identifiable risk factors.">
+            >
+            ["at0019"] = <
+                text = <"1 to 2 risk factors">
+                description = <"Risk factors: DM, tobacco smoker, HTN, hypercholesterolemia, obesity, +/− family history of CAD.">
+            >
+            ["at0020"] = <
+                text = <"3 or more risk factors">
+                description = <"Automatic score of 2 with established diagnosis of the any of the following conditions: peripheral arterial disease, myocardial infarction, past coronary revascularization procedure, or stroke.">
+            >
+            ["at0021"] = <
+                text = <"Troponin < discriminative level.">
+                description = <"Hospital lab discriminative level and/or AccuTroponin <0.04 ng/ml.">
+            >
+            ["at0022"] = <
+                text = <"Troponin elevated 1–3 times discriminative level.">
+                description = <"Hospital lab discriminative level and/or AccuTroponin 0.04–0.12 ng/ml.">
+            >
+            ["at0023"] = <
+                text = <"Troponin elevated > 3 times discriminative Level.">
+                description = <"Hospital lab discriminative level and/or AccuTroponin >0.12 ng/ml.">
+            >
+            ["at0026"] = <
+                text = <"Total score">
+                description = <"Sum of points assigned for each of the component parameters.">
+            >
+            ["at0028"] = <
+                text = <"Risk category">
+                description = <"Risk category & recommended management strategy.">
+            >
+            ["at0029"] = <
+                text = <"0-3">
+                description = <"Low risk, potential candidate for early discharge.">
+            >
+            ["at0030"] = <
+                text = <"4-6">
+                description = <"Moderate risk, potential candidate for observation & further evaluation.">
+            >
+            ["at0031"] = <
+                text = <"7-10">
+                description = <"High risk, candidate for urgent or emergent intervention.">
+            >
+            ["at0033"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9012"] = <
+                text = <"History (synthesised)">
+                description = <"The level of suspicion from patient history or anamnesis. (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Electrocardiogram (synthesised)">
+                description = <"The interpretation of an electrocardiograph. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Age (synthesised)">
+                description = <"The age of the patient, defined in years. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Risk factors (synthesised)">
+                description = <"Presence of risk factors for the development of coronary artery disease (CAD). (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Troponin (synthesised)">
+                description = <"The single serum troponin obtained during the emergency department assessment. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Risk category (synthesised)">
+                description = <"Risk category & recommended management strategy. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0012", "at0013", "at0014">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0009", "at0010", "at0011">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0021", "at0022", "at0023">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0018", "at0019", "at0020">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0015", "at0016", "at0017">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0029", "at0030", "at0031">
+        >
+    >

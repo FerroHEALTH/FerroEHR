@@ -1,0 +1,248 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=a888ebed-95ad-3959-93d0-014aa34b6089; build_uid=1715593a-6121-400e-b007-1472650c21aa)
+    openEHR-EHR-OBSERVATION.easi_score.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"HANDIHealth,UK">
+        ["email"] = <"ian@handihealth.org">
+        ["date"] = <"2015-02-18">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Dmitri Wall, Irish Skin Foundation", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"7761D1DE43F2CD199FE62C495058E750">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details of the Atopic dermatitis EASI score.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- EASI score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    CLUSTER[at0004] matches {    -- Body area
+                                        name matches {
+                                            DV_CODED_TEXT[at9004] matches {
+                                                defining_code matches {[ac9000]}    -- Body area (synthesised)
+                                            }
+                                        }
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0009] matches {    -- Severity index
+                                                name matches {
+                                                    DV_CODED_TEXT[at9005] matches {
+                                                        defining_code matches {[ac9001]}    -- Severity index (synthesised)
+                                                    }
+                                                }
+                                                value matches {
+                                                    DV_ORDINAL[at9006] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0014]}],    -- Absent
+                                                            [{1}, {[at0015]}],    -- Mild
+                                                            [{2}, {[at0016]}],    -- Moderate
+                                                            [{3}, {[at0017]}]    -- Severe
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0018] occurrences matches {0..1} matches {    -- Affected area
+                                                value matches {
+                                                    DV_ORDINAL[at9007] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0019]}],    -- 1% to 9%
+                                                            [{1}, {[at0020]}],    -- 10% to 29%
+                                                            [{2}, {[at0021]}],    -- 30% to 49%
+                                                            [{3}, {[at0022]}],    -- 50% to 69%
+                                                            [{4}, {[at0023]}],    -- 70% to 89%
+                                                            [{5}, {[at0024]}]    -- 90% to 100%
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Total EASI score
+                                        value matches {
+                                            DV_COUNT[at9008] matches {
+                                                magnitude matches {|0..72|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0026] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0027] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"EASI score">
+                description = <"Atopic dermatitis EASI score.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Body area">
+                description = <"The part of the body being assessed.">
+            >
+            ["at0005"] = <
+                text = <"Head and neck">
+                description = <"Head and neck skin area.">
+            >
+            ["at0006"] = <
+                text = <"Upper limbs">
+                description = <"Upper limb skin area.">
+            >
+            ["at0007"] = <
+                text = <"Trunk">
+                description = <"The trunk skin area.">
+            >
+            ["at0008"] = <
+                text = <"Lower limbs">
+                description = <"Lower limbs skin area.">
+            >
+            ["at0009"] = <
+                text = <"Severity index">
+                description = <"The level of severity of the symptom for a representative part of the body area.">
+            >
+            ["at0010"] = <
+                text = <"Redness">
+                description = <"The extent of redness.">
+            >
+            ["at0011"] = <
+                text = <"Thickness">
+                description = <"The thickness of the lesion.">
+            >
+            ["at0012"] = <
+                text = <"Crusting">
+                description = <"The extent of crusting.">
+            >
+            ["at0013"] = <
+                text = <"Lichenification">
+                description = <"The extent of lichenification.">
+            >
+            ["at0014"] = <
+                text = <"Absent">
+                description = <"The symptom is absent.">
+            >
+            ["at0015"] = <
+                text = <"Mild">
+                description = <"The symptom is mild.">
+            >
+            ["at0016"] = <
+                text = <"Moderate">
+                description = <"The symptom is moderate.">
+            >
+            ["at0017"] = <
+                text = <"Severe">
+                description = <"The symptom is severe.">
+            >
+            ["at0018"] = <
+                text = <"Affected area">
+                description = <"The extent of the area affected.">
+            >
+            ["at0019"] = <
+                text = <"1% to 9%">
+                description = <"1% to 9% of the body area is affected.">
+            >
+            ["at0020"] = <
+                text = <"10% to 29%">
+                description = <"10% to 29% of the body area is affected.">
+            >
+            ["at0021"] = <
+                text = <"30% to 49%">
+                description = <"30% to 49% of the body area is affected.">
+            >
+            ["at0022"] = <
+                text = <"50% to 69%">
+                description = <"50% to 69% of the body area is affected.">
+            >
+            ["at0023"] = <
+                text = <"70% to 89%">
+                description = <"70% to 89% of the body area is affected.">
+            >
+            ["at0024"] = <
+                text = <"90% to 100%">
+                description = <"90% to 100% of the body area is affected.">
+            >
+            ["at0025"] = <
+                text = <"Total EASI score">
+                description = <"The total EASI score.">
+            >
+            ["at0027"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9000"] = <
+                text = <"Body area (synthesised)">
+                description = <"The part of the body being assessed. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Severity index (synthesised)">
+                description = <"The level of severity of the symptom for a representative part of the body area. (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"Severity index (synthesised)">
+                description = <"The level of severity of the symptom for a representative part of the body area. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Affected area (synthesised)">
+                description = <"The extent of the area affected. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0010", "at0011", "at0012", "at0013">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0005", "at0006", "at0007", "at0008">
+        >
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0019", "at0020", "at0021", "at0022", "at0023", "at0024">
+        >
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0014", "at0015", "at0016", "at0017">
+        >
+    >

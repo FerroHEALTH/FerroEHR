@@ -1,0 +1,310 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=18925e2d-361d-4676-b6eb-e97f9a537a3b; build_uid=064d341e-ae3f-4639-87ea-9063dea30f37)
+    openEHR-EHR-EVALUATION.implanted_device_summary.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2024-04-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"7BCD8E153AD689FBB94B5A33AF7D8419">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a summary or overview detailing the history and context of use for a specified type of implantable medical device.">
+            use = <"Use to record a summary or overview of a single implanted medical device, or category of device. 
+
+The intended scope of this archetype includes, but is not limited to:
+- a cochlear implant;
+- an intracardiac pacemaker;
+- one or more aneurysm clips;
+- a femoral head prosthesis;
+- a coronary stent;
+- bone fixation devices such as screws or plates;
+- deep brain electrical stimulation system lead; or
+- deep brain electrical stimulation system pulse generator.
+
+This archetype has been specifically designed to:
+- support the management of implanted medical devices over time; 
+- assist in the identification of implanted medical devices in situ that may carry health risks for imaging and other health-related activities; and
+- carry critical information such as device identification that will support product recalls. 
+
+The repeating 'Specific implant details' CLUSTER supports documentation about each insertion of each specific medical device, including more precise identification and summary details about the device insertion and removal. This archetype can be further developed to document medical device details such as the manufacturer, batch numbers and device identifiers by nesting the CLUSTER.device_details in the 'Structured device detail' SLOT.
+
+In practice, some clinical systems will need to record specific and detailed INSTRUCTION and ACTION archetypes to reflect the request for a medical device and subsequent activities that need to be recorded as that request is carried out. There will inevitably be some overlap between this summary and these detailed archetypes. All may be necessary in different contexts however, where possible, ideally this summary should be derived from the point of care INSTRUCTION and ACTION documentation by clinicians, to prevent the need for clinicians to duplicate data input.">
+            misuse = <"Not to be used to request a medical device. Use a relevant INSTRUCTION archetype for this purpose.
+
+Not to be used to record the activities that occur in the insertion or removal of an implant. Use the ACTION.procedure archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Implanted medical device summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {1} matches {    -- Device type name
+                        value matches {
+                            DV_TEXT[at9017]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Overall status
+                        value matches {
+                            DV_CODED_TEXT[at9018] matches {
+                                defining_code matches {[ac9000]}    -- Overall status (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Overall description
+                        value matches {
+                            DV_TEXT[at9019]
+                        }
+                    }
+                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Implant body site
+                        value matches {
+                            DV_TEXT[at9020]
+                        }
+                    }
+                    CLUSTER[at0007] matches {    -- Specific implanted device details
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Device name
+                                value matches {
+                                    DV_TEXT[at9021]
+                                }
+                            }
+                            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Label
+                                value matches {
+                                    DV_TEXT[at9022]
+                                }
+                            }
+                            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Status
+                                value matches {
+                                    DV_CODED_TEXT[at9023] matches {
+                                        defining_code matches {[ac9001]}    -- Status (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9024]
+                                }
+                            }
+                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Insertion date
+                                value matches {
+                                    DV_DATE_TIME[at9025]
+                                }
+                            }
+                            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Specific implant body site
+                                value matches {
+                                    DV_TEXT[at9026]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0016] matches {    -- Structured implant body site
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_relative(-[a-zA-Z0-9_]+)*\.v2\..*|openEHR-EHR-CLUSTER\.anatomical_location_circle(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                            }
+                            allow_archetype CLUSTER[at0017] matches {    -- Structured device detail
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                            }
+                            allow_archetype CLUSTER[at0018] matches {    -- Multimedia representation
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.media_file(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                            }
+                            ELEMENT[at0019] occurrences matches {0..1} matches {    -- Removal date
+                                value matches {
+                                    DV_DATE_TIME[at9027]
+                                }
+                            }
+                            ELEMENT[at0020] occurrences matches {0..1} matches {    -- Reason for removal
+                                value matches {
+                                    DV_TEXT[at9028]
+                                }
+                            }
+                            ELEMENT[at0021] occurrences matches {0..1} matches {    -- Next review due
+                                value matches {
+                                    DV_DATE_TIME[at9029]
+                                }
+                            }
+                            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_TEXT[at9014]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Overall comment
+                        value matches {
+                            DV_TEXT[at9015]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0026] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9016]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0025] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Implanted medical device summary">
+                description = <"A summary or overview detailing the history and context of use for a specified type of implantable medical device, including details about specific implantation episodes.">
+            >
+            ["at0003"] = <
+                text = <"Overall status">
+                description = <"Assertion about the whether the device type is currently in situ.">
+            >
+            ["at0004"] = <
+                text = <"In situ">
+                description = <"The device type is currently inserted or implanted in the body.">
+            >
+            ["at0005"] = <
+                text = <"Removed">
+                description = <"The device type has been removed from the body.">
+            >
+            ["at0008"] = <
+                text = <"Device name">
+                description = <"Name of the implanted medical device.">
+                comment = <"Coding of the ‘Specific device name' with an external terminology is preferred, if available.">
+            >
+            ["at0014"] = <
+                text = <"Insertion date">
+                description = <"The Date/time when the device was implanted.">
+                comment = <"Partial dates are not permitted for contemporaneous recording.">
+            >
+            ["at0019"] = <
+                text = <"Removal date">
+                description = <"The Date/time when the device was removed.">
+                comment = <"Partial dates are not permitted for contemporaneous recording.">
+            >
+            ["at0017"] = <
+                text = <"Structured device detail">
+                description = <"Additional structured detail about the specific implanted device.">
+            >
+            ["at0015"] = <
+                text = <"Specific implant body site">
+                description = <"Identification of the area of the body where the specified device has been implanted.">
+            >
+            ["at0016"] = <
+                text = <"Structured implant body site">
+                description = <"Structured identification of the body site where the device has been inserted.">
+            >
+            ["at0013"] = <
+                text = <"Description">
+                description = <"Narrative description about the device.">
+            >
+            ["at0006"] = <
+                text = <"Overall description">
+                description = <"A narrative description about the history or context of use  for this device type over time.">
+                comment = <"For instance: a summary or overview of any or all insertions and/or removals.">
+            >
+            ["at0024"] = <
+                text = <"Last updated">
+                description = <"The date this Implanted medical device summary was last updated.">
+            >
+            ["at0025"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0021"] = <
+                text = <"Next review due">
+                description = <"Date on which this device should be reviewed.">
+                comment = <"Partial dates are not permitted.">
+            >
+            ["at0002"] = <
+                text = <"Device type name">
+                description = <"Name of the medical device category.">
+                comment = <"Coding of the ‘Device name' with an external terminology is strongly recommended, if available. For example: 'cochlear implant'; 'pacemaker'; 'aneurysm clip'; 'joint replacement'; 'coronary stent'; 'bone fixation device eg screws or a plate'; or 'deep brain stimulator'.">
+            >
+            ["at0018"] = <
+                text = <"Multimedia representation">
+                description = <"Digital image, video or diagram related to the specific implanted device.">
+            >
+            ["at0007"] = <
+                text = <"Specific implanted device details">
+                description = <"Details about a specific implanted medical device.">
+                comment = <"This repeating group supports documentation supports documentation about each insertion of each specific medical device, including more precise identification and summary details about the medical device insertion and/or removal. This group can be further to document medical device details such as the manufacturer, batch numbers and device identifiers by nesting the 'Device details' data group in the 'Structured device detail' SLOT.">
+            >
+            ["at0010"] = <
+                text = <"Status">
+                description = <"Assertion about the whether the identified device is currently in situ.">
+            >
+            ["at0009"] = <
+                text = <"Label">
+                description = <"An alternative name or label to identify a specific device, when the 'Device name' is not unique.">
+                comment = <"Use this field to identify a specific medical device when there are multiple devices of the same type or model implanted at the same time, such as aneurysm clips or vascular stents placed on different blood vessels or in different locations on the same blood vessel.">
+            >
+            ["at0020"] = <
+                text = <"Reason for removal">
+                description = <"Description about why the implanted device was removed.">
+            >
+            ["at0022"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the impanted medical device not captured in other fields.">
+            >
+            ["at0023"] = <
+                text = <"Overall comment">
+                description = <"Additional narrative about the implanted medical device type, not captured in other fields.">
+            >
+            ["at0011"] = <
+                text = <"In situ">
+                description = <"The specific device is currently inserted or implanted in the body.">
+            >
+            ["at0012"] = <
+                text = <"Removed">
+                description = <"The specific device has been removed from the body.">
+            >
+            ["at0028"] = <
+                text = <"Implant body site">
+                description = <"Identification of the body structure or region where the all devices of this type have been inserted.">
+                comment = <"If the implanted device is not usually located in the same body structure or region, the actual site of implantation should be specified using the 'Specific implant body site' element within the 'Specific implanted device details' CLUSTER. If the device is implanted at its usual site but requires further precision, the 'Specific implant body site' may also be used to record the exact location.">
+            >
+            ["ac9000"] = <
+                text = <"Overall status (synthesised)">
+                description = <"Assertion about the whether the device type is currently in situ. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Status (synthesised)">
+                description = <"Assertion about the whether the identified device is currently in situ. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0011", "at0012">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0004", "at0005">
+        >
+    >

@@ -1,0 +1,80 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7251a99e-05f0-4505-98fe-b4af4bd17639; build_uid=549e3cdf-4132-4fcb-91c3-5213122b20f5)
+    openEHR-EHR-OBSERVATION.self_test_result-pregnancy.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-OBSERVATION.self_test_result.v0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-04-11">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"15D6139AD7A887596E9790D362FBE36D">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the result of a diagnostic test performed on a specimen in a non-laboratory environment, including a self-test by the individual.">
+            keywords = <"home", "results">
+            use = <"To record the result of a simple diagnostic test performed on a specimen within a non-laboratory or non-clinical (POCT) environment, usually by an individual or their carer. 
+
+Use cases include, but are not limited to:
+- a urine pregnancy test;
+- home blood glucose monitoring; or
+- weekly INR self-testing.">
+            misuse = <"Not to be used to record the result of a test carried out in a laboratory or point of care test (POCT) setting - use the OBSERVATION.laboratory_test_result archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000.1] matches {    -- Pregnancy test result
+        /data[at0001]/events[at0002]/data[at0003]/items matches {
+            ELEMENT[at0005.1] matches {    -- Test name
+                value matches {
+                    DV_CODED_TEXT[at0.9000] matches {
+                        defining_code matches {[at0.1]}    -- Urine pregnancy test
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Pregnancy test result">
+                description = <"The result of a diagnostic test performed on a specimen in a non-laboratory environment.">
+            >
+            ["at0005.1"] = <
+                text = <"Test name">
+                description = <"Name of the test carried out on nvestigation performed on the specimen(s).">
+                comment = <"It is strongly recommended that 'Test name' be coded with a terminology, for example LOINC or SNOMED CT. For example: 'Glucometer blood sugar'; or 'COVID-19 rapid antigen test'. The name may sometimes include specimen type and/or patient state, such as 'Fasting glucometer blood sugar' or 'Oral COVID-19 RAT'.">
+            >
+            ["at0.1"] = <
+                text = <"Urine pregnancy test">
+                description = <"Home pregnancy test carried out on urine.">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0.1"] = <http://snomed.info/id/167252002>
+        >
+    >

@@ -1,0 +1,137 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d2cb2980-210e-36f7-abf3-86ee8a0cc628; build_uid=a3161571-86ca-40e6-996b-f4dc56079275)
+    openEHR-EHR-OBSERVATION.fitzpatrick_skin_type.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Dmitri Wall">
+        ["email"] = <"dmitri.wall@gmail.com">
+        ["date"] = <"2015-02-18">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Ian McNicoll, freshEHR, UK", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Fitzpatrick TB. Soleil et peau. J Med Esthet 1975; 2: 33-4.">
+        ["2"] = <"Fitzpatrick TB. The validity and practicality of sun-reactive skin types I through VI. Arch Dermatol. 1988 Jun;124(6):869-71. doi: 10.1001/archderm.124.6.869. PubMed PMID: 3377516.">
+        ["3"] = <"Fitzpatrick TB. Ultraviolet-induced pigmentary changes: benefits and hazards. Curr Probl Dermatol. 1986;15:25-38. Review. PubMed PMID: 3512179.">
+        ["4"] = <"Pathak MA, Jimbow K, Szabo G et al. Sunlight and melanin pigmentation. In: Photochemical and photobiological reviews: Springer. 1976; 211-39.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"E38FA313268C34529EE2C3DB225A545C">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"The concept of skin typing was developed in 1975 in order to select correct ultraviolet A dosage for treatment of psoriasis with oral methoxsalen, known as photochemotherapy (PUVA).  It was further developed in subsequent years to include 6 types, ranging from white to black skin, characterised based on skin tolerance of ultraviolet radiation exposure.">
+            keywords = <"Dermatology", "Skin colour">
+            use = <"Classification of skin colour type based on skin tolerance of ultraviolet radiation exposure.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Fitzpatrick skin type
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Skin type
+                                        value matches {
+                                            DV_ORDINAL[at9001] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0005]}],    -- I
+                                                    [{2}, {[at0006]}],    -- II
+                                                    [{3}, {[at0007]}],    -- III
+                                                    [{4}, {[at0008]}],    -- IV
+                                                    [{5}, {[at0009]}],    -- V
+                                                    [{6}, {[at0010]}]    -- VI
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0011] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0012] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Fitzpatrick skin type">
+                description = <"Numerical schema for classifying skin colour type based on reaction to ultraviolet radiation exposure.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Skin type">
+                description = <"The Fitzpatrick Skin type.">
+            >
+            ["at0005"] = <
+                text = <"I">
+                description = <"Always burn, never tan.">
+            >
+            ["at0006"] = <
+                text = <"II">
+                description = <"Usually burn, tan less than average (with difficulty).">
+            >
+            ["at0007"] = <
+                text = <"III">
+                description = <"Sometimes mild burn, tan about average.">
+            >
+            ["at0008"] = <
+                text = <"IV">
+                description = <"Rarely burn, tan more than average (with ease).">
+            >
+            ["at0009"] = <
+                text = <"V">
+                description = <"Brown skin, rarely burns, tans profusely.">
+            >
+            ["at0010"] = <
+                text = <"VI">
+                description = <"Black skin, never burns.">
+            >
+            ["at0012"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9001"] = <
+                text = <"Skin type (synthesised)">
+                description = <"The Fitzpatrick Skin type. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009", "at0010">
+        >
+    >

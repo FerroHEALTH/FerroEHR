@@ -1,0 +1,195 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c4c1a64a-62b4-4735-9490-2a95b53a52c8; build_uid=97b226f9-69cc-42bc-ac64-50c23f7d1aa9)
+    openEHR-EHR-OBSERVATION.intermacs_profile.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Vanessa Pereira">
+        ["organisation"] = <"Marand d.o.o.">
+        ["email"] = <"vanessa.pereira@marand.si">
+        ["date"] = <"2018-11-02">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Samuel Frade, BinaryScope Solutions, Portugal", "Heather Leslie, Atomica Informatics, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Barge-Caballero E, Paniagua-Martín MJ, Marzoa-Rivas R, Campo-Pérez R, Rodríguez-Fernández JÁ, Pérez-Pérez A, García-Bueno L, Blanco-Canosa P, Cancela ZG, Solla-Buceta M, et al. Usefulness of the INTERMACS Scale for predicting outcomes after urgent heart transplantation. Rev Esp Cardiol. 2011 Mar;64(3):193-200. doi: 10.1016/j.recesp.2010.08.001. Epub 2011 Feb 12. PubMed PMID: 21316834.">
+        ["2"] = <"Stevenson LW, Pagani FD, Young JB, Jessup M, Miller L, Kormos RL, Naftel DC, Ulisney K, Desvigne-Nickens P, Kirklin JK. INTERMACS profiles of advanced heart failure: the current picture. J Heart Lung Transplant. 2009 Jun;28(6):535-41. doi: 10.1016/j.healun.2009.02.015. PubMed PMID: 19481012.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"9440ACA127EC2682989C924325DE58EA">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the INTERMACS profile of a patient at the time of implant of a mechanical support.">
+            keywords = <"INTERMACS, heart failure, profiles", ...>
+            use = <"Use to record the INTERMACS profile of a patient at the time of implant of a mechanical support.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- INTERMACS profile
+        data matches {
+            HISTORY[at0001] matches {    -- History
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any Event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0006] occurrences matches {1} matches {    -- Profile
+                                        value matches {
+                                            DV_ORDINAL[at9001] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0007]}],    -- Critical cardiogenic shock
+                                                    [{2}, {[at0008]}],    -- Progressive decline on inotropic support
+                                                    [{3}, {[at0009]}],    -- Stable but inotrope dependent
+                                                    [{4}, {[at0010]}],    -- Resting symptoms
+                                                    [{5}, {[at0011]}],    -- Exertion intolerant
+                                                    [{6}, {[at0012]}],    -- Exertion limited
+                                                    [{7}, {[at0013]}]    -- Advanced NYHA Class III symptoms
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- 'TCS' modifier
+                                        value matches {
+                                            DV_CODED_TEXT[at9005] matches {
+                                                defining_code matches {[ac9001]}    -- 'TCS' modifier (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- 'A' modifier
+                                        value matches {
+                                            DV_CODED_TEXT[at9003] matches {
+                                                defining_code matches {[ac9001]}    -- 'TCS' modifier (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- 'FF' modifier
+                                        value matches {
+                                            DV_TEXT[at9004]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0016] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0018] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"INTERMACS profile">
+                description = <"Categorisation of the severity and level of limitation of advanced heart failure on at patient at the time of implant of a mechanical support, as defined by the Interagency Registry for Mechanically Assisted Circulatory Support (INTERMACS) data registry.">
+            >
+            ["at0001"] = <
+                text = <"History">
+                description = <"History.">
+            >
+            ["at0002"] = <
+                text = <"Any Event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0006"] = <
+                text = <"Profile">
+                description = <"Categorisation of the level of limitation at the time of implant.">
+            >
+            ["at0007"] = <
+                text = <"Critical cardiogenic shock">
+                description = <"Patients with life-threatening hypotension despite rapidly escalating inotropic support, critical organ hypoperfusion, often confirmed by worsening acidosis and/or lactate levels. “Crash and burn\".">
+            >
+            ["at0008"] = <
+                text = <"Progressive decline on inotropic support">
+                description = <"Patient with declining function despite intravenous inotropic support, may be manifest by worsening renal function, nutritional depletion, inability to restore volume balance “Sliding on inotropes.” Also describes declining status in patients unable to tolerate inotropic therapy.">
+            >
+            ["at0009"] = <
+                text = <"Stable but inotrope dependent">
+                description = <"Patient with stable blood pressure, organ function, nutrition, and symptoms on continuous intravenous inotropic support (or a temporary circulatory support device or both), but demonstrating repeated failure to wean from support due to recurrent symptomatic hypotension or renal dysfunction “Dependent stability\".">
+            >
+            ["at0010"] = <
+                text = <"Resting symptoms">
+                description = <"Patient can be stabilized close to normal volume status but experiences daily symptoms of congestion at rest or during ADL. Doses of diuretics generally fluctuate at very high levels. More intensive management and surveillance strategies should be considered, which may in some cases reveal poor compliance that would compromise outcomes with any therapy. Some patients may shuttle between 4 and 5.">
+            >
+            ["at0011"] = <
+                text = <"Exertion intolerant">
+                description = <"Comfortable at rest and with ADL but unable to engage in any other activity, living predominantly within the house. Patients are comfortable at rest without congestive symptoms, but may have underlying refractory elevated volume status, often with renal dysfunction. If underlying nutritional status and organ function are marginal, patient may be more at risk than INTERMACS 4, and require definitive intervention.">
+            >
+            ["at0012"] = <
+                text = <"Exertion limited">
+                description = <"Patient without evidence of fluid overload is comfortable at rest, and with activities of daily living and minor activities outside the home but fatigues after the first few minutes of any meaningful activity. Attribution to cardiac limitation requires careful measurement of peak oxygen consumption, in some cases with hemodynamic monitoring to confirm severity of cardiac impairment. “Walking wounded\".">
+            >
+            ["at0013"] = <
+                text = <"Advanced NYHA Class III symptoms">
+                description = <"A placeholder for more precise specification in future, this level includes patients who are without current or recent episodes of unstable fluid balance, living comfortably with meaningful activity limited to mild physical exertion.">
+            >
+            ["at0018"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0019"] = <
+                text = <"'A' modifier">
+                description = <"Modifier indicating the occurrence of frequent arrhythmias (A).">
+                comment = <"Can modify any Profile.">
+            >
+            ["at0020"] = <
+                text = <"'TCS' modifier">
+                description = <"Modifier indicating the use of temporary circulatory support (TCS).">
+                comment = <"Can modify Profiles 1, 2 or 3 in hospital.">
+            >
+            ["at0021"] = <
+                text = <"Present">
+                description = <"The qualifier is present.">
+            >
+            ["at0022"] = <
+                text = <"Absent">
+                description = <"The qualifier is absent.">
+            >
+            ["at0023"] = <
+                text = <"'FF' modifier">
+                description = <"Modifier indicating the need for frequent rehospitalisation (FF).">
+                comment = <"Can modify only outpatients. Profile 3 if at home, or Profiles, 4, 5, or 6. A frequent flyer would rarely be Profile 7.">
+            >
+            ["ac9002"] = <
+                text = <"Profile (synthesised)">
+                description = <"Categorisation of the level of limitation at the time of implant. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"'TCS' modifier (synthesised)">
+                description = <"Modifier indicating the use of temporary circulatory support (TCS). (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0007", "at0008", "at0009", "at0010", "at0011", "at0012", "at0013">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0021", "at0022">
+        >
+    >

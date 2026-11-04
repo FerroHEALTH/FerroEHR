@@ -1,0 +1,176 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=86ad2cd0-a095-433f-973b-0e2f0953587d; build_uid=4286fd57-85dd-4c27-8202-30d22c223b39)
+    openEHR-EHR-CLUSTER.muscle_tone.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2023-05-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"A7552D86B01F0A5E13FB41C67AF47274">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the findings observed during the physical examination of tone in a limb.">
+            use = <"Use to record the observed findings during the physical examination of tone in a limb.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the CLUSTER.exam-nervous_system archetype. It can also be nested within any other relevant OBSERVATION or Physical examination-related family of CLUSTER archetypes, where clinically appropriate. 
+
+In clinical scenarios requiring the documentation of more than one deep tendon reflex response, use a separate instance of this archetype for each reflex and body side.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Muscle tone finding
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- Body site
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9000]}    -- Body site (synthesised)
+                    }
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Clinical description
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Relative tone
+                value matches {
+                    DV_CODED_TEXT[at9006] matches {
+                        defining_code matches {[ac9001]}    -- Relative tone (synthesised)
+                    }
+                    DV_TEXT[at9007]
+                }
+            }
+            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Type of increased tone
+                value matches {
+                    DV_CODED_TEXT[at9008] matches {
+                        defining_code matches {[ac9002]}    -- Type of increased tone (synthesised)
+                    }
+                    DV_TEXT[at9009]
+                }
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9010]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Muscle tone finding">
+                description = <"Findings observed during the physical examination of tone in a limb.">
+            >
+            ["at0014"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the muscle tone findings, not captured in other fields.">
+            >
+            ["at0001"] = <
+                text = <"Body site">
+                description = <"Identification of the body site examined.">
+            >
+            ["at0007"] = <
+                text = <"Relative tone">
+                description = <"The muscle tone observed, relative to 'normal' tone.">
+            >
+            ["at0008"] = <
+                text = <"Normal">
+                description = <"The muscle tone is normal.">
+            >
+            ["at0009"] = <
+                text = <"Increased">
+                description = <"The muscle tone is increased, compared to normal.">
+            >
+            ["at0010"] = <
+                text = <"Decreased">
+                description = <"The muscle tone is decreased, compared to normal.">
+            >
+            ["at0011"] = <
+                text = <"Type of increased tone">
+                description = <"The type of increased muscle tone observed.">
+            >
+            ["at0003"] = <
+                text = <"Left arm">
+                description = <"">
+            >
+            ["at0002"] = <
+                text = <"Right arm">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Left leg">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Right leg">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Clasp-knife response">
+                description = <"Increased resistance followed by relaxation.">
+            >
+            ["at0013"] = <
+                text = <"Lead-pipe rigidity">
+                description = <"Uniform rigidity throughout the range of motion, with or without cogwheeling.">
+            >
+            ["at0006"] = <
+                text = <"Clinical description">
+                description = <"Narrative description about the tone observed at the identified body site.">
+            >
+            ["ac9000"] = <
+                text = <"Body site (synthesised)">
+                description = <"Identification of the body site examined. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Relative tone (synthesised)">
+                description = <"The muscle tone observed, relative to 'normal' tone. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Type of increased tone (synthesised)">
+                description = <"The type of increased muscle tone observed. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0000"] = <http://snomed.info/id/366725004>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0012", "at0013">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0008", "at0009", "at0010">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0002", "at0003", "at0004", "at0005">
+        >
+    >

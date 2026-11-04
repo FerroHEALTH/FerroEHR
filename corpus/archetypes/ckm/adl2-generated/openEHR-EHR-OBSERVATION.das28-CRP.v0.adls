@@ -1,0 +1,122 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3b4a79a0-4dbb-439e-a9c3-0d2286e378ad; build_uid=26e189ad-545b-40c6-a1e4-e27177e2c6f7)
+    openEHR-EHR-OBSERVATION.das28-CRP.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-OBSERVATION.das28.v0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2016-11-18">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Mark Greenhalgh, Operon Limited, UK", "Ian McNicoll, freshEHR Clinical Informatics, UK", "Hildi McNicoll, freshEHR Clinical Informatics, UK", "Nadim Anani, Sweden">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"http://www.nras.org.uk/the-das28-score">
+    >
+    other_details = <
+        ["current_contact"] = <"Hildegard Franke, freshEHR Clinical Informatics Ltd.<hildi@freshehr.com>">
+        ["MD5-CAM-1.0.1"] = <"1430641E0F219F56523C5F95090FBB44">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the individual DAS28-CRP parameters and total score.">
+            keywords = <"DAS28", "rheumatoid arthritis", "disease activity">
+            use = <"Use to record the individual DAS28-CRP parameters and total score as an assessment of disease activity in rheumatoid arthritis.">
+            misuse = <"Not to be used to record the DAS28 score using the ESR result. Use OBSERVATION.das28 for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000.1] matches {    -- Disease Activity Score-28 with CRP (DAS28‐CRP)
+        /data[at0001]/events[at0002]/data[at0003]/items matches {
+            ELEMENT[at0006.1] occurrences matches {0} matches {    -- ESR result
+                value matches {
+                    DV_QUANTITY[at0.9001] matches {
+                        property matches {[at9000]}
+                        magnitude matches {|0.0..300.0|}
+                        units matches {"mm/h"}
+                        precision matches {0}
+                    }
+                }
+            }
+            ELEMENT[at0008.1] matches {    -- DAS28-CRP score
+                value matches {
+                    DV_QUANTITY[at0.9002] matches {
+                        property matches {[at9001]}
+                        magnitude matches {|0.0..10.0|}
+                        units matches {"1"}
+                        precision matches {2}
+                    }
+                }
+            }
+            ELEMENT[at0015.1] matches {    -- DAS28-CRP(3) score
+                value matches {
+                    DV_QUANTITY[at0.9003] matches {
+                        property matches {[at9001]}
+                        magnitude matches {|0.0..10.0|}
+                        units matches {"1"}
+                        precision matches {2}
+                    }
+                }
+            }
+            after [at0015.1]
+            ELEMENT[at0.1] occurrences matches {0..1} matches {    -- CRP result
+                value matches {
+                    DV_QUANTITY[at0.9004] matches {
+                        property matches {[at0.9000]}    -- Concentration
+                        magnitude matches {|>=0.0|}
+                        units matches {"mg/L"}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Disease Activity Score-28 with CRP (DAS28‐CRP)">
+                description = <"Assessment tool used as a measure of disease activity in rheumatoid arthritis (RA), using CRP result.">
+                comment = <"28 joints are examined in this assessment.">
+            >
+            ["at0006.1"] = <
+                text = <"ESR result">
+                description = <"Erythrocyte sedimentation rate test result.">
+            >
+            ["at0.1"] = <
+                text = <"CRP result">
+                description = <"C-reactive protein test result.">
+            >
+            ["at0008.1"] = <
+                text = <"DAS28-CRP score">
+                description = <"Total DAS 28-CRP score.">
+            >
+            ["at0015.1"] = <
+                text = <"DAS28-CRP(3) score">
+                description = <"DAS 28-CRP score using only 3 variables, when the Global health parameter is not available.">
+            >
+            ["at0.9000"] = <
+                text = <"Concentration">
+                description = <"Concentration">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at0.9000"] = <http://openehr.org/id/119>
+        >
+    >

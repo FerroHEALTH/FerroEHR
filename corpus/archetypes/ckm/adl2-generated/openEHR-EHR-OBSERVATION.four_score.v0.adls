@@ -1,0 +1,276 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=0fb0ede1-a1aa-4c39-94d9-e2eebf7b49d8; build_uid=368faeb6-ea3b-4974-ac53-31bc4bf247d2)
+    openEHR-EHR-OBSERVATION.four_score.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Sidharth Ramesh">
+        ["organisation"] = <"Medblocks">
+        ["email"] = <"tornadoalert@gmail.com">
+        ["date"] = <"2021-02-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Atomica Informatics, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Wijdicks EF, Bamlet WR, Maramattom BV, Manno EM, McClelland RL. Validation of a new coma scale: The FOUR score. Ann Neurol. 2005 Oct;58(4):585-93. doi: 10.1002/ana.20611. PMID: 16178024.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"F4AD363AFDE55FF718EDD253454A1566">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter and their total sum for the FOUR score.">
+            keywords = <"four", "Glasgow", "Coma">
+            use = <"Use to record the results for each component parameter and their total sum for the FOUR score.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Full Outline of UnResponsiveness (FOUR) score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Eye response
+                                        value matches {
+                                            DV_ORDINAL[at9004] matches {
+                                                [value, symbol] matches {
+                                                    [{4}, {[at0012]}],    -- Eyelids open or opened, tracking, or blinking to command
+                                                    [{3}, {[at0013]}],    -- Eyelids open but not tracking
+                                                    [{2}, {[at0014]}],    -- Eyelids closed but open to loud voice
+                                                    [{1}, {[at0015]}],    -- Eyelids closed but open to pain
+                                                    [{0}, {[at0016]}]    -- Eyelids remain closed with pain
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Motor response
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{4}, {[at0017]}],    -- Thumbs-up, fist, or peace sign
+                                                    [{3}, {[at0018]}],    -- Localizing to pain
+                                                    [{2}, {[at0019]}],    -- Flexion response to pain
+                                                    [{1}, {[at0020]}],    -- Extension response to pain
+                                                    [{0}, {[at0021]}]    -- No response to pain or generalized myoclonus status
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Brain stem reflexes
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{4}, {[at0022]}],    -- Pupil and corneal reflexes present
+                                                    [{3}, {[at0023]}],    -- One pupil wide and fixed
+                                                    [{2}, {[at0024]}],    -- Pupil or corneal reflexes present
+                                                    [{1}, {[at0025]}],    -- Pupil and corneal reflexes absent
+                                                    [{0}, {[at0026]}]    -- Absent pupil, corneal and cough reflex
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Respiration
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0027]}],    -- Not intubated, regular breathing pattern
+                                                    [{2}, {[at0028]}],    -- Not intubated, Cheyne–Stokes breathing pattern
+                                                    [{3}, {[at0029]}],    -- Not intubated, irregular breathing
+                                                    [{4}, {[at0030]}],    -- Breathes above ventilator rate
+                                                    [{5}, {[at0031]}]    -- Breathes at ventilator rate or apnoea
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0033] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9008] matches {
+                                                magnitude matches {|0..16|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0008] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0032] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Full Outline of UnResponsiveness (FOUR) score">
+                description = <"Screening tool to assess individuals with impaired levels of consciousness.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Eye response">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Motor response">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Brain stem reflexes">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Respiration">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Eyelids open or opened, tracking, or blinking to command">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Eyelids open but not tracking">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Eyelids closed but open to loud voice">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Eyelids closed but open to pain">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Eyelids remain closed with pain">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Thumbs-up, fist, or peace sign">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Localizing to pain">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Flexion response to pain">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Extension response to pain">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"No response to pain or generalized myoclonus status">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Pupil and corneal reflexes present">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"One pupil wide and fixed">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Pupil or corneal reflexes present">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Pupil and corneal reflexes absent">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Absent pupil, corneal and cough reflex">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Not intubated, regular breathing pattern">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Not intubated, Cheyne–Stokes breathing pattern">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Not intubated, irregular breathing">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Breathes above ventilator rate">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Breathes at ventilator rate or apnoea">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0033"] = <
+                text = <"Total score">
+                description = <"The total sum of each component parameter for the FOUR score.">
+            >
+            ["ac9007"] = <
+                text = <"Eye response (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"Motor response (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Brain stem reflexes (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Respiration (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0027", "at0028", "at0029", "at0030", "at0031">
+        >
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0022", "at0023", "at0024", "at0025", "at0026">
+        >
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0017", "at0018", "at0019", "at0020", "at0021">
+        >
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at0012", "at0013", "at0014", "at0015", "at0016">
+        >
+    >

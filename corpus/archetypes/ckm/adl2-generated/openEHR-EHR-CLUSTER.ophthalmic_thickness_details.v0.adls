@@ -1,0 +1,817 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=68b6a995-8623-4443-8aef-5ed1cb47b922; build_uid=d28bb030-4666-4314-ac53-8b4c9b6c424c)
+    openEHR-EHR-CLUSTER.ophthalmic_thickness_details.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2015-06-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Jose Andonegui Navarro, Complejo Hospitalario de Navarra, Spain", "Luis Serrano Arriezu, Institute of Smart Cities & Universidad Pública de Navarra, Spain", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"AC39B7F805334C441B27B8B35D075743">
+    >
+    details = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar los detalles de estudios que incluyan medidas de espesor de estructuras oftálmicas específicas.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Register details about a study involving thickness measurement for specific ophthalmic structures.">
+            keywords = <"thickness", ...>
+            use = <"To specify the strategy to schedule a ophthalmic thickness study, but also to record the procedure as well as clinical findings obtained once the study has been completed.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Ophthalmic thickness details
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0054] occurrences matches {0..1} matches {    -- Laterality
+                value matches {
+                    DV_CODED_TEXT[at9016] matches {
+                        defining_code matches {[ac9000]}    -- Laterality (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Device type
+                value matches {
+                    DV_CODED_TEXT[at9017] matches {
+                        defining_code matches {[ac9001]}    -- Device type (synthesised)
+                    }
+                }
+            }
+            CLUSTER[at0058] occurrences matches {0..1} matches {    -- Test Parameters
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Method
+                        value matches {
+                            DV_CODED_TEXT[at9018] matches {
+                                defining_code matches {[ac9002]}    -- Method (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {1} matches {    -- Value type
+                        value matches {
+                            DV_CODED_TEXT[at9019] matches {
+                                defining_code matches {[ac9003]}    -- Value type (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Normative data source
+                        value matches {
+                            DV_TEXT[at9020]
+                        }
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Thickness definition
+                        value matches {
+                            DV_CODED_TEXT[at9021] matches {
+                                defining_code matches {[ac9004]}    -- Thickness definition (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0059] occurrences matches {0..1} matches {    -- Findings
+                items cardinality matches {1..*; unordered} matches {
+                    CLUSTER[at0007] occurrences matches {0..1} matches {    -- Optic disc parameters
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Disc area (DA)
+                                value matches {
+                                    DV_QUANTITY[at9022] matches {
+                                        property matches {[at9005]}    -- Area
+                                        magnitude matches {|>=0.0|}
+                                        units matches {"mm2"}
+                                        precision matches {3}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Excavation area (CA)
+                                value matches {
+                                    DV_QUANTITY[at9023] matches {
+                                        property matches {[at9005]}    -- Area
+                                        magnitude matches {|>=0.0|}
+                                        units matches {"mm2"}
+                                        precision matches {3}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Ring area (RA)
+                                value matches {
+                                    DV_QUANTITY[at9024] matches {
+                                        property matches {[at9005]}    -- Area
+                                        magnitude matches {|>=0.0|}
+                                        units matches {"mm2"}
+                                        precision matches {3}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Excavation volume (CV)
+                                value matches {
+                                    DV_QUANTITY[at9025] matches {
+                                        property matches {[at9006]}    -- Volume
+                                        magnitude matches {|>=0.0|}
+                                        units matches {"mm3"}
+                                        precision matches {3}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Ring volume (RV)
+                                value matches {
+                                    DV_QUANTITY[at9026] matches {
+                                        property matches {[at9006]}    -- Volume
+                                        magnitude matches {|>=0.0|}
+                                        units matches {"mm3"}
+                                        precision matches {3}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Cup-to-disc ratio (CDR)
+                                value matches {
+                                    DV_PROPORTION[at9027]
+                                }
+                            }
+                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Lineal Cup-to-disc ratio (LCDR)
+                                value matches {
+                                    DV_PROPORTION[at9028]
+                                }
+                            }
+                            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Vertical disc diameter (VDD)
+                                value matches {
+                                    DV_QUANTITY[at9029] matches {
+                                        property matches {[at9007]}    -- Length
+                                        magnitude matches {|>=0.0|}
+                                        units matches {"mm"}
+                                        precision matches {3}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Horizontal disc diameter (HDD)
+                                value matches {
+                                    DV_QUANTITY[at9030] matches {
+                                        property matches {[at9007]}    -- Length
+                                        magnitude matches {|>=0.0|}
+                                        units matches {"mm"}
+                                        precision matches {3}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0017] occurrences matches {0..1} matches {    -- Macular parameters
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Macula index (thickness)
+                                value matches {
+                                    DV_PROPORTION[at9031] matches {
+                                        numerator matches {|>=0.0|}
+                                        denominator matches {|>=0.0|}
+                                        is_integral matches {False}
+                                        type matches {0}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0026] occurrences matches {0..1} matches {    -- Macula index (volume)
+                                value matches {
+                                    DV_PROPORTION[at9032] matches {
+                                        numerator matches {|>=0.0|}
+                                        denominator matches {|>=0.0|}
+                                        is_integral matches {False}
+                                        type matches {0}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0019] occurrences matches {0..1} matches {    -- Average thickness of retina
+                                value matches {
+                                    DV_QUANTITY[at9033] matches {
+                                        property matches {[at9007]}    -- Length
+                                        magnitude matches {|>=0.0|}
+                                        units matches {"um"}
+                                        precision matches {0}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0020] occurrences matches {0..1} matches {    -- Average thickness change on retina
+                                value matches {
+                                    DV_QUANTITY[at9034] matches {
+                                        property matches {[at9007]}    -- Length
+                                        units matches {"um"}
+                                        precision matches {0}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Thickness map
+                value matches {
+                    DV_MULTIMEDIA[at9035] matches {
+                        media_type matches {[ac9015]}    -- Thickness map (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Ophthalmic thickness details">
+                description = <"Record of clinical findings related to measurement of thickness upon ophthalmic structures.">
+            >
+            ["at0002"] = <
+                text = <"Device type">
+                description = <"Identifies the type of acquisition device chosen to provide the thickness measurements.">
+                comment = <"Corresponds to the (0022,1415) attribute. ">
+            >
+            ["at0003"] = <
+                text = <"Method">
+                description = <"The acquisition method used to obtain the ophthalmic thickness map.">
+                comment = <"Corresponds to the (0022,1420) attribute. Values permitted are defined by DICOM standard (supplement 152) inside the table with Context ID 4261 (Ophthalmic Mapping Acquisition Method).">
+            >
+            ["at0004"] = <
+                text = <"Value type">
+                description = <"Specifies the meaning of the pixel values provided.">
+                comment = <"Corresponds to the (0022,1436) attribute. Values permitted are defined by DICOM standard (supplement 152) inside the table with Context ID 4263 (Ophthalmic Thickness Map Value Type).">
+            >
+            ["at0005"] = <
+                text = <"Normative data source">
+                description = <"Identifies the normative data set used (if any) to contrast the absolute ophthalmic thickness measurements obtained in the study.">
+                comment = <"Corresponds to the (0022,1443) attribute.">
+            >
+            ["at0006"] = <
+                text = <"Thickness definition">
+                description = <"Specifies which layers of the retina are included in the thickness measurement.">
+                comment = <"Corresponds to the (0022,1445) attribute. Values permitted are defined by DICOM standard (supplement 152) inside the table with Context ID 4262 (Retinal Thickness Definition).">
+            >
+            ["at0007"] = <
+                text = <"Optic disc parameters">
+                description = <"Parameters resulting from thickness measurements carried out upon the optic disk.">
+            >
+            ["at0008"] = <
+                text = <"Disc area (DA)">
+                description = <"Area of the optic disk in mm2.">
+            >
+            ["at0009"] = <
+                text = <"Excavation area (CA)">
+                description = <"Cup area inside the optic disc in mm2.">
+            >
+            ["at0010"] = <
+                text = <"Ring area (RA)">
+                description = <"Measurement of the neural rim area inside the optic disc in mm2.">
+            >
+            ["at0011"] = <
+                text = <"Excavation volume (CV)">
+                description = <"Cup volume measured inside the optic disc in mm3.">
+            >
+            ["at0012"] = <
+                text = <"Ring volume (RV)">
+                description = <"Neural rim volume measured inside the optic disc in mm3.">
+            >
+            ["at0013"] = <
+                text = <"Cup-to-disc ratio (CDR)">
+                description = <"Ratio obtained from cup and disc area values.">
+            >
+            ["at0014"] = <
+                text = <"Lineal Cup-to-disc ratio (LCDR)">
+                description = <"average of the cup/disc diameter ratios (square root of cup/disc area ratio). The linear cup/disc ratio should be similar to the clinician’s assessment of cup/disc ratio, as it is an average of all cup/disc ratio measures along all the meridians.">
+            >
+            ["at0015"] = <
+                text = <"Vertical disc diameter (VDD)">
+                description = <"Diameter of the optic disk in the axis perpendicular to macula.">
+            >
+            ["at0016"] = <
+                text = <"Horizontal disc diameter (HDD)">
+                description = <"Diameter of the optic disk in the axis paralel to macula.">
+            >
+            ["at0017"] = <
+                text = <"Macular parameters">
+                description = <"Parameters resulting from thickness measurements carried out upon the macula.">
+            >
+            ["at0019"] = <
+                text = <"Average thickness of retina">
+                description = <"Average value of thickness for every value measured on the current thickness map.">
+            >
+            ["at0020"] = <
+                text = <"Average thickness change on retina">
+                description = <"Average value of thickness for every value measured on a comparative thickness map, obtained measuring thickness changes during a follow-up study.">
+            >
+            ["at0023"] = <
+                text = <"Thickness map">
+                description = <"Object that encloses the image of an ophthalmic thickness map.">
+            >
+            ["at0025"] = <
+                text = <"Macula index (thickness)">
+                description = <"Is the thickness ratio obtained from the total inner ring to the total outer ring on a ETDRS grid (centered over the macula).">
+            >
+            ["at0026"] = <
+                text = <"Macula index (volume)">
+                description = <"Is the volume ratio obtained from the total inner ring to the total outer ring on a ETDRS grid (centered over the macula).">
+            >
+            ["at0032"] = <
+                text = <"Time domain">
+                description = <"Identifies the use of physical signals with respect to time to capture information (DICOM Code value 111920).">
+            >
+            ["at0033"] = <
+                text = <"Spectral domain">
+                description = <"Identifies the use of physical signals with respect to multiple frequencies to capture information (DICOM Code value 111921).">
+            >
+            ["at0034"] = <
+                text = <"No corneal compensation">
+                description = <"No compensation algorithm for corneal birefringence (DICOM Code value 111922).">
+            >
+            ["at0035"] = <
+                text = <"Corneal birefringence compensation">
+                description = <"Algorithm to compensate for variability in corneal birefringence (DICOM Code value 111923).">
+            >
+            ["at0036"] = <
+                text = <"Retinal topography">
+                description = <"Measurement of the retinal surface contour relative to an assigned datum plane (DICOM Code value 111924).">
+            >
+            ["at0037"] = <
+                text = <"Absolute ophthalmic thickness">
+                description = <"Thickness of a component of the posterior segment of the eye. For example, thickness of retina, choroid, etc. Corresponds to DICOM Code value 111930.">
+            >
+            ["at0038"] = <
+                text = <"Thickness deviation category from normative data">
+                description = <"Ophthalmic thickness map based upon statistical significance category (such as percentile) from a normative data set. Corresponds to DICOM Code value 111931.">
+            >
+            ["at0039"] = <
+                text = <"Thickness deviation from normative data">
+                description = <"Ophthalmic thickness map based upon deviation (such as microns) from a normative data set. Corresponds to DICOM Code value 111932.">
+            >
+            ["at0040"] = <
+                text = <"RNFL (Retinal nerve fiber layer thickness)">
+                description = <"Measurement approximating the distance related to the structure between the internal limiting membrane (ILM) and the outer boarder of the retinal nerve fiber layer (RNFL). Corresponds to DICOM Code value 111925.">
+            >
+            ["at0041"] = <
+                text = <"GCC (Ganglion cell complex)">
+                description = <"Measurement approximating the distance related to the structure between the ILM and the outer border of the inner plexiform layer (IPL), called the ganglion cell complex (GCC). Corresponds to DICOM Code value 111926.">
+            >
+            ["at0042"] = <
+                text = <"Total retinal thickness (ILM to IS-OS)">
+                description = <"Measurement approximating the distance related to the structure between the ILM and the inner-outer segment junction (IS-OS). Corresponds to DICOM Code value 111927.">
+            >
+            ["at0043"] = <
+                text = <"Total retinal thickness (ILM to RPE)">
+                description = <"Measurement approximating the distance related to the structure between the ILM and the retinal pigment epithelium (RPE). Corresponds to DICOM Code value 111928.">
+            >
+            ["at0045"] = <
+                text = <"Optical Coherence Tomography Scanner">
+                description = <"Corresponds to DICOM Code value A-00FBE.">
+            >
+            ["at0046"] = <
+                text = <"Retinal Thickness Analyzer">
+                description = <"Corresponds to DICOM Code value R-FAB5A.">
+            >
+            ["at0047"] = <
+                text = <"Confocal Scanning Laser Ophthalmoscope">
+                description = <"Corresponds to DICOM Code value A-00E8B.">
+            >
+            ["at0048"] = <
+                text = <"Scheimpflug Camera">
+                description = <"A slit reflected light microscope, which has the ability to form an image of the back scattered light from the eye in a sagittal plane. Scheimpflug cameras are able to achieve a wide depth of focus by employing the “Sheimpflug principle” where the lens and image planes are not parallel with each other. Rotating Sheimplug cameras are able to generate three-dimensional images and calculate measurements of the anterior chamber of the eye. Corresponds to DICOM Code value 111626.">
+            >
+            ["at0049"] = <
+                text = <"Scanning Laser Polarimeter">
+                description = <"Corresponds to DICOM Code value A-00E8C.">
+            >
+            ["at0050"] = <
+                text = <"Elevation-based corneal tomographer">
+                description = <"A device that measures corneal anterior surface shape using elevation-based methods (stereographic and light slit-based). Rasterstereography images a grid pattern illuminating the fluorescein dyed tear film with 2 cameras to produce 3D. Slit-based devices scan the cornea, usually by rotation about the instrument axis centered on the cornea vertex. Corresponds to DICOM Code value 111945.">
+            >
+            ["at0051"] = <
+                text = <"Reflection-based corneal topographer">
+                description = <"A reflection-based device that projects a pattern of light onto the cornea and an image of the reflection of that pattern from the tear film is recorded in one video frame. Light patterns include the circular mire pattern (Placido disc) and spot matrix patterns. Sequential scanning of light spots reflected from the corneal surface is also used requiring multiple video frames for recording. Corresponds to DICOM Code value 111946.">
+            >
+            ["at0052"] = <
+                text = <"Interferometry-based corneal tomographer">
+                description = <"An Interference-based device that projects a beam of light onto and through the cornea. Light reflected from within the cornea is combined with a reference beam giving rise to an interference pattern. Appropriately scanned, this imaging is used to construct 3-dimensional images of the cornea from anterior to posterior surfaces. E.g., swept source OCT. Corresponds to DICOM Code value 111947.">
+            >
+            ["at0053"] = <
+                text = <"Total retinal thickness (ILM to BM)">
+                description = <"Measurement approximating the distance related to the structure between the ILM and the Bruch's membrane (BM). Corresponds to DICOM Code value 111929.">
+            >
+            ["at0054"] = <
+                text = <"Laterality">
+                description = <"Eye/s included in the study.">
+            >
+            ["at0055"] = <
+                text = <"Left eye">
+                description = <"Left eye observation.">
+            >
+            ["at0056"] = <
+                text = <"Right eye">
+                description = <"Right eye observation.">
+            >
+            ["at0057"] = <
+                text = <"Both eyes">
+                description = <"Test acquired on both eyes of the patient.">
+            >
+            ["at0058"] = <
+                text = <"Test Parameters">
+                description = <"Overall settings chosen to conduct the test.">
+            >
+            ["at0059"] = <
+                text = <"Findings">
+                description = <"Findings and results from the thickness measurement study.">
+            >
+            ["at9005"] = <
+                text = <"Area">
+                description = <"Area">
+            >
+            ["at9006"] = <
+                text = <"Volume">
+                description = <"Volume">
+            >
+            ["at9007"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["at9008"] = <
+                text = <"image/cgm">
+                description = <"image/cgm">
+            >
+            ["at9009"] = <
+                text = <"image/gif">
+                description = <"image/gif">
+            >
+            ["at9010"] = <
+                text = <"image/png">
+                description = <"image/png">
+            >
+            ["at9011"] = <
+                text = <"image/tiff">
+                description = <"image/tiff">
+            >
+            ["at9012"] = <
+                text = <"image/jpeg">
+                description = <"image/jpeg">
+            >
+            ["at9013"] = <
+                text = <"application/pdf">
+                description = <"application/pdf">
+            >
+            ["at9014"] = <
+                text = <"application/dicom">
+                description = <"application/dicom">
+            >
+            ["ac9000"] = <
+                text = <"Laterality (synthesised)">
+                description = <"Eye/s included in the study. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Device type (synthesised)">
+                description = <"Identifies the type of acquisition device chosen to provide the thickness measurements. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Method (synthesised)">
+                description = <"The acquisition method used to obtain the ophthalmic thickness map. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Value type (synthesised)">
+                description = <"Specifies the meaning of the pixel values provided. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Thickness definition (synthesised)">
+                description = <"Specifies which layers of the retina are included in the thickness measurement. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Thickness map (synthesised)">
+                description = <"Object that encloses the image of an ophthalmic thickness map. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Detalles del espesor oftálmico">
+                description = <"Registro de los hallazgos clínicos referentes a la medida de espesor de estructuras oftálmicas.">
+            >
+            ["at0002"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0003"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0004"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0005"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0006"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0007"] = <
+                text = <"*New cluster(es)">
+                description = <"**(es)">
+            >
+            ["at0008"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0009"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0010"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0011"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0012"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0013"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0014"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0015"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0016"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0017"] = <
+                text = <"*New cluster(es)">
+                description = <"**(es)">
+            >
+            ["at0019"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0020"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0023"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0025"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0026"] = <
+                text = <"*Nuevo elemento(es)">
+                description = <"**(es)">
+            >
+            ["at0032"] = <
+                text = <"*Time domain(es)">
+                description = <"**(es)">
+            >
+            ["at0033"] = <
+                text = <"*Spectral domain(es)">
+                description = <"**(es)">
+            >
+            ["at0034"] = <
+                text = <"*No corneal compensation(es)">
+                description = <"**(es)">
+            >
+            ["at0035"] = <
+                text = <"*Corneal birefringence compensation(es)">
+                description = <"**(es)">
+            >
+            ["at0036"] = <
+                text = <"*Retinal topography(es)">
+                description = <"**(es)">
+            >
+            ["at0037"] = <
+                text = <"*Absolute(es)">
+                description = <"*Absolute ophthalmic thickness(es)">
+            >
+            ["at0038"] = <
+                text = <"*Normative data(es)">
+                description = <"*Thickness deviation category from normative data (es)">
+            >
+            ["at0039"] = <
+                text = <"*Normative data(es)">
+                description = <"*Thickness deviation from normative data(es)">
+            >
+            ["at0040"] = <
+                text = <"*Retinal nerve fiber layer thickness(es)">
+                description = <"**(es)">
+            >
+            ["at0041"] = <
+                text = <"*Ganglion cell complex thickness(es)">
+                description = <"**(es)">
+            >
+            ["at0042"] = <
+                text = <"*Total retinal thickness (ILM to IS-OS)(es)">
+                description = <"**(es)">
+            >
+            ["at0043"] = <
+                text = <"*Total retinal thickness (ILM to RPE)(es)">
+                description = <"**(es)">
+            >
+            ["at0045"] = <
+                text = <"*Optical Coherence Tomography Scanner(es)">
+                description = <"*Corresponds to DICOM Code value A-00FBE.(es)">
+            >
+            ["at0046"] = <
+                text = <"*Retinal Thickness Analyzer(es)">
+                description = <"*Corresponds to DICOM Code value R-FAB5A.(es)">
+            >
+            ["at0047"] = <
+                text = <"*Confocal Scanning Laser Ophthalmoscope(es)">
+                description = <"*Corresponds to DICOM Code value A-00E8B.(es)">
+            >
+            ["at0048"] = <
+                text = <"*Scheimpflug Camera(es)">
+                description = <"*A slit reflected light microscope, which has the ability to form an image of the back scattered light from the eye in a sagittal plane. Scheimpflug cameras are able to achieve a wide depth of focus by employing the “Sheimpflug principle” where the lens and image planes are not parallel with each other. Rotating Sheimplug cameras are able to generate three-dimensional images and calculate measurements of the anterior chamber of the eye. Corresponds to DICOM Code value 111626.(es)">
+            >
+            ["at0049"] = <
+                text = <"*Scanning Laser Polarimeter(es)">
+                description = <"*Corresponds to DICOM Code value A-00E8C.(es)">
+            >
+            ["at0050"] = <
+                text = <"*Elevation-based corneal tomographer(es)">
+                description = <"*A device that measures corneal anterior surface shape using elevation-based methods (stereographic and light slit-based). Rasterstereography images a grid pattern illuminating the fluorescein dyed tear film with 2 cameras to produce 3D. Slit-based devices scan the cornea, usually by rotation about the instrument axis centered on the cornea vertex. Corresponds to DICOM Code value 111945.(es)">
+            >
+            ["at0051"] = <
+                text = <"*Reflection-based corneal topographer(es)">
+                description = <"*A reflection-based device that projects a pattern of light onto the cornea and an image of the reflection of that pattern from the tear film is recorded in one video frame. Light patterns include the circular mire pattern (Placido disc) and spot matrix patterns. Sequential scanning of light spots reflected from the corneal surface is also used requiring multiple video frames for recording. Corresponds to DICOM Code value 111946.(es)">
+            >
+            ["at0052"] = <
+                text = <"*Interferometry-based corneal tomographer(es)">
+                description = <"*An Interference-based device that projects a beam of light onto and through the cornea. Light reflected from within the cornea is combined with a reference beam giving rise to an interference pattern. Appropriately scanned, this imaging is used to construct 3-dimensional images of the cornea from anterior to posterior surfaces. E.g., swept source OCT. Corresponds to DICOM Code value 111947.(es)">
+            >
+            ["at0053"] = <
+                text = <"*Total retinal thickness (ILM to BM)(es)">
+                description = <"**(es)">
+            >
+            ["at0054"] = <
+                text = <"*New element(es)">
+                description = <"**(es)">
+            >
+            ["at0055"] = <
+                text = <"*Left eye(es)">
+                description = <"*Left eye observation.(es)">
+            >
+            ["at0056"] = <
+                text = <"*Right eye(es)">
+                description = <"*Right eye observation.(es)">
+            >
+            ["at0057"] = <
+                text = <"*Both eyes(es)">
+                description = <"*Test acquired on both eyes of the patient.(es)">
+            >
+            ["at0058"] = <
+                text = <"*New cluster(es)">
+                description = <"**(es)">
+            >
+            ["at0059"] = <
+                text = <"*New cluster(es)">
+                description = <"**(es)">
+            >
+            ["at9005"] = <
+                text = <"Área">
+                description = <"Área">
+            >
+            ["at9006"] = <
+                text = <"Volumen">
+                description = <"Volumen">
+            >
+            ["at9007"] = <
+                text = <"Longitud">
+                description = <"Longitud">
+            >
+            ["at9008"] = <
+                text = <"image/cgm">
+                description = <"image/cgm">
+            >
+            ["at9009"] = <
+                text = <"image/gif">
+                description = <"image/gif">
+            >
+            ["at9010"] = <
+                text = <"image/png">
+                description = <"image/png">
+            >
+            ["at9011"] = <
+                text = <"image/tiff">
+                description = <"image/tiff">
+            >
+            ["at9012"] = <
+                text = <"image/jpeg">
+                description = <"image/jpeg">
+            >
+            ["at9013"] = <
+                text = <"application/pdf">
+                description = <"application/pdf">
+            >
+            ["at9014"] = <
+                text = <"application/dicom">
+                description = <"application/dicom">
+            >
+            ["ac9000"] = <
+                text = <"*New element(es) (synthesised)">
+                description = <"**(es) (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"*Nuevo elemento(es) (synthesised)">
+                description = <"**(es) (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"*Nuevo elemento(es) (synthesised)">
+                description = <"**(es) (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"*Nuevo elemento(es) (synthesised)">
+                description = <"**(es) (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"*Nuevo elemento(es) (synthesised)">
+                description = <"**(es) (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"*Nuevo elemento(es) (synthesised)">
+                description = <"**(es) (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9005"] = <http://openehr.org/id/335>
+            ["at9006"] = <http://openehr.org/id/129>
+            ["at9007"] = <http://openehr.org/id/122>
+        >
+        ["openEHR"] = <
+            ["at9008"] = <http://openehr.org/id/425>
+            ["at9009"] = <http://openehr.org/id/426>
+            ["at9010"] = <http://openehr.org/id/427>
+            ["at9011"] = <http://openehr.org/id/428>
+            ["at9012"] = <http://openehr.org/id/429>
+            ["at9013"] = <http://openehr.org/id/518>
+            ["at9014"] = <http://openehr.org/id/637>
+        >
+        ["SNOMED-CT"] = <
+            ["at0054"] = <http://snomed.info/id/272741003>
+            ["at0055"] = <http://snomed.info/id/362503005>
+            ["at0056"] = <http://snomed.info/id/362502000>
+            ["at0057"] = <http://snomed.info/id/362508001>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0032", "at0033", "at0034", "at0035", "at0036">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0045", "at0046", "at0047", "at0048", "at0049", "at0050", "at0051", "at0052">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0055", "at0056", "at0057">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0040", "at0041", "at0042", "at0043", "at0053">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at9008", "at9009", "at9010", "at9011", "at9012", "at9013", "at9014">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0037", "at0038", "at0039">
+        >
+    >

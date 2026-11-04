@@ -1,0 +1,69 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=966623e1-02dd-429e-9e95-889fae375273; build_uid=5bf87f02-6002-4b47-9819-84cfa752577b)
+    openEHR-EHR-SECTION.advance_care.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-04-13">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"A166CD893FBD2133EC47CE83A8B348B1">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To provide a framework and suggested design guidance for consistent modelling of content within a template for an Advance care plan.">
+            use = <"Use as a framework and suggested design guidance for consistent modelling of content within a template for an Advance care plan.
+
+This archetype is intended to be used within the COMPOSITION.advance_care_plan or as one component of other relevant COMPOSITION archetypes.
+
+This archetype can contain two types of statements, each represented by specific archetypes:
+- statements about the positive presence of advance care information, using one or more of EVALUATION.advance_care_directive, EVALUATION.advance_intervention_decisions or other relevant clinical archetypes; OR
+- a statement about no information being available about advance care information, using using the EVALUATION.absence archetype.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Advance care
+        items cardinality matches {0..*; unordered} matches {
+            allow_archetype ENTRY[at0003] matches {    -- Advance statement
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.advance_care_directive(-[a-zA-Z0-9_]+)*|openEHR-EHR-EVALUATION\.advance_intervention_decisions(-[a-zA-Z0-9_]+)*/}
+            }
+            allow_archetype EVALUATION[at0004] matches {    -- Absence statement
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.absence(-[a-zA-Z0-9_]+)*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Advance care">
+                description = <"A plan for the management of future health and social care requirements, including chronic illness and end of life care.">
+            >
+            ["at0003"] = <
+                text = <"Advance statement">
+                description = <"Positive statements about the presence of advance care directives and/or advance intervention decisions.">
+            >
+            ["at0004"] = <
+                text = <"Absence statement">
+                description = <"A positive statement that no information is available about advance care directives or intervention decisions.">
+            >
+        >
+    >

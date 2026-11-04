@@ -1,0 +1,75 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=429cab0a-b623-4507-9ee0-b94f8479e7f2; build_uid=e25743fa-1952-4d0e-8a17-90ecf20863eb)
+    openEHR-EHR-CLUSTER.pp_variant.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-09-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"83F03F938F5F65DDEDDB489A2617D79E">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Phenopacket variant
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype CLUSTER[at0001] occurrences matches {1..4} matches {    -- allele
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_vcfallele\.v0\..*|openEHR-EHR-CLUSTER\.pp_hgvsallele\.v0\..*|openEHR-EHR-CLUSTER\.pp_spdiallele\.v0\..*|openEHR-EHR-CLUSTER\.pp_iscnallele\.v0\..*/}
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- zygosity
+                value matches {
+                    DV_CODED_TEXT[at9000]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Phenopacket variant">
+                description = <"This archetype should be used to describe candidate variants or diagnosed causative variants. There is currently no standard variant nomenclature that can represent all kinds of genetic variation that is relevant to human medicine, science, and model organisms. Therefore, we represent variants using the keyword oneof, which is used in protobuf for an item with many optional fields where at most one field will be set at the same time. Variant messages contain an allele and the zygosity of the allele.
+
+Alleles can be listed using HGVS, VCF, SPDI or ISCN notation. The phenopacket schema will implement the GA4GH Variation Representation Specification once that is mature. The VR-Spec will be the recommended option in some settings.
+
+See: https://vr-spec.readthedocs.io/en/1.0rc/
+See: https://github.com/ga4gh-beacon/specification/blob/master/beacon.yaml
+The Variant element itself is an optional element of a Phenopacket or Biosample. If it is present, the Phenopacket standard has the following requirements.
+
+Alleles can refer to external sources, for example the ClinGen allele registry, ClinVar, dbSNP, dbVAR etc. using the id field. It is RECOMMENDED to use a CURIE identifier and corresponding Resource.
+
+N.B. phase information for alleles are not represented in this model.">
+            >
+            ["at0001"] = <
+                text = <"allele">
+                description = <"*">
+            >
+            ["at0002"] = <
+                text = <"zygosity">
+                description = <"*">
+                comment = <"The zygosity of the variant as determined in all of the samples represented in this Phenopacket is represented using a list of terms taken from the Genotype Ontology (GENO). For instance, if a variant affects one of two alleles at a certain locus, we could record the zygosity using the term heterozygous (GENO:0000135).">
+            >
+        >
+    >

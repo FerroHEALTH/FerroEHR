@@ -1,0 +1,169 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=2d7ac39c-147d-4672-bd08-b55372b9631e; build_uid=910a57d6-f968-4529-baa6-0c92301be861)
+    openEHR-EHR-CLUSTER.genetic_variant_presence.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Silje Ljosland Bakke">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no">
+        ["date"] = <"2020-03-16">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"FA49B7ED2418260198D18D3F69CEABD7">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung einer Bewertung des Vorkommens oder Nicht-Vorkommens einer bestimmten genetischen Variante in einer sequenzierten Probe.">
+            use = <"Verwenden Sie diesen Archetyp, um eine Bewertung des Vorkommens oder Nicht-Vorkommens einer bestimmten genetischen Variante in einer sequenzierten Probe darzustellen, z. B. für die Panel-Sequenzierung.
+
+Dieser Archetyp wurde für die Verwendung im SLOT \"Testergebnis\" des Archetyps OBSERVATION.laboratory_test_result entwickelt, kann aber auch in anderen ENTRY- oder CLUSTER-Archetypen verwendet werden, sofern dies klinisch angemessen ist.">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record an assessment of the presence or absence of a specific genetic variant in a sequenced specimen.">
+            use = <"Use to record an assessment of the presence or absence of a specific genetic variant in a sequenced specimen, for example for panel sequencing.
+
+This archetype has been designed to be used within the \"Test result\" SLOT of the OBSERVATION.laboratory_test_result archetype, but may also be used in other ENTRY or CLUSTER archetype where clinically appropriate.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Genetic variant presence
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Variant name
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Finding
+                value matches {
+                    DV_CODED_TEXT[at9002] matches {
+                        defining_code matches {[ac9000]}    -- Finding (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Genetic variant presence">
+                description = <"Bewertung des Vorkommens oder Nicht-Vorkommens einer bestimmten genetischen Variante in einer sequenzierten Probe.">
+            >
+            ["at0001"] = <
+                text = <"Variant name">
+                description = <"The name of the variant.">
+            >
+            ["at0002"] = <
+                text = <"Finding">
+                description = <"The presence or absence of the variant.">
+            >
+            ["at0003"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the genetic variant presence not captured in other elements.">
+            >
+            ["at0004"] = <
+                text = <"Present">
+                description = <"The target variant is present.">
+            >
+            ["at0005"] = <
+                text = <"Absent">
+                description = <"The target variant is absent.">
+            >
+            ["at0006"] = <
+                text = <"No call">
+                description = <"No data are available to confirm the presence/absence of the variant.">
+            >
+            ["at0007"] = <
+                text = <"Indeterminate">
+                description = <"The result is indeterminate.">
+            >
+            ["ac9000"] = <
+                text = <"Finding (synthesised)">
+                description = <"The presence or absence of the variant. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Genetic variant presence">
+                description = <"Assessment of the presence or absence of a specific genetic variant in a sequenced specimen.">
+            >
+            ["at0001"] = <
+                text = <"Variant name">
+                description = <"The name of the variant.">
+            >
+            ["at0002"] = <
+                text = <"Finding">
+                description = <"The presence or absence of the variant.">
+            >
+            ["at0003"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the genetic variant presence not captured in other elements.">
+            >
+            ["at0004"] = <
+                text = <"Present">
+                description = <"The target variant is present.">
+            >
+            ["at0005"] = <
+                text = <"Absent">
+                description = <"The target variant is absent.">
+            >
+            ["at0006"] = <
+                text = <"No call">
+                description = <"No data are available to confirm the presence/absence of the variant.">
+            >
+            ["at0007"] = <
+                text = <"Indeterminate">
+                description = <"The result is indeterminate.">
+            >
+            ["ac9000"] = <
+                text = <"Finding (synthesised)">
+                description = <"The presence or absence of the variant. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["LOINC"] = <
+            ["at0002"] = <http://loinc.org/id/69548-6>
+            ["at0004"] = <http://loinc.org/id/LA9633-4>
+            ["at0005"] = <http://loinc.org/id/LA9634-2>
+            ["at0006"] = <http://loinc.org/id/LA18198-4>
+            ["at0007"] = <http://loinc.org/id/LA11884-6>
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0004", "at0005", "at0006", "at0007">
+        >
+    >

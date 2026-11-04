@@ -1,0 +1,129 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c496cef5-ac61-4a62-b9db-ec304278d657; build_uid=0b766a37-9249-4148-ba6e-78965d08c9f5)
+    openEHR-EHR-ADMIN_ENTRY.transfer_review.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-06-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"D60CF756FA889AA817A114704685EE75">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ADMIN_ENTRY[at0000] matches {    -- Transfer review
+        data matches {
+            ITEM_TREE[at0003] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Transfer need
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Transferred?
+                        value matches {
+                            DV_CODED_TEXT[at9002] matches {
+                                defining_code matches {[ac9000]}    -- Transferred? (synthesised)
+                            }
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0025] matches {    -- Transferred from
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0024] matches {    -- Transferred to
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Date of transfer
+                        value matches {
+                            DV_DATE_TIME[at9004]
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Reason for transfer
+                        value matches {
+                            DV_TEXT[at9005]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Transfer review">
+                description = <"Evidence of follow up about the escalation of care.">
+            >
+            ["at0004"] = <
+                text = <"Transfer need">
+                description = <"">
+                comment = <"For example: specialist care; second opinion; or admission to hospital.">
+            >
+            ["at0005"] = <
+                text = <"Reason for transfer">
+                description = <"The reason for escalation.">
+            >
+            ["at0010"] = <
+                text = <"Date of transfer">
+                description = <"The date when the patient was referred for additional care.">
+            >
+            ["at0020"] = <
+                text = <"Transferred?">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Transferred to">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Transferred from">
+                description = <"">
+            >
+            ["ac9000"] = <
+                text = <"Transferred? (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0021", "at0022", "at0023">
+        >
+    >

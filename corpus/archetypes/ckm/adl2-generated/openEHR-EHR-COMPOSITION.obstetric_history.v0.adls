@@ -1,0 +1,147 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=76d4f8e6-d2e5-418f-b549-a90402188efa; build_uid=c1c88f3a-be4b-4248-973d-feef7b4fe56a)
+    openEHR-EHR-COMPOSITION.obstetric_history.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["pt"] = <
+            language = <[ISO_639-1::pt]>
+            author = <
+                ["name"] = <"Danielle Santos Alves">
+                ["organisation"] = <"Federal University of Pernambuco">
+                ["email"] = <"angeldannyalves@gmail.com">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Danielle Santos Alves">
+                ["organisation"] = <"Federal University of Pernambuco">
+                ["email"] = <"angeldannyalves@gmail.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"NT mEHR Project">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"02-01-2012">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: Obstetric history, Draft archetype [Internet]. Australian Digital Health Agency (NEHTA), ADHA Clinical Knowledge Manager. Authored: 2012 Jan 02. Available at: http://dcm.nehta.org.au/ckm#showArchetype_1013.1.1062_2 (discontinued)">
+    >
+    other_details = <
+        ["current_contact"] = <"Dr Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"7BF97370F23EC1E24075DA5F852442BD">
+    >
+    details = <
+        ["pt"] = <
+            language = <[ISO_639-1::pt]>
+            purpose = <"Registrar e atualizar um resumo de todas as gestações e resultados, bem como resumos detalhados de todas as gestações individuais.">
+            keywords = <"Obstétrico", "Sumário", "História">
+            use = <"Registrar todos os dados persistentes sobre gestações e um resumo de todas as gestações anteriores e atuais.">
+            misuse = <"Não deve ser usado para registrar dados de eventos relacionados a uma gravidez.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Registrar e atualizar um resumo de todas as gestações e resultados, bem como resumos detalhados de todas as gestações individuais.">
+            keywords = <"Obstétrico", "Sumário", "História">
+            use = <"Registrar todos os dados persistentes sobre gestações e um resumo de todas as gestações anteriores e atuais.">
+            misuse = <"Não deve ser usado para registrar dados de eventos relacionados a uma gravidez.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record and update a summary of all pregnancies and outcomes as well as detailed summaries of all individual pregnancies.">
+            keywords = <"obstetric", "summary", "history">
+            use = <"To record all persistent data about pregnancies and a summary statement of all past and current pregnancies.">
+            misuse = <"Not to be used to record event data relating to a pregnancy.">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation">
+        >
+    >
+
+definition
+    COMPOSITION[at0000] matches {    -- Obstetric history
+        category matches {
+            DV_CODED_TEXT[at0001] matches {    -- Coded text
+                defining_code matches {[at9000]}    -- event
+            }
+        }
+        context matches {
+            EVENT_CONTEXT[at0002] matches {    -- Event Context
+                other_context matches {
+                    ITEM_TREE[at0003]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt"] = <
+            ["at0000"] = <
+                text = <"História obstétrica">
+                description = <"Informações sobre gestações atuais e anteriores que podem incluir uma contagem resumida dos resultados.">
+            >
+            ["at0001"] = <
+                text = <"Coded text">
+                description = <"">
+            >
+            ["at0002"] = <
+                text = <"Event Context">
+                description = <"">
+            >
+            ["at9000"] = <
+                text = <"evento">
+                description = <"evento">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"História obstétrica">
+                description = <"Informações sobre gestações atuais e anteriores que podem incluir uma contagem resumida dos desfechos.">
+            >
+            ["at0001"] = <
+                text = <"Coded text">
+                description = <"">
+            >
+            ["at0002"] = <
+                text = <"Event Context">
+                description = <"">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Obstetric history">
+                description = <"Information about current and previous pregnancies which may include a summary count of outcomes.">
+            >
+            ["at0001"] = <
+                text = <"Coded text">
+                description = <"">
+            >
+            ["at0002"] = <
+                text = <"Event Context">
+                description = <"">
+            >
+            ["at9000"] = <
+                text = <"event">
+                description = <"event">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/433>
+        >
+    >

@@ -1,0 +1,170 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6ce249a6-7288-422b-956c-1076d7bb9a0d; build_uid=da67eed4-4bcd-46b8-814e-e7765184304c)
+    openEHR-EHR-OBSERVATION.third_party_observation.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"????">
+        ["date"] = <"2008-08-07">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"11A662C27D3FEA9CC841EE0A83B49D16">
+    >
+    details = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل ملاحظات حول المريض يقوم بها طرف ثالث لمراقبة/رعاية المريض">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a third party observer/carer's observations or concerns about an individual.">
+            use = <"Use to record a third party observer/carer's observations or concerns about an individual.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Carer observation
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Stimulus
+                                        value matches {
+                                            DV_TEXT[at9000]
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at9001]
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Level of concern
+                                        value matches {
+                                            DV_TEXT[at9003]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0014] matches {    -- Third party details
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.individual_personal\.v1\..*/}
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0015] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0016] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Carer observation">
+                description = <"Third party observer/carer's observations or concerns about an individual.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Stimulus">
+                description = <"Stimulus triggering the response being observed.">
+            >
+            ["at0005"] = <
+                text = <"Description">
+                description = <"Narrative description about the observation or concern.">
+            >
+            ["at0006"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the observation or concern, not captured in other fields.">
+            >
+            ["at0007"] = <
+                text = <"Level of concern">
+                description = <"Degree of concern displayed by third party.">
+            >
+            ["at0014"] = <
+                text = <"Third party details">
+                description = <"Information about the observer.">
+            >
+            ["at0016"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"ملاحظة القائم بالرعاية">
+                description = <"الملاحظات حول المريض و التي يقوم بها طرف ثالث مسئول عن مراقبة/ رعاية المريض">
+            >
+            ["at0002"] = <
+                text = <"إحدى الوقائع">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"المنبه">
+                description = <"المنبه الذي يقوم بإثارة الاستجابة التي تتم ملاحظتها">
+            >
+            ["at0005"] = <
+                text = <"الوصف">
+                description = <"وصف تفصيلي حول استجابة المريض للمنبه">
+            >
+            ["at0006"] = <
+                text = <"التعليق">
+                description = <"تعليقات إضافية حول الملاحظة و الاستجابة">
+            >
+            ["at0007"] = <
+                text = <"مستوى الاهتمام">
+                description = <"مستوى الاهتمام الذي يتم عرضه بواسطة الطرف الثالث">
+            >
+            ["at0014"] = <
+                text = <"عنقود: تفاصيل الطرف الثالث">
+                description = <"*">
+            >
+            ["at0016"] = <
+                text = <"*Cluster(en)">
+                description = <"**(en)">
+            >
+        >
+    >

@@ -1,0 +1,754 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3af37d47-2a31-4bfd-bb2c-13d5cc457888; build_uid=e3feccd4-cb10-4369-ac1d-79c3f595ff7b)
+    openEHR-EHR-OBSERVATION.body_segment_length.v1.1.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Emma Malm">
+                ["organisation"] = <"Karolinska Universitetssjukhuset">
+                ["email"] = <"emma.malm@cambio.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand, Vebjørn Arntzen">
+                ["organisation"] = <"Helse Bergen HF, Oslo universitetssykehus HF">
+                ["email"] = <"john.tore.valand@helse-bergen.no; varntzen@ous-hf.no, john.tore.valand@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics, Australia">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-03-07">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Andreas Abildgaard, OUS, Norway", "Marit Alice Venheim, Helse Vest IKT, Norway", "Stein Arne Rimehaug, Sunnaas sykehus, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Heidi Aursand, Oslo universitetssykehus, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Malin Berg, DIPS ASA, Norway", "Randi Brendberg, Helse Nord RHF, Norway", "Angela Crovetti, CDC/NIOSH, United States", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)", "Heather Grain, Llewelyn Grain Informatics, Australia", "Alfred Honore, Haukeland, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Ivar Mehlum, Nasjonal IKT HF, Norway", "Brit Jorun Liseth, Haukeland Universitetssykehus, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Heidi Koikkalainen, United Kingdom (openEHR Editor)", "Ronald Krawec, Alberta Health Services, Canada", "Tomi Laptoš, Marand, Slovenia", "Liv Laugen, Oslo universitetssykehus, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Anne M Gromsrud, DIPS AS, Norway", "Priscila Maranhão, MEDCIDS-FMUP, Portugal", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Johannes Michael Strehle, Helse-Nord, Norway", "Svenne Naumann, Finnmarkssykehuset, Norway", "Bjørn Næss, DIPS ASA, Norway", "Jayashree Panickar, Karolinska Institute, Sweden", "Line Silsand, univertsity hospital of northern norway, Norway (openEHR Editor)", "Trine Strand, Oslo Universitetssykehus (OUS), Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Micaela Thierley, Helse Bergen, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"De Mits S, Coorevits P, De Clercq D, Elewaut D, Woodburn J, Roosen P. Reliability and validity of the INFOOT three-dimensional foot digitizer for patients with rheumatoid arthritis. J Am Podiatr Med Assoc. 2011 May-Jun;101(3):198-207. PubMed PMID: 21622631.">
+        ["2"] = <"Drillis R, Contini R, Bluestein M. Body Segment Parameters; a survey of measurement techniques. Artif Limbs. 1964;8:44-66. PubMed PMID: 14208177. Available from: http://www.oandplibrary.org/al/1964_01_044.asp.">
+        ["3"] = <"Gordon, Claire C. et. al. 1988 Anthropometric Survey of U.S. Personnel: Summary Statistics Interim Report [Internet]. March 1989 [cited 2019 Mar 25]. Available from: https://multisite.eos.ncsu.edu/www-ergocenter-ncsu-edu/wp-content/uploads/sites/18/2016/06/Anthropometric-Detailed-Data-Tables.pdf.">
+        ["4"] = <"Júlíusson, P.B., Vinsjansen, S., Nilsen, B., Sælensminde, H., Vågset, R. and Eide, G.E., 2005. Måling av vekst og vekt: En oversikt over anbefalte teknikker. Pediatrisk Endokrinologi, 19, pp.23-9 [cited 2019 June 18]. Available from: http://pediatrisk-endokrinologi.no/2005/1/Juliusson_et_al_2005_1.pdf.">
+        ["5"] = <"Man-Systems Integration Standards,Volume 1, Section 3. [Internet]. National Aeronautics and Space Administration. Anthropometry and biomechanics; [cited 2019 Mar 25]. Available from: https://msis.jsc.nasa.gov/sections/section03.htm.">
+        ["6"] = <"National health and nutrition examination survey III: Body Measurements (Anthropometry) [Internet]. Rockville, MD: Westat, Inc; 1988 Oct [cited 2019 May 10]. Available from: https://wwwn.cdc.gov/nchs/data/nhanes3/manuals/anthro.pdf.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"330A4816E3F831C82CCFB8C96F226918">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att mäta avståndet mellan två ytanatomiska punkter.">
+            keywords = <"antropometri", "mätning", "längd", "höjd", "bredd", "spann", "kroppssegment">
+            use = <"Används för att mäta avståndet mellan två ytanatomiska punkter. 
+
+Mätningar av kroppssegment som ofta förekommer vid kartläggning av tillväxtsmönster hos barn har modellerats som separata arketyper. Avsikten med denna arketyp är att använda ett gemensamt förfarande för mätningar av flera olika kroppssegment, registrerade med dataelementet \"Benämning på kroppssegment\". På så vis undviks onödigt skapande av flera arketyper för respektive mätning. 
+
+Mätningar av detta slag kan registreras och observeras över tid. Till exempel för att övervaka barns tillväxt eller för att förse kliniska, antropometriska eller ergonomiska bedömningar med exempelvis kroppens form och proportioner. Arketypen kan även användas för att urskilja abnormala kliniska fynd vid uppföljning av sjukdomsprocess. 
+
+Parametrar vars avstånd mellan två punkter vanligen mäts, är tillagda som datatyp DV_CODED_TEXT i dataelementet \"Benämning på kroppssegment\". Vartefter ytterligare parametrar identifieras, kan dessa tilläggas i samma lista.">
+            misuse = <"Ska inte användas för att registrera mätningar för kroppssegment som har modellerats som separata arketyper. Dessa inkluderar bland annat: 
+-för huvudomfång, använd OBSERVATION.head_circumference;
+-för höftomfång, använd OBSERVATION.hip_circumference;
+-för midjemått, använd OBSERVATION.waist_circumference; och
+-för bröstkorgsomfång, använd OBSERVATION.chest_circumference.
+
+Ska inte användas för att registrera omkretsen för ett kroppssegment. Använd i stället OBSERVATION.body_segment_circumference.
+
+Ska inte användas för att registrera dimensionerna för ett inre kroppsorgan eller lesion.
+
+Ska inte användas för att registrera mätningar för hudveck. Använd i stället specifika arketyper. 
+
+Ska inte användas för att registrera Crown-rump length för ett foster med hjälp av bildteknik.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere måling av avstanden mellom to definerte punkter på kroppsoverflaten.">
+            keywords = <"antropometri", "måling", "lengde", "høyde", "bredde", "avstand", "spenn">
+            use = <"Brukes for å registrere måling av avstanden mellom to definerte punkter på kroppsoverflaten.
+
+Antropometriske målinger som er vanlige, og ofte er brukt som en del av vekstdiagrammer i barndommen, er modellert som egne arketyper. Hensikten med denne arketypen er å tilby en standard måte å registrere en eller alle mulige målinger mellom to identifiserte punkter på kroppen, identifisert av dataelementelementet \"Kroppsdel\", heller enn å lage en egen/ separat arketype for alle mulige målinger.
+
+Denne målingen kan registreres og følges over tid, for eksempel å følge utvikling av et barns vekst, eller for å gi innblikk i formen og proporsjonene av et individs kropp i en klinisk, antropometrisk eller ergonomisk vurdering. Man kan også følge utviklingen av en tilstand eller sykdom ved å registrere målinger av unormale kliniske funn eller observasjoner i denne arketypen.
+
+De vanligste parametrene som blir målt mellom to definerte punkter er lagt til DV_CODED_TEXT-datatype i elementet \"Kroppsdel\". Når behovet flere målinger blir identifisert kan disse etter hvert bli lagt til listen.">
+            misuse = <"Brukes ikke til å registrere allment utbredte kliniske målinger, som har sine egne spesifikke arketyper, for eksempel:
+
+- bruk OBSERVATION.height (Høyde/lengde) for for å måle en persons høyde eller lengde.
+- bruk OBSERVATION.head_circumference (Hodeomkrets) for å måle hodeomkrets.
+- bruk OBSERVATION.waist_circumference (Midjeomkrets) for å måle midjeomkrets.
+- bruk OBSERVATION.hip_circumference (Hofteomkrets) for å måle hofteomkrets.
+- bruk OBSERVATION.chest_circumference for å måle brystomkrets.
+
+Skal ikke brukes for å registrere omkretsen av en kroppsdel eller del av en kroppsdel. Bruk OBSERVATION.body_segment_circumference (Kroppsmåling - omkrets) for dette.
+
+Skal ikke brukes til å registrere areal av kroppsegmenter, bruk arketypen OBSERVATION.body_segment_area (Kroppsmåling - areal) for dette formålet.
+
+Skal ikke brukes til å registrere dimensjonene på et indre organ eller en lesjon/skade.
+
+Skal ikke brukes til å registrere målinger av hudfolder - bruk arketyper spesifikke for dette formålet.
+
+Skal ikke brukes til å registrere Isse - sete lengde på foster når det er brukt bildedannende utstyr.
+
+Brukes ikke for å registrere måling av sideforskjell i lengde mellom parvise kroppsegmenter. Bruk arketypen OBSERVATION.body_segment_length_discrepancy for dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the measurement of the distance between two points of surface anatomy.">
+            keywords = <"anthropometry", "measurement", "length", "height", "width", "span">
+            use = <"Use to record the measurement of the distance between two points of surface anatomy.
+
+Body segment measurements that are ubiquitous and, most commonly, used as part of growth charting in childhood have been modelled as unique and discrete archetypes. Rather than create an archetype for every single possible body segment measurement, the intent of this archetype is to use a common recording pattern to capture any, or all, other possible measurements between two identified body points, identified by the 'Body segment name' data element.
+
+This measurement may be recorded and tracked over time, for example tracking child growth parameters, or used to provide insight into the shape and proportions of an individual's body for purposes of clinical, anthropometric or ergonomic assessment. It may also be used to record the measurement of abnormal clinical findings or observations in order to track the progress of a condition or disease.
+
+Common parameters that are measured between two identified points have been added to the DV_CODED_TEXT data type in the 'Body segment name' data element. As further parameters are identified, these can be added to this list over time.">
+            misuse = <"Not to be used to record common body segment measurements that have been modelled as separate archetypes, including, but not limited to:
+- for Head circumference - use OBSERVATION.head_circumference;
+- for Hip circumference - use OBSERVATION.hip_circumference;
+- for Waist circumference - use OBSERVATION.waist_circumference; and
+- for Chest circumference - use OBSERVATION.chest_circumference.
+
+Not to be used to record the circumference of a body segment - use OBSERVATION.body_segment_circumference for this purpose.
+
+Not to be used to record the area of a body segment - use OBSERVATION.body_segment_area for this purpose.
+
+Not to be used to record the dimensions of an internal body organ or a lesion.
+
+Not to be used to record skinfold measurements - use archetypes that are specific for this purpose.
+
+Not to be used to measure the Crown-rump length for a fetus, using imaging technology.
+
+Not to be used to record the measurement of the difference in length between paired body segments. Use the OBSERVATION.body_segment_length_discrepancy archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Body segment length
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {2..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {1} matches {    -- Body segment name
+                                        value matches {
+                                            DV_TEXT[at9005]
+                                            DV_CODED_TEXT[at9006] matches {
+                                                defining_code matches {[ac9026]}    -- Body segment name (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Laterality
+                                        value matches {
+                                            DV_CODED_TEXT[at9007] matches {
+                                                defining_code matches {[ac9001]}    -- Laterality (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {1} matches {    -- Length
+                                        value matches {
+                                            DV_QUANTITY[at9008] matches {
+                                                property matches {[at9002]}    -- Length
+                                                [magnitude, units, precision] matches {
+                                                    [{|>=0.0|}, {"cm"}, {1}],
+                                                    [{|>=0.0|}, {"[in_i]"}, {1}],
+                                                    [{|>=0.0|}, {"mm"}, {1}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9009]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0010] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9010]
+                                        }
+                                    }
+                                    ELEMENT[at0031] occurrences matches {0..1} matches {    -- Body position
+                                        value matches {
+                                            DV_CODED_TEXT[at9017] matches {
+                                                defining_code matches {[ac9025]}    -- Body position (synthesised)
+                                            }
+                                            DV_TEXT[at9018]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    INTERVAL_EVENT[at0012] occurrences matches {0..1} matches {    -- Average measurement
+                        math_function matches {
+                            DV_CODED_TEXT[at9011] matches {
+                                defining_code matches {[at9003]}    -- mean
+                            }
+                        }
+                        data matches {
+                            use_node ITEM_TREE[at9012] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                        state matches {
+                            use_node ITEM_TREE[at9013] /data[at0001]/events[at0002]/state[at0010]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0014] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0015] matches {    -- Measuring device
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Measurement method
+                        value matches {
+                            DV_TEXT[at9022]
+                        }
+                    }
+                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- Measurement origin
+                        value matches {
+                            DV_TEXT[at9023]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0030] matches {    -- Structured origin
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0033] occurrences matches {0..1} matches {    -- Measurement endpoint
+                        value matches {
+                            DV_TEXT[at9024]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0035] matches {    -- Structured endpoint
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    allow_archetype CLUSTER[at0016] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Kroppssegmentets längd">
+                description = <"Mätning av avståndet mellan två ytanatomiska punkter.">
+            >
+            ["at0002"] = <
+                text = <"Ospecificerad händelse">
+                description = <"Ospecificerad standardhändelse vid en tidpunkt eller inom ett tidsintervall som explicit kan definieras i en mall eller genereras automatiskt av vissa IT-system.">
+            >
+            ["at0004"] = <
+                text = <"Benämning på kroppssegment">
+                description = <"Benämning på det uppmätta kroppssegmentet.">
+                comment = <"Använd elementet \"Mätmetod\" och/eller \"Mätningens start-/slutpunkt\" för att registrera hur mätningen genomförs.">
+            >
+            ["at0005"] = <
+                text = <"Lateralitet">
+                description = <"Sida för det uppmätta segmentet.">
+            >
+            ["at0006"] = <
+                text = <"Vänster">
+                description = <"Kroppens vänstra sida.">
+            >
+            ["at0007"] = <
+                text = <"Höger">
+                description = <"Kroppens högra sida.">
+            >
+            ["at0008"] = <
+                text = <"Längd">
+                description = <"Uppmätt längd av kroppssegmentet.">
+            >
+            ["at0009"] = <
+                text = <"Kommentar">
+                description = <"Kommentarer avseende mätning av omkrets för kroppssegmentet som inte beskrivs i övriga fält.">
+            >
+            ["at0011"] = <
+                text = <"Möjliga felkällor">
+                description = <"Beskrivning av faktorer och felkällor som kan påverka bedömningen av det uppmätta kroppssegmentet.">
+                comment = <"Exempelvis ett samarbetsovilligt barn.">
+            >
+            ["at0012"] = <
+                text = <"Medelvärdesmått">
+                description = <"Medelvärdet av ett flertal mätningar utförda vid samma tillfälle och på samma kroppssegment.">
+            >
+            ["at0015"] = <
+                text = <"Mätinstrument">
+                description = <"Information om det instrument som används för mätning.">
+            >
+            ["at0016"] = <
+                text = <"Tilläggsinformation">
+                description = <"Plats för att infoga tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.">
+                comment = <"Exempelvis lokala informationskrav eller metadata för anpassning till FHIR- eller CIMI-motsvarigheter.">
+            >
+            ["at0017"] = <
+                text = <"Sitthöjd">
+                description = <"Vertikalt avstånd mellan sittyta och hjässa. Mätning av överkroppslängd utförs när individen sitter upprätt.">
+            >
+            ["at0018"] = <
+                text = <"Överarmslängd">
+                description = <"Avstånd mellan skuldra och armbåge.">
+            >
+            ["at0019"] = <
+                text = <"Benlängd">
+                description = <"Avstånd mellan höftled och fotled.">
+            >
+            ["at0020"] = <
+                text = <"Femurlängd">
+                description = <"Avstånd mellan höftled och knäled.">
+            >
+            ["at0021"] = <
+                text = <"Fotlängd">
+                description = <"Avstånd mellan häl och spetsen på längsta tå.">
+            >
+            ["at0022"] = <
+                text = <"Crown-rump length">
+                description = <"Avstånd mellan hjässa och nedre delen av torso.">
+            >
+            ["at0023"] = <
+                text = <"Knähöjd">
+                description = <"Avstånd mellan fotsulan och toppen av underbenet.">
+            >
+            ["at0024"] = <
+                text = <"Armlängd">
+                description = <"Avstånd från fingertopp till fingertopp när båda armarna är utsträckta vinkelrätt mot kroppen.">
+            >
+            ["at0027"] = <
+                text = <"Mätmetod">
+                description = <"Beskrivning av den metod som används för mätning.">
+                comment = <"Specificera för att säkerställa att en sekvens av mätningar är utförda vid samma punkt och på samma sätt. Till exempel: 'Sitter med knä böjda i 90 grader'.">
+            >
+            ["at0029"] = <
+                text = <"Mätningens startpunkt">
+                description = <"Identifiering av kroppsområde där mätningens startpunkt befinner sig.">
+            >
+            ["at0030"] = <
+                text = <"Strukturerad startpunkt">
+                description = <"En strukturerad anatomisk lokalisering av startpunkten för mätningen.">
+            >
+            ["at0031"] = <
+                text = <"Kroppsposition">
+                description = <"Individens position vid mätningstillfället.">
+            >
+            ["at0033"] = <
+                text = <"Mätningens slutpunkt">
+                description = <"Identifiering av kroppsområde där mätningens slutpunkt befinner sig.">
+            >
+            ["at0035"] = <
+                text = <"Strukturerad slutpunkt">
+                description = <"En strukturerad anatomisk lokalisering av slutpunkten för mätningen.">
+            >
+            ["at0036"] = <
+                text = <"Upprättstående ställning">
+                description = <"Upprättstående ställning vid tidpunkt för mätning.">
+            >
+            ["at0037"] = <
+                text = <"Sittställning">
+                description = <"Sittställning (till exempel på säng eller stol) vid tidpunkt för mätning.">
+            >
+            ["at0039"] = <
+                text = <"Liggande ställning">
+                description = <"Liggande ställning vid tidpunkt för mätning.">
+            >
+            ["at0041"] = <
+                text = <"Underarmslängd">
+                description = <"Avstånd mellan armbåge och handled.">
+            >
+            ["at0042"] = <
+                text = <"Underbenslängd">
+                description = <"Avstånd mellan knäled och fotled.">
+            >
+            ["at0043"] = <
+                text = <"*Shoulder height(en)">
+                description = <"*Vertical distance from the standing surface to the acromion.(en)">
+            >
+            ["at0044"] = <
+                text = <"*Sitting shoulder height(en)">
+                description = <"*Vertical distance from the sitting surface to the acromion.(en)">
+            >
+            ["at9002"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9003"] = <
+                text = <"* mean (en)">
+                description = <"* mean (en)">
+            >
+            ["ac9026"] = <
+                text = <"Benämning på kroppssegment (synthesised)">
+                description = <"Benämning på det uppmätta kroppssegmentet. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Lateralitet (synthesised)">
+                description = <"Sida för det uppmätta segmentet. (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"Kroppsposition (synthesised)">
+                description = <"Individens position vid mätningstillfället. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Kroppsmåling - lengde">
+                description = <"Måling av avstanden mellom to definerte punkter på kroppsoverflaten.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Navn på kroppsdel">
+                description = <"Navn på del av kroppen som måles.">
+                comment = <"Måten kroppsdelen måles på skal registreres ved hjelp av elementet \"Metode\" og/eller av \"Startmålepunkt\" og \"Endemålepunkt\".">
+            >
+            ["at0005"] = <
+                text = <"Lateralitet">
+                description = <"Hvilken side av kroppen kroppsdelen er på.">
+            >
+            ["at0006"] = <
+                text = <"Venstre">
+                description = <"Venstre side av kroppen.">
+            >
+            ["at0007"] = <
+                text = <"Høyre">
+                description = <"Høyre side av kroppen.">
+            >
+            ["at0008"] = <
+                text = <"Lengde">
+                description = <"Den målte lengden av kroppsdelen.">
+            >
+            ["at0009"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om målingen av en kroppsdel som ikke er fanget i andre felt.">
+            >
+            ["at0011"] = <
+                text = <"Konfunderende faktorer">
+                description = <"Forhold eller omstendigheter som kan påvirke målingen av kroppsdelen.">
+                comment = <"For eksempel: et barn som ikke samarbeider, eller pasienter med skoliose/ kyfose.">
+            >
+            ["at0012"] = <
+                text = <"Gjennomsnittsmåling">
+                description = <"Gjennomsnittet av flere målinger av den samme kroppsdelen tatt under en enkelt undersøkelse.">
+            >
+            ["at0015"] = <
+                text = <"Måleinstrument">
+                description = <"Detaljer om måleinstrumentet som ble brukt i måling av kroppsdelen.">
+            >
+            ["at0016"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at0017"] = <
+                text = <"Sittehøyde">
+                description = <"Vertikal avstand mellom sitteflaten og toppen av hodet. Måling av overkroppens lengde mens en person sitter med rak rygg.">
+            >
+            ["at0018"] = <
+                text = <"Lengde av overarm">
+                description = <"Avstanden mellom skulder og albue.">
+            >
+            ["at0019"] = <
+                text = <"Benlengde">
+                description = <"Avstanden fra hofteledd til ankelledd.">
+            >
+            ["at0020"] = <
+                text = <"Lårlengde">
+                description = <"Avstanden mellom hofteledd og kneledd.">
+            >
+            ["at0021"] = <
+                text = <"Fotlengde">
+                description = <"Avstanden fra hælen til spissen av den lengste tåen.">
+            >
+            ["at0022"] = <
+                text = <"Isse - sete lengde">
+                description = <"Avstanden fra toppen av hodet til den nederste delen av overkroppen.">
+            >
+            ["at0023"] = <
+                text = <"Knehøyde">
+                description = <"Avstanden fra sålen til toppen av leggen.">
+            >
+            ["at0024"] = <
+                text = <"Armspenn">
+                description = <"Avstanden fra fingertupp til fingertupp med begge armer strukket ut vinkelrett fra kroppen.">
+            >
+            ["at0027"] = <
+                text = <"Målemetode">
+                description = <"Fritekstbeskrivelse av metoden som ble benyttet for målingen.">
+                comment = <"Spesifiser for å sikre at en sekvens av målinger blir gjort på de samme punktene og på samme måte. For eksempel \"Sittende med kneet bøyd 90 grader\".">
+            >
+            ["at0029"] = <
+                text = <"Startmålepunkt">
+                description = <"En fritekstbeskrivelse som identifiserer stedet på kroppen som er startpunkt for målingen.">
+            >
+            ["at0030"] = <
+                text = <"Strukturert startmålepunkt">
+                description = <"En strukturert anatomisk identifikasjon av stedet på kroppen som er startpunkt for målingen.">
+            >
+            ["at0031"] = <
+                text = <"Stilling">
+                description = <"Individets posisjon ved tidspunktet for målingen.">
+            >
+            ["at0033"] = <
+                text = <"Sluttmålepunkt">
+                description = <"En fritekstbeskrivelse som identifiserer stedet på kroppen som er sluttpunkt for målingen.">
+            >
+            ["at0035"] = <
+                text = <"Strukturert sluttpunkt">
+                description = <"En strukturert anatomisk identifikasjon av stedet på kroppen som er sluttpunkt for målingen.">
+            >
+            ["at0036"] = <
+                text = <"Stående">
+                description = <"Stående ved tidspunktet for målingen.">
+            >
+            ["at0037"] = <
+                text = <"Sittende">
+                description = <"Sittende (for eksempel på en stol eller på en seng med føttene på gulvet) på tidspunkt for målingen.">
+            >
+            ["at0039"] = <
+                text = <"Liggende">
+                description = <"Liggende flatt på tidspunkt for målingen.">
+            >
+            ["at0041"] = <
+                text = <"Underarmslengde">
+                description = <"Avstanden fra albue til håndledd.">
+            >
+            ["at0042"] = <
+                text = <"Legglengde">
+                description = <"Avstanden fra kneledd til ankelledd.">
+            >
+            ["at0043"] = <
+                text = <"Skulderhøyde">
+                description = <"Vertikal avstand fra gulv til acromion.">
+            >
+            ["at0044"] = <
+                text = <"Sittende skulderhøyde">
+                description = <"Vertikal avstand fra sitteflate til acromion.">
+            >
+            ["at9002"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9003"] = <
+                text = <"* mean (en)">
+                description = <"* mean (en)">
+            >
+            ["ac9026"] = <
+                text = <"Navn på kroppsdel (synthesised)">
+                description = <"Navn på del av kroppen som måles. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Lateralitet (synthesised)">
+                description = <"Hvilken side av kroppen kroppsdelen er på. (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"Stilling (synthesised)">
+                description = <"Individets posisjon ved tidspunktet for målingen. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Body segment length">
+                description = <"Measurement of the distance between two points of surface anatomy.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Body segment name">
+                description = <"Name of the measured body segment.">
+                comment = <"Use the 'Measurement method' element and/or recording the 'Measurement origin' and/or 'Measurement endpoint' to record how the body segment is measured.">
+            >
+            ["at0005"] = <
+                text = <"Laterality">
+                description = <"Side of the segment measured.">
+            >
+            ["at0006"] = <
+                text = <"Left">
+                description = <"Left side of the body.">
+            >
+            ["at0007"] = <
+                text = <"Right">
+                description = <"Right side of the body.">
+            >
+            ["at0008"] = <
+                text = <"Length">
+                description = <"Measured value of the length of the body segment.">
+            >
+            ["at0009"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the length measurement of the body segment, not captured in other fields.">
+            >
+            ["at0011"] = <
+                text = <"Confounding factors">
+                description = <"Record any issues or factors that may impact on the measurement of the body segment.">
+                comment = <"For example: an uncooperative child.">
+            >
+            ["at0012"] = <
+                text = <"Average measurement">
+                description = <"The average of several measurements of the same body segment taken during a single examination.">
+            >
+            ["at0015"] = <
+                text = <"Measuring device">
+                description = <"Details of the device used for measuring the body part.">
+            >
+            ["at0016"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0017"] = <
+                text = <"Sitting height">
+                description = <"Vertical distance between the sitting surface and the vertex of the head. A measure of trunk length, performed with the individual sitting erect.">
+            >
+            ["at0018"] = <
+                text = <"Upper arm length">
+                description = <"Distance between the shoulder and the elbow.">
+            >
+            ["at0019"] = <
+                text = <"Leg length">
+                description = <"Distance between the hip joint and the ankle joint.">
+            >
+            ["at0020"] = <
+                text = <"Upper leg length">
+                description = <"Distance between the hip joint and the knee joint.">
+            >
+            ["at0021"] = <
+                text = <"Foot length">
+                description = <"Distance between the base of the heel to the tip of the longest toe.">
+            >
+            ["at0022"] = <
+                text = <"Crown-rump length">
+                description = <"Distance between vertex of head to the lowest part of the trunk.">
+            >
+            ["at0023"] = <
+                text = <"Knee height">
+                description = <"Distance between the sole of the foot and the top of the lower leg.">
+            >
+            ["at0024"] = <
+                text = <"Armspan">
+                description = <"Distance from fingertip to fingertip with both arms fully extended at right angles to the body.">
+            >
+            ["at0027"] = <
+                text = <"Measurement method">
+                description = <"Narrative description of the method used for measurement.">
+                comment = <"Specify in order to ensure that a sequence of measurements are taken at the same point and in the same way. For example: 'Sitting with knee bent at 90 degrees'.">
+            >
+            ["at0029"] = <
+                text = <"Measurement origin">
+                description = <"Identification of a simple body site for the location of the starting point of the measurement.">
+            >
+            ["at0030"] = <
+                text = <"Structured origin">
+                description = <"A structured anatomical location for the starting point of the measurement.">
+            >
+            ["at0031"] = <
+                text = <"Body position">
+                description = <"The position of the individual at the time of measurement.">
+            >
+            ["at0033"] = <
+                text = <"Measurement endpoint">
+                description = <"Identification of a simple body site for the location of the ending point of the measurement.">
+            >
+            ["at0035"] = <
+                text = <"Structured endpoint">
+                description = <"A structured anatomical location for the endpoint of the measurement.">
+            >
+            ["at0036"] = <
+                text = <"Standing">
+                description = <"Standing at the time of measurement.">
+            >
+            ["at0037"] = <
+                text = <"Sitting">
+                description = <"Sitting (for example on bed or chair) at the time of measurement.">
+            >
+            ["at0039"] = <
+                text = <"Lying">
+                description = <"Lying flat at the time of measurement.">
+            >
+            ["at0041"] = <
+                text = <"Forearm length">
+                description = <"Distance from the elbow to the wrist.">
+            >
+            ["at0042"] = <
+                text = <"Lower leg length">
+                description = <"Distance between the knee joint and the ankle joint.">
+            >
+            ["at0043"] = <
+                text = <"Shoulder height">
+                description = <"Vertical distance from the standing surface to the acromion.">
+            >
+            ["at0044"] = <
+                text = <"Sitting shoulder height">
+                description = <"Vertical distance from the sitting surface to the acromion.">
+            >
+            ["at9002"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["at9003"] = <
+                text = <"mean">
+                description = <"mean">
+            >
+            ["ac9026"] = <
+                text = <"Body segment name (synthesised)">
+                description = <"Name of the measured body segment. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Laterality (synthesised)">
+                description = <"Side of the segment measured. (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"Body position (synthesised)">
+                description = <"The position of the individual at the time of measurement. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9002"] = <http://openehr.org/id/122>
+            ["at9003"] = <http://openehr.org/id/146>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0006", "at0007">
+        >
+        ["ac9026"] = <
+            id = <"ac9026">
+            members = <"at0017", "at0024", "at0018", "at0019", "at0020", "at0021", "at0022", "at0023", "at0041", "at0042", "at0043", "at0044">
+        >
+        ["ac9025"] = <
+            id = <"ac9025">
+            members = <"at0036", "at0037", "at0039">
+        >
+    >

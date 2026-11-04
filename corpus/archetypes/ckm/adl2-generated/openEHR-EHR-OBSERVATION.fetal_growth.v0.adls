@@ -1,0 +1,206 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=4beedfee-46ff-4f31-b383-1cd0a76eddf6; build_uid=99f121a2-fe4a-4dbc-ad97-8a890d9ff7e6)
+    openEHR-EHR-OBSERVATION.fetal_growth.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-03-12">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Fescina RH, De Mucio B, Martinez G, Alemán A, Sosa C, Mainero L, Rubino M. Monitoring fetal growth. 2nd ed. Montevideo: CLAP/WR; 2011.">
+        ["2"] = <"Kiserud T, Benachi A, Hecher K, Perez RG, Carvalho J, Piaggio G, Platt LD. The World Health Organization fetal growth charts: concept, findings, interpretation, and application. Am J Obstet Gynecol. 2018 Feb;218(2S):S619-S629. doi: 10.1016/j.ajog.2017.12.010. PMID: 29422204.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"5820CD9384B766F2125759D3B429B8F6">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about parameters plotted as percentiles on a growth chart for a fetus.">
+            keywords = <"growth", "calculation", "centile", "percentile", "z-score", "SD", "height", "weight", "head cicrumference">
+            use = <"Use to record details about parameters plotted as percentiles on a growth chart for a fetus.
+
+Use the URI to explicitly link the original measurement as recorded.">
+            misuse = <"Not to be used to record actual measurements. Use appropriate OBSERVATION archetypes for this purpose - for example OBSERVATION.height, OBSERVATION.weight, OBSERVATION.head_circumference, OBSERVATION.body_segment or OBSERVATION.blood_pressure.
+
+Not to be used to record growth indicators for an infant or child. Use OBSERVATION.child_growth for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Fetal growth indicators
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Growth indicator
+                                        value matches {
+                                            DV_CODED_TEXT[at9002] matches {
+                                                defining_code matches {[ac9000]}    -- Growth indicator (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0035] occurrences matches {0..1} matches {    -- URI to original measurement
+                                        value matches {
+                                            DV_URI[at9003]
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Percentile
+                                        value matches {
+                                            DV_PROPORTION[at9004] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Z-score
+                                        value matches {
+                                            DV_QUANTITY[at9005] matches {
+                                                property matches {[at9001]}    -- Qualified real
+                                                units matches {"1"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0041] occurrences matches {0..1} matches {    -- Clinical interpretation
+                                        value matches {
+                                            DV_TEXT[at9006]
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9007]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0031] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0032] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Fetal growth indicators">
+                description = <"Details about parameters plotted on a growth chart to allow monitoring of fetal growth over time, relative to a reference population.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0010"] = <
+                text = <"Percentile">
+                description = <"Percentile calculated using standard normal distribution for the gestational age.">
+            >
+            ["at0011"] = <
+                text = <"Z-score">
+                description = <"The deviation of a fetal value from the median value for a reference population, divided by the standard deviation of the reference population.">
+                comment = <"Also known as the Standard deviation score (SD).">
+            >
+            ["at0014"] = <
+                text = <"Growth indicator">
+                description = <"The name of the growth parameter.">
+            >
+            ["at0019"] = <
+                text = <"Comment">
+                description = <"A comment about the growth indicator, not captured in other fields.">
+            >
+            ["at0020"] = <
+                text = <"Crown-rump length-for-gestational-age">
+                description = <"Crown-rump length plotted against gestational age.">
+            >
+            ["at0021"] = <
+                text = <"Biparietal diameter-for-gestational-age">
+                description = <"Biparietal diameter plotted against gestational age.">
+            >
+            ["at0022"] = <
+                text = <"Femur length-for-gestational-age">
+                description = <"Femur length plotted against gestational age.">
+            >
+            ["at0023"] = <
+                text = <"Estimated weight-for-gestational-age">
+                description = <"Estimated weight plotted against gestational age.">
+            >
+            ["at0024"] = <
+                text = <"Head circumference-for-gestational-age">
+                description = <"Head circumference plotted against gestational age.">
+            >
+            ["at0025"] = <
+                text = <"Abdominal circumference-for-gestational age">
+                description = <"Abdominal circumference plotted against gestational age.">
+            >
+            ["at0026"] = <
+                text = <"Humerus length-for-gestational-age">
+                description = <"Humerus length plotted against gestational age.">
+            >
+            ["at0027"] = <
+                text = <"Fundal height-for-gestational-age">
+                description = <"Uterine fundal height plotted against gestational age.">
+            >
+            ["at0029"] = <
+                text = <"Liquor volume-for-gestational-age">
+                description = <"Liquor volume plotted against gestational age.">
+            >
+            ["at0032"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0035"] = <
+                text = <"URI to original measurement">
+                description = <"Link to the original measurement.">
+            >
+            ["at0041"] = <
+                text = <"Clinical interpretation">
+                description = <"Clinical interpretation of the growth indicator chart.">
+            >
+            ["at9001"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+            ["ac9000"] = <
+                text = <"Growth indicator (synthesised)">
+                description = <"The name of the growth parameter. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/380>
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0020", "at0021", "at0022", "at0023", "at0024", "at0025", "at0026", "at0027", "at0029">
+        >
+    >

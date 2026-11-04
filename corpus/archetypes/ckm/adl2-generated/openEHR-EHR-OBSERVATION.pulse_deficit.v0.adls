@@ -1,0 +1,88 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=84c0eb29-cf45-440c-b823-951436115fdc; build_uid=c9f612fb-9739-43b5-a9e0-97c3ad33878b)
+    openEHR-EHR-OBSERVATION.pulse_deficit.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2015-11-23">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B200B742D13E1210DC200806942B69D0">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the difference between the apical heart rate and peripheral pulse rate when measured simultaneously.">
+            use = <"Use to record the difference between the apical heart rate and peripheral pulse rate when measured simultaneously.
+
+The heart rate and pulse rate should be each be recorded separately, using the OBSERVATION.pulse archetype.">
+            misuse = <"Not to be used to record the actual pulse rate or heart rate - use the OBSERVATION.pulse archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Pulse deficit
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Any point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Deficit
+                                        value matches {
+                                            DV_QUANTITY[at9001] matches {
+                                                property matches {[at9000]}    -- Frequency
+                                                magnitude matches {|>=0.0|}
+                                                units matches {"1/min"}
+                                                precision matches {0}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Pulse deficit">
+                description = <"The difference between the apical heart rate and peripheral pulse rate.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time event">
+                description = <"Default, unspecified point in time which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Deficit">
+                description = <"The difference between the apical heart rate and peripheral pulse rate when measured simultaneously.">
+            >
+            ["at9000"] = <
+                text = <"Frequency">
+                description = <"Frequency">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/382>
+        >
+    >

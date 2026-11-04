@@ -1,0 +1,227 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=57ac4883-05c7-4c53-afd5-7b3246f3c023; build_uid=874624e4-a04d-4d27-9dea-49bd78da8e38)
+    openEHR-EHR-CLUSTER.activity-running.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Noah Hellman et. al.">
+        ["organisation"] = <"Linköping University, Sweden">
+        ["date"] = <"2019-04-15">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Noah Hellman et. al. Linköping University, Sweden", "Erik Sundvall, Linköping University + Region Östergötland, Sweden">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"C55FDE85505165A498AE3FFB6344B26A">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a running session; e.g. data from a smartwatch or other device">
+            keywords = <"Running, jogging", ...>
+            use = <"Can be used in the 'Activity' slot of openEHR-EHR-OBSERVATION.physical_activity.v0">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Running
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Distance
+                value matches {
+                    DV_QUANTITY[at9004] matches {
+                        property matches {[at9000]}    -- Length
+                        [units] matches {
+                            [{"km"}],
+                            [{"mile"}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0026] occurrences matches {0..1} matches {    -- Duration
+                value matches {
+                    DV_DURATION[at9005]
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Speed
+                value matches {
+                    DV_QUANTITY[at9006] matches {
+                        property matches {[at9001]}    -- Velocity
+                        [magnitude, units] matches {
+                            [{|0.0..50.0|}, {"km/h"}],
+                            [{|0.0..20.0|}, {"m/s"}],
+                            [{|0.0..30.0|}, {"mile/h (mph)"}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0021] occurrences matches {0..1} matches {    -- Pace
+                value matches {
+                    DV_QUANTITY[at9007] matches {
+                        [units] matches {
+                            [{"min/km"}],
+                            [{"min"}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Footwear
+                value matches {
+                    DV_TEXT[at9008]
+                }
+            }
+            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Step length
+                value matches {
+                    DV_QUANTITY[at9009] matches {
+                        property matches {[at9000]}    -- Length
+                        [units] matches {
+                            [{"m"}],
+                            [{"ft"}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Distance type
+                value matches {
+                    DV_CODED_TEXT[at9010] matches {
+                        defining_code matches {[ac9002]}    -- Distance type (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Terrain
+                value matches {
+                    DV_CODED_TEXT[at9011] matches {
+                        defining_code matches {[ac9003]}    -- Terrain (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Cadence
+                value matches {
+                    DV_QUANTITY[at9012] matches {
+                        units matches {"/min"}
+                    }
+                }
+            }
+            allow_archetype CLUSTER[at0027] matches {    -- Extension
+                include
+                    archetype_id/value matches {/.*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Running">
+                description = <"Running session; e.g a race or a jog.">
+            >
+            ["at0002"] = <
+                text = <"Distance">
+                description = <"*">
+            >
+            ["at0003"] = <
+                text = <"Footwear">
+                description = <"Unshod or a specific type of footwear while running.">
+            >
+            ["at0008"] = <
+                text = <"Speed">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"Step length">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Distance type">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"Sprint">
+                description = <"The individual ran a distance up to 500m.">
+            >
+            ["at0014"] = <
+                text = <"Middle-distance">
+                description = <"The individual ran a distance between 500m-3000m.">
+            >
+            ["at0015"] = <
+                text = <"Long-distance">
+                description = <"The indivdiual ran a distance longer than 3000m.">
+            >
+            ["at0016"] = <
+                text = <"Terrain">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"Treadmill">
+                description = <"Stationary treadmill.">
+            >
+            ["at0018"] = <
+                text = <"Running track">
+                description = <"Running track such as a 400m oval track.">
+            >
+            ["at0019"] = <
+                text = <"Road">
+                description = <"City roads.">
+            >
+            ["at0020"] = <
+                text = <"Rough terrain">
+                description = <"Grass, mud, woodlands, hills, flat ground and water.">
+            >
+            ["at0021"] = <
+                text = <"Pace">
+                description = <"*">
+            >
+            ["at0023"] = <
+                text = <"Cadence">
+                description = <"Frequency of steps.">
+            >
+            ["at0026"] = <
+                text = <"Duration">
+                description = <"*">
+            >
+            ["at0027"] = <
+                text = <"Extension">
+                description = <"*">
+            >
+            ["at9000"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["at9001"] = <
+                text = <"Velocity">
+                description = <"Velocity">
+            >
+            ["ac9002"] = <
+                text = <"Distance type (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Terrain (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/122>
+            ["at9001"] = <http://openehr.org/id/338>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0013", "at0014", "at0015">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0017", "at0018", "at0019", "at0020">
+        >
+    >

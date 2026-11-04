@@ -1,0 +1,872 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=58b4a651-f781-4406-972a-e66c50e3a309; build_uid=6294e6eb-4bb3-4dbc-a305-ff0e5ae6a0f5)
+    openEHR-EHR-OBSERVATION.audiology_speech_test_result.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Kerrie Lee">
+        ["email"] = <"kerrie.lee2@bigpond.com">
+        ["date"] = <"2013-01-13">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Stephen Chu, NEHTA, Australia", "Kathy Currie, Northern Territory Health, Australia", "Sam Heard, Ocean Informatics, Australia (Editor)", "Anthony Leech, Hearing Health, Australia", "Kerrie Lee, Ngaanyatjarra Health Service, Australia", "Heather Leslie, Atomica Informatics, Australia (Editor)", "Ian McNicoll, Ocean Informatics UK, United Kingdom">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Derived from: Audiology Speech Test Result, Draft archetype [Internet]. Australian Digital Health Agency (NEHTA), ADHA Clinical Knowledge Manager. Authored: 2013 Jan 13. Available at: http://dcm.nehta.org.au/ckm#showArchetype_1013.1.1174_3 (discontinued).">
+        ["2"] = <"Taylor B. Predicting Real World Hearing Aid Benefit with Speech Audiometry: An Evidence-Based Review; 2007 May 07 [cited 2013 Feb 08]. Available from: http://www.audiologyonline.com/articles/predicting-real-world-hearing-aid-946.">
+        ["3"] = <"Madel J, Flexer C. Pediatric Audiology: Diagnosis, Technology, and Management. Thieme Medical Publishers; 2008. Chapter 10, Evaluation of Speech Perception in Infants and Children, p89-105.">
+        ["4"] = <"Gordon-Salant S. Age-related differences in speech recognition performance as a function of test format and paradigm. Ear Hear. 1987 Oct;8(5):277-82. PubMed PMID: 3678641. ">
+        ["5"] = <"Nilsson M, Soli S D, Sullivan, J A. Development of the Hearing In Noise Test for the measurement of speech reception thresholds in quiet and in noise. Acoust. Soc. Am. 95, 1085 (1994), DOI:10.1121/1.408469.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"9C9A58E6EF0D2BE2083B9B2356D7C04C">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record results from an audiology speech test conducted for the purpose of assessing speech discrimination and speech recognition, and their clinical interpretation.">
+            keywords = <"speech", "audiology">
+            use = <"Use to record the results of audiology speech tests carried out to assess speech discrimination and speech recognition. 
+
+Use to record the clinical interpretation of audiology speech tests carried out to assess speech discrimination and speech recognition.">
+            misuse = <"Not to be used for audiology speech testing that is used for phonemic confusions analysis.
+
+Not to be used to assess speech production.
+
+Not to be used to record audiology speech tests where the presentaton level is not known - for example: unmonitored live voice.">
+            copyright = <"© Northern Territory Department of Health (Australia), openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Audiology speech test result
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Test result name
+                                        value matches {
+                                            DV_TEXT[at9017]
+                                        }
+                                    }
+                                    CLUSTER[at0005] occurrences matches {0..1} matches {    -- Result details
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Test ear
+                                                value matches {
+                                                    DV_CODED_TEXT[at9018] matches {
+                                                        defining_code matches {[ac9000]}    -- Test ear (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0093] occurrences matches {0..1} matches {    -- Presentation method
+                                                value matches {
+                                                    DV_CODED_TEXT[at9019] matches {
+                                                        defining_code matches {[ac9001]}    -- Presentation method (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            CLUSTER[at0010] matches {    -- Performance intensity function
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Loudness
+                                                        value matches {
+                                                            DV_QUANTITY[at9020] matches {
+                                                                property matches {[at9002]}    -- Loudness
+                                                                units matches {"dB"}
+                                                                precision matches {0}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Words correct
+                                                        value matches {
+                                                            DV_PROPORTION[at9021] matches {
+                                                                numerator matches {|0.0..100.0|}
+                                                                type matches {2}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Elements correct
+                                                        value matches {
+                                                            DV_PROPORTION[at9022] matches {
+                                                                numerator matches {|0.0..100.0|}
+                                                                is_integral matches {True}
+                                                                type matches {2}
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            CLUSTER[at0017] occurrences matches {0..1} matches {    -- Adaptive speech test
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Loudness to achieve target
+                                                        value matches {
+                                                            DV_QUANTITY[at9023] matches {
+                                                                property matches {[at9002]}    -- Loudness
+                                                                units matches {"dB"}
+                                                                precision matches {1}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Signal to noise ratio
+                                                        value matches {
+                                                            DV_QUANTITY[at9024] matches {
+                                                                property matches {[at9002]}    -- Loudness
+                                                                magnitude matches {|-20.0..30.0|}
+                                                                units matches {"dB"}
+                                                                precision matches {0}
+                                                            }
+                                                        }
+                                                    }
+                                                    CLUSTER[at0013] occurrences matches {0..1} matches {    -- Reliability
+                                                        items cardinality matches {1; unordered} matches {
+                                                            ELEMENT[at0016] matches {    -- Standard error
+                                                                value matches {
+                                                                    DV_QUANTITY[at9025] matches {
+                                                                        property matches {[at9003]}    -- Term binding for at9003, translation not known in ADL 1.4 -> ADL 2 converter
+                                                                    }
+                                                                }
+                                                            }
+                                                            ELEMENT[at0078] matches {    -- Confidence interval
+                                                                value matches {
+                                                                    DV_QUANTITY[at9026] matches {
+                                                                        property matches {[at9002]}    -- Loudness
+                                                                        units matches {"dB"}
+                                                                    }
+                                                                }
+                                                            }
+                                                            ELEMENT[at0081] matches {    -- Sample size
+                                                                value matches {
+                                                                    DV_COUNT[at9027]
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0079] occurrences matches {0..1} matches {    -- No test result
+                                                value matches {
+                                                    DV_BOOLEAN[at9028] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0080] occurrences matches {0..1} matches {    -- Reason for no test result
+                                                value matches {
+                                                    DV_TEXT[at9029]
+                                                }
+                                            }
+                                            ELEMENT[at0020] occurrences matches {0..1} matches {    -- Clinical interpretation
+                                                value matches {
+                                                    DV_TEXT[at9030]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Overall interpretation
+                                        value matches {
+                                            DV_TEXT[at9031]
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9032]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0023] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Aided status
+                                        value matches {
+                                            DV_CODED_TEXT[at9033] matches {
+                                                defining_code matches {[ac9004]}    -- Aided status (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Type of listening device
+                                        value matches {
+                                            DV_CODED_TEXT[at9034] matches {
+                                                defining_code matches {[ac9005]}    -- Type of listening device (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0031] occurrences matches {0..1} matches {    -- Listening device settings
+                                        value matches {
+                                            DV_TEXT[at9035]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0082] matches {    -- Listening device
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0033] occurrences matches {0..1} matches {    -- Contralateral masking
+                                        value matches {
+                                            DV_CODED_TEXT[at9036] matches {
+                                                defining_code matches {[ac9006]}    -- Contralateral masking (synthesised)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0032] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0087] occurrences matches {0..1} matches {    -- Type of adaptive test
+                        value matches {
+                            DV_CODED_TEXT[at9037] matches {
+                                defining_code matches {[ac9007]}    -- Type of adaptive test (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0052] occurrences matches {0..1} matches {    -- Target performance level
+                        value matches {
+                            DV_PROPORTION[at9038] matches {
+                                numerator matches {|0.0..100.0|}
+                                is_integral matches {False}
+                                type matches {2}
+                            }
+                        }
+                    }
+                    ELEMENT[at0091] occurrences matches {0..1} matches {    -- Start level
+                        value matches {
+                            DV_QUANTITY[at9039] matches {
+                                property matches {[at9002]}    -- Loudness
+                                units matches {"dB"}
+                                precision matches {0}
+                            }
+                        }
+                    }
+                    ELEMENT[at0090] occurrences matches {0..1} matches {    -- Step size
+                        value matches {
+                            DV_QUANTITY[at9040] matches {
+                                property matches {[at9002]}    -- Loudness
+                                units matches {"dB"}
+                                precision matches {0}
+                            }
+                        }
+                    }
+                    ELEMENT[at0054] occurrences matches {0..1} matches {    -- Presentation voice
+                        value matches {
+                            DV_CODED_TEXT[at9041] matches {
+                                defining_code matches {[ac9008]}    -- Presentation voice (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0057] occurrences matches {0..1} matches {    -- Presentation method
+                        value matches {
+                            DV_CODED_TEXT[at9042] matches {
+                                defining_code matches {[ac9009]}    -- Presentation method (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0060] occurrences matches {0..1} matches {    -- Response type
+                        value matches {
+                            DV_CODED_TEXT[at9043] matches {
+                                defining_code matches {[ac9010]}    -- Response type (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0064] occurrences matches {0..1} matches {    -- Response set
+                        value matches {
+                            DV_CODED_TEXT[at9044] matches {
+                                defining_code matches {[ac9011]}    -- Response set (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0068] occurrences matches {0..1} matches {    -- Closed set alternatives
+                        value matches {
+                            DV_COUNT[at9045]
+                        }
+                    }
+                    ELEMENT[at0069] occurrences matches {0..1} matches {    -- Closed domain items
+                        value matches {
+                            DV_COUNT[at9046]
+                        }
+                    }
+                    ELEMENT[at0070] occurrences matches {0..1} matches {    -- Stimulus type
+                        value matches {
+                            DV_CODED_TEXT[at9047] matches {
+                                defining_code matches {[ac9012]}    -- Stimulus type (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0092] occurrences matches {0..1} matches {    -- SNR speech presentation level
+                        value matches {
+                            DV_QUANTITY[at9048] matches {
+                                property matches {[at9002]}    -- Loudness
+                                units matches {"dB"}
+                                precision matches {0}
+                            }
+                        }
+                    }
+                    ELEMENT[at0040] occurrences matches {0..1} matches {    -- SNR competing noise
+                        value matches {
+                            DV_CODED_TEXT[at9049] matches {
+                                defining_code matches {[ac9013]}    -- SNR competing noise (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0083] occurrences matches {0..1} matches {    -- SNR competing noise presentation
+                        value matches {
+                            DV_CODED_TEXT[at9050] matches {
+                                defining_code matches {[ac9014]}    -- SNR competing noise presentation (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0045] occurrences matches {0..1} matches {    -- Number of voices
+                        value matches {
+                            DV_COUNT[at9051]
+                        }
+                    }
+                    ELEMENT[at0036] occurrences matches {0..1} matches {    -- Masking presentation method
+                        value matches {
+                            DV_CODED_TEXT[at9052] matches {
+                                defining_code matches {[ac9015]}    -- Masking presentation method (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0039] occurrences matches {0..1} matches {    -- Masking stimulus level
+                        value matches {
+                            DV_QUANTITY[at9053] matches {
+                                property matches {[at9002]}    -- Loudness
+                                units matches {"dB"}
+                            }
+                        }
+                    }
+                    ELEMENT[at0046] occurrences matches {0..1} matches {    -- Calibration reference dB
+                        value matches {
+                            DV_CODED_TEXT[at9054] matches {
+                                defining_code matches {[ac9016]}    -- Calibration reference dB (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Audiology speech test result">
+                description = <"Record of results from an audiology speech test conducted for the purpose of assessing speech discrimination and speech recognition, and their clinical interpretation.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Test result name">
+                description = <"Identification of the audiology speech test performed.">
+                comment = <"For example: AB Word List; Paediatric Speech Intelligibility (PSI);  NUCHIPS; HINT; and BKB Sentences.">
+            >
+            ["at0005"] = <
+                text = <"Result details">
+                description = <"The test measurements and interpretations which can be recorded per ear, or for both ears simultaneously.">
+            >
+            ["at0006"] = <
+                text = <"Test ear">
+                description = <"The ear to which to the speech signal is presented.">
+            >
+            ["at0007"] = <
+                text = <"Left ear">
+                description = <"The test stimuli were presented to the left ear only.">
+            >
+            ["at0008"] = <
+                text = <"Right ear">
+                description = <"The test stimuli were presented to the right ear only.">
+            >
+            ["at0009"] = <
+                text = <"Binaural">
+                description = <"The test stimuli were presented to both ears simultaneously in a soundfield.">
+            >
+            ["at0010"] = <
+                text = <"Performance intensity function">
+                description = <"Results obtained for performance intensity function at each test level.">
+            >
+            ["at0011"] = <
+                text = <"Loudness">
+                description = <"The stimulus intensity.">
+            >
+            ["at0013"] = <
+                text = <"Reliability">
+                description = <"Details about the responses correct of the subject being tested.">
+            >
+            ["at0014"] = <
+                text = <"Words correct">
+                description = <"Percentage of words to which the test subject responds correctly.">
+            >
+            ["at0015"] = <
+                text = <"Elements correct">
+                description = <"Percentage of elements to which the test subject responds correctly.">
+            >
+            ["at0016"] = <
+                text = <"Standard error">
+                description = <"A measure to compare a sample mean and a population mean.">
+                comment = <"This data element needs the properties of the quantity to be set to allow a decimal number.">
+            >
+            ["at0017"] = <
+                text = <"Adaptive speech test">
+                description = <"Details of the adaptive test protocol.">
+            >
+            ["at0018"] = <
+                text = <"Loudness to achieve target">
+                description = <"The mean dB loudness level of the speech stimuli required to achieve the target correct performance.">
+            >
+            ["at0019"] = <
+                text = <"Signal to noise ratio">
+                description = <"The relationship of the loudness of the speech signal in dB to the loudness level of the noise stimulus.">
+                comment = <"For example: if the speech level is 50dB and the noise level in 60dB then the SNR is -10.">
+            >
+            ["at0020"] = <
+                text = <"Clinical interpretation">
+                description = <"Clinical interpretation of all responses for the identified test ear.">
+            >
+            ["at0021"] = <
+                text = <"Overall interpretation">
+                description = <"Overall clinical interpretation of the responses for both ears.">
+            >
+            ["at0022"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the test results and intepretation not captured in other fields.">
+            >
+            ["at0024"] = <
+                text = <"Aided status">
+                description = <"Indication regarding use of an assistive listening device by the test subject during the test.">
+            >
+            ["at0025"] = <
+                text = <"Aided">
+                description = <"The test has been conducted with the patient using a form of auditory assistance, such as a hearing aid or cochlear implant.">
+            >
+            ["at0026"] = <
+                text = <"Unaided">
+                description = <"The test has been conducted without the patient using any form of auditory assistance, such as a hearing aid or cochlear implant.">
+            >
+            ["at0027"] = <
+                text = <"Type of listening device">
+                description = <"Identification of type of assistive listening device used.">
+                comment = <"Only relevant if 'Aid Status' value is 'Aided'.">
+            >
+            ["at0028"] = <
+                text = <"Hearing aid">
+                description = <"A type of hearing device.">
+            >
+            ["at0029"] = <
+                text = <"Cochlear implant">
+                description = <"A type of hearing device.">
+            >
+            ["at0030"] = <
+                text = <"Bone conductor aid">
+                description = <"A type of hearing device.">
+            >
+            ["at0031"] = <
+                text = <"Listening device settings">
+                description = <"Narrative description of the details of the assistive listening device settings.">
+            >
+            ["at0033"] = <
+                text = <"Contralateral masking">
+                description = <"Contralateral masking signal was presented to the non test ear.">
+            >
+            ["at0034"] = <
+                text = <"Present">
+                description = <"Masking noise is presented to the non test ear.">
+            >
+            ["at0035"] = <
+                text = <"Absent">
+                description = <"No masking noise is presented.">
+            >
+            ["at0036"] = <
+                text = <"Masking presentation method">
+                description = <"The method used to present the constralateral masking test signal.">
+            >
+            ["at0037"] = <
+                text = <"Earphone">
+                description = <"A device that converts electric signals to audible sound and fits over or in the ear.">
+            >
+            ["at0038"] = <
+                text = <"Loudspeaker">
+                description = <"A listening condition in which the listener is 1 metre from a loud speaker and hears sounds presented via the loud speaker.">
+            >
+            ["at0039"] = <
+                text = <"Masking stimulus level">
+                description = <"The level of the contralateral masking speech spectrum noise in dB.">
+            >
+            ["at0040"] = <
+                text = <"SNR competing noise">
+                description = <"Type of signal used as a competing signal during Signal to Noise Ratio testing.">
+            >
+            ["at0041"] = <
+                text = <"White noise">
+                description = <"Noise that has the same power at all frequencies (i.e., a flat power spectrum).">
+            >
+            ["at0042"] = <
+                text = <"Speech spectrum noise">
+                description = <"Noise spectrum that approximates the average long term spectrum of adult male speech and has a slope below 100 Hz of +6 dB/octave, a flat spectrum between 100 Hz and 320 Hz, and above 320 Hz a slope of -6 dB/octave.">
+            >
+            ["at0043"] = <
+                text = <"Multitalker babble">
+                description = <"A recording of the voices of many people who are talking simultaneously, resulting in an unintelligible babble.">
+            >
+            ["at0044"] = <
+                text = <"Alternate speaker">
+                description = <"The masker is a single person speaking and this speaker is different to the speaker used for the test stimulus.">
+            >
+            ["at0045"] = <
+                text = <"Number of voices">
+                description = <"Number of voices used to generate multispeaker babble.">
+                comment = <"Relevant only if 'Speech Babble' is the selected value for the 'Type of Mask' data element.">
+            >
+            ["at0046"] = <
+                text = <"Calibration reference dB">
+                description = <"Scale used for acoustic calibration check.">
+            >
+            ["at0047"] = <
+                text = <"dB SPL">
+                description = <"The sound pressure level scale was used.">
+            >
+            ["at0048"] = <
+                text = <"dB HL">
+                description = <"The hearing level scale was used.">
+            >
+            ["at0052"] = <
+                text = <"Target performance level">
+                description = <"The specified percentage correct used to setup the adaptive test protocol.">
+            >
+            ["at0054"] = <
+                text = <"Presentation voice">
+                description = <"The mode by which the speech test stimuli are presented.">
+            >
+            ["at0055"] = <
+                text = <"Live voice">
+                description = <"Presentation of the speech test stimuli by monitored live voice presentation by the tester.">
+            >
+            ["at0056"] = <
+                text = <"Recorded voice">
+                description = <"Presentation of the speech test stimuli from a recorded medium.">
+            >
+            ["at0057"] = <
+                text = <"Presentation method">
+                description = <"The method used to present the speech test stimulus.">
+            >
+            ["at0058"] = <
+                text = <"Headphone">
+                description = <"The stimulus is presented via external headphones - either circumaural or supraaural..">
+            >
+            ["at0059"] = <
+                text = <"Soundfield">
+                description = <"The stimulus is presented via a loudspeaker located at least one metre away from the subject.">
+            >
+            ["at0060"] = <
+                text = <"Response type">
+                description = <"The type of response the patient is asked to give after hearing each stimulus.">
+            >
+            ["at0061"] = <
+                text = <"Vocal">
+                description = <"The person repeats the stimulus item that was heard.">
+            >
+            ["at0062"] = <
+                text = <"Picture pointing">
+                description = <"The test subject points to a picture of the stimulus item that was heard.">
+            >
+            ["at0063"] = <
+                text = <"Written response alternatives">
+                description = <"The test subject points to written text that corresponds to the stimulus item that was heard.">
+            >
+            ["at0064"] = <
+                text = <"Response set">
+                description = <"The size of the response set.">
+            >
+            ["at0065"] = <
+                text = <"Open set">
+                description = <"The size of the response set is unlimited.">
+            >
+            ["at0066"] = <
+                text = <"Closed set">
+                description = <"The size of the response set is limited.">
+            >
+            ["at0067"] = <
+                text = <"Closed task domain">
+                description = <"The response set is limited and the response alternatives remain constant for the whole test list.">
+            >
+            ["at0068"] = <
+                text = <"Closed set alternatives">
+                description = <"The number of response alternatives offered in the Closed Set.">
+            >
+            ["at0069"] = <
+                text = <"Closed domain items">
+                description = <"The number of response items offered in the Closed Task Domain.">
+            >
+            ["at0070"] = <
+                text = <"Stimulus type">
+                description = <"The type of speech stimulus used for the speech test.">
+            >
+            ["at0071"] = <
+                text = <"Nonsense syllable">
+                description = <"A consonant-vowel (CV) or CCV or VC or VCC item that is not a real word but is phonotactically correct.">
+            >
+            ["at0072"] = <
+                text = <"Nonsense CVC">
+                description = <"Nonsense word comprising a consonant, then a vowel, then a final consonant, for example, \"wub\" or \"yat\".">
+            >
+            ["at0073"] = <
+                text = <"Nonsense word">
+                description = <"A speech stimulus that is not a real word but is phonotactically correct.">
+            >
+            ["at0074"] = <
+                text = <"Monosyllabic word">
+                description = <"A word comprised of a single syllable. For example, 'green'.">
+            >
+            ["at0075"] = <
+                text = <"Spondee word">
+                description = <"A word comprised of 2 syllables with equal stress on each syllable. For example, 'sunshine'.">
+            >
+            ["at0076"] = <
+                text = <"Trochee word">
+                description = <"A word that is comprised of two syllables with stress on the first syllable. For example 'bucket'.">
+            >
+            ["at0077"] = <
+                text = <"Sentence">
+                description = <"A grammatical unit of one or more words that expresses an independent statement, question, request, command, exclamation, etc.">
+            >
+            ["at0078"] = <
+                text = <"Confidence interval">
+                description = <"A term used in inferential statistics that measures the probability that a population parameter will fall between two set values.">
+            >
+            ["at0079"] = <
+                text = <"No test result">
+                description = <"No test result is available for the test ear.">
+                comment = <"Record as True if the clinician was unable to record a result for the test ear or binaural testing in a soundfield, as defined by the 'Test Ear' data element.">
+            >
+            ["at0080"] = <
+                text = <"Reason for no test result">
+                description = <"Reason why no result is available for the test ear.">
+                comment = <"For example, patient was not cooperative; patient was not capable; ran out of time.">
+            >
+            ["at0081"] = <
+                text = <"Sample size">
+                description = <"The number of reverals in an adaptive threshold test used for calculating estimates of a given test result.">
+            >
+            ["at0082"] = <
+                text = <"Listening device">
+                description = <"Details about the specific assistive listening device used during the test.">
+            >
+            ["at0083"] = <
+                text = <"SNR competing noise presentation">
+                description = <"The type of noise used in a speech test measuring speech perception in noise.">
+            >
+            ["at0084"] = <
+                text = <"Ipsilateral">
+                description = <"The noise is presented to the same ear as the speech signal.">
+            >
+            ["at0085"] = <
+                text = <"Contralateral">
+                description = <"The noise is presented to the ear opposite to the speech signal.">
+            >
+            ["at0086"] = <
+                text = <"Concrete object pointing">
+                description = <"The subject response is to point to a 3 dimensional (i.e., concrete) object.">
+            >
+            ["at0087"] = <
+                text = <"Type of adaptive test">
+                description = <"The type of adaptive test used. Typically either in quiet or in noise.">
+            >
+            ["at0088"] = <
+                text = <"Quiet">
+                description = <"The speech signal is presented in optimal listening conditions, without any interference from other auditory signals.">
+            >
+            ["at0089"] = <
+                text = <"Signal to noise ratio">
+                description = <"The ratio of the signal intensity to the noise intensity.">
+            >
+            ["at0090"] = <
+                text = <"Step size">
+                description = <"The number of dB by which the stimullus intensity is changed after each response.">
+            >
+            ["at0091"] = <
+                text = <"Start level">
+                description = <"The initial presentation level in dB.">
+            >
+            ["at0092"] = <
+                text = <"SNR speech presentation level">
+                description = <"The initial signal to noise ratio level in dB. For example, +20 dB.">
+            >
+            ["at0093"] = <
+                text = <"Presentation method">
+                description = <"The method used to present the speech test stimulus.">
+                comment = <"For exampe: a visual stimulus can be used to test lip reading skills.">
+            >
+            ["at0094"] = <
+                text = <"Auditory test">
+                description = <"An auditory stimulus is presented to the test subject.">
+            >
+            ["at0095"] = <
+                text = <"Audiovisual test">
+                description = <"A combination of auditory and visual stimuli are presented to the test subject.">
+            >
+            ["at0096"] = <
+                text = <"Visual test">
+                description = <"A visual stimulus is presented to the test subject.">
+            >
+            ["at0097"] = <
+                text = <"dB A">
+                description = <"The A-weighted decibels of the sound pressure level scale were used.">
+            >
+            ["at0098"] = <
+                text = <"Insert earphone">
+                description = <"The stimulus is presented via insert earphones.">
+            >
+            ["at9003"] = <
+                text = <"Term binding for at9003, translation not known in ADL 1.4 -> ADL 2 converter">
+                description = <"Term binding for at9003, translation not known in ADL 1.4 -> ADL 2 converter">
+            >
+            ["at9002"] = <
+                text = <"Loudness">
+                description = <"Loudness">
+            >
+            ["ac9000"] = <
+                text = <"Test ear (synthesised)">
+                description = <"The ear to which to the speech signal is presented. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Presentation method (synthesised)">
+                description = <"The method used to present the speech test stimulus. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Aided status (synthesised)">
+                description = <"Indication regarding use of an assistive listening device by the test subject during the test. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Type of listening device (synthesised)">
+                description = <"Identification of type of assistive listening device used. (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Contralateral masking (synthesised)">
+                description = <"Contralateral masking signal was presented to the non test ear. (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"Type of adaptive test (synthesised)">
+                description = <"The type of adaptive test used. Typically either in quiet or in noise. (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"Presentation voice (synthesised)">
+                description = <"The mode by which the speech test stimuli are presented. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Presentation method (synthesised)">
+                description = <"The method used to present the speech test stimulus. (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Response type (synthesised)">
+                description = <"The type of response the patient is asked to give after hearing each stimulus. (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Response set (synthesised)">
+                description = <"The size of the response set. (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Stimulus type (synthesised)">
+                description = <"The type of speech stimulus used for the speech test. (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"SNR competing noise (synthesised)">
+                description = <"Type of signal used as a competing signal during Signal to Noise Ratio testing. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"SNR competing noise presentation (synthesised)">
+                description = <"The type of noise used in a speech test measuring speech perception in noise. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Masking presentation method (synthesised)">
+                description = <"The method used to present the constralateral masking test signal. (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Calibration reference dB (synthesised)">
+                description = <"Scale used for acoustic calibration check. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9003"] = <http://openehr.org/id/118>
+            ["at9002"] = <http://openehr.org/id/123>
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0041", "at0042", "at0043", "at0044">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0071", "at0072", "at0073", "at0074", "at0075", "at0076", "at0077">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0065", "at0066", "at0067">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0061", "at0062", "at0063", "at0086">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0047", "at0048", "at0097">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0037", "at0038">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0084", "at0085">
+        >
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0059", "at0098", "at0058">
+        >
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0055", "at0056">
+        >
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at0088", "at0089">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0094", "at0095", "at0096">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0007", "at0008", "at0009">
+        >
+        ["ac9006"] = <
+            id = <"ac9006">
+            members = <"at0034", "at0035">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0028", "at0029", "at0030">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0025", "at0026">
+        >
+    >

@@ -1,0 +1,357 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=24d5e8b6-57f7-4f01-ae44-6be9ed7810b0; build_uid=65cb2575-7f70-472f-9227-c5795fd1c6d5)
+    openEHR-DEMOGRAPHIC-CLUSTER.biometric_identifier_iso.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Sergio Miranda Freire">
+                ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+                ["email"] = <"sergio@lampada.uerj.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sergio Miranda Freire & Rigoleta Dutra Mediano Dias">
+        ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+        ["email"] = <"sergio@lampada.uerj.br">
+        ["date"] = <"2009-05-20">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Rigoleta Dutra, Ministry of Defense, Brazil (openEHR Editor)", "Sergio Freire, State University of Rio de Janeiro, Brazil (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"ISO/TS 22220:2008(E) - Identification of Subject of Care - Technical Specification- International Organization for Standardization">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"EBF625943F4456820B484CA4D22DE7E6">
+    >
+    details = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Coleta de identificação biométrica de uma pessoa">
+            keywords = <"serviço demográfico", "identificador biométrico">
+            use = <"Usado em serviços demográficos para registrar os detalhes do objeto biométrico utilizado para identificar uma pessoa">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Representation of data about a person's biometric identifier">
+            keywords = <"demographic service", "biometric identifier">
+            use = <"Used in demographic services to register the details of a person's biometric identifier">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Biometric identifier
+        items matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- Type of biometric
+                value matches {
+                    DV_CODED_TEXT[at9001] matches {
+                        defining_code matches {[ac9000]}    -- Type of biometric (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Biometric data template
+                value matches {
+                    DV_CODED_TEXT[at9002] matches {
+                        defining_code matches {[ac1]}    -- Template code
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Biometric enrolment quality
+                value matches {
+                    DV_PROPORTION[at9003]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Biometric creating authority
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0005] matches {    -- Location of biometric identifier
+                value matches {
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[ac2]}    -- Localization code
+                    }
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Biometric schema
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Biometric device identification
+                value matches {
+                    DV_TEXT[at9007]
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Biometric version
+                value matches {
+                    DV_TEXT[at9008]
+                }
+            }
+            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Biometric date of creation
+                value matches {
+                    DV_DATE[at9009]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"identificador biométrico">
+                description = <"Identificador biométrico de uma pessoa">
+            >
+            ["at0001"] = <
+                text = <"Tipo">
+                description = <"Tipo do identificador biométrico">
+            >
+            ["at0002"] = <
+                text = <"Template do identificador">
+                description = <"O formato para um BIR que é completamente definido por um patrono do CBEFF">
+            >
+            ["at0003"] = <
+                text = <"Qualidade do registro biométrico">
+                description = <"Um número que indica a qualidade do registro biométrico">
+            >
+            ["at0004"] = <
+                text = <"Autoridade criadora">
+                description = <"Indica a organização que criou o objeto biométrico">
+            >
+            ["at0005"] = <
+                text = <"Localização do identificador">
+                description = <"Quando o objeto biométrico puder representar um conjunto de opções alternativas, as localizações específicas devem ser identificadas. Se o objeto biométrico representa mais de uma, múltiplas localizações devem ser indicadas">
+            >
+            ["at0006"] = <
+                text = <"Esquema biométrico">
+                description = <"Um identificador atribuído a um produto biométrico que o identifica de maneira não ambígua dentre os produtos biométricos que receberam um identificador de um proprietário de produtos biométricos">
+            >
+            ["at0007"] = <
+                text = <"Identificação do equipamento biométrico">
+                description = <"A transformação de um BIR de um formato inicial para outro formato">
+            >
+            ["at0008"] = <
+                text = <"Versão do processo">
+                description = <"Versão do processo usado para produzir o objeto biométrico. Está relacionada ao software usado, e não à especificação do equipamento. Valor(es) abstrato(s) definido(s) pela especificação do formato do patrono que identifica(m) uma versão do formato">
+            >
+            ["at0009"] = <
+                text = <"Data de criação">
+                description = <"A data na qual o identificador biométrico foi criado">
+            >
+            ["at0020"] = <
+                text = <"Impressão digital - rolada">
+                description = <"Impressão digital - rolada">
+            >
+            ["at0021"] = <
+                text = <"Impressão digital - plana">
+                description = <"Impressão digital - plana">
+            >
+            ["at0022"] = <
+                text = <"Características faciais">
+                description = <"Características faciais">
+            >
+            ["at0023"] = <
+                text = <"Voz">
+                description = <"Voz">
+            >
+            ["at0024"] = <
+                text = <"Íris">
+                description = <"Íris">
+            >
+            ["at0025"] = <
+                text = <"Retina">
+                description = <"Retina">
+            >
+            ["at0026"] = <
+                text = <"Geometria da mão">
+                description = <"Geometria da mão">
+            >
+            ["at0027"] = <
+                text = <"Dinâmica da assinatura">
+                description = <"Dinâmica da assinatura">
+            >
+            ["at0028"] = <
+                text = <"Dinâmica da digitação">
+                description = <"Dinâmica da digitação">
+            >
+            ["at0029"] = <
+                text = <"Movimento dos lábios">
+                description = <"Movimento dos lábios">
+            >
+            ["at0030"] = <
+                text = <"Imagem térmica da face">
+                description = <"Imagem térmica da face">
+            >
+            ["at0031"] = <
+                text = <"Imagem térmica da mão">
+                description = <"Imagem térmica da mão">
+            >
+            ["at0032"] = <
+                text = <"Andar">
+                description = <"Andar">
+            >
+            ["at0033"] = <
+                text = <"Tipo sanguíneo (incluindo fator RH)">
+                description = <"Tipo sanguíneo (incluindo fator RH)">
+            >
+            ["at0034"] = <
+                text = <"DNA">
+                description = <"DNA">
+            >
+            ["at0035"] = <
+                text = <"Desconhecido">
+                description = <"Desconhecido">
+            >
+            ["ac1"] = <
+                text = <"Código do template">
+                description = <"código válido para template do identificador biométrico">
+            >
+            ["ac2"] = <
+                text = <"Localização do objeto biométrico">
+                description = <"código válido para a localização do identificador biométrico">
+            >
+            ["ac9000"] = <
+                text = <"Tipo (synthesised)">
+                description = <"Tipo do identificador biométrico (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Biometric identifier">
+                description = <"A person's biometric identifier">
+            >
+            ["at0001"] = <
+                text = <"Type of biometric">
+                description = <"Identification of the type of biometric identifier described by this set of data">
+            >
+            ["at0002"] = <
+                text = <"Biometric data template">
+                description = <"The format for a BIR that is fully-defined by a CBEFF patron">
+            >
+            ["at0003"] = <
+                text = <"Biometric enrolment quality">
+                description = <"A numeric indicator of the quality of the biometric object">
+            >
+            ["at0004"] = <
+                text = <"Biometric creating authority">
+                description = <"This indicates the organization that created the biometric">
+            >
+            ["at0005"] = <
+                text = <"Location of biometric identifier">
+                description = <"Where the biometric could represent a number of alternative options, the specific location should be identified. If the biometric represents more than one, multiple locations should be indicated">
+            >
+            ["at0006"] = <
+                text = <"Biometric schema">
+                description = <"An identifier assigned to a biometric product that unambiguously identifies the biometric product within the biometric products that have been assigned an identifier by a biometric product owner">
+            >
+            ["at0007"] = <
+                text = <"Biometric device identification">
+                description = <"The transformation of a BIR in an initial patron format into a BIR in a target patron format">
+            >
+            ["at0008"] = <
+                text = <"Biometric version">
+                description = <"Version of the process used to produce this biometric. This relates to the software used, rather than the device specification. Abstract value(s) defined by the patron format specification that identify a version of the patron format">
+            >
+            ["at0009"] = <
+                text = <"Biometric date of creation">
+                description = <"The date upon which the biometric identifier was created">
+            >
+            ["at0020"] = <
+                text = <"Finger print—rolled">
+                description = <"Finger print—rolled">
+            >
+            ["at0021"] = <
+                text = <"Finger print—flat">
+                description = <"Finger print—flat">
+            >
+            ["at0022"] = <
+                text = <"Facial features">
+                description = <"Facial features">
+            >
+            ["at0023"] = <
+                text = <"Voice">
+                description = <"Voice">
+            >
+            ["at0024"] = <
+                text = <"Iris">
+                description = <"Iris">
+            >
+            ["at0025"] = <
+                text = <"Retina">
+                description = <"Retina">
+            >
+            ["at0026"] = <
+                text = <"Hand geometry">
+                description = <"Hand geometry">
+            >
+            ["at0027"] = <
+                text = <"Signature dynamics">
+                description = <"Signature dynamics">
+            >
+            ["at0028"] = <
+                text = <"Keystroke dynamics">
+                description = <"Keystroke dynamics">
+            >
+            ["at0029"] = <
+                text = <"Lip movement">
+                description = <"Lip movement">
+            >
+            ["at0030"] = <
+                text = <"Thermal face image">
+                description = <"Thermal face image">
+            >
+            ["at0031"] = <
+                text = <"Thermal hand image">
+                description = <"Thermal hand image">
+            >
+            ["at0032"] = <
+                text = <"Gait">
+                description = <"Gait">
+            >
+            ["at0033"] = <
+                text = <"Blood type (including rh factor)">
+                description = <"Blood type (including rh factor)">
+            >
+            ["at0034"] = <
+                text = <"DNA">
+                description = <"DNA">
+            >
+            ["at0035"] = <
+                text = <"Unknown">
+                description = <"Unknown">
+            >
+            ["ac1"] = <
+                text = <"Template code">
+                description = <"Valid codes for the biometric template">
+            >
+            ["ac2"] = <
+                text = <"Localization code">
+                description = <"Valid codes for the biometric localization">
+            >
+            ["ac9000"] = <
+                text = <"Type of biometric (synthesised)">
+                description = <"Identification of the type of biometric identifier described by this set of data (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0020", "at0021", "at0022", "at0023", "at0024", "at0025", "at0026", "at0027", "at0028", "at0029", "at0030", "at0031", "at0032", "at0033", "at0034", "at0035">
+        >
+    >

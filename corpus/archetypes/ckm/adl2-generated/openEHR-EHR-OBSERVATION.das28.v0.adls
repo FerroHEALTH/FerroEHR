@@ -1,0 +1,243 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=0a67fcae-271f-4c24-9fdd-45b5718bb5b3; build_uid=05139682-bae5-49b2-b350-46413d203c7d)
+    openEHR-EHR-OBSERVATION.das28.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            author = <
+                ["name"] = <"Blaz Osterman, Vanessa Pereira">
+                ["organisation"] = <"Better">
+                ["email"] = <"vanessapereira@protonmail.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Hildegard Franke">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"hildi@freshehr.com">
+        ["date"] = <"2016-11-18">
+    >
+    original_namespace = <"uk.org.clinicalmodels">
+    original_publisher = <"UK Clinical Models">
+    other_contributors = <"Mark Greenhalgh, Operon Limited, UK", "Ian McNicoll, freshEHR Clinical Informatics, UK", "Nadim Anani, Sweden">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"http://www.nras.org.uk/the-das28-score">
+    >
+    other_details = <
+        ["current_contact"] = <"Hildegard Franke, freshEHR Clinical Informatics Ltd.<hildi@freshehr.com>">
+        ["MD5-CAM-1.0.1"] = <"4EAE21C6A8B75B31CD7FD85B20859076">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the individual DAS28 parameters and total score.">
+            keywords = <"DAS28", "rheumatoid arthritis", "disease activity">
+            use = <"Use to record the individual DAS28 parameters and total score as an assessment of disease activity in rheumatoid arthritis.">
+            misuse = <"Not to be used to record the DAS28 score using the CRP result. Use OBSERVATION.das28-CRP for this purpose.">
+            copyright = <"© openEHR Foundation, Clinical Models UK">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            purpose = <"*To record the individual DAS28 parameters and total score.(en)">
+            keywords = <"DAS28", "Revmatoidni artritis", "Aktivnost bolezni">
+            use = <"*Use to record the individual DAS28 parameters and total score as an assessment of disease activity in rheumatoid arthritis.(en)">
+            misuse = <"*Not to be used to record the DAS28 score using the CRP result. Use OBSERVATION.das28-CRP for this purpose.(en)">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Disease Activity Score-28 (DAS28)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Point in time
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Tender joint count
+                                        value matches {
+                                            DV_COUNT[at9002] matches {
+                                                magnitude matches {|0..28|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Swollen joint count
+                                        value matches {
+                                            DV_COUNT[at9003] matches {
+                                                magnitude matches {|0..28|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- ESR result
+                                        value matches {
+                                            DV_QUANTITY[at9004] matches {
+                                                property matches {[at9000]}    -- Velocity
+                                                magnitude matches {|0.0..300.0|}
+                                                units matches {"mm/h"}
+                                                precision matches {0}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Global health
+                                        value matches {
+                                            DV_QUANTITY[at9005] matches {
+                                                property matches {[at9001]}    -- Qualified real
+                                                magnitude matches {|0.0..100.0|}
+                                                units matches {"1"}
+                                                precision matches {0}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- DAS28 score
+                                        value matches {
+                                            DV_QUANTITY[at9006] matches {
+                                                property matches {[at9001]}    -- Qualified real
+                                                magnitude matches {|0.0..10.0|}
+                                                units matches {"1"}
+                                                precision matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- DAS28(3) score
+                                        value matches {
+                                            DV_QUANTITY[at9007] matches {
+                                                property matches {[at9001]}    -- Qualified real
+                                                magnitude matches {|0.0..10.0|}
+                                                units matches {"1"}
+                                                precision matches {2}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0009] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0010] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Disease Activity Score-28 (DAS28)">
+                description = <"Assessment tool used as a measure of disease activity in rheumatoid arthritis (RA), using ESR result.">
+                comment = <"28 joints are examined in this assessment.">
+            >
+            ["at0002"] = <
+                text = <"Point in time">
+                description = <"Default, unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Tender joint count">
+                description = <"The total number of tender joints observed.">
+            >
+            ["at0005"] = <
+                text = <"Swollen joint count">
+                description = <"The total number of swollen joints observed.">
+            >
+            ["at0006"] = <
+                text = <"ESR result">
+                description = <"Erythrocyte sedimentation rate test result.">
+            >
+            ["at0007"] = <
+                text = <"Global health">
+                description = <"Visual analogue scale assessment of overall health and disease activity.">
+            >
+            ["at0008"] = <
+                text = <"DAS28 score">
+                description = <"Total DAS 28 score.">
+            >
+            ["at0010"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0015"] = <
+                text = <"DAS28(3) score">
+                description = <"DAS 28 score using only 3 variables, when the Global health parameter is not available.">
+            >
+            ["at9000"] = <
+                text = <"Velocity">
+                description = <"Velocity">
+            >
+            ["at9001"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+        >
+        ["sl"] = <
+            ["at0000"] = <
+                text = <"DAS 28 Revmatološka ocena">
+                description = <"DAS28 je merilo aktivnosti bolezni pri revmatoidnem artritisu (RA).">
+                comment = <"DAS pomeni „disease activity score“, številka 28 pa se nanaša na 28 sklepov, ki so bili pregledani v tej oceni.">
+            >
+            ["at0002"] = <
+                text = <"Točen čas">
+                description = <"Določen datum in / ali čas, ki sta lahko izrecno določena v predlogi ali med izvajanjem.">
+            >
+            ["at0004"] = <
+                text = <"Občutljivi sklepi">
+                description = <"Število občutljivih sklepov.">
+            >
+            ["at0005"] = <
+                text = <"Otečeni sklepi">
+                description = <"Število otečenih sklepov.">
+            >
+            ["at0006"] = <
+                text = <"ESR rezultat">
+                description = <"Hitrost sedimentacije eritrocitov.">
+            >
+            ["at0007"] = <
+                text = <"Bolnikovo globalno zdravje">
+                description = <"Vizualna analogna skala za oceno bolnikovegova globalnega zdravja.">
+            >
+            ["at0008"] = <
+                text = <"DAS28 skupna ocena">
+                description = <"Skupna ocena DAS28.
+">
+            >
+            ["at0010"] = <
+                text = <"Razširitev">
+                description = <"Dodatne informacije, potrebne za zajem lokalnega konteksta ali za uskladitev z drugimi referenčnimi modeli / formalizmi.">
+                comment = <"Na primer: lokalne zahteve po informacijah; ali dodatni metapodatki za uskladitev s FHIR.">
+            >
+            ["at0015"] = <
+                text = <"*DAS28(3) score(en)">
+                description = <"*DAS 28 score using only 3 variables, when the Global health parameter is not available.(en)">
+            >
+            ["at9000"] = <
+                text = <"* Velocity (en)">
+                description = <"* Velocity (en)">
+            >
+            ["at9001"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/338>
+            ["at9001"] = <http://openehr.org/id/380>
+        >
+    >

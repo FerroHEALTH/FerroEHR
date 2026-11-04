@@ -1,0 +1,776 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1ce3e0c7-8b5c-4672-b5e4-b02cfc9c4e0c; build_uid=44aaf0f6-4aca-404a-82b9-734bcffaad3c)
+    openEHR-EHR-EVALUATION.obstetric_summary.v1.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Marit Alice Venheim">
+                ["organisation"] = <"Helse Vest IKT AS">
+                ["email"] = <"marit.alice.venheim@helse-vest-ikt.no">
+            >
+        >
+        ["pt"] = <
+            language = <[ISO_639-1::pt]>
+            author = <
+                ["name"] = <"Danielle Santos Alves">
+                ["organisation"] = <"Federal University of Pernambuco">
+                ["email"] = <"danielle.salves@ufpe.br">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Marivan Abrahão, Gabriela Alves, Adriana Kitajima e Maria Ângela Scatena / Danielle Santos Alves">
+                ["organisation"] = <"Core Consulting / Federal University of Pernambuco">
+                ["email"] = <"contato@coreconsulting.com.br / danielle.salves@ufpe.com">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+        ["es-co"] = <
+            language = <[ISO_639-1::es-co]>
+            author = <
+                ["name"] = <"Francisco Ramirez ante">
+                ["organisation"] = <"SITIS SAS">
+                ["email"] = <"framirez74@gmail.com">
+            >
+            accreditation = <"Ingeniero de Sistemas">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2011-02-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Sheryl Alexander, NT Department of Health, Australia", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Margaret Cotter, AMSANT, Australia", "Michelle Dowden, Miwatj Health Ngalkanbuy Health, Australia", "Peter Fedorcsak, Oslo universitetssykehus, Norway", "Shahla Foozonkhah, Iran ministry of health and education, Iran", "Tim Garden, NTG Department of Health, Australia", "Heather Grain, Llewelyn Grain Informatics, Australia", "Kristin Grødem, Helse Vest IKT, Norway", "Mikkel Gaup Grønmo, Helse-Nord, FSE, Norway (openEHR Editor)", "Sam Heard, Ocean Informatics, Australia (Editor)", "Anne Hedvig Mellbye Pfeffer, OUS, Norway", "Anca Heyd, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Michelle Kealy, Australia", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Bernadette Lack, Deptartment of Health, NT, Australia", "Liv Laugen, Oslo universitetssykehus, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Anne M Gromsrud, DIPS AS, Norway", "Priscila Maranhão, MEDCIDS-FMUP, Portugal", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Paul Miller, SCIMP NHS Scotland, United Kingdom", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Svenne Naumann, Finnmarkssykehuset, Norway", "Rogerio Neri, Soft & Solutions, Brazil", "Jeremy Oats, NT Health, Australia", "Andrej Orel, Marand d.o.o., Slovenia", "Jayashree Panickar, Karolinska Institute, Sweden", "Danielle Santos Alves, Federal University of Pernambuco, Brazil", "Gro-Hilde Severinsen, Norwegian center for ehealthresearch, Norway", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Gary Sinclair, NT DoH, Australia", "trine stavseth, Oslo universitetsykehus, Norway", "Tove Stenquist, Helseforetak, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Chen Sun, Haukeland universitetssykehus, Norway", "June Susanne Berge, DIPS AS, Norway", "Nyree Taylor, Ocean Informatics, Australia", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Ørjan Vermeer, Haukeland Universitetssjukehus, Kvinneklinikken, Norway", "Cherie Whitbread, Royal Darwin Hospital, Australia", "Jo Wright, NT Dept of Health, Australia", "Krister Åkesson, Region Örebro län, Sweden">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Born Too Soon: The Global Action Report on Preterm Birth [Internet]. Geneva: World Health Organization; 2012. Available from: https://www.who.int/maternal_child_adolescent/documents/born_too_soon/en/.">
+        ["2"] = <"Derived from: Obstetric summary, draft archetype [Internet]. Australian Digital Health Agency (NEHTA), ADHA Clinical Knowledge Manager. No longer available.">
+        ["3"] = <"Fact sheet: Preterm birth [Internet]. Geneva: World Health Organisation. Preterm birth; 2018 Feb 19 [cited 2020 May 07]. Available from: https://www.who.int/news-room/fact-sheets/detail/preterm-birth.">
+        ["4"] = <"Opara EI, Zaidi J. The interpretation and clinical application of the word 'parity': a survey [Internet]. BJOG. 2007 Oct;114(10):1295-7. doi: 10.1111/j.1471-0528.2007.01435.x. PMID: 17877683. Available from: https://obgyn.onlinelibrary.wiley.com/doi/full/10.1111/j.1471-0528.2007.01435.x.">
+        ["5"] = <"reVITALize: Obstetrics Data Definitions V1.0 [Internet]. Washington, American College of Obstetricians and Gynecologists; 2014 [cited 2020 May 07]. Available from: https://www.acog.org/practice-management/health-it-and-clinical-informatics/revitalize-obstetrics-data-definitions.">
+        ["6"] = <"Tidy C, Payne J. Gravidity and Parity Definitions: Implications in Risk Assessment [Internet]. Leeds: Patient Platform Limited; 2019 Jan 21 [cited 2020 May 07]. Available from: https://patient.info/doctor/gravidity-and-parity-definitions-and-their-implications-in-risk-assessment#.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"90184A07972E5ED5D44D07D8A5791BBE">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere sammendrag eller vedvarende informasjon om antall sentrale obstetriske hendelser som kan påvirke risikovurdering eller beslutningsstøtte.">
+            keywords = <"obstetrikk", "svangerskap", "paritet", "gravida", "para", "svangerskapsavbrudd", "spontanabort", "aborter", "spontan", "levende", "fødsler", "dødfødsler", "keisersnitt", "ekstrauterin graviditet", "neonatal", "død", "levende", "multippel", "missed abortion", "provosert abort", "ektopisk", "extrauterin", "ekstrauterin", "svangerskapshistorikk", "fødsel", "TPAL", "GTPAL">
+            use = <"Brukes for å registrere sammendrag eller vedvarende informasjon om antall sentrale obstetriske hendelser som kan påvirke risikovurdering eller beslutningsstøtte.
+
+Intensjonen med denne arketypen er at den skal gjennomgås og oppdateres etter hvert svangerskap, enten manuelt av helsepersonell eller automatisk oppdatert i et klinisk system. Det er antatt at denne arketypen kun representerer en komponent av en obstetrisk historie. Ved å bruke flere arketyper inn i en templat vil det oppnås en komplett obstetrisk historie. 
+
+For å registrere en TPAL oversikt kan denne arketypen brukes til å registrere Fødsler til termin (T), Premature fødsler (P), Aborter (A). For å registrere Levende barn (L) benyttes arketypen EVALUATION.social_network. Noen varianter bruker også Gravida (G) og antall Flerlingefødsler (M).
+
+Definisjonen for noen av disse dataelementene vil variere mellom myndighetsområder, det er derfor mulig å legge til definisjonen i Protocol-delen av arketypen. Dette er viktig dersom utveksling av data forekommer mellom myndighetsområder.">
+            misuse = <"Brukes ikke for å dokumentere informasjon om ett enkelt svangerskap. Bruk spesifikke arketyper for dette formålet.
+
+Brukes ikke for å dokumentere detaljer rundt et inngrep i svangerskapet, for eksempel svangerskapsavbrudd eller forløsning. Bruk arketypen ACTION.procedure (Prosedyre) for dette formålet.
+
+Brukes ikke for å registrere detaljer om funn under hver enkelt svangerskapskontroll eller under fødsel. Dette registreres i egne arketyper for dette formålet som for eksempel: OBSERVATION.story (Anamnese) sammen med CLUSTER.symptom_sign (Symptom/sykdomstegn), OBSERVATION.blood_pressure (Blodtrykk), OBSERVATION.urinalysis (Urinanalyse) eller EVALUATION.problem_diagnosis (Problem/diagnose).">
+        >
+        ["pt"] = <
+            language = <[ISO_639-1::pt]>
+            purpose = <"*To record summary or persistent information about the numbers of key obstetric events that may impact risk assessment or decision support.(en)">
+            keywords = <"*obstetric(en)", "*pregnancy(en)", "*parity(en)", "*para(en)", "*gravidity(en)", "*gravida(en)", "*termination(en)", "*miscarriage(en)", "*abortions(en)", "*birth(en)", "*stillbirth(en)", "*caesarean(en)", "*cesarean(en)", "*ectopic(en)", "*tubal(en)", "*TPAL(en)", "*GTPAL(en)">
+            use = <"*Use to record summary or persistent information about the numbers of key obstetric events that may impact risk assessment or decision support.
+
+Data recorded using this archetype is intended to be revised and updated after each pregnancy, either manually by a clinician or automatically calculated within a clinical system. It is anticipated that this archetype represents only one component of an obstetric history. A complete obstetric history should be represented using multiple archetypes within a template.
+
+In order to record a TPAL overview, Term Births (T), Preterm Births (P) and Abortions (A) can be recorded using this archetype. Living Children (L) can be recorded using the EVALUATION.social_network archetype, so that it can be used more broadly. Some variants may also use Gravidity (G) and the number of Multiple Births (M). 
+
+In many jurisdictions, the definition of some of these data elements may vary. For this reason, definitions may be included in the Protocol to ensure clarity of intent especially if the data is being exchanged between jurisdictions.(en)">
+            misuse = <"*Not for recording summary information about a single pregnancy. Use specific archetypes for this purpose.
+
+Not to be used to record details about procedures performed during a pregnancy, for example terminations or deliveries. Use the ACTION.procedure archetype for this purpose.
+
+Not to be used to record the details about findings in each antenatal visits or during labour. Detailed data should be recorded using appropriate archetypes for this purpose such as OBSERVATION.story together with CLUSTER.symptom_sign; OBSERVATION.blood pressure; OBSERVATION.urinalysis; or EVALUATION.problem_diagnosis.(en)">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Para gravar uma visão geral sobre a história obstétrica de uma mulher para fins de: fornecimento de um informações de sua história obstétrica, para reportar a órgãos oficiais ou para apoio à decisão clínica.">
+            keywords = <"Obstétrico", "Gravidez", "Paridade", "Gestante", "Gravida", "Abortamento induzido", "Aborto espontâneo", "Espontâneo", "Vivo", "Nascimentos", "Natimorto", "Cesariana", "Ectópica", "Neonatal", "Morte", "Tubária", "Vivo", "Múltiplo">
+            use = <"Usar para registrar o panorama da história obstétrica de uma mulher, incluindo um resumo de todas as gestações e os resultados ou intervenções associadas.
+
+Utilizar, se adequado, como a base de relatórios legais sobre nascimentos.
+
+Usar para registrar a visão geral de uma história obstétrica, se necessário - o número de nascimentos a termo, nascimento prematuro, abortos e nascidos vivos. Algumas variações adicionam o número de gestações e o número de nascimentos múltiplos.
+
+Alguns dados podem ser calculados ou derivados de registros de gravidez individuais, se disponíveis.
+">
+            misuse = <"Não utilizar para registrar informações de resumo sobre uma única gravidez – neste caso utilize EVALUATION.pregnancy_summary.
+
+Não utilizar para registrar informações detalhadas sobre episódios individuais de gravidez, abortos ou partos. Estas informação deverão ser registradas através de arquétipos específicos, baseados nos dados do evento.
+">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record summary or persistent information about the numbers of key obstetric events that may impact risk assessment or decision support.">
+            keywords = <"obstetric", "pregnancy", "parity", "para", "gravidity", "gravida", "termination", "miscarriage", "abortions", "birth", "stillbirth", "caesarean", "cesarean", "ectopic", "tubal", "TPAL", "GTPAL">
+            use = <"Use to record summary or persistent information about the numbers of key obstetric events that may impact risk assessment or decision support.
+
+Data recorded using this archetype is intended to be revised and updated after each pregnancy, either manually by a clinician or automatically calculated within a clinical system. It is anticipated that this archetype represents only one component of an obstetric history. A complete obstetric history should be represented using multiple archetypes within a template.
+
+In order to record a TPAL overview, Term Births (T), Preterm Births (P) and Abortions (A) can be recorded using this archetype. Living Children (L) can be recorded using the EVALUATION.social_network archetype, so that it can be used more broadly. Some variants may also use Gravidity (G) and the number of Multiple Births (M). 
+
+In many jurisdictions, the definition of some of these data elements may vary. For this reason, definitions may be included in the Protocol to ensure clarity of intent especially if the data is being exchanged between jurisdictions.">
+            misuse = <"Not for recording summary information about a single pregnancy. Use specific archetypes for this purpose.
+
+Not to be used to record details about procedures performed during a pregnancy, for example terminations or deliveries. Use the ACTION.procedure archetype for this purpose.
+
+Not to be used to record the details about findings in each antenatal visits or during labour. Detailed data should be recorded using appropriate archetypes for this purpose such as OBSERVATION.story together with CLUSTER.symptom_sign; OBSERVATION.blood pressure; OBSERVATION.urinalysis; or EVALUATION.problem_diagnosis.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es-co"] = <
+            language = <[ISO_639-1::es-co]>
+            purpose = <"Sirve para registrar una visión general sobre la historia obstétrica de una mujer con fines de: proporcionar un resumen de su historia obstétrica, la presentación de informes a los órganos estatutarios o el apoyo de soporte de decisiones clínicas">
+            keywords = <"Obstétrica", "Eembarazo", "Paridad", "Gesta", "Parto", "terminacion", "abortos involuntarios", "abortos", "Espontánea", "Vivo", "nacimientos", "mortinatos", "Cesárea", "Ectópico", "Neonatal", "muerte", "Múltiple">
+            use = <"Sirve para registrar una visión general sobre la historia obstétrica de una mujer, incluyendo un resumen de todos los embarazos.
+
+Utilice este resmen como base para informes legales con respecto a los nacimientos .
+
+Se utiliza para registrar la información general de una historia obstétrica, si es necesario - el número de nacimientos a termino (T) , los nacimientos prematuros (P) , Abortos (A) y niños que viven (L) . Algunas variaciones añaden Gravidez (G) y el número de nacimientos múltiples (M) .
+
+Algunos datos pueden ser calculados o derivados de los registros individuales de embarazo, si están disponibles.">
+            misuse = <"No es para registrar la información del embarazo actual - utilice el arquetipo EVALUACIÓN. pregnancy_summary para este propósito.
+
+No es para registrar la información detallada sobre cada uno de los individuales embarazos, abortos involuntarios , Embarazos interrumpidos, o nacimientos. Esta información se registra utilizando otros arquetipos específicos como datos basados ​​en eventos .">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Obstetric summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9016]
+                        }
+                    }
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Gravidity
+                        value matches {
+                            DV_COUNT[at9001] matches {
+                                magnitude matches {|0..<100|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Parity
+                        value matches {
+                            DV_COUNT[at9002] matches {
+                                magnitude matches {|0..<100|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Term births
+                        value matches {
+                            DV_COUNT[at9003] matches {
+                                magnitude matches {|0..<100|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Preterm births
+                        value matches {
+                            DV_COUNT[at9004] matches {
+                                magnitude matches {|0..<100|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Abortions
+                        value matches {
+                            DV_COUNT[at9005] matches {
+                                magnitude matches {|0..<100|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Miscarriages
+                        value matches {
+                            DV_COUNT[at9006] matches {
+                                magnitude matches {|0..<100|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Terminations
+                        value matches {
+                            DV_COUNT[at9007] matches {
+                                magnitude matches {|0..<100|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Ectopic pregnancies
+                        value matches {
+                            DV_COUNT[at9008] matches {
+                                magnitude matches {|0..<100|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Live births
+                        value matches {
+                            DV_COUNT[at9010] matches {
+                                magnitude matches {|0..<100|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Multiple births
+                        value matches {
+                            DV_COUNT[at9012] matches {
+                                magnitude matches {|0..<100|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Stillbirths
+                        value matches {
+                            DV_COUNT[at9009] matches {
+                                magnitude matches {|0..<100|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Neonatal deaths
+                        value matches {
+                            DV_COUNT[at9018]    -- Mass
+                        }
+                    }
+                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Caesarean sections
+                        value matches {
+                            DV_COUNT[at9019]
+                        }
+                    }
+                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9017]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0008] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9014]
+                        }
+                    }
+                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Definition of viability
+                        value matches {
+                            DV_DURATION[at9020] matches {
+                                value
+                            }
+                            DV_QUANTITY[at9021] matches {
+                                property matches {[at9018]}    -- Mass
+                                units matches {"g"}
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0024] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Obstetrisk sammendrag">
+                description = <"Sammendrag eller vedvarende informasjon om antall sentrale obstetriske hendelser.">
+            >
+            ["at0002"] = <
+                text = <"Gravida">
+                description = <"Antall ganger en kvinne har vært gravid, nåværende og tidligere, uavhengig av svangerskapets utfall.">
+                comment = <"Kliniske systemer kan representere dette dataelementet med begrepet 'Gravida' i et klinisk skjema.">
+            >
+            ["at0003"] = <
+                text = <"Para">
+                description = <"Antall ganger en kvinne har født et levedyktig barn, uavhengig av svangerskapet utfall.">
+                comment = <"Paritet inkluderer alle svangerskap som blir fullført etter at fosteret anses som levedyktig, som definert i elementet \"Definisjon av levedyktig\". Dødfødsel, senaborter og alle fødsler med et levedyktig barn er inkludert i vurderingen av paritet. I tilfeller av flerlingefødsler økes pariteten bare ved fødsel av det siste fosteret.">
+            >
+            ["at0004"] = <
+                text = <"Spontane aborter">
+                description = <"Antall ganger en kvinne har spontanabortert.">
+                comment = <"Definisjonen av spontane aborter kan registreres i dataelementet \"Definisjon av levedyktighet\" i Protocol-delen av arketypen.">
+            >
+            ["at0005"] = <
+                text = <"Provoserte aborter">
+                description = <"Antall ganger en kvinne har fått uført eller uført en provosert abort, uavhengig av gestasjonsuke.">
+            >
+            ["at0006"] = <
+                text = <"Levendefødte">
+                description = <"Antall levende fødte barn.">
+            >
+            ["at0009"] = <
+                text = <"Sist oppdatert">
+                description = <"Datoen da det obstetriske sammendraget sist ble oppdatert.">
+            >
+            ["at0011"] = <
+                text = <"Ekstrauterine graviditeter">
+                description = <"Antall svangerskap utenfor livmoren.">
+            >
+            ["at0012"] = <
+                text = <"Dødfødsler">
+                description = <"Antall dødfødsler.">
+                comment = <"Definisjonen av dødfødsel kan registreres i Protocol-delen av arketypen.">
+            >
+            ["at0015"] = <
+                text = <"Fødsler til termin">
+                description = <"Antall fødsler til eller etter termin.">
+                comment = <"Definisjonen av fødsel til termin er hvor det blir født et levedyktig barn ved eller etter gestasjonsuke 37 og 0 dager.">
+            >
+            ["at0016"] = <
+                text = <"Preterme fødsler">
+                description = <"Antall fødsler før termin.">
+                comment = <"Definisjonen av preterm førsel er hvor det blir født et levedyktig barn før gestasjonsuke 37.">
+            >
+            ["at0017"] = <
+                text = <"Aborter">
+                description = <"Antall svangerskap der fosteret ikke blir vurdert som levedyktig, uavhengig av årsak. Dette inkluderer spontanaborter, provoserte aborter og ekstrauterine graviditeter.">
+                comment = <"Summen registrert for \"Aborter\" skal være lik summen av alle \"Spontane aborter\", \"Provoserte aborter\" og \"Ekstrauterine graviditeter\", dersom det er registrert noe i disse tilleggsfeltene.">
+            >
+            ["at0018"] = <
+                text = <"Flerlingefødsler">
+                description = <"Antall fødsler der mer enn ett barn ble født.">
+            >
+            ["at0021"] = <
+                text = <"Definisjon av levedyktighet">
+                description = <"Antall gestasjonsuker benyttet i denne datainnsamlingen som definerer skillet mellom et ikke levedyktig foster og et levedyktig foster.">
+                comment = <"Dersom barnet blir født før definert gestasjonsuke eller veier mindre enn definert vekt, brukes dataelementet \"Spontanabort\" til registrering. Dersom barnet blir født etter definert gestasjonsuke eller veier mer enn definert vekt, brukes dataelementet \"Para\" til registrering. Er barnet dødfødt etter definert gestasjonsuke eller veier mer enn definert vekt registreres dette også i dataelemendet \"Dødfødsel.\"
+
+Avhengig av lokale definisjoner kan missed abortion inngå i dette dataelementet. Kan være nyttig når man skal sammenligne data mellom ulike myndighetsområder, ettersom definisjoner av spontanabort kan variere.">
+            >
+            ["at0024"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at0025"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse om kvinnens svangerskap og fødsler.">
+                comment = <"Innholdet i denne beskrivelsen er ment å gi komplementerende informasjon til de antall sentrale obstetriske hendelser fanget ved hjelp av denne arketypen.">
+            >
+            ["at0026"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om det obstetriske sammendraget som ikke er fanget opp i andre felt.">
+            >
+            ["at0027"] = <
+                text = <"Keisersnitt">
+                description = <"Antall keisersnitt.">
+            >
+            ["at0028"] = <
+                text = <"Neonatale dødsfall">
+                description = <"Antall neonatale dødsfall.">
+                comment = <"Nyfødtperioden begynner ved fødselen og slutter ved 28 fullførte levedager.">
+            >
+            ["at9018"] = <
+                text = <"* Mass (en)">
+                description = <"* Mass (en)">
+            >
+        >
+        ["pt"] = <
+            ["at0000"] = <
+                text = <"Sumário obstétrico">
+                description = <"Uma visão geral da história obstétrica de uma mulher, incluindo um resumo de todas as gestações seus resultados ou as intervenções associadas.
+
+">
+            >
+            ["at0004"] = <
+                text = <"Aborto espontâneo">
+                description = <"Número de vezes que uma mulher teve um aborto espontâneo.">
+                comment = <"A definição de aborto espontâneo pode ser registrada no Protocolo.">
+            >
+            ["at0005"] = <
+                text = <"Interrupções">
+                description = <"Número de vezes que uma mulher teve uma interrupção induzida da gravidez, independentemente da gestação.">
+            >
+            ["at0006"] = <
+                text = <"Nascido vivo">
+                description = <"Número de bebês nascidos vivos.">
+            >
+            ["at0009"] = <
+                text = <"Última atualização">
+                description = <"Data da última atualização do sumário.">
+            >
+            ["at0011"] = <
+                text = <"Gravidez ectópica">
+                description = <"Número de gravidezes ectópicas.">
+            >
+            ["at0012"] = <
+                text = <"Natimorto">
+                description = <"Número de natimorto">
+                comment = <"A definição de viabilidade pode ser registrada no protocolo.">
+            >
+            ["at0015"] = <
+                text = <"Parto a termo">
+                description = <"Número de nascimentos após ou a termo.">
+                comment = <"A definição de um nascimento a termo é um nascimento viável entre 37-42 semanas de gestação.">
+            >
+            ["at0016"] = <
+                text = <"Parto pré-termo">
+                description = <"Número de partos antes do termo.">
+                comment = <"A definição de parto pré-termo é o nascimento viável antes de 37 semanas de gestação.">
+            >
+            ["at0018"] = <
+                text = <"Nascimento múltiplo">
+                description = <"Número de nascimento em que mais de um feto nasceu.">
+            >
+            ["at0021"] = <
+                text = <"Definição de viabilidade">
+                description = <"O número de semanas de gestação que diferencia entre um aborto espontâneo e um nascimento viável, usado na coleta de dados.">
+                comment = <"Se o bebê nascer antes da definição da gestação ou menor que o peso definido, ele será gravado usando o elemento de dados 'Aborto'. Se o bebê nascer após a gestação definida ou maior que o peso definido, ele será gravado usando o elemento de dados 'Paridade'. Se o bebê nascer morto após a gestação definida ou maior que o peso definido, ele também poderá ser gravado usando o elemento de dados 'Natimorto'.
+
+Dependendo das definições locais, abortos perdidos podem ser capturados nesse elemento de dados. Talvez seja útil registrar ao comparar dados de diferentes regiões, pois as definições de aborto espontâneo podem variar. ">
+            >
+            ["at0024"] = <
+                text = <"Extensão">
+                description = <"Informações adicionais necessárias para capturar conteúdo local ou alinhar-se com outros modelos / formalismos de referência.">
+                comment = <"Por exemplo: requisitos de informações locais ou metadados adicionais para alinhar com os equivalentes FHIR ou CIMI.">
+            >
+            ["at0025"] = <
+                text = <"Descrição">
+                description = <"Descrição narrativa dos números gerais dos principais eventos obstétricos.">
+                comment = <"*The content of this description is intended to provide a narrative context that will complement the numbers of key obstetric events captured using this archetype.(en)">
+            >
+            ["at0026"] = <
+                text = <"Comentário">
+                description = <"Narrativa adicional sobre os números obstétricos, não capturados em outros campos.">
+            >
+            ["at0027"] = <
+                text = <"Parto vaginal">
+                description = <"Número de parto vaginal">
+            >
+            ["at0028"] = <
+                text = <"Óbitos neonatais">
+                description = <"Número de óbitos neonatais">
+                comment = <"O período neonatal começa no nascimento e termina aos 28 dias completos de vida.">
+            >
+            ["at0002"] = <
+                text = <"*Gravidity(en)">
+                description = <"*Number of times a woman has been pregnant, current and past, regardless of the pregnancy outcome.(en)">
+                comment = <"*Clinical systems might represent this data element by the term 'Gravida' on a clinical form.(en)">
+            >
+            ["at0003"] = <
+                text = <"*Parity(en)">
+                description = <"*Number of times a woman has given birth to a viable baby, regardless of the pregnancy outcome.(en)">
+                comment = <"*Parity includes all pregnancies that are carried after the fetus is considered viable, as defined in the 'Definition of viability data' element. Stillbirths, late abortions, and all live births are included in the assessment of Parity. In cases of multiple pregnancies, parity is only increased with birth of the last fetus.(en)">
+            >
+            ["at0017"] = <
+                text = <"*Abortions(en)">
+                description = <"*Number of pregnancies that do not reach viability from all causes, including spontaneous miscarriages, induced terminations and ectopic pregnancies.(en)">
+                comment = <"*The value recorded for 'Abortions' should be equal to the sum of 'Miscarriages', 'Terminations' and 'Ectopic pregnancies', if these additional fields are recorded.(en)">
+            >
+            ["at9018"] = <
+                text = <"massa">
+                description = <"massa">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"*Obstetric summary(en)">
+                description = <"Uma visão geral da história obstétrica de uma mulher, incluindo um resumo de todas as gestações seus resultados ou as intervenções associadas.
+
+">
+            >
+            ["at0004"] = <
+                text = <"Aborto espontâneo">
+                description = <"Número de vezes que uma mulher teve um aborto espontâneo.">
+                comment = <"A definição de aborto espontâneo pode ser registrada no Protocolo.">
+            >
+            ["at0005"] = <
+                text = <"Interrupções">
+                description = <"Número de vezes que uma mulher teve uma interrupção induzida da gravidez, independentemente da gestação.">
+            >
+            ["at0006"] = <
+                text = <"Nascido vivo">
+                description = <"Número de bebês nascidos vivos.">
+            >
+            ["at0009"] = <
+                text = <"Última atualização">
+                description = <"Data da última atualização do sumário.">
+            >
+            ["at0011"] = <
+                text = <"Gravidez ectópica">
+                description = <"Número de gravidezes ectópicas.">
+            >
+            ["at0012"] = <
+                text = <"Natimorto">
+                description = <"Número de natimorto">
+                comment = <"A definição de viabilidade pode ser registrada no protocolo.">
+            >
+            ["at0015"] = <
+                text = <"Parto a termo">
+                description = <"Número de nascimentos após ou a termo.">
+                comment = <"A definição de um nascimento a termo é um nascimento viável entre 37-42 semanas de gestação.">
+            >
+            ["at0016"] = <
+                text = <"Parto pré-termo">
+                description = <"Número de partos antes do termo.">
+                comment = <"A definição de parto pré-termo é o nascimento viável antes de 37 semanas de gestação.">
+            >
+            ["at0018"] = <
+                text = <"Nascimento múltiplo">
+                description = <"Número de nascimento em que mais de um feto nasceu.">
+            >
+            ["at0021"] = <
+                text = <"Definição de viabilidade">
+                description = <"O número de semanas de gestação que diferencia entre um aborto espontâneo e um nascimento viável, usado na coleta de dados.">
+                comment = <"Se o bebê nascer antes da definição da gestação ou menor que o peso definido, ele será gravado usando o elemento de dados 'Aborto'. Se o bebê nascer após a gestação definida ou maior que o peso definido, ele será gravado usando o elemento de dados 'Paridade'. Se o bebê nascer morto após a gestação definida ou maior que o peso definido, ele também poderá ser gravado usando o elemento de dados 'Natimorto'.
+
+Dependendo das definições locais, abortos perdidos podem ser capturados nesse elemento de dados. Talvez seja útil registrar ao comparar dados de diferentes regiões, pois as definições de aborto espontâneo podem variar. ">
+            >
+            ["at0024"] = <
+                text = <"Extensão">
+                description = <"Informações adicionais necessárias para capturar conteúdo local ou alinhar-se com outros modelos / formalismos de referência.">
+                comment = <"Por exemplo: requisitos de informações locais ou metadados adicionais para alinhar com os equivalentes FHIR ou CIMI.">
+            >
+            ["at0025"] = <
+                text = <"Descrição">
+                description = <"Descrição narrativa dos números gerais dos principais eventos obstétricos.">
+                comment = <"*The content of this description is intended to provide a narrative context that will complement the numbers of key obstetric events captured using this archetype.(en)">
+            >
+            ["at0026"] = <
+                text = <"Comentário">
+                description = <"Narrativa adicional sobre os números obstétricos, não capturados em outros campos.">
+            >
+            ["at0027"] = <
+                text = <"Parto vaginal">
+                description = <"Número de parto vaginal">
+            >
+            ["at0028"] = <
+                text = <"Óbito neonatal">
+                description = <"Número de óbitos neonatais">
+                comment = <"O período neonatal começa no nascimento e termina aos 28 dias completos de vida.">
+            >
+            ["at0002"] = <
+                text = <"*Gravidity(en)">
+                description = <"*Number of times a woman has been pregnant, current and past, regardless of the pregnancy outcome.(en)">
+                comment = <"*Clinical systems might represent this data element by the term 'Gravida' on a clinical form.(en)">
+            >
+            ["at0003"] = <
+                text = <"*Parity(en)">
+                description = <"*Number of times a woman has given birth to a viable baby, regardless of the pregnancy outcome.(en)">
+                comment = <"*Parity includes all pregnancies that are carried after the fetus is considered viable, as defined in the 'Definition of viability data' element. Stillbirths, late abortions, and all live births are included in the assessment of Parity. In cases of multiple pregnancies, parity is only increased with birth of the last fetus.(en)">
+            >
+            ["at0017"] = <
+                text = <"*Abortions(en)">
+                description = <"*Number of pregnancies that do not reach viability from all causes, including spontaneous miscarriages, induced terminations and ectopic pregnancies.(en)">
+                comment = <"*The value recorded for 'Abortions' should be equal to the sum of 'Miscarriages', 'Terminations' and 'Ectopic pregnancies', if these additional fields are recorded.(en)">
+            >
+            ["at9018"] = <
+                text = <"* Mass (en)">
+                description = <"* Mass (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Obstetric summary">
+                description = <"Summary or persistent information about the numbers of key obstetric events.">
+            >
+            ["at0002"] = <
+                text = <"Gravidity">
+                description = <"Number of times a woman has been pregnant, current and past, regardless of the pregnancy outcome.">
+                comment = <"Clinical systems might represent this data element by the term 'Gravida' on a clinical form.">
+            >
+            ["at0003"] = <
+                text = <"Parity">
+                description = <"Number of times a woman has given birth to a viable baby, regardless of the pregnancy outcome.">
+                comment = <"Parity includes all pregnancies that are carried after the fetus is considered viable, as defined in the 'Definition of viability data' element. Stillbirths, late abortions, and all live births are included in the assessment of Parity. In cases of multiple pregnancies, parity is only increased with birth of the last fetus.">
+            >
+            ["at0004"] = <
+                text = <"Miscarriages">
+                description = <"Number of times a woman has had a miscarriage.">
+                comment = <"The definition of viability can be recorded in the Protocol.">
+            >
+            ["at0005"] = <
+                text = <"Terminations">
+                description = <"Number of times a woman has had an induced pregnancy termination, regardless of gestation.">
+            >
+            ["at0006"] = <
+                text = <"Live births">
+                description = <"Number of infants born alive.">
+            >
+            ["at0009"] = <
+                text = <"Last updated">
+                description = <"The date this summary was last updated.">
+            >
+            ["at0011"] = <
+                text = <"Ectopic pregnancies">
+                description = <"Number of ectopic pregnancies.">
+            >
+            ["at0012"] = <
+                text = <"Stillbirths">
+                description = <"Number of stillbirths.">
+                comment = <"The definition of viability can be recorded in the Protocol.">
+            >
+            ["at0015"] = <
+                text = <"Term births">
+                description = <"Number of births at or after term.">
+                comment = <"The definition of a term birth is a viable birth at or after 37 weeks and 0 days of gestation. ">
+            >
+            ["at0016"] = <
+                text = <"Preterm births">
+                description = <"Number of births before term.">
+                comment = <"The definition of a preterm birth is a viable birth before 37 weeks of gestation.">
+            >
+            ["at0017"] = <
+                text = <"Abortions">
+                description = <"Number of pregnancies that do not reach viability from all causes, including spontaneous miscarriages, induced terminations and ectopic pregnancies.">
+                comment = <"The value recorded for 'Abortions' should be equal to the sum of 'Miscarriages', 'Terminations' and 'Ectopic pregnancies', if these additional fields are recorded.">
+            >
+            ["at0018"] = <
+                text = <"Multiple births">
+                description = <"Number of birth events in which more than one fetus has been born.">
+            >
+            ["at0021"] = <
+                text = <"Definition of viability">
+                description = <"The number of weeks of gestation that differentiates between a miscarriage and a viable birth, that is used in the data collection.">
+                comment = <"If the baby is born before the defined gestation or less than the defined weight, it is recorded using the 'Miscarriage' data element. If the baby is born after the defined gestation or greater than the defined weight it is recorded using the 'Parity' data element. If the baby is born dead after the defined gestation or greater than the defined weight it may also recorded using the 'Stillbirth' data element.
+
+Depending on local definitions, missed abortions may be captured in this data element. Maybe useful to record when comparing data from different regions as definitions of a miscarriage may vary.">
+            >
+            ["at0024"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0025"] = <
+                text = <"Description">
+                description = <"Narrative description about the overall obstetric history.">
+                comment = <"The content of this description is intended to provide a narrative context that will complement the numbers of key obstetric events captured using this archetype.">
+            >
+            ["at0026"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the obstetric summary, not captured in other fields.">
+            >
+            ["at0027"] = <
+                text = <"Caesarean sections">
+                description = <"Number of caesarean sections.">
+            >
+            ["at0028"] = <
+                text = <"Neonatal deaths">
+                description = <"The number of neonatal deaths.">
+                comment = <"The neonatal period begins at birth and ends at 28 completed days of life ">
+            >
+            ["at9018"] = <
+                text = <"Mass">
+                description = <"Mass">
+            >
+        >
+        ["es-co"] = <
+            ["at0000"] = <
+                text = <"*Obstetric counts (en)">
+                description = <"Una visión general de la historia obstétrica de una mujer, incluyendo un resumen de todos los embarazos.">
+            >
+            ["at0002"] = <
+                text = <"*Gravidity (en)">
+                description = <"*Number of times a woman has been pregnant, current and past, regardless of the pregnancy outcome. (en)">
+                comment = <"*Clinical systems might represent this data element by the term 'Gravida' on a clinical form. (en)">
+            >
+            ["at0003"] = <
+                text = <"*Parity(en)">
+                description = <"*Number of times a woman has given birth to a viable baby, regardless of the pregnancy outcome. (en)">
+                comment = <"*Parity includes all pregnancies that are carried after the fetus is considered viable, as defined in the 'Definition of viability data' element. Stillbirths, late abortions, and all live births are included in the assessment of Parity. In cases of multiple pregnancies, parity is only increased with birth of the last fetus. (en)">
+            >
+            ["at0004"] = <
+                text = <"*Miscarriages(en)">
+                description = <"*Number of times a woman has had a miscarriage. (en)">
+                comment = <"*The definition of a miscarriage can be recorded in the Protocol. (en)">
+            >
+            ["at0005"] = <
+                text = <"Embarazos interrumpidos">
+                description = <"*Number of times a woman has had an induced pregnancy termination, regardless of gestation. (en)">
+            >
+            ["at0006"] = <
+                text = <"*Live births (en)">
+                description = <"*Number of infants born alive. (en)">
+            >
+            ["at0009"] = <
+                text = <"*Last updated (en)">
+                description = <"Fecha de ultima actualización del resumen">
+            >
+            ["at0011"] = <
+                text = <"*Ectopic pregnancies (en)">
+                description = <"Número de embarazos ectópicos">
+            >
+            ["at0012"] = <
+                text = <"*Stillbirths(en)">
+                description = <"*Number of stillbirths.(en)">
+                comment = <"*The definition of viability can be recorded in the Protocol. (en)">
+            >
+            ["at0015"] = <
+                text = <"*Term births (en)">
+                description = <"*Number of births at or after term. (en)">
+                comment = <"*The definition of a term birth is a viable birth at or after 37 weeks and 0 days of gestation.  (en)">
+            >
+            ["at0016"] = <
+                text = <"*Preterm births (en)">
+                description = <"*Number of births before term. (en)">
+                comment = <"*The definition of a preterm birth is a viable birth before 37 weeks of gestation. (en)">
+            >
+            ["at0017"] = <
+                text = <"*Abortions (en)">
+                description = <"*Number of pregnancies that do not reach viability from all causes, including spontaneous miscarriages, induced terminations and ectopic pregnancies. (en)">
+                comment = <"*The value recorded for 'Abortions' should be equal to the sum of 'Miscarriages', 'Terminations' and 'Ectopic pregnancies', if these additional fields are recorded. (en)">
+            >
+            ["at0018"] = <
+                text = <"*Multiple births (en)">
+                description = <"Número de nacimientos en los cuales ha nacido mas de un producto vivo">
+            >
+            ["at0021"] = <
+                text = <"*Definition of viability (en)">
+                description = <"*The number of weeks of gestation that differentiates between a miscarriage and a viable birth, that is used in the data collection. (en)">
+                comment = <"*If the baby is born before the defined gestation or less than the defined weight, it is recorded using the 'Miscarriage' data element. If the baby is born after the defined gestation or greater than the defined weight it is recorded using the 'Parity' data element. If the baby is born dead after the defined gestation or greater than the defined weight it may also recorded using the 'Stillbirth' data element.
+
+Depending on local definitions, missed abortions may be captured in this data element. Maybe useful to record when comparing data from different regions as definitions of a miscarriage may vary. (en)">
+            >
+            ["at0024"] = <
+                text = <"*Extension (en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms. (en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents. (en)">
+            >
+            ["at0025"] = <
+                text = <"*Description (en)">
+                description = <"*Narrative description about the overall obstetric history. (en)">
+                comment = <"*The content of this description is intended to provide a narrative context that will complement the numbers of key obstetric events captured using this archetype. (en)">
+            >
+            ["at0026"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the obstetric summary, not captured in other fields. (en)">
+            >
+            ["at0027"] = <
+                text = <"*Caesarean sections (en)">
+                description = <"*Number of caesarean sections. (en)">
+            >
+            ["at0028"] = <
+                text = <"*Neonatal deaths (en)">
+                description = <"*The number of neonatal deaths. (en)">
+                comment = <"*The neonatal period begins at birth and ends at 28 completed days of life  (en)">
+            >
+            ["at9018"] = <
+                text = <"* Mass (en)">
+                description = <"* Mass (en)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9018"] = <http://openehr.org/id/124>
+        >
+    >

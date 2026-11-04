@@ -1,0 +1,205 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ba41dbb3-a182-4401-8c5f-d265e836c754; build_uid=01605afd-7f7d-4a7f-aeda-e31e370860ba)
+    openEHR-EHR-OBSERVATION.ccs_angina_status.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Kim Werle, Martin Koch">
+                ["organisation"] = <"Medizinische Hochschule Hannover, Servei Català de la Salut">
+                ["email"] = <"martinandreaskoch@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, UK">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"2013-03-08">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Canadian Cardiovascular Society grading of angina pectoris">
+        ["2"] = <"Available from: http://www.ccs.ca/download/position_statements/Grading%20of%20Angina.pdf">
+        ["3"] = <"CANADIAN CARDIOVASCULAR SOCIETY ANGINA GRADE 0 – A CLINICALLY USEFUL ADDITION">
+        ["4"] = <"Available from: http://www.pulsus.com/ccc2003/abs/a853.htm">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"E2381CF8B4D4227AA40DF7B77D38CDD5">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Erfassung einer Klassifikation der Angina pectoris von Patienten auf Grundlage der angegebenen Brustschmerzen. Basierend auf dem Angina Status Score der Canadian Cardiovascular Society (CCS), erweitert um die Klasse 0, um Situationen zu erfassen, in denen Patienten keine Symptome haben.">
+            keywords = <"Beschwerden", "Schmerzen", "Herz", "Angina">
+            use = <"Zur Erfassung einer Klassifikation der Angina pectoris des Patienten auf Grundlage der angegebenen Brustschmerzen, basierend auf dem CCS Angina Status Score.">
+            misuse = <"Die Klasse 0 ist im offiziellen Angina Status Score der Canadian Cardiovascular Society (CCS) nicht definiert.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a classification of patient angina on the basis of reported chest pain.  Based on Canadian Cardiovascular Society (CCS) Angina Status score, adjusted to add Class 0, to record situations where patients have no symptoms.">
+            keywords = <"discomfort", "pain", "cardiac", "angina">
+            use = <"Use to record a classification of patient angina on the basis of reported chest pain based on the CCS Angina Status Score.">
+            misuse = <"Note that Class 0 is not defined in the formal Canadian Cardiovascular Society (CCS) Angina Status score.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Angina symptom classification (CCS)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Angina classification
+                                        value matches {
+                                            DV_ORDINAL[at9001] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- Class 0
+                                                    [{1}, {[at0006]}],    -- Class I
+                                                    [{2}, {[at0007]}],    -- Class II
+                                                    [{3}, {[at0008]}],    -- Class III
+                                                    [{4}, {[at0009]}]    -- Class IV
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0010] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0011] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Klassifikation der Angina-Symptome (CCS)">
+                description = <"Angina Symptom Score basierend auf dem Angina Status Score der Canadian Cardiovascular Society (CCS).">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardmäßiges, nicht angegebenes Zeitpunkt- oder Intervallereignis, das in einer Vorlage oder zur Laufzeit explizit definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Angina Klassifikation">
+                description = <"Angina Symptom Score auf Grundlage der Angina Status Klassifikation der Canadian Cardiovascular Society (CCS).">
+            >
+            ["at0005"] = <
+                text = <"Grad 0">
+                description = <"Der Patient hat keine Anginasymptome.">
+            >
+            ["at0006"] = <
+                text = <"Grad I">
+                description = <"Angina pectoris, die eine normale körperliche Aktivität nicht einschränkt.">
+            >
+            ["at0007"] = <
+                text = <"Grad II">
+                description = <"Leichte Einschränkung der normalen Tätigkeit.">
+            >
+            ["at0008"] = <
+                text = <"Grad III">
+                description = <"Deutliche Einschränkung der normalen körperlichen Aktivität.">
+            >
+            ["at0009"] = <
+                text = <"Grad IV">
+                description = <"Unfähigkeit, eine körperliche Tätigkeit ohne Beschwerden auszuüben.">
+            >
+            ["at0011"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen sind erforderlich, um den lokalen Kontext zu erfassen oder mit anderen Referenzmodellen/Formalismen in Einklang zu bringen.">
+                comment = <"Zum Beispiel: Lokale Krankenhausabteilungsinformationen oder zusätzliche Metadaten zur Angleichung an FHIR oder CIMI-Äquivalente.">
+            >
+            ["ac9001"] = <
+                text = <"Angina Klassifikation (synthesised)">
+                description = <"Angina Symptom Score auf Grundlage der Angina Status Klassifikation der Canadian Cardiovascular Society (CCS). (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Angina symptom classification (CCS)">
+                description = <"Angina symptom score based on Canadian Cardiovascular Society (CCS) Angina Status score.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Angina classification">
+                description = <"Angina symptom score based on Canadian Cardiovascular Society (CCS) Angina Status classification.">
+            >
+            ["at0005"] = <
+                text = <"Class 0">
+                description = <"Patient has no angina symptoms.">
+            >
+            ["at0006"] = <
+                text = <"Class I">
+                description = <"Angina which does not limit ordinary physical activity.">
+            >
+            ["at0007"] = <
+                text = <"Class II">
+                description = <"Slight limitation of ordinary activity.">
+            >
+            ["at0008"] = <
+                text = <"Class III">
+                description = <"Marked limitation of ordinary physical activity.">
+            >
+            ["at0009"] = <
+                text = <"Class IV">
+                description = <"Inability to perform any physical activity without discomfort.">
+            >
+            ["at0011"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9001"] = <
+                text = <"Angina classification (synthesised)">
+                description = <"Angina symptom score based on Canadian Cardiovascular Society (CCS) Angina Status classification. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["Snomed"] = <
+            ["at0000"] = <http://snomed.info/id/134438001>
+            ["at0004"] = <http://snomed.info/id/134438001>
+            ["at0006"] = <http://snomed.info/id/61490001>
+            ["at0007"] = <http://snomed.info/id/41334000>
+            ["at0008"] = <http://snomed.info/id/85284003>
+            ["at0009"] = <http://snomed.info/id/89323001>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009">
+        >
+    >

@@ -1,0 +1,760 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3db0a81a-c247-4b80-9eb0-4bfe03fb1d04; build_uid=0adca63c-dc5e-4021-8500-19c084247cbf)
+    openEHR-EHR-OBSERVATION.harris_hip.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Jonas Lyshaug">
+        ["organisation"] = <"HN IKT">
+        ["email"] = <"Jonas.nils.erik.lyshaug@hnikt.no">
+        ["date"] = <"2025-03-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Marte Vassli Gullesen, HelseNord IKT HF, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Harris WH. Traumatic arthritis of the hip after dislocation and acetabular fractures: treatment by mold arthroplasty. An end-result study using a new method of result evaluation. J Bone Joint Surg Am. 1969 Jun;51(4):737-55. PMID: 5783851.">
+        ["2"] = <"Söderman P, Malchau H. Is the Harris hip score system useful to study the outcome of total hip replacement? Clin Orthop Relat Res. 2001 Mar;(384):189-97. doi: 10.1097/00003086-200103000-00022. PMID: 11249165.">
+        ["3"] = <"Wamper KE, Sierevelt IN, Poolman RW, Bhandari M, Haverkamp D. The Harris hip score: Do ceiling effects limit its usefulness in orthopedics? Acta Orthop. 2010 Dec;81(6):703-7. doi: 10.3109/17453674.2010.537808. PMID: 21110703; PMCID: PMC3216080.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"31C8A107F1FB7A9B31D6B8D1A4C78800">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter and their total sum for the clinician-assessed Harris Hip Score (HHS), and the associated patient-reported outcome measure, the Modified Harris Hip Score (mHHS).">
+            keywords = <"arthroplasty", "fractures", "osteoarthritis", "hip", "HHS", "mHHS">
+            use = <"Use to record:
+- the results for each component parameter and their total sum for the Harris Hip Score, which includes both patient-reported measures of pain and function and clinician-assessed findings of range of motion and deformity; and
+- the results for the subset of parameters that form the Modified Harris Hip Score, which includes only the patient-reported components from the original Harris Hip Score and omits all clinician-assessed examination findings. 
+- the score for the Modified Harris Hip Score, recorded as either: 
+  -- a 'raw' score, being the actual sum of the patient-reported components, with a maximum value of 91; and
+  -- a 'normalised' score, representing the raw score expressed on a 0–100 scale for comparability with the original Harris Hip Score.
+
+While openEHR archetypes are all freely available under an open license, it is not clear if the specific content of this Harris Hip Score archetype is copyright protected. The original source was published in 1969 by Dr William Harris. Any use of this archetype within implementations should be in compliance with the terms established by the copyright owners, if available.">
+            misuse = <"">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Harris Hip Score (HHS)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- 1. Pain
+                                        value matches {
+                                            DV_ORDINAL[at9015] matches {
+                                                [value, symbol] matches {
+                                                    [{44}, {[at0005]}],    -- None, or ignores it
+                                                    [{40}, {[at0006]}],    -- Slight, occasional, no compromise in activity
+                                                    [{30}, {[at0007]}],    -- Mild pain, no effect on average activities, rarely moderate pain with unusual activity, may take aspirin
+                                                    [{20}, {[at0008]}],    -- Moderate pain, tolerable but makes concessions to pain. Some limitations of ordinary activity or work. May require occasional pain medication stronger than aspirin
+                                                    [{10}, {[at0009]}],    -- Marked pain, serious limitation of activities
+                                                    [{0}, {[at0010]}]    -- Totally disabled, crippled, pain in bed, bedridden
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- 2. Support devices
+                                        value matches {
+                                            DV_ORDINAL[at9016] matches {
+                                                [value, symbol] matches {
+                                                    [{11}, {[at0012]}],    -- None
+                                                    [{7}, {[at0013]}],    -- Cane/walking stick for long walks
+                                                    [{5}, {[at0014]}],    -- Cane/walking stick most of the time
+                                                    [{3}, {[at0015]}],    -- One crutch
+                                                    [{2}, {[at0016]}],    -- Two canes/walking sticks
+                                                    [{0}, {[at0017]}]    -- Two crutches or not able to walk
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- 3. Distance walked
+                                        value matches {
+                                            DV_ORDINAL[at9017] matches {
+                                                [value, symbol] matches {
+                                                    [{11}, {[at0019]}],    -- Unlimited
+                                                    [{8}, {[at0020]}],    -- Six blocks
+                                                    [{5}, {[at0021]}],    -- Two or three blocks
+                                                    [{2}, {[at0022]}],    -- Indoors only
+                                                    [{0}, {[at0023]}]    -- Bed and chair only
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- 4. Limp
+                                        value matches {
+                                            DV_ORDINAL[at9018] matches {
+                                                [value, symbol] matches {
+                                                    [{11}, {[at0025]}],    -- None
+                                                    [{8}, {[at0026]}],    -- Slight
+                                                    [{5}, {[at0027]}],    -- Moderate
+                                                    [{0}, {[at0028]}]    -- Severe
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- 5. Shoes and socks
+                                        value matches {
+                                            DV_ORDINAL[at9019] matches {
+                                                [value, symbol] matches {
+                                                    [{4}, {[at0030]}],    -- With ease
+                                                    [{2}, {[at0031]}],    -- With difficulty
+                                                    [{0}, {[at0032]}]    -- Unable
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0033] occurrences matches {0..1} matches {    -- 6. Stairs
+                                        value matches {
+                                            DV_ORDINAL[at9020] matches {
+                                                [value, symbol] matches {
+                                                    [{4}, {[at0034]}],    -- Normally without using a railing
+                                                    [{2}, {[at0035]}],    -- Normally using a railing
+                                                    [{1}, {[at0036]}],    -- In any manner
+                                                    [{0}, {[at0037]}]    -- Unable to do stairs
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0038] occurrences matches {0..1} matches {    -- 7. Public transportation
+                                        value matches {
+                                            DV_ORDINAL[at9021] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0039]}],    -- Able to use transportation (bus)
+                                                    [{0}, {[at0040]}]    -- Unable to use public transportation (bus)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0041] occurrences matches {0..1} matches {    -- 8. Sitting
+                                        value matches {
+                                            DV_ORDINAL[at9022] matches {
+                                                [value, symbol] matches {
+                                                    [{5}, {[at0042]}],    -- Comfortably in ordinary chair for one hour
+                                                    [{3}, {[at0043]}],    -- On a high chair for 30 minutes
+                                                    [{0}, {[at0044]}]    -- Unable to sit comfortably in any chair
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0048] occurrences matches {0..4} matches {    -- 9. Absence of deformity
+                                        value matches {
+                                            DV_ORDINAL[at9023] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0176]}],    -- One or more criteria are not met.
+                                                    [{4}, {[at0177]}]    -- All four criteria are met.
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0052] occurrences matches {0..1} matches {    -- 10. Total degrees of flexion
+                                        value matches {
+                                            DV_SCALE[at9024] matches {
+                                                [value, symbol] matches {
+                                                    [{0.0}, {[at0053]}],    -- None
+                                                    [{0.04}, {[at0054]}],    -- 0>8
+                                                    [{0.08}, {[at0055]}],    -- 8>16
+                                                    [{1.2}, {[at0056]}],    -- 16>24
+                                                    [{1.6}, {[at0057]}],    -- 24>32
+                                                    [{2.0}, {[at0058]}],    -- 32>40
+                                                    [{2.25}, {[at0059]}],    -- 40>45
+                                                    [{2.55}, {[at0060]}],    -- 45>55
+                                                    [{2.85}, {[at0061]}],    -- 55>65
+                                                    [{3.0}, {[at0062]}],    -- 65>70
+                                                    [{3.15}, {[at0063]}],    -- 70>75
+                                                    [{3.3}, {[at0064]}],    -- 75>80
+                                                    [{3.6}, {[at0065]}],    -- 80>90
+                                                    [{3.75}, {[at0066]}],    -- 90>100
+                                                    [{3.9}, {[at0067]}]    -- 100>110
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0068] occurrences matches {0..1} matches {    -- 11. Total degrees of abduction
+                                        value matches {
+                                            DV_SCALE[at9025] matches {
+                                                [value, symbol] matches {
+                                                    [{0.0}, {[at0163]}],    -- None
+                                                    [{0.2}, {[at0164]}],    -- 0>5
+                                                    [{0.4}, {[at0165]}],    -- 5>10
+                                                    [{0.6}, {[at0166]}],    -- 10>15
+                                                    [{0.65}, {[at0167]}]    -- 15>20
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0074] occurrences matches {0..1} matches {    -- 12. Total degrees of external rotation
+                                        value matches {
+                                            DV_SCALE[at9026] matches {
+                                                [value, symbol] matches {
+                                                    [{0.0}, {[at0168]}],    -- None
+                                                    [{0.1}, {[at0169]}],    -- 0>5
+                                                    [{0.2}, {[at0170]}],    -- 5>10
+                                                    [{0.3}, {[at0171]}]    -- 10>15
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0079] occurrences matches {0..1} matches {    -- 13. Total degrees of adduction
+                                        value matches {
+                                            DV_SCALE[at9027] matches {
+                                                [value, symbol] matches {
+                                                    [{0.0}, {[at0172]}],    -- None
+                                                    [{0.05}, {[at0173]}],    -- 0>5
+                                                    [{0.1}, {[at0174]}],    -- 5>10
+                                                    [{0.15}, {[at0175]}]    -- 10>15
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0085] occurrences matches {0..1} matches {    -- HHS total
+                                        value matches {
+                                            DV_QUANTITY[at9028] matches {
+                                                property matches {[at9013]}    -- Qualified real
+                                                magnitude matches {|0.0..100.0|}
+                                                units matches {"1"}
+                                                precision matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0160] occurrences matches {0..1} matches {    -- mHHS raw total
+                                        value matches {
+                                            DV_QUANTITY[at9029] matches {
+                                                property matches {[at9013]}    -- Qualified real
+                                                magnitude matches {|0.0..91.0|}
+                                                units matches {"1"}
+                                                precision matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0162] occurrences matches {0..1} matches {    -- mHHS normalised total
+                                        value matches {
+                                            DV_QUANTITY[at9030] matches {
+                                                property matches {[at9013]}    -- Qualified real
+                                                magnitude matches {|0.0..100.0|}
+                                                units matches {"1"}
+                                                precision matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0086] occurrences matches {0..1} matches {    -- Grading
+                                        value matches {
+                                            DV_CODED_TEXT[at9031] matches {
+                                                defining_code matches {[ac9014]}    -- Grading (synthesised)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0047] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0084] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Harris Hip Score (HHS)">
+                description = <"An assessment score used to evaluate the functional capacity of an individual following hip surgery.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"1. Pain">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"None, or ignores it">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Slight, occasional, no compromise in activity">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Mild pain, no effect on average activities, rarely moderate pain with unusual activity, may take aspirin">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Moderate pain, tolerable but makes concessions to pain. Some limitations of ordinary activity or work. May require occasional pain medication stronger than aspirin">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Marked pain, serious limitation of activities">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Totally disabled, crippled, pain in bed, bedridden">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"2. Support devices">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Cane/walking stick for long walks">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Cane/walking stick most of the time">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"One crutch">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Two canes/walking sticks">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Two crutches or not able to walk">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"3. Distance walked">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Unlimited">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Six blocks">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Two or three blocks">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Indoors only">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Bed and chair only">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"4. Limp">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Slight">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"5. Shoes and socks">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"With ease">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"With difficulty">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Unable">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"6. Stairs">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Normally without using a railing">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Normally using a railing">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"In any manner">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Unable to do stairs">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"7. Public transportation">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Able to use transportation (bus)">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Unable to use public transportation (bus)">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"8. Sitting">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Comfortably in ordinary chair for one hour">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"On a high chair for 30 minutes">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Unable to sit comfortably in any chair">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"9. Absence of deformity">
+                description = <"Less than 30degrees of fixed flexion.
+Less than 10 degrees of fixed internal rotation in extension.
+Less than 10 degrees of fixed adduction.
+Limb length discrepancy less than 3.2 cm (1.5 inches).">
+            >
+            ["at0052"] = <
+                text = <"10. Total degrees of flexion">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"0>8">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"8>16">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"16>24">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"24>32">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"32>40">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"40>45">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"45>55">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"55>65">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"65>70">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"70>75">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"75>80">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"80>90">
+                description = <"">
+            >
+            ["at0066"] = <
+                text = <"90>100">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"100>110">
+                description = <"">
+            >
+            ["at0068"] = <
+                text = <"11. Total degrees of abduction">
+                description = <"">
+            >
+            ["at0074"] = <
+                text = <"12. Total degrees of external rotation">
+                description = <"">
+            >
+            ["at0079"] = <
+                text = <"13. Total degrees of adduction">
+                description = <"">
+            >
+            ["at0084"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0085"] = <
+                text = <"HHS total">
+                description = <"The total sum of each component parameter for the Harris hip score.">
+            >
+            ["at0086"] = <
+                text = <"Grading">
+                description = <"Grading derived from Harris hip score.">
+            >
+            ["at0087"] = <
+                text = <"Poor">
+                description = <"Less than 70.">
+            >
+            ["at0088"] = <
+                text = <"Fair">
+                description = <"70-79.">
+            >
+            ["at0089"] = <
+                text = <"Good">
+                description = <"80-89.">
+            >
+            ["at0090"] = <
+                text = <"Excellent">
+                description = <"90-100.">
+            >
+            ["at0160"] = <
+                text = <"mHHS raw total">
+                description = <"The total sum of each component parameter for the modified Harris hip score.">
+            >
+            ["at0162"] = <
+                text = <"mHHS normalised total">
+                description = <"The adjusted score for the Modified Harris Hip Score, representing the raw score expressed on a 0–100 scale for comparability with the original Harris Hip Score.">
+            >
+            ["at0163"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0164"] = <
+                text = <"0>5">
+                description = <"">
+            >
+            ["at0165"] = <
+                text = <"5>10">
+                description = <"">
+            >
+            ["at0166"] = <
+                text = <"10>15">
+                description = <"">
+            >
+            ["at0167"] = <
+                text = <"15>20">
+                description = <"">
+            >
+            ["at0168"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0169"] = <
+                text = <"0>5">
+                description = <"">
+            >
+            ["at0170"] = <
+                text = <"5>10">
+                description = <"">
+            >
+            ["at0171"] = <
+                text = <"10>15">
+                description = <"">
+            >
+            ["at0172"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0173"] = <
+                text = <"0>5">
+                description = <"">
+            >
+            ["at0174"] = <
+                text = <"5>10">
+                description = <"">
+            >
+            ["at0175"] = <
+                text = <"10>15">
+                description = <"">
+            >
+            ["at0176"] = <
+                text = <"One or more criteria are not met.">
+                description = <"">
+            >
+            ["at0177"] = <
+                text = <"All four criteria are met.">
+                description = <"">
+            >
+            ["at9013"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+            ["ac9031"] = <
+                text = <"1. Pain (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"2. Support devices (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9033"] = <
+                text = <"3. Distance walked (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9034"] = <
+                text = <"4. Limp (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9035"] = <
+                text = <"5. Shoes and socks (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9036"] = <
+                text = <"6. Stairs (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9037"] = <
+                text = <"7. Public transportation (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9038"] = <
+                text = <"8. Sitting (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9039"] = <
+                text = <"9. Absence of deformity (synthesised)">
+                description = <"Less than 30degrees of fixed flexion.
+Less than 10 degrees of fixed internal rotation in extension.
+Less than 10 degrees of fixed adduction.
+Limb length discrepancy less than 3.2 cm (1.5 inches). (synthesised)">
+            >
+            ["ac9040"] = <
+                text = <"10. Total degrees of flexion (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9041"] = <
+                text = <"11. Total degrees of abduction (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9042"] = <
+                text = <"12. Total degrees of external rotation (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9043"] = <
+                text = <"13. Total degrees of adduction (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Grading (synthesised)">
+                description = <"Grading derived from Harris hip score. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9013"] = <http://openehr.org/id/380>
+        >
+    >
+    value_sets = <
+        ["ac9031"] = <
+            id = <"ac9031">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009", "at0010">
+        >
+        ["ac9035"] = <
+            id = <"ac9035">
+            members = <"at0030", "at0031", "at0032">
+        >
+        ["ac9034"] = <
+            id = <"ac9034">
+            members = <"at0025", "at0026", "at0027", "at0028">
+        >
+        ["ac9033"] = <
+            id = <"ac9033">
+            members = <"at0019", "at0020", "at0021", "at0022", "at0023">
+        >
+        ["ac9032"] = <
+            id = <"ac9032">
+            members = <"at0012", "at0013", "at0014", "at0015", "at0016", "at0017">
+        >
+        ["ac9039"] = <
+            id = <"ac9039">
+            members = <"at0176", "at0177">
+        >
+        ["ac9038"] = <
+            id = <"ac9038">
+            members = <"at0042", "at0043", "at0044">
+        >
+        ["ac9037"] = <
+            id = <"ac9037">
+            members = <"at0039", "at0040">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0087", "at0088", "at0089", "at0090">
+        >
+        ["ac9036"] = <
+            id = <"ac9036">
+            members = <"at0034", "at0035", "at0036", "at0037">
+        >
+        ["ac9042"] = <
+            id = <"ac9042">
+            members = <"at0168", "at0169", "at0170", "at0171">
+        >
+        ["ac9041"] = <
+            id = <"ac9041">
+            members = <"at0163", "at0164", "at0165", "at0166", "at0167">
+        >
+        ["ac9040"] = <
+            id = <"ac9040">
+            members = <"at0053", "at0054", "at0055", "at0056", "at0057", "at0058", "at0059", "at0060", "at0061", "at0062", "at0063", "at0064", "at0065", "at0066", "at0067">
+        >
+        ["ac9043"] = <
+            id = <"ac9043">
+            members = <"at0172", "at0173", "at0174", "at0175">
+        >
+    >

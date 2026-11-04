@@ -1,0 +1,145 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=31fc8d28-8943-48c1-abc1-17a2e725990c; build_uid=438b6157-c12e-49ee-bd25-085917a41cad)
+    openEHR-EHR-CLUSTER.electrophysiology_experiment.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::cs]>
+
+description
+    original_author = <
+        ["name"] = <"Václav Papež">
+        ["organisation"] = <"University of West Bohemia">
+        ["email"] = <"vpapez@kiv.zcu.cz">
+        ["date"] = <"2016-04-04">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Based on odML terminology http://portal.g-node.org/odml/terminologies/v1.0/experiment/electrophysiology.xml, v.1.0, d. 2012-01-02 ">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"344CA243823B82B7345A26459A05FF9C">
+    >
+    details = <
+        ["cs"] = <
+            language = <[ISO_639-1::cs]>
+            purpose = <"Describes basic atributtes of electrophysilogy experiments according to odML terminology.">
+            keywords = <"experiment", "electrophysiology">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Electrophysiology
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Type
+                value matches {
+                    DV_CODED_TEXT[at9002] matches {
+                        defining_code matches {[ac9000]}    -- Type (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Subtype
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9001]}    -- Subtype (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["cs"] = <
+            ["at0000"] = <
+                text = <"Electrophysiology">
+                description = <"Properties for describing an electrophysiological experiment.">
+            >
+            ["at0001"] = <
+                text = <"Type">
+                description = <"Intracellular recording of single cell responses with sharp microelectrodes.">
+            >
+            ["at0002"] = <
+                text = <"intracellular recording">
+                description = <"*">
+            >
+            ["at0003"] = <
+                text = <"extracellular recording">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"patch clamp">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"whole cell patch">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"loose patch">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"ERG">
+                description = <"*">
+            >
+            ["at0008"] = <
+                text = <"EEG">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"EKG">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"EMG">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"Subtype">
+                description = <"Subtype of this electrophysiological experiment.">
+            >
+            ["at0012"] = <
+                text = <"single electrode recording">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"dual electrode recording">
+                description = <"*">
+            >
+            ["at0014"] = <
+                text = <"multi electrode recording">
+                description = <"*">
+            >
+            ["ac9000"] = <
+                text = <"Type (synthesised)">
+                description = <"Intracellular recording of single cell responses with sharp microelectrodes. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Subtype (synthesised)">
+                description = <"Subtype of this electrophysiological experiment. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["ODMLID"] = <
+            ["at0001"] = <http://ODMLID.org/id/ODMLID012002>
+            ["at0011"] = <http://ODMLID.org/id/ODMLID012003>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0012", "at0013", "at0014">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0002", "at0003", "at0004", "at0005", "at0006", "at0007", "at0008", "at0009", "at0010">
+        >
+    >

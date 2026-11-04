@@ -1,0 +1,540 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=dd46f157-d547-4ec7-a7a4-92406071524c; build_uid=2679f21d-f91c-4958-ad4f-cd553575e2d6)
+    openEHR-EHR-CLUSTER.bioreagent.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Anneka Sargeant, Martin Koch">
+                ["organisation"] = <"Institut für Medizinische Informatik - Universitätsmedizin Göttingen, Servei Català de la Salut">
+                ["email"] = <"anneka.sargeant@med.uni-goettingen.de, martinandreaskoch@catsalut.cat">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Elham Gholami">
+                ["organisation"] = <"SLL">
+                ["email"] = <"elham.gholami@sll.se">
+            >
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Alan March">
+                ["organisation"] = <"Hospital Universitario Austral, Buenos Aires, Argentina">
+                ["email"] = <"amarch@cas.austral.edu.ar">
+            >
+            accreditation = <"MD">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand, Peter Fedorcsak, Liv Laugen">
+                ["organisation"] = <"Helse Bergen HF, University of Oslo, ​Oslo University Hospital, Norway">
+                ["email"] = <"peterfe@uio.no, liv.laugen@ous-hf.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Osmeire Chamelette Sanzovo">
+                ["organisation"] = <"Hospital Sírio Libanês - SP">
+                ["email"] = <"osmeire.acsanzovo@hsl.org.br">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-01-28">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Peter Fedorcsak, University of Oslo, Norway (openEHR Editor)", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"https://en.wikipedia.org/wiki/Reagent">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"1FB126497097E69496ED78B6AB9B2BEF">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Aufzeichnung der Details zu einem Bioreagenz oder Laborverbrauchsmaterial, das im Rahmen eines diagnostischen oder therapeutischen Verfahrens im Gesundheitswesen verwendet wird.">
+            keywords = <"Chemikalie", "Biochemikalie", "Reagenz", "Biosubstanz", "Substanz", "Laborprodukt", "Material", "Medium">
+            use = <"Zur Erfassung der Details eines Bioreagenz oder Laborverbrauchsmaterials, das im Rahmen eines diagnostischen oder therapeutischen Verfahrens im Gesundheitswesen verwendet wird.
+
+Dieser Archetyp wurde für die breite Wiederverwendung in anderen Archetypen entwickelt, die die Verwendung eines bestimmten Bioreagenz identifizieren müssen. Beispielsweise kann er im SLOT „Verfahrensdetails“ des Archetyps ACTION.procedure bei Verfahren der assistierten Reproduktion verschachtelt werden, wie z. B.:
+- Denudation von Eizellen;
+- Assistierte Aktivierung von Eizellen;
+- Kryokonservierung und Auftauen von Zellen oder Embryonen; und
+- Befruchtung durch intrazytoplasmatische Spermieninjektion (ICSI).">
+            misuse = <"Nicht zur Erfassung von Daten über Arzneimittel mit direkter pharmakologischer, metabolischer oder immunologischer Wirkung. Beispiel: Ein verschreibungspflichtiges Arzneimittel sollte mit dem Archetyp „INSTRUCTION.medication_order“ erfasst werden, der sich auf Wirkstoffe, Dosierung usw. konzentriert.
+
+Nicht zur Erfassung von Daten über medizinische Geräte, Instrumente oder Ausrüstung, die bei diagnostischen oder therapeutischen Verfahren eingesetzt werden, verwenden Sie hierfür den entsprechenden Archetyp.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"*To record the details about a bioreagent or laboratory consumable used as part of a diagnostic or therapeutic procedure in healthcare. (en)">
+            keywords = <"*chemical (en)", "*biochemical (en)", "*reagent (en)", "*biosubstance (en)", "*substance (en)", "*laboratory (en)", "*product (en)", "*material (en)", "*medium (en)">
+            use = <"*Use to record the details about a bioreagent or laboratory consumable used as part of a diagnostic or therapeutic procedure in healthcare.
+
+This archetype has been designed for broad reuse within other archetypes that need to identify the use of a specific bioreagent. For example, to nest within the 'Procedure detail' SLOT in the ACTION.procedure archetype in assisted reproduction treatment procedures such as: 
+- oocyte denudation; 
+- assisted oocyte activation; 
+- cryopreservation and thawing of cells or embryos; and
+- fertilisation by intracytoplasmic sperm injection (ICSI). (en)">
+            misuse = <"*Not to be used to record data about medicinal products that exert a direct pharmacological, metabolic or immunologic effect. For example: a medicine that requires a prescription should be recorded using the  INSTRUCTION.medication_order archetype, focused on the active ingredients, dosage etc.
+
+Not to be used to record data about medical devices, instruments or equipment used during diagnostic or therapeutic procedures - use the appropriate archetype for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"*To record the details about a bioreagent or laboratory consumable used as part of a diagnostic or therapeutic procedure in healthcare. (en)">
+            keywords = <"*chemical (en)", "*biochemical (en)", "*reagent (en)", "*biosubstance (en)", "*substance (en)", "*laboratory (en)", "*product (en)", "*material (en)", "*medium (en)">
+            use = <"*Use to record the details about a bioreagent or laboratory consumable used as part of a diagnostic or therapeutic procedure in healthcare.
+
+This archetype has been designed for broad reuse within other archetypes that need to identify the use of a specific bioreagent. For example, to nest within the 'Procedure detail' SLOT in the ACTION.procedure archetype in assisted reproduction treatment procedures such as: 
+- oocyte denudation; 
+- assisted oocyte activation; 
+- cryopreservation and thawing of cells or embryos; and
+- fertilisation by intracytoplasmic sperm injection (ICSI). (en)">
+            misuse = <"*Not to be used to record data about medicinal products that exert a direct pharmacological, metabolic or immunologic effect. For example: a medicine that requires a prescription should be recorded using the  INSTRUCTION.medication_order archetype, focused on the active ingredients, dosage etc.
+
+Not to be used to record data about medical devices, instruments or equipment used during diagnostic or therapeutic procedures - use the appropriate archetype for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en detaljert oversikt over bioreagenser eller forbruksvarer anvendt ved en diagnostisk- eller behandlingsrettet prosedyre.">
+            keywords = <"kjemikalie", "biokjemisk", "reagens", "bioreagens", "stoff", "laboratorie", "produkt", "materiale", "medium">
+            use = <"Bruk for å registrere en detaljert oversikt over bioreagens eller forbruksvare anvendt ved en diagnostisk- eller behandlingsrettet prosedyre.
+
+Denne arketypen ble utviklet for bruke inne i andre arketyper hvor det er nødvendig å identifisere bruk av et bestemt bioreagens. For eksempel kan denne arketypen nøstes i SLOTet 'Prosedyredetaljer' i ACTION.procedure arketypene laget for assistert befruktning:
+- denudering av oocytt;
+- assistert oocyttaktivering;
+- nedfrysing og opptining av celler eller embryo;
+- intracytoplasmatisk spermiemikroinjeksjon.">
+            misuse = <"Skal ikke brukes til å registrere data om legemidler som har en direkte farmakologisk, metabolsk eller immunologisk effekt. For eksempel: en medisin som krever resept skal registreres ved å bruke arketypen INSTRUCTION.medication_order (Legemiddelordinering), med fokus på de aktive ingrediensene, dosering osv.
+
+Skal ikke brukes til å registrere data om medisinsk utstyr, instrumenter eller utstyr som brukes under diagnostiske eller terapeutiske prosedyrer - bruk riktig arketype for dette formålet.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*To record the details about a bioreagent or laboratory consumable used as part of a diagnostic or therapeutic procedure in healthcare. (en)">
+            keywords = <"*chemical (en)", "*biochemical (en)", "*reagent (en)", "*biosubstance (en)", "*substance (en)", "*laboratory (en)", "*product (en)", "*material (en)", "*medium (en)">
+            use = <"*Use to record the details about a bioreagent or laboratory consumable used as part of a diagnostic or therapeutic procedure in healthcare.
+
+This archetype has been designed for broad reuse within other archetypes that need to identify the use of a specific bioreagent. For example, to nest within the 'Procedure detail' SLOT in the ACTION.procedure archetype in assisted reproduction treatment procedures such as: 
+- oocyte denudation; 
+- assisted oocyte activation; 
+- cryopreservation and thawing of cells or embryos; and
+- fertilisation by intracytoplasmic sperm injection (ICSI). (en)">
+            misuse = <"*Not to be used to record data about medicinal products that exert a direct pharmacological, metabolic or immunologic effect. For example: a medicine that requires a prescription should be recorded using the  INSTRUCTION.medication_order archetype, focused on the active ingredients, dosage etc.
+
+Not to be used to record data about medical devices, instruments or equipment used during diagnostic or therapeutic procedures - use the appropriate archetype for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the details about a bioreagent or laboratory consumable used as part of a diagnostic or therapeutic procedure in healthcare.">
+            keywords = <"chemical", "biochemical", "reagent", "biosubstance", "substance", "laboratory", "product", "material", "medium">
+            use = <"Use to record the details about a bioreagent or laboratory consumable used as part of a diagnostic or therapeutic procedure in healthcare.
+
+This archetype has been designed for broad reuse within other archetypes that need to identify the use of a specific bioreagent. For example, to nest within the 'Procedure detail' SLOT in the ACTION.procedure archetype in assisted reproduction treatment procedures such as: 
+- oocyte denudation; 
+- assisted oocyte activation; 
+- cryopreservation and thawing of cells or embryos; and
+- fertilisation by intracytoplasmic sperm injection (ICSI).">
+            misuse = <"Not to be used to record data about medicinal products that exert a direct pharmacological, metabolic or immunologic effect. For example: a medicine that requires a prescription should be recorded using the  INSTRUCTION.medication_order archetype, focused on the active ingredients, dosage etc.
+
+Not to be used to record data about medical devices, instruments or equipment used during diagnostic or therapeutic procedures - use the appropriate archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"*To record the details about a bioreagent or laboratory consumable used as part of a diagnostic or therapeutic procedure in healthcare. (en)">
+            keywords = <"*chemical (en)", "*biochemical (en)", "*reagent (en)", "*biosubstance (en)", "*substance (en)", "*laboratory (en)", "*product (en)", "*material (en)", "*medium (en)">
+            use = <"*Use to record the details about a bioreagent or laboratory consumable used as part of a diagnostic or therapeutic procedure in healthcare.
+
+This archetype has been designed for broad reuse within other archetypes that need to identify the use of a specific bioreagent. For example, to nest within the 'Procedure detail' SLOT in the ACTION.procedure archetype in assisted reproduction treatment procedures such as: 
+- oocyte denudation; 
+- assisted oocyte activation; 
+- cryopreservation and thawing of cells or embryos; and
+- fertilisation by intracytoplasmic sperm injection (ICSI). (en)">
+            misuse = <"*Not to be used to record data about medicinal products that exert a direct pharmacological, metabolic or immunologic effect. For example: a medicine that requires a prescription should be recorded using the  INSTRUCTION.medication_order archetype, focused on the active ingredients, dosage etc.
+
+Not to be used to record data about medical devices, instruments or equipment used during diagnostic or therapeutic procedures - use the appropriate archetype for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Bioreagent
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- Name
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Type
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0021] matches {    -- Identifier
+                value matches {
+                    DV_IDENTIFIER[at9002]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Manufacturer
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Catalogue number
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Batch number
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Date of expiry
+                value matches {
+                    DV_DATE_TIME[at9006]
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9007]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Bioreagenz">
+                description = <"Eine Substanz, Verbindung, ein Produkt oder Material, das zur Identifizierung oder Manipulation chemischer Stoffe oder zur Unterstützung des Wachstums von Zellen oder Geweben als Teil eines diagnostischen oder therapeutischen Verfahrens im Gesundheitswesen verwendet wird.">
+                comment = <"Zum Beispiel: Antikörper, immortalisierte Zelllinien und Werkzeugverbindungen.">
+            >
+            ["at0001"] = <
+                text = <"Name">
+                description = <"Identifizierung des Reagenz oder Verbrauchsmaterials, vorzugsweise durch einen gebräuchlichen Namen, einen formalen, vollständig beschreibenden Namen oder, falls erforderlich, durch Klasse oder Kategorie.">
+                comment = <"Beispiel: „Lösung zur Spermienimmobilisierung“.">
+            >
+            ["at0003"] = <
+                text = <"Typ">
+                description = <"Die Kategorie oder Art des Reagenz oder Verbrauchsmaterials.">
+                comment = <"Beispiel: „Zellkulturmedium“.">
+            >
+            ["at0004"] = <
+                text = <"Hersteller">
+                description = <"Name des Herstellers.">
+            >
+            ["at0006"] = <
+                text = <"Losnummer">
+                description = <"Die vom Hersteller vergebene Nummer identifiziert eine Gruppe gleichzeitig hergestellter Artikel und befindet sich normalerweise auf dem Etikett oder dem Verpackungsmaterial.">
+            >
+            ["at0007"] = <
+                text = <"Ablaufdatum">
+                description = <"Datum, nach dem das Gerät/Produkt nicht mehr gebrauchstauglich ist. Normalerweise auf dem Reagenz selbst oder auf der beiliegenden Verpackung aufgedruckt.">
+                comment = <"Dieses Datum gilt normalerweise nur für Einmalprodukte oder Einwegprodukte.">
+            >
+            ["at0008"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Informationen zum Bioreagenz, die in anderen Feldern nicht erfasst wurden.">
+            >
+            ["at0021"] = <
+                text = <"Identifizierung">
+                description = <"Eine eindeutige Identifizierung, die von einem bestimmten Register zugewiesen wird.">
+                comment = <"Zum Beispiel: Chemical Abstracts Service (CAS)-Nummer, Beilstein-Registrierungsnummer oder Enzyme Commission (EC)-Nummer.">
+            >
+            ["at0022"] = <
+                text = <"Katalognummer">
+                description = <"Die vom Hersteller vergebene Nummer, wie sie im Katalog, auf dem Etikett oder der beiliegenden Verpackung des Herstellers erscheint.">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"*Bioreagent (en)">
+                description = <"*A substance, compound, product or material used to identify or manipulate the chemical matter, or used to support the growth of cells or tissues, as part of a diagnostic or therapeutic procedure in healthcare. (en)">
+                comment = <"*For example: antibodies, immortalised cell lines, and tool compounds. (en)">
+            >
+            ["at0001"] = <
+                text = <"*Name (en)">
+                description = <"*Identification of the reagent or consumable, preferably by a common name, a formal fully descriptive name or, if required, by class or category. (en)">
+                comment = <"*For example: \"Sperm immobilisation solution\". (en)">
+            >
+            ["at0003"] = <
+                text = <"Typ">
+                description = <"*The category or type of reagent or consumable. (en)">
+                comment = <"*For example: \"Cell culture medium\". (en)">
+            >
+            ["at0004"] = <
+                text = <"Tillverkare">
+                description = <"Tillverkares namn">
+            >
+            ["at0006"] = <
+                text = <"*Batch number (en)">
+                description = <"*The number assigned by the manufacturer which identifies a group of items manufactured at the same time, usually found on the label or packaging material. (en)">
+            >
+            ["at0007"] = <
+                text = <"Utgångsdatum">
+                description = <"*Date after which the device/product is no longer fit for use, usually found on the reagent itself or printed on the accompanying packaging. (en)">
+                comment = <"Detta datum gäller vanligtvis utrustning som ska användas en gång.">
+            >
+            ["at0008"] = <
+                text = <"kommentarer">
+                description = <"*Additional narrative about the bioreagent not captured in other fields. (en)">
+            >
+            ["at0021"] = <
+                text = <"*Identifier (en)">
+                description = <"*A unique identifier allocated by a specified registry. (en)">
+                comment = <"*For example: Chemical Abstracts Service (CAS) number; Beilstein Registry number; or Enzyme Commission (EC) number. (en)">
+            >
+            ["at0022"] = <
+                text = <"Katalognummer">
+                description = <"*The number assigned by the manufacturer, as it appears in the manufacturer's catalogue, labeling, or accompanying packaging. (en)">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"*Bioreagent (en)">
+                description = <"*A substance, compound, product or material used to identify or manipulate the chemical matter, or used to support the growth of cells or tissues, as part of a diagnostic or therapeutic procedure in healthcare. (en)">
+                comment = <"*For example: antibodies, immortalised cell lines, and tool compounds. (en)">
+            >
+            ["at0001"] = <
+                text = <"*Name (en)">
+                description = <"*Identification of the reagent or consumable, preferably by a common name, a formal fully descriptive name or, if required, by class or category. (en)">
+                comment = <"*For example: \"Sperm immobilisation solution\". (en)">
+            >
+            ["at0003"] = <
+                text = <"*Type(en)">
+                description = <"*The category or type of reagent or consumable. (en)">
+                comment = <"*For example: \"Cell culture medium\". (en)">
+            >
+            ["at0004"] = <
+                text = <"Fabricante">
+                description = <"Fabricante del dispositivo.">
+            >
+            ["at0006"] = <
+                text = <"*Batch number (en)">
+                description = <"*The number assigned by the manufacturer which identifies a group of items manufactured at the same time, usually found on the label or packaging material. (en)">
+            >
+            ["at0007"] = <
+                text = <"Fecha de vencimiento">
+                description = <"*Date after which the device/product is no longer fit for use, usually found on the reagent itself or printed on the accompanying packaging. (en)">
+            >
+            ["at0008"] = <
+                text = <"Comentario">
+                description = <"*Additional narrative about the bioreagent not captured in other fields. (en)">
+            >
+            ["at0021"] = <
+                text = <"*Identifier (en)">
+                description = <"*A unique identifier allocated by a specified registry. (en)">
+                comment = <"*For example: Chemical Abstracts Service (CAS) number; Beilstein Registry number; or Enzyme Commission (EC) number. (en)">
+            >
+            ["at0022"] = <
+                text = <"*New element(en)">
+                description = <"*The number assigned by the manufacturer, as it appears in the manufacturer's catalogue, labeling, or accompanying packaging. (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Bioreagens">
+                description = <"Et substans/stoff, materiale eller sammensatt produkt som brukes til å identifisere eller manipulere det kjemiske stoffet, eller brukes til å støtte veksten av celler eller vev, som en del av en diagnostisk eller terapeutisk prosedyre i helsevesenet.">
+                comment = <"For eksempel: antistoff, cellelinjer, eller produkter.">
+            >
+            ["at0001"] = <
+                text = <"Navn">
+                description = <"Identifisering av reagens eller forbruksvare, fortrinnsvis ved vanlig navn, ved formelt, fullt beskrivende navn, eller hvis påkrevet, ved klasse eller kategori.">
+                comment = <"For eksempel: \"Løsning for immobilisering av spermier\".">
+            >
+            ["at0003"] = <
+                text = <"Type">
+                description = <"Kategori eller type reagens eller forbruksvare.">
+                comment = <"For eksempel: \"Celledyrkningsmedium\".">
+            >
+            ["at0004"] = <
+                text = <"Produsent">
+                description = <"Navnet til produsenten.">
+            >
+            ["at0006"] = <
+                text = <"Batch/lot-nummer">
+                description = <"Nummeret tildelt av produsenten som identifiserer en gruppe enheter som er produsert samtidig, som regel funnet på etiketten eller pakningsvedlegget.">
+            >
+            ["at0007"] = <
+                text = <"Utløpsdato">
+                description = <"Datoen produktet ikke lenger er egnet for bruk. Datoen finnes vanligvis på produktet eller på pakningsvedlegget.">
+                comment = <"Denne datoen gjelder vanligvis for engangsutstyr eller utstyr som ikke skal gjenbrukes.">
+            >
+            ["at0008"] = <
+                text = <"Kommentar">
+                description = <"Fritekstopplysninger om bioreagens som ikke er fanget opp i andre felter.">
+            >
+            ["at0021"] = <
+                text = <"Identifikator">
+                description = <"En unik identifikator tildelt av et spesifisert register.">
+                comment = <"For eksempel: Chemical Abstracts Service (CAS) nummer; Beilstein Registry nummer; eller Enzyme Commission (EC) nummer.">
+            >
+            ["at0022"] = <
+                text = <"Katalognummer">
+                description = <"Nummer tildelt av produsenten, slik det framstår i produsentens katalog, merking eller medfølgende pakningsvedlegg.">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"*Bioreagent (en)">
+                description = <"*A substance, compound, product or material used to identify or manipulate the chemical matter, or used to support the growth of cells or tissues, as part of a diagnostic or therapeutic procedure in healthcare. (en)">
+                comment = <"*For example: antibodies, immortalised cell lines, and tool compounds. (en)">
+            >
+            ["at0001"] = <
+                text = <"*Name (en)">
+                description = <"*Identification of the reagent or consumable, preferably by a common name, a formal fully descriptive name or, if required, by class or category. (en)">
+                comment = <"*For example: \"Sperm immobilisation solution\". (en)">
+            >
+            ["at0003"] = <
+                text = <"Tipo">
+                description = <"*The category or type of reagent or consumable. (en)">
+                comment = <"*For example: \"Cell culture medium\". (en)">
+            >
+            ["at0004"] = <
+                text = <"Fabricante">
+                description = <"Nome do fabricante.">
+            >
+            ["at0006"] = <
+                text = <"*Batch number (en)">
+                description = <"*The number assigned by the manufacturer which identifies a group of items manufactured at the same time, usually found on the label or packaging material. (en)">
+            >
+            ["at0007"] = <
+                text = <"Data de validade">
+                description = <"*Date after which the device/product is no longer fit for use, usually found on the reagent itself or printed on the accompanying packaging. (en)">
+                comment = <"*This date usually applies only to single use or disposable devices.(en)
+Esta data geralmente se aplica apenas para dispositivos de uso único ou descartáveis.">
+            >
+            ["at0008"] = <
+                text = <"Comentários">
+                description = <"*Additional narrative about the bioreagent not captured in other fields. (en)">
+            >
+            ["at0021"] = <
+                text = <"*Identifier (en)">
+                description = <"*A unique identifier allocated by a specified registry. (en)">
+                comment = <"*For example: Chemical Abstracts Service (CAS) number; Beilstein Registry number; or Enzyme Commission (EC) number. (en)">
+            >
+            ["at0022"] = <
+                text = <"Número do catálogo">
+                description = <"*The number assigned by the manufacturer, as it appears in the manufacturer's catalogue, labeling, or accompanying packaging. (en)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"*Bioreagent (en)">
+                description = <"*A substance, compound, product or material used to identify or manipulate the chemical matter, or used to support the growth of cells or tissues, as part of a diagnostic or therapeutic procedure in healthcare. (en)">
+                comment = <"*For example: antibodies, immortalised cell lines, and tool compounds. (en)">
+            >
+            ["at0001"] = <
+                text = <"*Name (en)">
+                description = <"*Identification of the reagent or consumable, preferably by a common name, a formal fully descriptive name or, if required, by class or category. (en)">
+                comment = <"*For example: \"Sperm immobilisation solution\". (en)">
+            >
+            ["at0003"] = <
+                text = <"*Type(en)">
+                description = <"*The category or type of reagent or consumable. (en)">
+                comment = <"*For example: \"Cell culture medium\". (en)">
+            >
+            ["at0004"] = <
+                text = <"المُصَنِّع">
+                description = <"اسم المُصَنِّع">
+            >
+            ["at0006"] = <
+                text = <"*Batch number (en)">
+                description = <"*The number assigned by the manufacturer which identifies a group of items manufactured at the same time, usually found on the label or packaging material. (en)">
+            >
+            ["at0007"] = <
+                text = <"تاريخ انتهاء الصلاحية">
+                description = <"*Date after which the device/product is no longer fit for use, usually found on the reagent itself or printed on the accompanying packaging. (en)">
+            >
+            ["at0008"] = <
+                text = <"تعليق">
+                description = <"*Additional narrative about the bioreagent not captured in other fields. (en)">
+            >
+            ["at0021"] = <
+                text = <"*Identifier (en)">
+                description = <"*A unique identifier allocated by a specified registry. (en)">
+                comment = <"*For example: Chemical Abstracts Service (CAS) number; Beilstein Registry number; or Enzyme Commission (EC) number. (en)">
+            >
+            ["at0022"] = <
+                text = <"*New element(en)">
+                description = <"*The number assigned by the manufacturer, as it appears in the manufacturer's catalogue, labeling, or accompanying packaging. (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Bioreagent">
+                description = <"A substance, compound, product or material used to identify or manipulate the chemical matter, or used to support the growth of cells or tissues, as part of a diagnostic or therapeutic procedure in healthcare.">
+                comment = <"For example: antibodies, immortalised cell lines, and tool compounds.">
+            >
+            ["at0001"] = <
+                text = <"Name">
+                description = <"Identification of the reagent or consumable, preferably by a common name, a formal fully descriptive name or, if required, by class or category.">
+                comment = <"For example: \"Sperm immobilisation solution\".">
+            >
+            ["at0003"] = <
+                text = <"Type">
+                description = <"The category or type of reagent or consumable.">
+                comment = <"For example: \"Cell culture medium\".">
+            >
+            ["at0004"] = <
+                text = <"Manufacturer">
+                description = <"Name of manufacturer.">
+            >
+            ["at0006"] = <
+                text = <"Batch number">
+                description = <"The number assigned by the manufacturer which identifies a group of items manufactured at the same time, usually found on the label or packaging material.">
+            >
+            ["at0007"] = <
+                text = <"Date of expiry">
+                description = <"Date after which the device/product is no longer fit for use, usually found on the reagent itself or printed on the accompanying packaging.">
+                comment = <"This date usually applies only to single use or disposable devices.">
+            >
+            ["at0008"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the bioreagent not captured in other fields.">
+            >
+            ["at0021"] = <
+                text = <"Identifier">
+                description = <"A unique identifier allocated by a specified registry.">
+                comment = <"For example: Chemical Abstracts Service (CAS) number; Beilstein Registry number; or Enzyme Commission (EC) number.">
+            >
+            ["at0022"] = <
+                text = <"Catalogue number">
+                description = <"The number assigned by the manufacturer, as it appears in the manufacturer's catalogue, labeling, or accompanying packaging.">
+            >
+        >
+    >

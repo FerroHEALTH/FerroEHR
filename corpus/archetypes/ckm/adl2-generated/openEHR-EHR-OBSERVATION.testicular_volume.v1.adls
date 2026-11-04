@@ -1,0 +1,290 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b88ff750-4108-4e7e-9f97-9c0d6635cd41; build_uid=d29f09dd-9b12-41bd-bcb6-5e98142bcc71)
+    openEHR-EHR-OBSERVATION.testicular_volume.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand">
+                ["organisation"] = <"Helse Bergen HF, Norway">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"John Tore Valand">
+        ["organisation"] = <"Helse Bergen University Hospital">
+        ["email"] = <"john.tore.valand@helse-bergen.no">
+        ["date"] = <"2017-04-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Malin Berg, DIPS ASA, Norway", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Bjørn Christensen, Helse Bergen HF, Norway", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Stig Erik Hegrestad, Helse Førde, Norway", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom", "Heather Grain, Llewelyn Grain Informatics, Australia", "Ingrid Heitmann, Oslo universitetssykehus HF, Norway", "Annette Hole Sjøborg, DIPS ASA, Norway", "Hilde Hollås, DIPS AS, Norway", "Alfred Honore, Haukeland, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Pétur Júlíusson, Barneklinikken, HUS og K2, UIB, Norway", "Heather Leslie, Atomica Informatics, Australia", "Hallvard Lærum, Direktoratet for e-helse, Norway", "Siv Marie Lien, DIPS ASA, Norway", "Hildegard McNicoll, freshEHR Clinical Informatics Ltd., United Kingdom", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia", "Stian Torleif Varpe, Helse Bergen, Norway", "Gro-Hilde Ulriksen, Norwegian center for ehealthresearch, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Sotos JF, Tokar NJ. Testicular volumes revisited: A proposal for a simple clinical method that can closely match the volumes obtained by ultrasound and its clinical application. Int J Pediatr Endocrinol. 2012 Jun 8;2012(1):17. doi: 10.1186/1687-9856-2012-17. PubMed PMID: 22682237; PubMed Central PMCID: PMC3538616.">
+        ["2"] = <"Lin CC, Huang WJ, Chen KK. Measurement of testicular volume in smaller testes: how accurate is the conventional orchidometer? J Androl. 2009 Nov-Dec;30(6):685-9. doi: 10.2164/jandrol.108.006460. Epub 2009 Jul 3. PubMed PMID: 19578133.">
+        ["3"] = <"Mbaeri TU, Orakwe JC, Nwofor AM, Oranusi CK, Mbonu OO. Ultrasound measurements of testicular volume: Comparing the three common formulas with the true testicular volume determined by water displacement. African Journal of Urology. 2013 Jun 1;19(2):69-73.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"83F993E83F28FE84B3890CC15499F96B">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere testikkelvolumet til et individ.">
+            keywords = <"testikler", "testikkel", "orchidometer", "orchiometer", "volum">
+            use = <"Brukes for å registrere testikkelvolumet til et individ.
+
+Måling av testikkelvolum kan være en komponent i en overordnet undersøkelse av genitalia, arketypen er allikevel utviklet som en frittstående OBSERVATION-arketype for å støtte monitorering av testikkelvolum i vekstkurver.
+
+Brukes til å registrere endring ved gjentatte målinger. Dette kan modelleres ved å begrense \"Uspesifisert hendelse\" i en templat til et intervall med en tilhørende matematisk funksjon for \"økning\".">
+            misuse = <"Brukes ikke for å registrere volumet av et objekt eller av andre kroppsdeler enn testikler. Bruk egne arketyper for dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the volume of an individual's testicle.">
+            keywords = <"testis", "testicle", "orchiometer", "orchidometer", "volume">
+            use = <"Use to record the volume of an individual's testicle.
+
+While the measurement of testicular volume may be one component of a full genital examination, this archetype for recording testicular volume has been developed as a standalone OBSERVATION to support the common monitoring of testicular volume by use of growth charts in childhood and puberty.
+
+Use to record change from repeated measurements. This can currently be modeled by constraining the 'any event' to an interval in a template with an associated mathematical function, as appropriate.">
+            misuse = <"Not to be used to record the volume of an object or other bodypart than testicles. Use an appropriate archetype for this purpose.">
+            copyright = <"© Nasjonal IKT HF, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Testicular volume
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {2..*; unordered} matches {
+                                    ELEMENT[at0020] occurrences matches {1} matches {    -- Testicle examined
+                                        value matches {
+                                            DV_TEXT[at9009]
+                                            DV_CODED_TEXT[at9010] matches {
+                                                defining_code matches {[ac9008]}    -- Testicle examined (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {1} matches {    -- Testicular volume
+                                        value matches {
+                                            DV_QUANTITY[at9002] matches {
+                                                property matches {[at9000]}    -- Volume
+                                                [magnitude, units, precision] matches {
+                                                    [{|>=0.0|}, {"ml"}, {2}],
+                                                    [{|>=0.0|}, {"cm3"}, {2}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9005]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0011] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9006]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0006] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Method
+                        value matches {
+                            DV_TEXT[at9008]
+                        }
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Formula
+                        value matches {
+                            DV_TEXT[at9007]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0007] matches {    -- Device
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0019] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Testikkelvolum">
+                description = <"Testikkelvolum enten estimert eller utregnet.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0005"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om målingen som ikke er dekket av andre felt.">
+            >
+            ["at0007"] = <
+                text = <"Måleutstyr">
+                description = <"Strukturerte detaljer om utstyret som ble benyttet for å måle testiklene.">
+                comment = <"For eksempel: Gima Orkidometer.">
+            >
+            ["at0008"] = <
+                text = <"Formel">
+                description = <"Formel som ble brukt for å regne ut testikkelvolumet.">
+                comment = <"For eksempel: \"L × W × H × 0.71\".">
+            >
+            ["at0010"] = <
+                text = <"Testikkelvolum">
+                description = <"Estimert eller utregnet testikkelvolum.">
+            >
+            ["at0012"] = <
+                text = <"Konfunderende faktorer">
+                description = <"Problemer eller faktorer som kan ha innvirkning på målingen.">
+                comment = <"For eksempel: Ikke samarbeidsvillig barn.">
+            >
+            ["at0013"] = <
+                text = <"Metode">
+                description = <"Metoden som ble benyttet for å måle testiklene.">
+                comment = <"For eksempel: Ved bruk av orchidometer, skyvelær eller ultralyd.">
+            >
+            ["at0019"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at0020"] = <
+                text = <"Undersøkt testikkel">
+                description = <"Testikkelen som ble målt.">
+                comment = <"For eksempel høyre eller venstre testikkel.">
+            >
+            ["at0021"] = <
+                text = <"Venstre testikkel">
+                description = <"Måling av venstre testikkel.">
+            >
+            ["at0022"] = <
+                text = <"Høyre testikkel">
+                description = <"Måling av høyre testikkel.">
+            >
+            ["at9000"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["ac9008"] = <
+                text = <"Undersøkt testikkel (synthesised)">
+                description = <"Testikkelen som ble målt. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Testicular volume">
+                description = <"The estimated or calculated volume of a testicle.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0005"] = <
+                text = <"Comment">
+                description = <"Additional narrative not covered in other fields.">
+            >
+            ["at0007"] = <
+                text = <"Device">
+                description = <"Structured details about the device used to measure the testicles.">
+                comment = <"For example: Gima orchidometer.">
+            >
+            ["at0008"] = <
+                text = <"Formula">
+                description = <"The formula used to calculate the testicular volume.">
+                comment = <"For example: 'L × W × H × 0.71'.">
+            >
+            ["at0010"] = <
+                text = <"Testicular volume">
+                description = <"Estimated or calculated volume of a testicle.">
+            >
+            ["at0012"] = <
+                text = <"Confounding factors">
+                description = <"Issues or factors that may impact on the measurement.">
+                comment = <"For example: Uncooperative child.">
+            >
+            ["at0013"] = <
+                text = <"Method">
+                description = <"The method used to measure the testicles.">
+                comment = <"For example: By orchidometer, calipers or ultrasound.">
+            >
+            ["at0019"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0020"] = <
+                text = <"Testicle examined">
+                description = <"Identification of the testicle that was measured.">
+                comment = <"For example: Left or right testicle.">
+            >
+            ["at0021"] = <
+                text = <"Left testicle">
+                description = <"Measurement of the left testicle.">
+            >
+            ["at0022"] = <
+                text = <"Right testicle">
+                description = <"Measurement of the right testicle.">
+            >
+            ["at9000"] = <
+                text = <"Volume">
+                description = <"Volume">
+            >
+            ["ac9008"] = <
+                text = <"Testicle examined (synthesised)">
+                description = <"Identification of the testicle that was measured. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/129>
+        >
+        ["SNOMED-CT"] = <
+            ["at0010"] = <http://snomed.info/id/251828008>
+            ["at0021"] = <http://snomed.info/id/63239009>
+            ["at0022"] = <http://snomed.info/id/15598003>
+        >
+    >
+    value_sets = <
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0021", "at0022">
+        >
+    >

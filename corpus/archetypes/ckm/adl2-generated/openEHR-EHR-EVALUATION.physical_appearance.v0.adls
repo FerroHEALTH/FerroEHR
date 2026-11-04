@@ -1,0 +1,230 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=924bd51c-1725-4c9c-8e32-f358c0a12071; build_uid=843cd9de-75fb-40ae-a9b2-17b7ce90f2ce)
+    openEHR-EHR-EVALUATION.physical_appearance.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen">
+                ["organisation"] = <"Oslo University Hospital">
+                ["email"] = <"varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Peter Fedorcsak">
+        ["organisation"] = <"University of Oslo">
+        ["email"] = <"peterfe@uio.no">
+        ["date"] = <"2022-01-11">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Nuno Abreu, Oporto Hospital Center, Portugal", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Aleocidio Balzanelo, DASA, Brazil", "Keisha Barwise, MOHW/IDB HSSP Project, Jamaica", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Sigrid Daae Mæland, Helse Vest IKT, Norway", "Samanta Dallagnese, Prontmed, Brazil", "Kieran Dang, Big Picture Medical, Australia", "Stefan Dubois, Dep't of Pathology and Genetics, University Hospitals of Lund and Malmö, Sweden", "Gunn Elin Blakkisrud, DIPS ASA, Norway", "Kåre Flø, DIPS ASA, Norway", "Grant Forrest, Lunaria Ltd, United Kingdom", "Stefan Girsberger, University Hospital Bern, Switzerland", "Heather Grain, Llewelyn Grain Informatics, Australia", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (openEHR Editor)", "Evelyn Hovenga, EJSH Consulting, Australia", "Lise Kristin Knutsen, Oslo universitetssykehus, Norway", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Rikard Lovstrom, Swedish Medical Association, Sweden", "Hallvard Lærum, Direktoratet for e-helse, Norway", "Christine Mikalsen, Regional forvaltning EPJ, Norway", "Svenne Naumann, Finnmarkssykehuset, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Terje Sagmyr, DIPS AS, Norway", "Benjamin Senst, Germany", "Tove Stenquist, Helseforetak, Norway", "Frode Stenvik, Helse Sør-Øst, Norway", "Roy Støle, OUS, Norway", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Anders Thurin, VGR, Sweden", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"D9157DA4863626A530F25C1E1EC4BED5">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For registrere detaljer om den varige og allmenne fysiske fremtoningen til et individ.">
+            keywords = <"fenotype", "hud", "iris", "skikkelse", "hår", "karakteristika", "fremtoning", "framtoning", "kjennetegn", "utseende">
+            use = <"Bruk for registrere detaljer om den varige og allmenne fysiske fremtoningen til et individ og som normalt ikke vil bli registrert som del av fysisk undersøkelse.
+
+Denne arketypen har blitt laget for å bli brukt sammen med arketypen innen gruppen av Fysisk undersøkelse og andre arketyper for å støtte en detaljert beskrivelsen av et individs fenotype. Eksempler på bruksområder inkluderer:
+- pare donor og resipient av kjønnsceller, eller
+- avhjelpe identifisering post mortem.
+
+Omfanget i denne førsteutgaven av arketypen er holdt enkel, og det er sannsynlig at den vil bli utvidet i fremtiden når man har identifisert andre bruksområder. Mulige fremtidige tillegg har blitt lagt til et endringsønske i det internasjonale biblioteket av arketyper, som Change request CR-867.">
+            misuse = <"Skal ikke brukes til å registrere aspekter av fysisk fremtoning som ikke er varige, for eksempel midlertidig skifte av hårfarge.
+
+Skal ikke brukes til å registrere fysiske observasjoner som vekt, høyde, kroppsmasseindeks. Bruk arketyper av OBSERVATION-klasse som er laget for dette formålet.
+
+Skal ikke brukes til å registrere fysiske karakteristika som vanligvis blir dokumentert som del av en fysisk undersøkelse. For eksempel å halte, ansiktslammelser, håravfall eller depigmentering av hud. Bruk spesifikke arketyper for fysisk undersøkelse for dette.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about the long-term or enduring physical appearance of an individual, common to all people.">
+            keywords = <"phenotype, skin, iris, stature, hair, characteristics, appearance", ...>
+            use = <"To record details about the long-term or enduring physical appearance of an individual, common to all people and that would not usually be recorded as part of a physical examination. 
+
+This archetype has been designed to be used alongside the Physical examination family and other archetypes to support a detailed description of the phenotype of an individual. 
+Examples of use cases include:
+- gamete donor matching; or 
+- assisting in post-mortem identification.
+
+The initial scope of this archetype has been kept simple and it is likely that it will be extended further in the future as use cases are identified. Potential future additions for consideration have been captured in Change request CR-867.">
+            misuse = <"Not to be used to record aspects of physical appearance which are not enduring, such as the temporary dyeing of hair.
+
+Not to be used to record measured physical characteristics, such as height, weight and body mass index. Use the specific OBSERVATION archetypes for these purposes.
+
+Not to be used to record physical characteristics that would commonly be documented as part of a physical examination, such as walking with a limp, facial palsy, alopecia, and skin depigmentation. Use specific archetypes for physical examination for these purposes, including inspection of gait and the face.
+
+Not to be used to record a photograph or image of the individual - use the CLUSTER.media_file nested within the 'Photo' SLOT in the CLUSTER.person archetype.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Physical appearance of an individual
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9000]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Hair colour
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..2} matches {    -- Iris colour
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Skin colour
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0006] matches {    -- Body build
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0013] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9005]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0009] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9006]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0011] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Fysisk fremtoning til et individ">
+                description = <"Den varige og allmenne fysiske fremtoningen til et individ.">
+            >
+            ["at0002"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstlig beskrivelse av den fysiske fremtoningen og karakteristika til et individ.">
+            >
+            ["at0003"] = <
+                text = <"Hårfarge">
+                description = <"Beskrivelse av individets naturlige hårfarge.">
+                comment = <"Dette datalementet kan oppdateres over tid for å gjenspeile den naturlige gråfargingen av hår som kommer med alderen. Dersom ønskelig kan hårfarge kodes i templat, for eksempel ved å bruke Fischer-Saller skala.">
+            >
+            ["at0004"] = <
+                text = <"Irisfarge">
+                description = <"Beskrivelse av fargen på iris i øyet.">
+                comment = <"Dette dataelementet er gjort valgfritt og repeterbart for å kunne registrere forskjellig farge dersom det er ulik farge på venstre og høyre iris. Dersom ønskelig kan irisfarge kodes i templat.">
+            >
+            ["at0005"] = <
+                text = <"Hudfarge">
+                description = <"Beskrivelse av den normale fargen på huden over hele kroppen.">
+                comment = <"Dersom ønskelig kan hudfarge kodes i templat">
+            >
+            ["at0006"] = <
+                text = <"Kroppsbygning">
+                description = <"Beskrivelse av kroppsstørrelse og/eller -bygning.">
+                comment = <"For eksempel \"Høy og hengslete\" eller \"Kort og tettbygd\". Dersom ønskelig kan kroppsbygning kodes i templat.">
+            >
+            ["at0010"] = <
+                text = <"Sist oppdatert">
+                description = <"Dato når den fysiske fremtoningen sist ble oppdatert.">
+            >
+            ["at0011"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0012"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om fysisk fremtoning som ikke er fanget i andre elementer.">
+            >
+            ["at0013"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere detaljer om den fysiske fremtoningen.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Physical appearance of an individual">
+                description = <"Enduring physical appearance of an individual, common to all people.">
+            >
+            ["at0002"] = <
+                text = <"Description">
+                description = <"Narrative descripition about the physical appearance and characteristics of an individual.">
+            >
+            ["at0003"] = <
+                text = <"Hair colour">
+                description = <"Description of the natural hair colour.">
+                comment = <"This data element can be updated over time to reflect the natural greying of hair with age. Coding of the hair colour can be added in a template, if preferred. For example: the  Fischer–Saller scale.">
+            >
+            ["at0004"] = <
+                text = <"Iris colour">
+                description = <"Description of the colour of the iris in the eye.">
+                comment = <"This data element has been made optional and repeating to allow different colors to be recorded for each iris, if heterochromia is present. Coding of the eye colour can be added in a template, if preferred.">
+            >
+            ["at0005"] = <
+                text = <"Skin colour">
+                description = <"Description of the normal colour of the skin of the whole body.">
+                comment = <"Coding of the skin colour can be added in a template, if preferred.">
+            >
+            ["at0006"] = <
+                text = <"Body build">
+                description = <"Description of the body size and/or shape.">
+                comment = <"For example 'tall & thin'; 'short & stocky'. Coding of the body build can be added in a template, if preferred.">
+            >
+            ["at0010"] = <
+                text = <"Last updated">
+                description = <"The date the physical appearance was last updated.">
+            >
+            ["at0011"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0012"] = <
+                text = <"Comment">
+                description = <"Additional narrative about physical appearance, not captured in other fields.">
+            >
+            ["at0013"] = <
+                text = <"Additional details">
+                description = <"Additional details about the physical characteristics.">
+            >
+        >
+    >

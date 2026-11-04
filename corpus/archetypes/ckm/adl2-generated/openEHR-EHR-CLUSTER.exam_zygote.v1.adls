@@ -1,0 +1,406 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b6a281cf-05cf-4510-9c38-5812f93fa6e8; build_uid=fc3e35b5-fd63-461a-a00f-a2c3640a27d0)
+    openEHR-EHR-CLUSTER.exam_zygote.v1.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Peter Fedorcsak, Vebjørn Arntzen">
+                ["organisation"] = <"University of Oslo, Oslo University Hospital">
+                ["email"] = <"peterfe@uio.no, varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Peter Fedorcsak">
+        ["organisation"] = <"Oslo University Hospital">
+        ["email"] = <"peter.fedorcsak@medisin.uio.no">
+        ["date"] = <"2021-10-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Peter Fedorcsak, University of Oslo, Norway (openEHR Editor)", "Rosane Gotardo, Systema Ltda., Brazil", "Heather Grain, Llewelyn Grain Informatics, Australia", "Gareth Greggains, Oslo University Hospital", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Manisha Mantri, C-DAC, India", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Trine Skuland, Oslo University Hospital", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Julius Hreinsson, Laboratory Director at Reproductive Medicine, Sahlgrenska University Hospital, Sweden">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Alpha Scientists in Reproductive, M. and E.S.I.G.o. Embryology, The Istanbul consensus workshop on embryo assessment: proceedings of an expert meeting. Human Reproduction, 2011. 26(6): p. 1270-1283.">
+        ["2"] = <"Papale, L., et al., The zygote. Human Reproduction, 2012. 27(suppl_1): p. i22-i49.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"A2F701A8CA604EAAC02202B73D3F9EE1">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere strukturerte observasjoner av en human zygote.">
+            keywords = <"in vitro, befruktning, IVF, reproduksjon, zygote, fertilisert, befruktet, egg, eggcelle, oocytt, embryo, blastocyst, assistert", ...>
+            use = <"Brukes til å registrere morfologiske observasjoner passende for zygote stadium, vanligvis som del av assistert befruktning.
+
+Arketypen er laget spesifikt for å brukes i SLOT'et \"Undersøkelsesdetaljer\" i arketypen 'OBSERVATION.embryo_assessment' eller 'ACTION.procedure', men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende.">
+            misuse = <"Skal ikke brukes til å registrere morfologiske observasjoner av oocytter, embryoer i deling og blastocyster - bruk spesifikke CLUSTER arketyper.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record structured observations of the human zygote.">
+            keywords = <"in vitro, fertilization, IVF, reproductive medicine, zygote, fertilised, fertilized, oocyte, egg, fertilisation, embryo, reproduction, ART, blastocyst", ...>
+            use = <"Use to record morphological observations appropriate for the zygote stage, normally as part of assisted reproduction treatment. 
+
+This archetype has been specifically designed to be used in the 'Observations detail' SLOT within the 'OBSERVATION.embryo_assessment' or 'ACTION.procedure' archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.">
+            misuse = <"Not to be used for recording observations on oocytes, cleavage stage embryos and blastocysts - use specific CLUSTER archetypes for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Examination of a zygote
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Number of pronuclei
+                value matches {
+                    DV_COUNT[at9005]
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Pronuclear symmetry
+                value matches {
+                    DV_TEXT[at9006]
+                    DV_CODED_TEXT[at9007] matches {
+                        defining_code matches {[ac9000]}    -- Pronuclear symmetry (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Pronuclear morphology
+                value matches {
+                    DV_TEXT[at9008]
+                    DV_CODED_TEXT[at9009] matches {
+                        defining_code matches {[ac9001]}    -- Pronuclear morphology (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0034] occurrences matches {0..1} matches {    -- Number of polar bodies
+                value matches {
+                    DV_COUNT[at9019]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Polar body morphology
+                value matches {
+                    DV_TEXT[at9010]
+                    DV_CODED_TEXT[at9011] matches {
+                        defining_code matches {[ac9002]}    -- Polar body morphology (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Cytoplasmic morphology
+                value matches {
+                    DV_TEXT[at9012]
+                    DV_CODED_TEXT[at9013] matches {
+                        defining_code matches {[ac9003]}    -- Cytoplasmic morphology (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0019] occurrences matches {0..1} matches {    -- Nucleolar precursor bodies
+                value matches {
+                    DV_CODED_TEXT[at9014] matches {
+                        defining_code matches {[ac9004]}    -- Nucleolar precursor bodies (synthesised)
+                    }
+                    DV_TEXT[at9015]
+                }
+            }
+            ELEMENT[at0028] matches {    -- Other morphological features
+                value matches {
+                    DV_TEXT[at9016]
+                }
+            }
+            ELEMENT[at0032] occurrences matches {0..1} matches {    -- Morphology grade
+                value matches {
+                    DV_TEXT[at9018]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Undersøkelse av en zygote">
+                description = <"Morfologiske funn ved mikroskopisk undersøkelse av en human zygote.">
+            >
+            ["at0001"] = <
+                text = <"Forkjernenes symmetri">
+                description = <"Størrelsessymmetri av zygotens forkjerner.">
+            >
+            ["at0002"] = <
+                text = <"Forkjernenes morfologi">
+                description = <"Morfologi av zygotens forkjerner.">
+            >
+            ["at0003"] = <
+                text = <"Pollegemenes morfologi">
+                description = <"Morfologi av zygotens pollegemer.">
+            >
+            ["at0004"] = <
+                text = <"Morfologi av cytoplasma">
+                description = <"Morfologi av zygotens cytoplasma.">
+            >
+            ["at0005"] = <
+                text = <"Antall forkjerner">
+                description = <"Antall synlige forkjerner (pronukleuser) i zygoten.">
+            >
+            ["at0011"] = <
+                text = <"Symmetrisk">
+                description = <"Forkjerner med lik størrelse.">
+            >
+            ["at0012"] = <
+                text = <"Ikke-symmetrisk">
+                description = <"Størrelsesforskjell mellom forkjernene.">
+            >
+            ["at0014"] = <
+                text = <"Sentralt sidestilt">
+                description = <"Sentralt lokaliserte forkjerner ved siden av hverandre.">
+            >
+            ["at0015"] = <
+                text = <"Adskilte">
+                description = <"Adskilte forkjerner.">
+            >
+            ["at0016"] = <
+                text = <"Periferiell plassering">
+                description = <"Periferielt plasserte forkjerner.">
+            >
+            ["at0017"] = <
+                text = <"Normale">
+                description = <"Sidestilte pollegemer.">
+            >
+            ["at0018"] = <
+                text = <"Adskilte">
+                description = <"Stor vinkel mellom pollegemer.">
+            >
+            ["at0019"] = <
+                text = <"Prekursorer til kjernelegeme">
+                description = <"Fordeling av prekursorer til kjernelegeme i zygoten.">
+            >
+            ["at0020"] = <
+                text = <"Normal">
+                description = <"Flere prekursorer til kjernelegeme.">
+            >
+            ["at0021"] = <
+                text = <"Mangler">
+                description = <"Fravær av prekursorer til kjernelegeme.">
+            >
+            ["at0023"] = <
+                text = <"Blink">
+                description = <"En eller flere forkjerner med kun én prekursor til kjernelegeme.">
+            >
+            ["at0024"] = <
+                text = <"Homogent">
+                description = <"Homogent cytoplasma.">
+            >
+            ["at0025"] = <
+                text = <"Granulert">
+                description = <"Granulert cytoplasma.">
+            >
+            ["at0026"] = <
+                text = <"Vakuolert">
+                description = <"Små eller store vakuoler i zygotens cytoplasma.">
+            >
+            ["at0027"] = <
+                text = <"Dysmorfisk">
+                description = <"Dysmorfisk cytoplasma, herunder opphopende organeller.">
+            >
+            ["at0028"] = <
+                text = <"Andre morfologiske observasjoner">
+                description = <"Ytterligere morfologiske observasjoner av zygoten som ikke dekkes av de andre spesifiserte elementene.">
+                comment = <"Dette dataelementet er mulig å repetere for å legge til rette for flere registreringer, både fritekst og kodede verdier.">
+            >
+            ["at0030"] = <
+                text = <"Fragmenterte">
+                description = <"Fragmenterte pollegemer.">
+            >
+            ["at0031"] = <
+                text = <"Degenererte">
+                description = <"Degenererte eller atretiske pollegemer.">
+            >
+            ["at0032"] = <
+                text = <"Morfologisk gradering">
+                description = <"Overordnet gradering eller skår basert på zygotens registrerte, morfologiske egenskaper.">
+                comment = <"Bruk av en etablert skala for vurdering av zygotens morfologi anbefales.">
+            >
+            ["at0034"] = <
+                text = <"Antall pollegemer">
+                description = <"Antall synlige pollegemer i zygoten.">
+            >
+            ["ac9000"] = <
+                text = <"Forkjernenes symmetri (synthesised)">
+                description = <"Størrelsessymmetri av zygotens forkjerner. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Forkjernenes morfologi (synthesised)">
+                description = <"Morfologi av zygotens forkjerner. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Pollegemenes morfologi (synthesised)">
+                description = <"Morfologi av zygotens pollegemer. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Morfologi av cytoplasma (synthesised)">
+                description = <"Morfologi av zygotens cytoplasma. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Prekursorer til kjernelegeme (synthesised)">
+                description = <"Fordeling av prekursorer til kjernelegeme i zygoten. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Examination of a zygote">
+                description = <"Morphological findings obtained by microscopy of the human zygote.">
+            >
+            ["at0001"] = <
+                text = <"Pronuclear symmetry">
+                description = <"Size symmetry of pronuclei in a zygote.">
+            >
+            ["at0002"] = <
+                text = <"Pronuclear morphology">
+                description = <"Morphology of pronuclei in a zygote.">
+            >
+            ["at0003"] = <
+                text = <"Polar body morphology">
+                description = <"Morphology of polar bodies in a zygote.">
+            >
+            ["at0004"] = <
+                text = <"Cytoplasmic morphology">
+                description = <"Morphology of the cytoplasm in a zygote.">
+            >
+            ["at0005"] = <
+                text = <"Number of pronuclei">
+                description = <"Number of visible pronuclei in a zygote.">
+            >
+            ["at0011"] = <
+                text = <"Symmetrical">
+                description = <"Evenly sized pronuclei.">
+            >
+            ["at0012"] = <
+                text = <"Non-symmetrical">
+                description = <"Difference between pronuclear size.">
+            >
+            ["at0014"] = <
+                text = <"Centrally juxtaposed">
+                description = <"Centrally located, juxtaposed pronuclei.">
+            >
+            ["at0015"] = <
+                text = <"Separated">
+                description = <"Separated pronuclei.">
+            >
+            ["at0016"] = <
+                text = <"Peripherally positioned">
+                description = <"Peripherally located pronuclei.">
+            >
+            ["at0017"] = <
+                text = <"Normal">
+                description = <"Juxtaposed polar bodies.">
+            >
+            ["at0018"] = <
+                text = <"Separated">
+                description = <"Large angle between polar bodies.">
+            >
+            ["at0019"] = <
+                text = <"Nucleolar precursor bodies">
+                description = <"Distribution of nuclear precursor bodies in a zygote.">
+            >
+            ["at0020"] = <
+                text = <"Normal">
+                description = <"Several nuclear precursor bodies.">
+            >
+            ["at0021"] = <
+                text = <"Absent">
+                description = <"Absent nuclear precursor body.">
+            >
+            ["at0023"] = <
+                text = <"Bull's eye">
+                description = <"Pronuclei with 1 nuclear precursor body.">
+            >
+            ["at0024"] = <
+                text = <"Homogeneous">
+                description = <"Homogeneous cytoplasm.">
+            >
+            ["at0025"] = <
+                text = <"Granular">
+                description = <"Granular cytoplasm.">
+            >
+            ["at0026"] = <
+                text = <"Vacuolated">
+                description = <"Vacuolated cytoplasm, including small and large vacuoles.">
+            >
+            ["at0027"] = <
+                text = <"Dysmorphic">
+                description = <"Dysmorphic cytoplasm, including clustered organelles.">
+            >
+            ["at0028"] = <
+                text = <"Other morphological features">
+                description = <"Additional morphological features not captured by specific parameters.">
+                comment = <"The occurrences for this data element is set to 0..* to allow for more than one morphological attribute to be added as a coded value.">
+            >
+            ["at0030"] = <
+                text = <"Fragmented">
+                description = <"Fragmented polar bodies.">
+            >
+            ["at0031"] = <
+                text = <"Degenerated">
+                description = <"Degenerated or atretic polar bodies.">
+            >
+            ["at0032"] = <
+                text = <"Morphology grade">
+                description = <"Overall grading or score based on recorded morphological features the zygote.">
+                comment = <"Use of an established morphology assessment classification is preferred.">
+            >
+            ["at0034"] = <
+                text = <"Number of polar bodies">
+                description = <"Number of visible polar bodies in a zygote.">
+            >
+            ["ac9000"] = <
+                text = <"Pronuclear symmetry (synthesised)">
+                description = <"Size symmetry of pronuclei in a zygote. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Pronuclear morphology (synthesised)">
+                description = <"Morphology of pronuclei in a zygote. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Polar body morphology (synthesised)">
+                description = <"Morphology of polar bodies in a zygote. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Cytoplasmic morphology (synthesised)">
+                description = <"Morphology of the cytoplasm in a zygote. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Nucleolar precursor bodies (synthesised)">
+                description = <"Distribution of nuclear precursor bodies in a zygote. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0017", "at0018", "at0030", "at0031">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0014", "at0015", "at0016">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0011", "at0012">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0020", "at0021", "at0023">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0024", "at0025", "at0026", "at0027">
+        >
+    >

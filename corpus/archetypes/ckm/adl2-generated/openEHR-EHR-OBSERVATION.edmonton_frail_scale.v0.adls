@@ -1,0 +1,470 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=601552da-338d-426f-8ce0-606e6a70b1ab; build_uid=c3f22a3d-6d15-464e-b3ff-c7584fa7b4a7)
+    openEHR-EHR-OBSERVATION.edmonton_frail_scale.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Hildegard Franke">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"hildi@freshehr.com">
+        ["date"] = <"2017-05-23">
+    >
+    original_namespace = <"uk.org.clinicalmodels">
+    original_publisher = <"UK Clinical Models">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"uk.org.clinicalmodels">
+    custodian_organisation = <"UK Clinical Models">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"https://www.nscphealth.co.uk/edmontonscale-pdf">
+    >
+    other_details = <
+        ["current_contact"] = <"Hildegard Franke, freshEHR Clinical Informatics Ltd.<hildi@freshehr.com>">
+        ["MD5-CAM-1.0.1"] = <"4BAA265CF602FE7232DE36EC2EFA7BCA">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For the recording of the Edmonton Frail Scale individual domain items and overall score.">
+            use = <"Use to record the Edmonton Frail Scale items and score.">
+            misuse = <"">
+            copyright = <"© Clinical Models UK">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Edmonton frail scale
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Point in time
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Cognition: clock drawing
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- No errors
+                                                    [{1}, {[at0006]}],    -- Minor spacing error
+                                                    [{2}, {[at0007]}]    -- Other errors
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Hospital admissions
+                                        value matches {
+                                            DV_ORDINAL[at9012] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0009]}],    -- None
+                                                    [{1}, {[at0010]}],    -- Once or twice
+                                                    [{2}, {[at0011]}]    -- More than twice
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- General health description
+                                        value matches {
+                                            DV_ORDINAL[at9013] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0013]}],    -- Excellent, very good, good
+                                                    [{1}, {[at0014]}],    -- Fair
+                                                    [{2}, {[at0015]}]    -- Poor
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Functional independence
+                                        value matches {
+                                            DV_ORDINAL[at9014] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- None or one
+                                                    [{1}, {[at0018]}],    -- Two to four
+                                                    [{2}, {[at0019]}]    -- Five to eight
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Social support
+                                        value matches {
+                                            DV_ORDINAL[at9015] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0021]}],    -- Always
+                                                    [{1}, {[at0022]}],    -- Sometimes
+                                                    [{2}, {[at0023]}]    -- Never
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Medication use
+                                        value matches {
+                                            DV_ORDINAL[at9016] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0025]}],    -- No
+                                                    [{1}, {[at0026]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Forget to take medications
+                                        value matches {
+                                            DV_ORDINAL[at9017] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0028]}],    -- No
+                                                    [{1}, {[at0029]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- Nutrition
+                                        value matches {
+                                            DV_ORDINAL[at9018] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0031]}],    -- No
+                                                    [{1}, {[at0032]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0033] occurrences matches {0..1} matches {    -- Mood
+                                        value matches {
+                                            DV_ORDINAL[at9019] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0034]}],    -- No
+                                                    [{1}, {[at0035]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0036] occurrences matches {0..1} matches {    -- Continence
+                                        value matches {
+                                            DV_ORDINAL[at9020] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0037]}],    -- No
+                                                    [{1}, {[at0038]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0039] occurrences matches {0..1} matches {    -- Functional performance
+                                        value matches {
+                                            DV_ORDINAL[at9021] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0040]}],    -- 0 to 10 seconds
+                                                    [{1}, {[at0041]}],    -- 11 to 20 seconds
+                                                    [{2}, {[at0042]}]    -- More than 20 seconds or unwilling or requiring assistance
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0043] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9022] matches {
+                                                magnitude matches {|0..17|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0044] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0045] matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9023]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0046] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0047] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Edmonton frail scale">
+                description = <"Edmonton Frail Scale.">
+            >
+            ["at0002"] = <
+                text = <"Point in time">
+                description = <"A specific date and/or time which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Cognition: clock drawing">
+                description = <"Abilty to place numbers and hands in the correct position on a pre-drawn circle to indicate a clock.">
+            >
+            ["at0005"] = <
+                text = <"No errors">
+                description = <"The subject made no errors.">
+            >
+            ["at0006"] = <
+                text = <"Minor spacing error">
+                description = <"The subject made one or more minor spacing errors.">
+            >
+            ["at0007"] = <
+                text = <"Other errors">
+                description = <"The subject made other errors.">
+            >
+            ["at0008"] = <
+                text = <"Hospital admissions">
+                description = <"Number of times admitted to hospital in last year.">
+            >
+            ["at0009"] = <
+                text = <"None">
+                description = <"The subject has not been admitted to hospital in the last year.">
+            >
+            ["at0010"] = <
+                text = <"Once or twice">
+                description = <"The subject has been admitted to hospital once or twice in the last year.">
+            >
+            ["at0011"] = <
+                text = <"More than twice">
+                description = <"The subject has been admitted to hospital more than twice in the last year.">
+            >
+            ["at0012"] = <
+                text = <"General health description">
+                description = <"General description of health.">
+            >
+            ["at0013"] = <
+                text = <"Excellent, very good, good">
+                description = <"The subject describes their general health as excellent, very good or good.">
+            >
+            ["at0014"] = <
+                text = <"Fair">
+                description = <"The subject describes their general health as fair.">
+            >
+            ["at0015"] = <
+                text = <"Poor">
+                description = <"The subject describes their general health as poor.">
+            >
+            ["at0016"] = <
+                text = <"Functional independence">
+                description = <"Number of activities requiring help.">
+            >
+            ["at0017"] = <
+                text = <"None or one">
+                description = <"The subject requires help with none or one activities.">
+            >
+            ["at0018"] = <
+                text = <"Two to four">
+                description = <"The subject requires help with two to four activities.">
+            >
+            ["at0019"] = <
+                text = <"Five to eight">
+                description = <"The subject requires help with five to eight activities.">
+            >
+            ["at0020"] = <
+                text = <"Social support">
+                description = <"Able to count on someone willing and able to meet needs when help required.">
+            >
+            ["at0021"] = <
+                text = <"Always">
+                description = <"The subject always has social support.">
+            >
+            ["at0022"] = <
+                text = <"Sometimes">
+                description = <"The subject sometimes has social support.">
+            >
+            ["at0023"] = <
+                text = <"Never">
+                description = <"The subject never has social support.">
+            >
+            ["at0024"] = <
+                text = <"Medication use">
+                description = <"Using five or more different prescription medications on a regular basis.">
+            >
+            ["at0025"] = <
+                text = <"No">
+                description = <"The subject does not use five or more different prescription medications on a regular basis.">
+            >
+            ["at0026"] = <
+                text = <"Yes">
+                description = <"The subject uses five or more different prescription medications on a regular basis.">
+            >
+            ["at0027"] = <
+                text = <"Forget to take medications">
+                description = <"Does the subject forget to take their prescription medications at times?">
+            >
+            ["at0028"] = <
+                text = <"No">
+                description = <"The subject does not forget to take their prescription medications.">
+            >
+            ["at0029"] = <
+                text = <"Yes">
+                description = <"The subject at times forgets to take their prescription medications.">
+            >
+            ["at0030"] = <
+                text = <"Nutrition">
+                description = <"Has the subject recently lost weight so that clothing has become looser?">
+            >
+            ["at0031"] = <
+                text = <"No">
+                description = <"The subject has not lost weight recently.">
+            >
+            ["at0032"] = <
+                text = <"Yes">
+                description = <"The subject has lost weight recently.">
+            >
+            ["at0033"] = <
+                text = <"Mood">
+                description = <"Does the subject often feel sad or depressed?">
+            >
+            ["at0034"] = <
+                text = <"No">
+                description = <"The subject does not feel sad or depressed.">
+            >
+            ["at0035"] = <
+                text = <"Yes">
+                description = <"The subject often feels sad or depressed.">
+            >
+            ["at0036"] = <
+                text = <"Continence">
+                description = <"Does the subject have a problem with losing control of urine unvoluntarily?">
+            >
+            ["at0037"] = <
+                text = <"No">
+                description = <"The subject does not have a problem with losing control of urine involuntarily.">
+            >
+            ["at0038"] = <
+                text = <"Yes">
+                description = <"The subject has a problems with losing control of urine involuntary.">
+            >
+            ["at0039"] = <
+                text = <"Functional performance">
+                description = <"Length of time taken to get up from chair, walk to mark about 3 metres away at a safe and comforable pace and return to chair.">
+            >
+            ["at0040"] = <
+                text = <"0 to 10 seconds">
+                description = <"The subject takes 0 to 10 seconds to perform the task.">
+            >
+            ["at0041"] = <
+                text = <"11 to 20 seconds">
+                description = <"The subject takes 11 to 20 seconds to perform the task.">
+            >
+            ["at0042"] = <
+                text = <"More than 20 seconds or unwilling or requiring assistance">
+                description = <"The subject takes more than 20 seconds to perform the task or is unwilling or requires help.">
+            >
+            ["at0043"] = <
+                text = <"Total score">
+                description = <"Sum of individual scores.">
+            >
+            ["at0045"] = <
+                text = <"Confounding factors">
+                description = <"Record any issues or factors that may impact on the observation or the score.">
+            >
+            ["at0047"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"e.g. Local hospital departmental infomation or additional metadata to align with HL7 or CDISC equivalents.">
+            >
+            ["ac9023"] = <
+                text = <"Cognition: clock drawing (synthesised)">
+                description = <"Abilty to place numbers and hands in the correct position on a pre-drawn circle to indicate a clock. (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"Hospital admissions (synthesised)">
+                description = <"Number of times admitted to hospital in last year. (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"General health description (synthesised)">
+                description = <"General description of health. (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"Functional independence (synthesised)">
+                description = <"Number of activities requiring help. (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Social support (synthesised)">
+                description = <"Able to count on someone willing and able to meet needs when help required. (synthesised)">
+            >
+            ["ac9028"] = <
+                text = <"Medication use (synthesised)">
+                description = <"Using five or more different prescription medications on a regular basis. (synthesised)">
+            >
+            ["ac9029"] = <
+                text = <"Forget to take medications (synthesised)">
+                description = <"Does the subject forget to take their prescription medications at times? (synthesised)">
+            >
+            ["ac9030"] = <
+                text = <"Nutrition (synthesised)">
+                description = <"Has the subject recently lost weight so that clothing has become looser? (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"Mood (synthesised)">
+                description = <"Does the subject often feel sad or depressed? (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"Continence (synthesised)">
+                description = <"Does the subject have a problem with losing control of urine unvoluntarily? (synthesised)">
+            >
+            ["ac9033"] = <
+                text = <"Functional performance (synthesised)">
+                description = <"Length of time taken to get up from chair, walk to mark about 3 metres away at a safe and comforable pace and return to chair. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9031"] = <
+            id = <"ac9031">
+            members = <"at0034", "at0035">
+        >
+        ["ac9030"] = <
+            id = <"ac9030">
+            members = <"at0031", "at0032">
+        >
+        ["ac9033"] = <
+            id = <"ac9033">
+            members = <"at0040", "at0041", "at0042">
+        >
+        ["ac9032"] = <
+            id = <"ac9032">
+            members = <"at0037", "at0038">
+        >
+        ["ac9029"] = <
+            id = <"ac9029">
+            members = <"at0028", "at0029">
+        >
+        ["ac9024"] = <
+            id = <"ac9024">
+            members = <"at0009", "at0010", "at0011">
+        >
+        ["ac9023"] = <
+            id = <"ac9023">
+            members = <"at0005", "at0006", "at0007">
+        >
+        ["ac9028"] = <
+            id = <"ac9028">
+            members = <"at0025", "at0026">
+        >
+        ["ac9027"] = <
+            id = <"ac9027">
+            members = <"at0021", "at0022", "at0023">
+        >
+        ["ac9026"] = <
+            id = <"ac9026">
+            members = <"at0017", "at0018", "at0019">
+        >
+        ["ac9025"] = <
+            id = <"ac9025">
+            members = <"at0013", "at0014", "at0015">
+        >
+    >

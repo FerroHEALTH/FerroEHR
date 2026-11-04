@@ -1,0 +1,231 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=9ff81b50-4e8f-4ba9-b8cc-50f820d31988; build_uid=4453ba3d-e73b-4d25-8fc0-ef37824ba839)
+    openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name-individual_provider.v0.0.1-alpha
+
+specialize
+    openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Sergio Miranda Freire">
+                ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+                ["email"] = <"sergio@lampada.uerj.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Rigoleta Dutra & Sergio Miranda Freire">
+        ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+        ["email"] = <"sergio@lampada.uerj.br">
+        ["date"] = <"2009-05-20">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Rigoleta Dutra, Ministry of Defense, Brazil (openEHR Editor)", "Sergio Freire, State University of Rio de Janeiro, Brazil (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"ISO/DTS 27527:2007(E) - Provider Identification - Draft Technnical Specification - International Organization for Standardization">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"E4BC5DA45B4289EE54509FD8D1FB81B1">
+    >
+    details = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Representação do nome de um profissional de saúde">
+            keywords = <"serviço demográfico", "nome de um profissional de saúde">
+            use = <"Utilizado em serviços demográficos para representar os nomes que um profissional de saúde pode ter">
+            misuse = <"">
+            copyright = <"© copyright (c) 2010 openEHR Foundation, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Representation of a individual healthcare provider name">
+            keywords = <"demographic service", "individual healthcar provider's name">
+            use = <"Used in demographic services to represent the names that an individual healthcare provider is known by">
+            misuse = <"">
+            copyright = <"© copyright (c) 2010 openEHR Foundation, openEHR Foundation">
+        >
+    >
+
+definition
+    PARTY_IDENTITY[at0000.1] matches {    -- Individual healthcare provider name
+        /details[at0001]/items matches {
+            CLUSTER[at0002] matches {
+                items cardinality matches {2} matches {
+                    ELEMENT[at0010] occurrences matches {1} matches {
+                        value matches {
+                            DV_TEXT[at0.9000]
+                        }
+                    }
+                    ELEMENT[at0011] occurrences matches {1} matches {
+                        value matches {
+                            DV_COUNT[at0.9001]
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0003] occurrences matches {1..*} matches {
+                items cardinality matches {2} matches {
+                    ELEMENT[at0012] occurrences matches {1} matches {
+                        value matches {
+                            DV_TEXT[at0.9002]
+                        }
+                    }
+                    ELEMENT[at0013] occurrences matches {1} matches {
+                        value matches {
+                            DV_COUNT[at0.9003]
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0004] matches {
+                items cardinality matches {2} matches {
+                    ELEMENT[at0014] occurrences matches {1} matches {
+                        value matches {
+                            DV_CODED_TEXT[at0.9004] matches {
+                                defining_code matches {[ac1]}
+                            }
+                        }
+                    }
+                    ELEMENT[at0015] occurrences matches {1} matches {
+                        value matches {
+                            DV_COUNT[at0.9005]
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0005] matches {
+                items cardinality matches {2} matches {
+                    ELEMENT[at0016] occurrences matches {1} matches {
+                        value matches {
+                            DV_CODED_TEXT[at0.9006] matches {
+                                defining_code matches {[ac2]}
+                            }
+                        }
+                    }
+                    ELEMENT[at0017] occurrences matches {1} matches {
+                        value matches {
+                            DV_COUNT[at0.9007]
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0007] matches {
+                /items[at0021]/value matches {
+                    DV_CODED_TEXT[at9010.1] matches {
+                        defining_code matches {[ac3]}
+                    }
+                }
+            }
+            ELEMENT[at0009.1] occurrences matches {0} matches {    -- Conditional Use
+                value matches {
+                    DV_CODED_TEXT[at0.9011] matches {
+                        defining_code matches {[ac9001]}
+                    }
+                }
+            }
+            after [at0005]
+            CLUSTER[at0006] occurrences matches {1..*} matches {
+                items cardinality matches {2..3} matches {
+                    ELEMENT[at0018] occurrences matches {1} matches {
+                        value matches {
+                            DV_CODED_TEXT[at0.9008] matches {
+                                defining_code matches {[ac9000]}
+                            }
+                        }
+                    }
+                    ELEMENT[at0019] occurrences matches {1} matches {
+                        value matches {
+                            DV_INTERVAL<DV_DATE>[at0.9009]
+                        }
+                    }
+                    ELEMENT[at0020] occurrences matches {0..1} matches {
+                        value matches {
+                            DV_TEXT[at0.9010]
+                        }
+                    }
+                }
+            }
+            after [at0009.1]
+            CLUSTER[at0.2] matches {    -- Restricted name usage
+                items cardinality matches {1..*; unique} matches {
+                    ELEMENT[at0.3] occurrences matches {1}    -- Type of restriction
+                    ELEMENT[at0.4] occurrences matches {1} matches {    -- Restriction interval
+                        value matches {
+                            DV_INTERVAL[at0.9012]
+                        }
+                    }
+                    ELEMENT[at0.5] matches {    -- Available provider
+                        value matches {
+                            DV_TEXT[at0.9013]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt-br"] = <
+            ["at0.2"] = <
+                text = <"Grupo de utilização restrita do nome">
+                description = <"Este conjunto de dados se aplica a um nome específico e é usado em sistemas computacionais para restringir o modo como um nome é usado ou exibido naquele sistema">
+            >
+            ["at0.3"] = <
+                text = <"Tipo de restrição">
+                description = <"Um indicador de condições especiais que devem ser aplicadas ao nome do profissional">
+            >
+            ["at0.4"] = <
+                text = <"Intervalo da restrição">
+                description = <"Indica o período de tempo em que esta restrição se aplica">
+            >
+            ["at0.5"] = <
+                text = <"Identificador do prestador">
+                description = <"Este campo indica os prestadores que podem visualizar este nome e os detalhes associados a ele">
+            >
+            ["at0000.1"] = <
+                text = <"Nome do profissional de saúde">
+                description = <"Nome de uma pessoa ao atuar como profissional de saúde">
+            >
+            ["at0009.1"] = <
+                text = <"Indicador de uso condicional">
+                description = <"Um indicador das condições específicas ou regras que devem ser aplicadas ao nome de uma pessoa">
+            >
+        >
+        ["en"] = <
+            ["at0.2"] = <
+                text = <"Restricted name usage">
+                description = <"This set of data elements apply to a specific name set and are used within computer systems to restrict the way a name is used or displayed in that system">
+            >
+            ["at0.3"] = <
+                text = <"Type of restriction">
+                description = <"An indicator of special conditions or rules that shall be applied to an individual provider name">
+            >
+            ["at0.4"] = <
+                text = <"Restriction interval">
+                description = <"Indicates the period of time where this restriction applies">
+            >
+            ["at0.5"] = <
+                text = <"Available provider">
+                description = <"This field indicates those providers who should be able to see this name and the details assoociated with it">
+            >
+            ["at0000.1"] = <
+                text = <"Individual healthcare provider name">
+                description = <"Person name when performing the role of a healthcare provider">
+            >
+            ["at0009.1"] = <
+                text = <"Conditional Use">
+                description = <"An indicator of specific conditions or rules that should be applied to a person's name">
+            >
+        >
+    >

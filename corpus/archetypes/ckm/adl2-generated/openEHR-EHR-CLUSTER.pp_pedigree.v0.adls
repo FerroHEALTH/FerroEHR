@@ -1,0 +1,55 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=cdb81aff-e057-4fd2-9f5b-1b8ac1741b88; build_uid=4d534901-a771-49d2-8c93-de999c463e4e)
+    openEHR-EHR-CLUSTER.pp_pedigree.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-09-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"3711250919F83DD154911E91CE88EB04">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Phenopackets pedigree
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype CLUSTER[at0001] matches {    -- persons
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_person\.v0\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Phenopackets pedigree">
+                description = <"Phenopackets pedigree">
+            >
+            ["at0001"] = <
+                text = <"persons">
+                description = <"*">
+            >
+        >
+    >

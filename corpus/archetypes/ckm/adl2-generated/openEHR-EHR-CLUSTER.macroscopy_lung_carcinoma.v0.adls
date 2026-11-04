@@ -1,0 +1,115 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c2dee521-8b59-33c8-850d-4a1af3ff6ec2; build_uid=dda5ce68-b604-4b96-be17-a016e1745bc4)
+    openEHR-EHR-CLUSTER.macroscopy_lung_carcinoma.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics">
+        ["email"] = <"ian.mcnicoll@freshehr.com">
+        ["date"] = <"2009-10-11">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"The Royal College of Pathologists. Dataset for lung cancer histopathology reports [Internet]. 2007 Sep ;[cited 2009 Jul 27 ]. Available from: http://www.rcpath.org/index.asp?PageID=1159">
+        ["2"] = <"College of American Pathologists. Histopathology Lung protocol [Internet]. [cited 2009 Jul 27 ]. Available from: http://www.cap.org/apps/docs/committees/cancer/cancer_protocols/2005/lung05_pw.pdf">
+    >
+    other_details = <
+        ["current_contact"] = <"Ian McNicoll, freshEHR Clinical Informatics, ian.mcnicoll@freshehr.com">
+        ["MD5-CAM-1.0.1"] = <"795AD8AE9DE64400C1B5B395AA9685B3">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record detailed findings about lung cancer found on macroscopic histopathological examination.">
+            keywords = <"histopathology", "cancer", "laboratory", "lab", "malignancy", "pathology", "lung", "bronchial">
+            use = <"To record detailed findings about macroscopic examination of tissue related to lung cancer.
+
+This archetype has been designed to be used within the 'Structured findings' SLOT in the CLUSTER.histopathology_findings archetype.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Macroscopic findings - Lung cancer
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Number of tumours
+                value matches {
+                    DV_COUNT[at9000] matches {
+                        magnitude matches {|>=0|}
+                    }
+                }
+            }
+            allow_archetype CLUSTER[at0003] matches {    -- Tumour site
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0001] matches {    -- Tumour dimensions
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.physical_properties(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0004] matches {    -- Direct spread of tumour
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.tumour_invasion(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0005] matches {    -- Tumour resection margin
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.tumour_resection_margins(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0006] matches {    -- Lymph node involvement
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.lymph_node_metastases(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Non-neoplastic lung findings
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Macroscopic findings - Lung cancer">
+                description = <"Macroscopic anatomical pathology findings related to lung cancer.">
+            >
+            ["at0001"] = <
+                text = <"Tumour dimensions">
+                description = <"Details of maximum dimensions of the tumour.">
+            >
+            ["at0002"] = <
+                text = <"Number of tumours">
+                description = <"The overall number of tumours.">
+            >
+            ["at0003"] = <
+                text = <"Tumour site">
+                description = <"The site of the tumour.">
+            >
+            ["at0004"] = <
+                text = <"Direct spread of tumour">
+                description = <"Details of direct spread of the tumour.">
+            >
+            ["at0005"] = <
+                text = <"Tumour resection margin">
+                description = <"Details of medial or bronchial resection margins.">
+            >
+            ["at0006"] = <
+                text = <"Lymph node involvement">
+                description = <"Details of lymph node involvement by tumour.">
+            >
+            ["at0007"] = <
+                text = <"Non-neoplastic lung findings">
+                description = <"Findings of non-neoplastic lung pathology.">
+            >
+        >
+    >

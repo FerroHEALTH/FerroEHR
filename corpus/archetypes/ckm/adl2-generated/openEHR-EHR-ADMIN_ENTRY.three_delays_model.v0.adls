@@ -1,0 +1,179 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=9462aaa2-2f5f-4caa-8eb6-6884e7433af5; build_uid=b2eb0a78-c49d-451b-8e56-8c2c4cd40c17)
+    openEHR-EHR-ADMIN_ENTRY.three_delays_model.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-06-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Barnes-Josiah D, Myntti C, Augustin A. The \"three delays\" as a framework for examining maternal mortality in Haiti. Soc Sci Med. 1998 Apr;46(8):981-93. doi: 10.1016/s0277-9536(97)10018-1. PMID: 9579750. Available from: https://www.sciencedirect.com/science/article/pii/S0277953697100181.">
+        ["2"] = <"Shah B, Krishnan N, Kodish SR, et al. Applying the Three Delays Model to understand emergency care seeking and delivery in rural Bangladesh: a qualitative study. BMJ Open 2020;10:e042690. doi: 10.1136/bmjopen-2020-042690. Available from: https://bmjopen.bmj.com/content/10/12/e042690.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"0868ACA1E16F36BC7156A5EBE38B989C">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record information about identified delays in seeking, reaching or receiving healthcare using the \"Three Delays\" framework.">
+            use = <"Use to record information about identified delays in seeking, reaching or receiving healthcare using the \"Three Delays\" framework.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ADMIN_ENTRY[at0000] matches {    -- Three Delays Model (3DM)
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Delay category
+                        value matches {
+                            DV_CODED_TEXT[at9002] matches {
+                                defining_code matches {[ac9000]}    -- Delay category (synthesised)
+                            }
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Delay presence?
+                        value matches {
+                            DV_CODED_TEXT[at9004] matches {
+                                defining_code matches {[ac9001]}    -- Delay presence? (synthesised)
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0012] matches {    -- Delay details
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.delay_details(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9005]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0022] occurrences matches {0..1} matches {    -- Solution responsibility
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Solution timeline
+                        value matches {
+                            DV_DATE_TIME[at9007]
+                            DV_DURATION[at9008] matches {
+                                value matches {PYMWD/|>=P0D|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Three Delays Model (3DM)">
+                description = <"A framework to identify factors that lead to delays or problems in the provision of healthcare and poor outcomes.">
+                comment = <"The Three Delays Model was originally developed
+in the context of maternal mortality in low income settings but has been used in other contexts.">
+            >
+            ["at0005"] = <
+                text = <"Delay category">
+                description = <"The type of delay.">
+                comment = <"For example: delay related to patient factors; delay related to socio-economic factors; or delay related to health facility factors.">
+            >
+            ["at0008"] = <
+                text = <"Description">
+                description = <"Narrative description about the delay category.">
+            >
+            ["at0009"] = <
+                text = <"Comment">
+                description = <"Narrative description about the delay category, not captured in other fields.">
+            >
+            ["at0012"] = <
+                text = <"Delay details">
+                description = <"Additional details about subcategories of delay or specific delays.">
+            >
+            ["at0013"] = <
+                text = <"Delay presence?">
+                description = <"Was the delay recognised as present, relevant to the identified 'Delay category'?">
+            >
+            ["at0014"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Seeking care">
+                description = <"Deciding to seek additional care">
+            >
+            ["at0020"] = <
+                text = <"Reaching care">
+                description = <"Reaching an appropriate health facility">
+            >
+            ["at0021"] = <
+                text = <"Receiving care">
+                description = <"Receiving appropriate care from the health facility">
+            >
+            ["at0022"] = <
+                text = <"Solution responsibility">
+                description = <"The name of the person or organisation assigned responsibility to solve or mitigate the identified delay category.">
+            >
+            ["at0023"] = <
+                text = <"Solution timeline">
+                description = <"The due date or proposed timeframe for resolution or mitigation of the delay category.">
+            >
+            ["ac9000"] = <
+                text = <"Delay category (synthesised)">
+                description = <"The type of delay. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Delay presence? (synthesised)">
+                description = <"Was the delay recognised as present, relevant to the identified 'Delay category'? (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0014"] = <http://snomed.info/id/373066001>
+            ["at0015"] = <http://snomed.info/id/373067005>
+            ["at0018"] = <http://snomed.info/id/261665006>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0014", "at0015", "at0018">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0019", "at0020", "at0021">
+        >
+    >

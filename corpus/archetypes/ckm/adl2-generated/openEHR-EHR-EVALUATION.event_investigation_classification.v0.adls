@@ -1,0 +1,238 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=516fc4e0-7f40-43c9-9bfc-83d991c97127; build_uid=53d08d23-d646-47a5-9b99-1859041bc402)
+    openEHR-EHR-EVALUATION.event_investigation_classification.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-06-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Nicola Ewen, SERHA/Ministry of Health and Wellness, Jamaica", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Yohann White, Ministry of Health and Wellness, Jamaica">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"6D91F5C9739221C2A5357DECF3D6A4E3">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the disease classification for an identified health event as part of a disease surveillance investigation.">
+            use = <"Use to record the disease for an identified health event as part of a disease surveillance investigation, most commonly the final determination at the completion of a case investigation but may also record initial classification in a suspected event.
+
+Use a separate instance of this archetype to record the conclusion for each suspected 'Index event'.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation, Ministry of Health and Wellness Jamaica">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Health event investigation classification
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0007] occurrences matches {1} matches {    -- Index event
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Initial classification
+                        value matches {
+                            DV_CODED_TEXT[at9004] matches {
+                                defining_code matches {[ac9000]}    -- Initial classification (synthesised)
+                            }
+                            DV_TEXT[at9005]
+                        }
+                    }
+                    ELEMENT[at0060] occurrences matches {0..1} matches {    -- Final classification
+                        value matches {
+                            DV_CODED_TEXT[at9006] matches {
+                                defining_code matches {[ac9001]}    -- Final classification (synthesised)
+                            }
+                            DV_TEXT[at9007]
+                        }
+                    }
+                    ELEMENT[at0008] matches {    -- Reason for classification
+                        value matches {
+                            DV_TEXT[at9008]
+                        }
+                    }
+                    ELEMENT[at0009] matches {    -- Reason description
+                        value matches {
+                            DV_TEXT[at9009]
+                        }
+                    }
+                    ELEMENT[at0068] occurrences matches {0..1} matches {    -- Contribution to death
+                        value matches {
+                            DV_TEXT[at9010]
+                            DV_CODED_TEXT[at9011] matches {
+                                defining_code matches {[ac9002]}    -- Contribution to death (synthesised)
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0016] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.drug_resistance_profile(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.clinical_evidence\.v1\..*/}
+                    }
+                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9012]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0013] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0014] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9013]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Health event investigation classification">
+                description = <"Classification for an identified health event as part of a public health surveillance investigation.">
+            >
+            ["at0002"] = <
+                text = <"Initial classification">
+                description = <"Classification of the likelihood of the 'Index event' as causal at the initiation of a case investigation.">
+                comment = <"Not to be used to record the 'Final classification' after completion of a case investigation.">
+            >
+            ["at0003"] = <
+                text = <"Probable">
+                description = <"A case is 'Probable' when common, relevant symptoms and/or signs are exhibited and there is an epidemiological link.">
+            >
+            ["at0004"] = <
+                text = <"Not suspected">
+                description = <"A case is 'Not suspected' if the clinical or laboratory findings do not meet the criteria to suspect disease.">
+            >
+            ["at0007"] = <
+                text = <"Index event">
+                description = <"The name of the infectious event under investigation.">
+                comment = <"This data element may be redundant if the index event has been identified elsewhere within a template.">
+            >
+            ["at0008"] = <
+                text = <"Reason for classification">
+                description = <"The broad category of the reason for the classification.">
+                comment = <"For example: lost to follow-up.">
+            >
+            ["at0009"] = <
+                text = <"Reason description">
+                description = <"Narrative description about the reason for the classification.">
+                comment = <"For example: description of clinical findings and/or conclusive laboratory test results; or alternate diagnosis made.">
+            >
+            ["at0014"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0015"] = <
+                text = <"Last updated">
+                description = <"The date when this health event investigation classification was last updated.">
+            >
+            ["at0016"] = <
+                text = <"Additional details">
+                description = <"Additional structured details about the classification.">
+                comment = <"For example: details about the clinical evidenct confirming or excluding this disease as the cause of the infection">
+            >
+            ["at0017"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the classification, not captured in other fields.">
+            >
+            ["at0035"] = <
+                text = <"Suspected">
+                description = <"A case is 'Suspected' when common, relevant symptoms and/or signs are exhibited.">
+            >
+            ["at0060"] = <
+                text = <"Final classification">
+                description = <"Classification of the likelihood of the 'Index event' as causal after completion of a case investigation.">
+                comment = <"Not to be used to record the 'Initial classification' at the initiation of a case investigation.">
+            >
+            ["at0061"] = <
+                text = <"Pending">
+                description = <"A case is 'Pending' at the completion of an adequate investigation when it is not possible to confirm or discard due to inadequate information, and further information is anticipated. It is usually a temporary classification.">
+            >
+            ["at0062"] = <
+                text = <"Probable">
+                description = <"A case is 'Probable' at the completion of an adequate investigation when clinical evidence criteria are met and/or an epidemiological link has been identified, with laboratory test results suggesting causality rather than being conclusive.">
+            >
+            ["at0063"] = <
+                text = <"Laboratory confirmed">
+                description = <"A case is 'Laboratory confirmed' at the completion of an adequate investigation when positive laboratory test results confirm the clinical evidence and/or epidemiological link.">
+            >
+            ["at0064"] = <
+                text = <"Discarded">
+                description = <"A case is 'Discarded' or 'Excluded' at the completion of an adequate investigation due to negative laboratory test results that exclude causality.">
+            >
+            ["at0065"] = <
+                text = <"Inconclusive">
+                description = <"A case is 'Inconclusive' at the completion of an adequate investigation when it is not possible to confirm or discard due to inadequate information, and no further information is anticipated. It is not a temporary classification.">
+            >
+            ["at0066"] = <
+                text = <"Clinically confirmed">
+                description = <"A case is 'Clinically confirmed' at the completion of an adequate investigation on the basis of clinical evidence alone.">
+            >
+            ["at0068"] = <
+                text = <"Contribution to death">
+                description = <"Assessment of the relationship between the index event and the death of the individual.">
+            >
+            ["at0069"] = <
+                text = <"Related">
+                description = <"The index disease was directly or indirectly related to the death of the infected individual.">
+            >
+            ["at0070"] = <
+                text = <"Unrelated">
+                description = <"The index disease was not related to the death of the infected individual.">
+            >
+            ["at0071"] = <
+                text = <"Unknown">
+                description = <"It is unknown if the index disease is related to the death of the individual or not.">
+            >
+            ["ac9000"] = <
+                text = <"Initial classification (synthesised)">
+                description = <"Classification of the likelihood of the 'Index event' as causal at the initiation of a case investigation. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Final classification (synthesised)">
+                description = <"Classification of the likelihood of the 'Index event' as causal after completion of a case investigation. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Contribution to death (synthesised)">
+                description = <"Assessment of the relationship between the index event and the death of the individual. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0069", "at0070", "at0071">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0061", "at0062", "at0063", "at0066", "at0064", "at0065">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0035", "at0003", "at0004">
+        >
+    >

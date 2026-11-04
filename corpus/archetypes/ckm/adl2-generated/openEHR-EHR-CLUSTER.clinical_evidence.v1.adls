@@ -1,0 +1,423 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1a30b06f-887a-4b08-ab42-243bf6757c33; build_uid=25f3f07e-1c99-47c3-99a2-56967b763817)
+    openEHR-EHR-CLUSTER.clinical_evidence.v1.3.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Alina Rehberg, Darin Leonhardt">
+                ["organisation"] = <"Medizinische Hochschule Hannover, PLRI, PLRI für medizinische Informatik/ Medizinische Hochschule">
+                ["email"] = <"rehberg.alina@mh-hannover.de, leonhardt.darin@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Therese Lindberg">
+                ["organisation"] = <"Cambio CDS">
+                ["email"] = <"therese.lindberg@cambio.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke, Liv Laugen, Vebjørn Arntzen">
+                ["organisation"] = <"Nasjonal IKT HF, ​Oslo University Hospital, Norway">
+                ["email"] = <"silje.ljosland.bakke@nasjonalikt.no, liv.laugen@ous-hf.no, varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2015-01-23">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Morten Aas, Oslo Universitetssykehus, Norway", "Ole Andreas Bjordal, Webmed, Norway", "Stein Arne Rimehaug, Sunnaas sykehus, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Kristian Berg, Universitetssykehuset Nord Norge, Norway", "SB BHATTACHARYYA, Sudisa Consultancy Services, India", "SBhusan Bhattacharyya, Sudisa Consultancy Services, India", "Bjørn Christensen, Helse Bergen HF, Norway", "Chris Dickson, NHS Digital, United Kingdom", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom", "Bente Gjelsvik, Helse Bergen, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Hanne Joensen, Helse Bergen HUS, Norway", "Siri Larønningen, Kreftregisteret, Norway", "Heather Leslie, Ocean Informatics, Australia (openEHR Editor)", "Hallvard Lærum, Direktoratet for e-helse, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Lars Morgan Karlsen, DIPS ASA, Norway", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Vladimir Pizzo, Hospital Sírio Libanês, Brazil", "Navin Ramachandran, NHS, United Kingdom", "Raymond Simkus, Brookswood Family Practice, Canada", "Iztok Stotl, UKCLJ, Slovenia", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Mette Wam, Esito AS, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"9CA673C44D07EB44E7473631D0F97DD4">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Dokumentation eines expliziten Befundes zur Unterstützung einer klinischen Behauptung, wie z.B. eines Problems/einer Diagnose, eines Nebenwirkungsrisikos, einer Gesundheitsrisikobewertung oder einer Kontraindikation.">
+            keywords = <"Diagnose", "Beweis", "Bedingung", "Krankheit", "Problem", "Feststellung", "Befund", "Beobachtung">
+            use = <"Zur Dokumentationn von Details zu Befunden, die eine klinische Feststellung unterstützen, entweder als Zusammenfassung von Daten, die in anderen (oft der Klasse OBSERVATION) Archetypen verfügbar sind, oder wenn die ursprünglichen Beobachtungsdaten nicht verfügbar sind.
+
+Diesen Archetypen innerhalb eines SLOTS Archetypen wie EVALUATION.problem_diagnose, EVALUATION.adverse_reaction_risk, EVALUATION.health_risk, EVALUATION.contraindication oder ähnlichen zusammenfassenden Archetypen verwenden, bei denen der Name der Feststellung bereits in der EVALUATION angegeben wurde, verschachtelt wird, um den Inhalt um diesen zusätzlichen und optionalen Datensatz zu erweitern. Während LINKs innerhalb des openEHR-Referenzmodells eine Verknüpfung mit Daten ermöglichen, die an anderer Stelle in der Gesundheitsakte gespeichert sind, wurde dieser Archetyp entwickelt, um diese Funktionalität explizit zu machen und um die klinische Sichtbarkeit und Überprüfung dieser Daten zu ermöglichen, wo sie in einer Vorlage oder Spezifikation relevant sein können.
+
+Der klinische Beweis kann direkt in diesen Archetyp als \"Finding\" eingegeben werden, oder es kann ein Zitat verwendet werden, um explizit auf Daten innerhalb der Gesundheitsakte zu verweisen.
+
+">
+            misuse = <"Nicht zur Dokumentation von zusammenfassende Details zu einem identifizierten Problem oder einer Diagnose verwenden - verwenden Sie dazu die EVALUATION.problem_diagnosis.
+
+Nicht zur Dokumentation von zusammenfassenden Details über ein identifiziertes Nebenwirkungsrisiko verwenden - verwenden Sie dazu die Datei EVALUATION.adverse_reaction_risk.
+
+Nicht zur Dokumentation von zusammenfassenden Details über ein identifiziertes Gesundheitsrisiko zu verwenden - verwenden Sie zu diesem Zweck die Datei EVALUATION.health_risk.
+
+Nicht zur Dokumentation von zusammenfassende Einzelheiten über eine identifizierte Kontraindikation verwenden - verwenden Sie dazu die Datei EVALUATION.contraindication.
+">
+            copyright = <"© openEHR Foundation, openEHR Norway">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera ett uttryckligt resultat till stöd för ett kliniskt påstående, såsom ett problem / diagnos, biverkningsrisk, hälsoriskbedömning eller kontraindikation.">
+            keywords = <"diagnos", "bevis", "tillstånd", "sjukdom", "problem", "påstående", "fynd", "observation">
+            use = <"*Används för att registrera detaljer om fynd som stöder ett kliniskt påstående, antingen som en sammanfattning av data som finns tillgängliga i andra (ofta OBSERVATION-klass) arketyper, eller när de ursprungliga observationsdata inte är tillgängliga.
+
+Denna arketyp är utformad för att kapslas in i en SLOT i EVALUATION.problem_diagnosis, EVALUATION.adverse_reaction_risk, EVALUATION.health_risk, EVALUATION.contraindication, eller liknande sammanfattande arketyper, där namnet på påståendet redan har specificerats i EVALUATIONEN, för att utöka innehållet med denna extra och valfria dataset. Medan LÄNKAR inom openEHR-referensmodellen möjliggör koppling till data som hålls någon annanstans inom hälsojournalen har denna arketyp utvecklats för att göra denna funktion tydlig och för att möjliggöra klinisk synlighet och granskning av dessa data, där det kan vara relevant i en template eller specifikation.
+
+De kliniska bevisen kan matas in direkt i denna arketyp som en \"Finding\", eller en citering kan användas för att uttryckligen peka på data i hälsojournalen.">
+            misuse = <"Är inte utformad för att registrera sammanfattade detaljer om ett identifierat problem eller diagnos - använd EVALUATION.problem_diagnosis för detta ändamål.
+
+Är inte utformad för att registrera sammanfattande detaljer om en identifierad biverkningsrisk - använd EVALUATION.adverse_reaction_risk för detta ändamål.
+
+Är inte utformad för att registrera sammanfattande detaljer om en identifierad hälsorisk - använd EVALUATION.health_risk för detta ändamål.
+
+Är inte utformad för att registrera sammanfattande detaljer om en identifierad kontraindikation - använd EVALUATION.-kontraindikationen för detta ändamål.">
+            copyright = <"© openEHR Foundation, openEHR Norway">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere eksplisitte detaljer om grunnlaget for et klinisk utsagn, for eksempel en problem/diagnose, risiko for overfølsomhetsreaksjon, helserisiko, eller kontraindikasjon.">
+            keywords = <"diagnose", "evidens", "tilstand", "sykdom", "problem", "observasjon", "begrunnelse">
+            use = <"Brukes for å registrere eksplisitte detaljer om grunnlaget for et klinisk utsagn, enten som en oppsummering av data som er tilgjengelig i andre arketyper (ofte av OBSERVATION-klassen), eller når de opprinnelige dataene ikke er tilgjengelige for applikasjonen.
+
+Denne arketypen er ment å legges i et SLOT i arketypene EVALUATION.problem_diagnosis, EVALUATION.adverse_reaction_risk, EVALUATION.health_risk, EVALUATION.contraindication eller lignende oppsummerende arketyper, der utsagnet allerede er spesifisert i EVALUATION-arketypen. Den fungerer der som en valgfri utvidelse av datasettet i EVALUATION-arketypen.
+
+Som spesifisert i openEHR referansemodellen kan det benyttes lenker for å lenke til data som ligger andre steder i journalen, mens denne arketypen er laget for å gjøre dette eksplisitt, og for å gjøre det mulig å vise og gjennomgå disse dataene klinisk der dette er relevant.
+
+Grunnlaget kan legges direkte i denne i arketypen som et \"Resultat\", \"Strukturert resultat\", som fritekstlig oppsummering i \"Oppsummering\", eller en referans kan benyttes for å peke direkte til dataene som ligger et annet sted i journalen.">
+            misuse = <"Skal ikke brukes til å registrere sammendrag om et problem eller en diagnose. For dette brukes arketypen EVALUATION.problem_diagnosis.
+
+Skal ikke brukes til å registrere sammendrag om risiko for overfølsomhetsreaksjoner. For dette brukes arketypen EVALUATION.adverse_reaction_risk.
+
+Skal ikke brukes til å registrere sammendrag om en helserisiko. For dette brukes arketypen EVALUATION.health_risk.
+
+Skal ikke brukes til å registrere sammendrag om en kontraindikasjon. For dette brukes arketypen EVALUATION.contraindication.">
+            copyright = <"© openEHR Foundation, openEHR Norway">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record an explicit finding in support of a clinical assertion, such as a problem/diagnosis, adverse reaction risk, health risk assessment, or contraindication.">
+            keywords = <"diagnosis", "evidence", "condition", "disease", "problem", "assertion", "finding", "observation">
+            use = <"Use to record details about findings that support a clinical assertion, either as a summary of data available in other (often OBSERVATION class) archetypes, or when the original observational data is not available.
+
+This archetype is designed to be nested within a SLOT in the EVALUATION.problem_diagnosis, EVALUATION.adverse_reaction_risk, EVALUATION.health_risk, EVALUATION.contraindication, or similar summary archetypes, where the name of the assertion has already been specified in the EVALUATION, in order to extend its content with this additional and optional dataset. While LINKs within the openEHR Reference Model allow for linkage to data held elsewhere within the health record, this archetype has been developed to make this functionality explicit, and to enable clinical visibility and review of this data, where it may be relevant in a template or specification.
+
+The clinical evidence can be entered directly into this archetype as a 'Result', 'Structured result', a narrative summary in 'Summary'; or a citation can be used to explicitly point to data within the health record.">
+            misuse = <"Not to be used to record summary details about an identified problem or diagnosis - use the EVALUATION.problem_diagnosis for this purpose.
+
+Not to be used to record summary details about an identified adverse reaction risk - use the EVALUATION.adverse_reaction_risk for this purpose.
+
+Not to be used to record summary details about an identified health risk - use the EVALUATION.health_risk for this purpose.
+
+Not to be used to record summary details about an identified contraindication - use the EVALUATION.contraindication for this purpose.">
+            copyright = <"© openEHR Foundation, openEHR Norway">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Clinical evidence
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Evidence
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Summary
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0005]    -- Result
+            allow_archetype CLUSTER[at0025] matches {    -- Structured result
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Date/time of result
+                value matches {
+                    DV_DATE_TIME[at9002]
+                }
+            }
+            ELEMENT[at0026] occurrences matches {0..1} matches {    -- Date/time clinically relevant
+                value matches {
+                    DV_DATE_TIME[at9006]
+                }
+            }
+            allow_archetype CLUSTER[at0007] matches {    -- Citation
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.citation(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0022] matches {    -- Method
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Method description
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            allow_archetype CLUSTER[at0018] matches {    -- Multimedia representation
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.media_file\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0024] matches {    -- Additional details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Klinische Evidenz">
+                description = <"Details über Befunde, die eine klinische Feststellung stützen.">
+            >
+            ["at0001"] = <
+                text = <"Beschreibung der Methode">
+                description = <"Narrative Beschreibung der Methode(n), die zur Festellung der Evidenz verwendet wurde(n).">
+            >
+            ["at0003"] = <
+                text = <"Befund">
+                description = <"Identifizierung des Befundes, der die Feststellung stützt">
+                comment = <"Es wird nach Möglichkeit empfohlen den Befund mit einer Terminologie zu kodieren.">
+            >
+            ["at0004"] = <
+                text = <"Befundbeschreibung">
+                description = <"Narrative Beschreibung des Befundes.">
+            >
+            ["at0005"] = <
+                text = <"Ergebnis">
+                description = <"Messung oder Wert, der mit dem Befund verbunden ist.">
+                comment = <"Zum Beispiel: Mantoux-Testergebnis.">
+            >
+            ["at0006"] = <
+                text = <"Feststellungsdatum">
+                description = <"Das Datum, an dem der Befund klinisch festgestellt wurde.">
+                comment = <"Zum Beispiel: Das Datum, an dem der Befund vom Arzt gemacht oder ihm zur Verfügung gestellt wurde.">
+            >
+            ["at0007"] = <
+                text = <"Zitat">
+                description = <"Detaillierte Daten über die in einem anderen Teil der Gesundheitsakte enthaltenen Beweise sind verfügbar.">
+            >
+            ["at0018"] = <
+                text = <"Multimediale Darstellung">
+                description = <"Digitales Bild, Video oder Diagramm, welches die klinischen Evidenz darstellt.">
+            >
+            ["at0022"] = <
+                text = <"Methode">
+                description = <"Art der Untersuchung oder Recherche, die zur Feststellung der Evidenz verwendet wird.">
+                comment = <"Erwägen Sie 'Methode' mit einer Terminologie zu kodieren, wenn möglich. Zum Beispiel: Körperliche Untersuchung, Röntgenaufnahme der Brust, Ergebnis der Histopathologie, Koloskopie.">
+            >
+            ["at0023"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Informationen über die Befunde, welche noch nicht an anderer Stelle dokumentiert wurden.">
+            >
+            ["at0024"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Zusätzliche strukturierte Angaben zu den Ergebnissen.">
+            >
+            ["at0025"] = <
+                text = <"Strukturiertes Ergebnis">
+                description = <"Strukturierte Angaben über das Ergebnis.">
+            >
+            ["at0026"] = <
+                text = <"Klinisch relevantes Datum/Uhrzeit">
+                description = <"Das Datum/Uhrzeit, zu der das Ergebnis als Beweis für die Feststellung aufgenommen wurde.">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Kliniska bevis">
+                description = <"Detaljer om resultat som stöder ett kliniskt påstående.">
+            >
+            ["at0001"] = <
+                text = <"Metodbeskrivning">
+                description = <"Berättande beskrivning av metoden / metoderna som används för att identifiera bevisen.">
+            >
+            ["at0003"] = <
+                text = <"*Fynd">
+                description = <"*Identifiering av fyndet som stöder påståendet.">
+                comment = <"*Det rekommenderas att fynd ska kodas med en terminologi, där det är möjligt.">
+            >
+            ["at0004"] = <
+                text = <"Beskrivning av fynd">
+                description = <"Berättande beskrivning av fynd.">
+            >
+            ["at0005"] = <
+                text = <"Resultat">
+                description = <"*Mätning eller värde associerat med fyndet.">
+                comment = <"*Till exempel: Mantoux-testresultat.">
+            >
+            ["at0006"] = <
+                text = <"Identifieringsdatum">
+                description = <"*Datum då fyndet kliniskt identifierades.">
+                comment = <"*Till exempel: Datumet då fynden gjordes av eller gjordes tillgänglig för läkaren.">
+            >
+            ["at0007"] = <
+                text = <"Citat">
+                description = <"Detaljerad information tillgänglig om bevisen som finns i en annan del av hälsojournalen.">
+            >
+            ["at0018"] = <
+                text = <"Multimedia representation">
+                description = <"Digital bild, video eller diagram som representerar kliniska bevis.">
+            >
+            ["at0022"] = <
+                text = <"Metod">
+                description = <"Typ av undersökning eller utredning som används för att identifiera bevisen.">
+                comment = <"Överväg att koda 'Metod' med en terminologi, där det är möjligt. Till exempel: Fysisk undersökning, bröströntgen, resultat av histopatologi, koloskopi.">
+            >
+            ["at0023"] = <
+                text = <"Kommentar">
+                description = <"Ytterligare beskrivning om fynden som inte redan inkluderats.">
+            >
+            ["at0024"] = <
+                text = <"*Additional details (en)">
+                description = <"*Additional structured details about findings. (en)">
+            >
+            ["at0025"] = <
+                text = <"*CLUSTER_SLOT (en)">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"*DV_DATE_TIME (en)">
+                description = <"">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Klinisk grunnlag">
+                description = <"Detaljer om funn som underbygger et klinisk utsagn.">
+            >
+            ["at0001"] = <
+                text = <"Metodebeskrivelse">
+                description = <"Fritekstlig beskrivelse av typen undersøkelse eller utredning som er utført for å komme fram til grunnlaget.">
+            >
+            ["at0003"] = <
+                text = <"Grunnlag">
+                description = <"Identifisering av en forekomst av et klinisk grunnlag, enten ved navn eller type, som et enkelt resultat eller en gruppe av resultater.">
+                comment = <"Det anbefales å kode \"Funn\" med en terminologi, der det er mulig. For eksempel \"Mantoux test\", \"AFP nivå\", \"Tumorstørrelse\", \"Genetisk test\", \"BRCA1 test\", \"Histopatologisvar\", \"Fysisk funn\", \"Funn ved operasjon\", \"FIGO stadium\", \"Symptom\", \"Tumorgradering\", \"Klinisk inntrykk\". Dersom grunnlaget er tilstrekkelig identifisert i \"Resultat\" eller \"Strukturert resultat\" kan dette elementet være overflødig, og har derfor blitt satt som valgfritt.">
+            >
+            ["at0004"] = <
+                text = <"Oppsummering">
+                description = <"Fritekstbeskrivelse av denne forekomsten av klinisk grunnlag.">
+            >
+            ["at0005"] = <
+                text = <"Resultat">
+                description = <"Resultatet eller funnet som støtter utsagnet.">
+                comment = <"For eksempel \"11 mm\", \"13 µg/L\", \"2.5 ml\" or \"BRCA1 positiv\". \"Resultat\" kan bli kodet med en terminologi der det er passende.">
+            >
+            ["at0006"] = <
+                text = <"Dato">
+                description = <"Dato/tid til resultatet eller funnet.">
+                comment = <"For eksempel når en klinisk undersøkelse ble gjort. For laboratorieanalyser eller bildediagnostikk er dette dato/tid for når prøven eller bildet ble tatt.">
+            >
+            ["at0007"] = <
+                text = <"Referanse">
+                description = <"Detaljerte data om funnet i andre deler av journalen.">
+            >
+            ["at0018"] = <
+                text = <"Multimediarepresentasjon">
+                description = <"Digitalt bilde, video eller diagram som representerer det kliniske grunnlaget.">
+            >
+            ["at0022"] = <
+                text = <"Metode">
+                description = <"Typen undersøkelse eller utredning som er utført for å komme fram til funnet.">
+                comment = <"Metoden bør vurderes kodet med en terminologi der dette er mulig. For eksempel fysisk undersøkelse, røntgen thorax, patologisvar, koloskopi.">
+            >
+            ["at0023"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere informasjon om funnet, som ikke kan registreres i andre felter.">
+            >
+            ["at0024"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere strukturerte detaljer om funnet.">
+            >
+            ["at0025"] = <
+                text = <"Strukturert resultat">
+                description = <"Strukturerte detaljer om resultatet.">
+            >
+            ["at0026"] = <
+                text = <"Dato/tid for klinisk relevans">
+                description = <"Dato/tid når resultatet ble tatt inn som grunnlag for utsagnet.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Clinical evidence">
+                description = <"Details about findings that support a clinical assertion.">
+            >
+            ["at0001"] = <
+                text = <"Method description">
+                description = <"Narrative description of the method/s used to identify the evidence.">
+            >
+            ["at0003"] = <
+                text = <"Evidence">
+                description = <"Identification of an item of clinical evidence by name or type, either as a single result or as a grouping of results.">
+                comment = <"It is recommended that 'Evidence' should be coded with a terminology, where possible.  For example: 'Mantoux test', 'AFP level', 'tumour volume', 'genetic tests', 'BRCA1 test', 'histopathology result', 'physical examination finding', 'intraoperative finding', 'FIGO stage', 'symptom', 'tumour grading', 'clinical impression'. For use cases where the evidence is sufficiently identified in 'Result' or 'Structured result', this data element may be redundant and has therefore been made optional.">
+            >
+            ["at0004"] = <
+                text = <"Summary">
+                description = <"Narrative summary about this item of clinical evidence.">
+            >
+            ["at0005"] = <
+                text = <"Result">
+                description = <"The result or finding that supports the assertion.">
+                comment = <"For example: '11 mm', '13 µg/L', '2.5 ml' or 'BRCA1 positive'. 'Result' can be coded with a terminology, where appropriate.">
+            >
+            ["at0006"] = <
+                text = <"Date/time of result">
+                description = <"The date/time of the result or finding.">
+                comment = <"For example: The date time of a clinical examination. For labs or imaging this is the collection date/time of the specimen or image.">
+            >
+            ["at0007"] = <
+                text = <"Citation">
+                description = <"Detailed data available about the evidence held in another part of the health record.">
+            >
+            ["at0018"] = <
+                text = <"Multimedia representation">
+                description = <"Digital image, video or diagram representing the clinical evidence.">
+            >
+            ["at0022"] = <
+                text = <"Method">
+                description = <"Type of examination or investigation used to identify the evidence.">
+                comment = <"Consider coding 'Method' with a terminology, where possible. For example: Physical examination, Chest x-ray, Histopathology result, Colonoscopy.">
+            >
+            ["at0023"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the finding not captured in other fields.">
+            >
+            ["at0024"] = <
+                text = <"Additional details">
+                description = <"Additional structured details about the finding.">
+            >
+            ["at0025"] = <
+                text = <"Structured result">
+                description = <"Structured details about the result.">
+            >
+            ["at0026"] = <
+                text = <"Date/time clinically relevant">
+                description = <"The date/time when the result was included as evidence for the assertion.">
+            >
+        >
+    >

@@ -1,0 +1,676 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7e289b5c-e123-4dc0-9aad-548352b64915; build_uid=1f47ccc2-612f-4be1-b514-b1cde6dc24cd)
+    openEHR-EHR-OBSERVATION.story.v1.3.3
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Sarah Ballout, Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"ballout.sarah@mh-hannover.de, Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Emma Malm">
+                ["organisation"] = <"Karolinska Universitetssjukhuset">
+                ["email"] = <"emma.malm@cambio.se">
+            >
+        >
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            author = <
+                ["name"] = <"Seung-Jong Yu">
+                ["organisation"] = <"NOUSCO Co.,Ltd.">
+                ["email"] = <"seungjong.yu@gmail.com">
+            >
+            accreditation = <"Certified board of Family medicine">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Guillermo Palli">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Nasjonal IKT HF, Helse Vest IKT AS">
+                ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Osmeire Chamelette Sanzovo">
+                ["organisation"] = <"Hospital Sírio Libanês - SP">
+                ["email"] = <"osmeire.acsanzovo@hsl.org.br">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            author = <
+                ["name"] = <"Vanja Maravić, Lara Škufca">
+                ["organisation"] = <"Better Deutschland GmbH, Better d.o.o.">
+                ["email"] = <"vanja.maravic@better.care, laras@better.care">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            author = <
+                ["name"] = <"Francesca Frexia">
+                ["organisation"] = <"CRS4 - Center for advanced studies, research and development in Sardinia, Pula (Cagliari), Italy">
+                ["email"] = <"francesca.frexia@crs4.it">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Jonas Bucher">
+                ["organisation"] = <"Cistec AG">
+                ["email"] = <"jonas.bucher@cistec.com">
+            >
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+            author = <
+                ["name"] = <"Lin Zhang">
+                ["organisation"] = <"Freelancer">
+                ["email"] = <"linforest@163.com">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Joost Holslag">
+                ["organisation"] = <"Nedap, Joost Holslag Geneeskunde & Advies">
+                ["email"] = <"joost.holslag@nedap.com, info@joostholslag.nl">
+            >
+            accreditation = <"MD">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2008-05-15">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Tomas Alme, DIPS ASA, Norway", "Nadim Anani, Karolinska Institutet, Sweden", "Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (Nasjonal IKT redaktør)", "Koray Atalag, University of Auckland, New Zealand", "Gustavo Bacelar-Silva, Healthcare Designs, Brazil (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Shahla Foozonkhah, Iran ministry of health and education, Iran", "Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway", "Sam Heard, Ocean Informatics, Australia", "Andreas Hering, Helse Bergen HF, Haukeland universitetssjukehus, Norway", "Anca Heyd, DIPS ASA, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Shinji Kobayashi, Kyoto University, Japan", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hallvard Lærum, Direktoratet for e-helse, Norway", "Arne Løberg Sæter, DIPS ASA, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Rune Pedersen, Universitetssykehuset i Nord Norge, Norway", "Micaela Thierley, Helse Bergen/Haraldsplass sykehus, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Direct communication with clinicians.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"C3C3D1004C0B0E25100780E3B3FE6F3E">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Beschreibung der klinischen Vorgeschichte des Patienten und die Entwicklung eines Frameworks für die Erstellung eines detaillierten CLUSTER-Archetyps, der die Darstellung mit zusätzlichen strukturierten Details zu Symptomen, gesundheitlichen Ereignissen und verwandten Bereichen unterstützt. 
+
+Zur Repräsentation der klinischen Vorgeschichte einer Person, eines Elternteils, eines Betreuers oder einer anderen Partei. Sie kann von einem Kliniker als Teil der ihm vorgelegten klinischen Anamnese erfasst werden oder als Teil eines klinischen Fragebogens oder einer persönlichen Patientenakte selbst erfasst werden.">
+            keywords = <"Vorgeschichte", "vorliegende", "Beschwerde", "Erzählung", "Symptom", "Gesundheit", "Aufzeichnung", "aktuelle Beschwerde", "Anamnese">
+            use = <"Zur Repräsentation einer Beschreibung über subjektive gesundheitsbezogene Beobachtungen oder Eindrücke aus Sicht der zu pflegenden Person.
+
+Wenn es von einem Kliniker im Kontext der Gesundheitsversorgung aufgezeichnet wird, kann die Geschichte genutzt werden, um die klinische Vorgeschichte zu erfassen, wie sie von der Person selbst, einem Elternteil, Pflegeperson oder anderen beteiligten Parteien berichtet wurde. Falls diese von der Person selbst erfasst wird, kann sie als Bericht über ihre \"Geschichte\" von Symptomen und Gesundheitserfahrungen verwendet werden, der zum Austausch mit den Gesundheitsdienstleistern oder zur Dokumentation in ihrer persönlichen Gesundheitsakte verwendet werden kann.
+
+Verwendung:
+- zum Darstellen einer einfachen Erzählung; und/oder
+- als Container-Archetyp, um die Darstellung einer detaillierten strukturierten Geschichte durch die Einbeziehung relevanter CLUSTER-Archetypen innerhalb des \"Strukturierte Angabe\"-SLOTs zu ermöglichen. Zum Beispiel können CLUSTER.symptom-, CLUSTER.issue- oder CLUSTER.health_event-Archetypen in diesem SLOT angemessen verwendet werden.
+
+Diesen Archetypen verwenden, um die aus bestehenden oder alten klinischen Systemen erfasste Beschreibungen der klinischen Vorgeschichte in einem archetypischen Format mit Hilfe des 'Story'-Textdatenelements integrieren.">
+            misuse = <"Nicht zur Repräsentation formaler Beurteilungen von Klinikern, die in der Regel unter Nutzung der Archetypenklasse EVALUATION erfasst werden.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera en beskrivning av vårdtagarens sjukdomshistoria samt tillhandahålla ett ramverk i vilken detaljerade CLUSTER-arketyper ska infogas, där syftet med var och en är att stödja berättelsen med ytterligare detaljer för symptom, hälsohändelser och relaterade ämnen.
+
+Används för att registrera detaljer om en sjukdomshistoria som rapporterats av vårdtagare, förälder, vårdgivare eller annan part. Detta kan registreras som en del av en sjukdomshistoria som rapporterats direkt till en kliniker, eller registreras som en del av ett kliniskt frågeformulär eller patientjournal.">
+            keywords = <"presenterar", "klagomål", "berättelse", "symptom", "hälsa", "journal", "anamnes", "sjukdomshistoria">
+            use = <"Används för att registrera en beskrivning av subjektiva, hälsorelaterade observationer eller intryck ur vårdtagarens perspektiv. 
+
+Om registrering sker av en kliniker, kan berättelsen användas för att fånga sjukdomshistorian som rapporterats antigen av vårdtagaren, en förälder, vårdgivaren eller annan närstående. Om registrering sker av vårdtagaren själv, kan berättelsen användas som en redogörelse för deras symptom och hälsoupplevelser, som i sin tur kan användas för att dela med vårdgivare eller för att dokumentera i deras egna personliga hälsojournaler.
+
+Användningsområden:
+- registrering av en enkel sjukdomshistoria; och/eller
+- som en containerarketyp för att möjliggöra registrering av en detaljerad berättelse genom att inkludera relevanta CLUSTER-arketyper i \"Detail\"-SLOT. Till exempel kan CLUSTER.symptom, CLUSTER.issue eller CLUSTER.health_event-arketyper användas på lämpligt sätt i denna SLOT.
+
+Används för att införliva de beskrivningar av sjukdomshistorier som finns dokumenterade i befintliga eller äldre kliniska system i ett arketypiskt format med hjälp av dataelementet ”Berättelse”.">
+            misuse = <"Ska inte användas för att registrera formella bedömningar av kliniker. Dessa registreras vanligtvis med EVALUATION-klassen av arketyper.">
+        >
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            purpose = <"개인/환자가 의사에게 이야기하거나 직접 기록한 임상 병력에 대한 서술을 기록하기 위한 것과 상세한 CLUSTER archetypes를 포함할 수 있는 프레임워크를 제공하는 것으로 각각에 임상 병력의 다양한 측면들을 상세하게 기술될 것이다.">
+            keywords = <"*병력(ko)", "*현재(ko)", "*호소(ko)", "*이야기(ko)">
+            use = <"환자가 의사에게 이야기한 공식적인 '현재 호소하는 병력(History of Presenting Complaint)'을 기록하기 위해서 사용함; 또는 (예를 들어 개인건강기록에 있는) 개인 자신의 증상들의 '이야기(story)를 설명한 것을 기록하기 위해 사용함.
+
+기존 또는 이전의 임상 시스템 내의 임상 병력의 서술을 'Story' data element을 사용하여 archetyped format으로 통합하기위해 사용함.
+
+단순한 서술을 기록하기 위해 사용함 그리고/또는 container archetype으로써 - 추가적이고 특정한 그리고 상세한 CLUSTER archetypes에 의해 확장될 수 있는 공통의 쿼리가능한 ENTRY archetype framework를 제공함. 각각에 임상병력의 다양한 측면을 기술될 것임. 병력과 관련된 CLUSTER archetypes의 예는 CLUSTER.symptom 또는 CLUSTER.health_event를 포함한다.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Para registrar uma descrição narrativa da história clínica do sujeito do cuidado e para fornecer um quadro no qual se aninha arquétipos CLUSTER detalhados, cada um dos quais irão apoiar a narrativa com detalhes estruturados adicionais para sintomas, eventos de saúde e tópicos relacionados.
+
+Use para registrar detalhes sobre a história clínica relatada por um indivíduo, pais, cuidador ou outra pessoa. Pode ser registrado pelo médico como parte de um registro de história clínica relatado, ou auto-registrado como parte de um questionário clínico ou registro de saúde pessoal.">
+            keywords = <"história", "queixa", "sintoma", "saúde", "gravar", "apresentando queixa", "anamnese", "presente">
+            use = <"Use para registrar uma descrição sobre observações ou impressões subjetivas relacionadas à saúde do ponto de vista do sujeito do cuidado.
+
+Quando registrado por um médico dentro do contexto de provisão de cuidados de saúde, a história pode ser utilizada para capturar a história clínica, como relatado pelo próprio sujeito, pais, cuidador ou outra parte relacionada. Se gravado pelo próprio sujeito, pode ser usado como um relato de sua \"história\" de sintomas e experiências de saúde, que pode ser usado para compartilhar com os prestadores de cuidados de saúde ou para documentar dentro do seu próprio registro de saúde pessoal.
+
+Usar:
+- para gravar uma narrativa simples; e/ou
+- como um arquétipo contêiner para permitir o registro de um histórico detalhado por inclusão de arquétipos CLUSTER relevantes dentro do SLOT Detalhes. Por exemplo: arquétipos CLUSTER.symptom, CLUSTER.issue ou CLUSTER.health_event podem ser adequadamente utilizados neste SLOT.
+
+Use para incorporar as descrições narrativas da história clínica capturadas de sistemas clínicos existentes ou herdados em um formato arquetipado, usando o elemento de dados de texto \"História\".">
+            misuse = <"Não deve ser usado para gravar avaliações formais por médicos que normalmente seriam gravadas usando a classe de arquétipos EVALUATION.">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"*To record a narrative description of the clinical history, as told to a clinician or recorded directly by an individual/patient, and to provide a framework in which to nest detailed CLUSTER archetypes, each of which will describe the various aspects of the clinical history in further detail.(en)">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a narrative description of the clinical history of the subject of care and to provide a framework in which to nest detailed CLUSTER archetypes, each of which will support the narrative with additional structured detail for symptoms, health events and related topics.
+
+Use to record detail about the clinical history as reported by an individual, parent, care-giver or other party. It may be recorded by a clinician as part of a clinical history record as reported to them, or self-recorded as part of a clinical questionnaire or personal health record.">
+            keywords = <"history", "presenting", "complaint", "story", "symptom", "health", "record", "presenting complaint", "anamnesis">
+            use = <"Use to record a description about subjective health-related observations or impressions from the point of view of the subject of care. 
+
+When recorded by a clinician within the context of healthcare provision the story can be used for capturing the clinical history, as reported by the subject themselves, a parent, care-giver or other related party. If recorded by the subject, it can be used as an account of their 'story' of symptoms and health experiences, which might be used to share with healthcare providers or to document within their own personal health record.
+
+Use:
+- to record a simple narrative; and/or 
+- as a container archetype to enable recording of a detailed structured history by inclusion of relevant CLUSTER archetypes within the 'Detail' SLOT. For example: CLUSTER.symptom, CLUSTER.issue or CLUSTER.health_event archetypes can be appropriately used in this SLOT.
+
+Use to incorporate the narrative descriptions of clinical history captured from existing or legacy clinical systems into an archetyped format, using the 'Story' text data element.">
+            misuse = <"Not to be used to record formal assessments by clinicians which would usually be recorded using the EVALUATION class of archetypes.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"Registrare una descrizione narrativa della storia clinica del soggetto di cura e fornire un quadro in cui annidare gli archetipi dettagliati di CLUSTER, ognuno dei quali supporterà la narrazione con ulteriori dettagli strutturati per i sintomi, gli eventi sanitari e gli argomenti correlati.
+
+Usato per registrare i dettagli della storia clinica come riportata da un individuo, da un genitore, da un caregiver o da un altro soggetto. Può essere registrato da un clinico come parte di una storia clinica così come riportata, o autoregistrato come parte di un questionario clinico o di una cartella clinica personale.">
+            keywords = <"cronologia, presentazione, segnalazione, storia, sintomo, salute, registrazione, presentazione di una lamentela, anamnesi", ...>
+            use = <"Usato per registrare una descrizione delle osservazioni o impressioni soggettive relative alla salute dal punto di vista del soggetto di cura.
+
+Quando viene registrata da un clinico nell'ambito dell'assistenza sanitaria, la storia può essere utilizzata per acquisire l'anamnesi clinica, come riportata dal soggetto stesso, da un genitore, da un care-giver o da altre parti correlate. Se registrata dal soggetto, può essere utilizzata come resoconto della sua \"cronologia\" di sintomi ed esperienze di salute, e può essere utilizzata per condividerla con gli operatori sanitari o per documentare all'interno della cartella clinica personale del soggetto.
+
+Utilizzo:
+- per registrare una semplice narrazione; e/o
+- come archetipo di contenitore per consentire la registrazione di una storia strutturata e dettagliata includendo i relativi archetipi di CLUSTER all'interno dello SLOT \"Dettaglio\". Per esempio: Gli archetipi di CLUSTER.symptom, CLUSTER.issue o CLUSTER.health_event possono essere utilizzati in modo appropriato in questo SLOT.
+
+Utilizzare per incorporare le descrizioni narrative della storia clinica acquisite da sistemi clinici esistenti o preesistenti in un formato archetipizzato, utilizzando l'elemento \"Storia\".
+">
+            misuse = <"Da non utilizzare per registrare le valutazioni formali dei clinici che di solito vengono registrate utilizzando la classe EVALUATION degli archetipi.">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Pour enregistrer une description narrative des antécédents cliniques du sujet pris en charge et pour fournir un cadre dans lequel intégrer des archétypes CLUSTER détaillés, chacun d’entre eux venant étayer le récit par des détails structurés supplémentaires concernant les symptômes, les événements de santé et les sujets connexes.
+
+À utiliser pour enregistrer des détails sur les antécédents cliniques tels qu’ils ont été rapportés par une personne, un parent, un soignant ou toute autre partie. Ces informations peuvent être enregistrées par un clinicien dans le cadre d’un dossier d’antécédents cliniques, telles qu’elles lui ont été rapportées, ou saisies par la personne elle-même dans le cadre d’un questionnaire clinique ou d’un dossier de santé personnel.">
+            keywords = <"antécédents", "présentant", "plainte", "récit", "symptôme", "santé", "Pour enregistrer", "motif de consultation", "anamnèse">
+            use = <"À utiliser pour enregistrer une description des observations ou impressions subjectives liées à la santé du point de vue de la personne prise en charge. 
+
+Lorsqu’elle est enregistrée par un clinicien dans le cadre de la prestation de soins, cette description peut servir à saisir les antécédents cliniques tels qu’ils ont été rapportés par la personne elle-même, un parent, un aidant ou toute autre partie concernée. Si elle est consignée par la personne concernée, elle peut servir de récit de son « histoire » en matière de symptômes et d’expériences de santé, qui pourra être partagé avec des professionnels de santé ou consigné dans son dossier de santé personnel.
+
+Utilisation :
+- pour enregistrer un récit simple ; et/ou 
+- comme archétype « conteneur » permettant la consignation d’un historique détaillé et structuré grâce à l’inclusion d’archétypes CLUSTER pertinents dans le SLOT « Detail ». Par exemple : les archétypes CLUSTER.symptom, CLUSTER.issue ou CLUSTER.health_event peuvent être utilisés de manière appropriée dans cet emplacement.
+
+À utiliser pour intégrer les descriptions narratives de l’historique clinique issues de systèmes cliniques existants ou hérités dans un format archétypé, à l’aide de l’élément de données textuel « Story ».">
+            misuse = <"À ne pas utiliser pour enregister des évaluations formelles réalisées par des cliniciens, qui sont généralement enregistrées à l’aide de la classe d’archétypes EVALUATION.">
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+            purpose = <"旨在用于记录照护服务对象临床病史的叙述性描述，并提供可用于在其中嵌套其他详细的群簇型（CLUSTER ）原始型的框架；其中，所嵌入的每个原始型分别会利用进一步关于症状、健康事件和相关主题的结构化详情来支持上述的叙述。
+
+用于记录关于个人、父母、照护人员/照料者或其他参与方所报告的临床病史的详细信息。临床医务人员/临床医生可能会将其记录为向他们所报告的临床病史记录的组成部分，或者是照护服务对象将其自行记录为临床问卷或个人健康档案的组成部分。">
+            keywords = <"病史", "历史", "陈述", "描述", "叙述", "主诉", "抱怨", "症状", "健康", "档案", "记录", "既往史", "既往病史">
+            use = <"用于从照护服务对象的角度记录关于主观性的健康相关观察或印象的描述。
+
+当临床医务人员/临床医生在提供医疗保健服务的背景下加以记录时，临床病史叙述原始型可用于采集照护服务对象自己、父母、照护人员或其他相关[参与]方所报告的临床病史。如果记录者为照护服务对象，则可将其作为对于其症状和健康经历/体验的“临床病史叙述”的说明，而且还可能会将此类的临床病史叙述用来与医疗保健服务人员进行分享，或者是在照护服务对象的个人健康当中进行记录。
+
+用于：
+- 记录一个简单的叙述；和/或
+- 作为容器型的原始型，通过在“详情”（Detail）槽位当中收纳相关的群簇型（CLUSTER ）原始型，从而使得能够记录详细的结构化病史。例如：可以在这一槽位当中酌情使用群簇型症状原始型 CLUSTER.symptom、群簇型事项原始型 CLUSTER.issue 或群簇型健康事件原始型 CLUSTER.health_event。
+
+用于采用原始型的格式，利用“临床病史叙述”（Story）文本型数据元，收纳从已有或历史遗留的临床系统之中所采集的关于临床病史的叙述性描述。">
+            misuse = <"并非旨在用于记录临床医务人员/临床医生的正式评估[结果]。后者的记录通常会采用的是评估（EVALUATION）类的原始型。">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"*To record a narrative description of the clinical history, as told to a clinician or recorded directly by an individual/patient, and to provide a framework in which to nest detailed CLUSTER archetypes, each of which will describe the various aspects of the clinical history in further detail.(en)">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en fritekstbeskrivelse av individets sykehistorie/anamnese og som et rammeverk for å nøste detaljerte CLUSTER-arketyper som hver for seg kan detaljere ulike aspekter av sykehistorien, som symptomer, helserelaterte hendelser, og andre tilgrensende emner.
+
+Brukes for å registrere detaljer om sykehistorien slik den blir fortalt av et individ, pårørende, eller en annen part. Det kan registreres av en kliniker som del av opptak av sykehistorie, eller selvregistreres som del av et spørreskjema eller personlig helsearkiv.">
+            keywords = <"anamnese", "sykehistorie", "problem", "helseplage", "bekymring">
+            use = <"Brukes for å registrere en beskrivelse av subjektive helserelaterte observasjoner eller inntrykk fra individets synsvinkel.
+
+Når anamnesen registreres av en kliniker i en konsultasjon kan arketypen brukes for å registrere den kliniske historikken til individet, rapportert av individet selv, en forelder, pårørende eller en annen involvert part. Dersom den registreres av individet selv, kan den brukes som en oversikt over symptom- og helseerfaringer, som kan deles med helsepersonell eller som dokumentasjon i deres eget helsearkiv.
+
+Brukes:
+- for å registrere en enkelt fritekst
+- som et rammeverk for å registrere en detaljert strukturert historikk ved å inkludere relevante CLUSTER-arketyper i SLOTet \"Strukturerte detaljer\". Eksempler kan være CLUSTER.symptom_sign eller CLUSTER.health_event.
+
+Brukes for å kunne gjenbruke anamnese i eksisterende systemer inn i et arketypeformat ved hjelp av 'Anamnese'-dataelementet.">
+            misuse = <"Skal ikke brukes for å registrere formelle vurderinger av klinikere. Disse registreres ved hjelp av forskjellige arketyper av klassen EVALUATION.">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            purpose = <"Za beleženje pripovednega opisa klinične zgodovine subjekta oskrbe in zagotavljanje ogrodja, v katerem lahko vgnezdimo podrobne arhetipe CLUSTER, od katerih bo vsak podpiral pripoved z dodatnimi strukturiranimi podrobnostmi za simptome, zdravstvene dogodke in povezane teme.
+
+Uporabite za beleženje podrobnosti o klinični zgodovini, kot jo poroča posameznik, starš, skrbnik ali druga stran. Lahko ga zabeleži klinik kot del zapisa klinične zgodovine, kot mu je bilo poročano, ali samozabeleženo kot del kliničnega vprašalnika ali osebnega zdravstvenega kartona.">
+            keywords = <"zgodovina", "predstavitev", "pritožba", "zgodba", "simptom", "zdravje", "karton", "anamneza">
+            use = <"Uporabite za beleženje opisa subjektivnih z zdravjem povezanih opazovanj ali vtisov z vidika subjekta oskrbe.
+
+Ko ga zabeleži klinik v kontekstu zagotavljanja zdravstvene oskrbe, se lahko zgodba uporabi za zajemanje klinične anamneze, kot jo poroča subjekt sam, starš, skrbnik ali druga povezana stran. Če ga zabeleži subjekt, se lahko uporabi kot poročilo o njegovi \"zgodbi\" simptomov in zdravstvenih izkušenj, ki se lahko uporabi za deljenje z izvajalci zdravstvene oskrbe ali za dokumentiranje v njegovem osebnem zdravstvenem kartonu.
+
+Uporaba:
+- za beleženje preproste pripovedi; in/ali
+- kot vsebniški arhetip za omogočanje beleženja podrobne strukturirane zgodovine z vključitvijo ustreznih arhetipov CLUSTER v režo \"Podrobnosti\". Na primer: arhetipe CLUSTER.symptom, CLUSTER.issue ali CLUSTER.health_event lahko ustrezno uporabimo v tej reži.
+
+Uporabite za vključitev pripovednih opisov klinične zgodovine, zajetih iz obstoječih ali zastarelih kliničnih sistemov, v arhetipski format, z uporabo podatkovnega elementa \"Zgodba\".">
+            misuse = <"Ne uporabljajte za beleženje formalnih ocen klinikov, ki bi se običajno beležile z uporabo razreda arhetipov EVALUATION.">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"*To record a narrative description of the clinical history of the subject of care and to provide a framework in which to nest detailed CLUSTER archetypes, each of which will support the narrative with additional structured detail for symptoms, health events and related topics.
+
+Use to record detail about the clinical history as reported by an individual, parent, care-giver or other party. It may be recorded by a clinician as part of a clinical history record as reported to them, or self-recorded as part of a clinical questionnaire or personal health record.(en)">
+            keywords = <"*history(en)", "*presenting(en)", "*complaint(en)", "*story(en)", "*symptom(en)", "*health(en)", "*record(en)", "*presenting complaint(en)", "*anamnesis(en)">
+            use = <"*Use to record a description about subjective health-related observations or impressions from the point of view of the subject of care. 
+
+When recorded by a clinician within the context of healthcare provision the story can be used for capturing the clinical history, as reported by the subject themselves, a parent, care-giver or other related party. If recorded by the subject, it can be used as an account of their 'story' of symptoms and health experiences, which might be used to share with healthcare providers or to document within their own personal health record.
+
+Use:
+- to record a simple narrative; and/or 
+- as a container archetype to enable recording of a detailed structured history by inclusion of relevant CLUSTER archetypes within the 'Detail' SLOT. For example: CLUSTER.symptom, CLUSTER.issue or CLUSTER.health_event archetypes can be appropriately used in this SLOT.
+
+Use to incorporate the narrative descriptions of clinical history captured from existing or legacy clinical systems into an archetyped format, using the 'Story' text data element.(en)">
+            misuse = <"*Not to be used to record formal assessments by clinicians which would usually be recorded using the EVALUATION class of archetypes.(en)">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Story/History
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0004] matches {    -- Story
+                                        value matches {
+                                            DV_TEXT[at9000]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0006] matches {    -- Structured detail
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.health_event(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.issue(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.symptom_sign(-[a-zA-Z0-9_]+)*\.v2\..*/}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0007] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0008] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Erzählung/Vorgeschichte">
+                description = <"Die subjektive klinische Vorgeschichte der betreuten Person, wie sie direkt von der Person aufgezeichnet oder einem Kliniker von der Person oder einem Betreuer berichtet wird.">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardwert, ein undefinierter/s Zeitpunkt oder Intervallereignis, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Geschichte">
+                description = <"Beschreibung der Geschichte oder der klinischen Vorgeschichte für die betreute Person.">
+            >
+            ["at0006"] = <
+                text = <"Strukturierte Angabe">
+                description = <"Strukturierte Angaben über die Vorgeschichte der Person oder des Patienten.">
+                comment = <"Zum Beispiel: ein spezifisches Symptom wie Übelkeit oder Schmerzen; ein Ereignis wie ein Sturz vom Fahrrad; oder ein Anliegen wie der Wunsch, mit dem Tabakkonsum aufzuhören.">
+            >
+            ["at0008"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen, die zur Erfassung lokaler Inhalte oder zur Anpassung an andere Referenzmodelle/Formalismen erforderlich sind.">
+                comment = <"Zum Beispiel: Lokale Informationsanforderungen oder zusätzliche Metadaten, um Verknüpfungen mit FHIR Äquivalenten herzustellen.">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Sjukdomshistoria">
+                description = <"Vårdtagarens subjektiva sjukdomshistoria som registrerats direkt av vårdgivaren, eller rapporterats till en kliniker av vårdtagaren eller vårdgivaren.">
+            >
+            ["at0002"] = <
+                text = <"Ospecificerad händelse">
+                description = <"Ospecificerad standardhändelse vid en tidpunkt eller inom ett tidsintervall som explicit kan definieras i en mall eller genereras automatiskt av vissa IT-system.">
+            >
+            ["at0004"] = <
+                text = <"Sjukdomshistoria">
+                description = <"Berättande beskrivning av vårdtagarens sjukdomshistoria.">
+            >
+            ["at0006"] = <
+                text = <"Strukturerade detaljer">
+                description = <"Strukturerade detaljer om individens eller vårdtagarens sjukdomshistoria.">
+                comment = <"Till exempel: ett specifikt symptom som illamående eller smärta; en händelse som att falla av en cykel; eller ett problem som en önskan om att sluta använda tobak.">
+            >
+            ["at0008"] = <
+                text = <"Tilläggsinformation">
+                description = <"Plats för att infoga tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.">
+                comment = <"*For example: Local information requirements or additional metadata to align with FHIR equivalents. (en)">
+            >
+        >
+        ["ko"] = <
+            ["at0000"] = <
+                text = <"*Story/History(en)">
+                description = <"*The subjective clinical history of the subject of care as recorded directly by the subject, or reported to a clinician by the subject or a carer.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Story(en)">
+                description = <"*Narrative description of the story or clinical history for the subject of care.(en)">
+            >
+            ["at0006"] = <
+                text = <"*Structured detail(en)">
+                description = <"*Structured detail about the individual's story or patient's history.(en)">
+                comment = <"*For example: a specific symptom such as nausea or pain; an event such as a fall off a bicycle; or an issue such as a desire to quit using tobacco.(en)">
+            >
+            ["at0008"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: Local information requirements or additional metadata to align with FHIR equivalents. (en)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"História">
+                description = <"A história clínica subjetiva do sujeito do cuidado como registrada diretamente por ele, ou relatada a um médico pelo sujeito ou por um cuidador.">
+            >
+            ["at0002"] = <
+                text = <"Algum Evento">
+                description = <"Padrão, ponto indeterminado no tempo ou intervalo do evento que pode ser explicitamente definido em um modelo ou em tempo de execução.">
+            >
+            ["at0004"] = <
+                text = <"História">
+                description = <"Descrição narrativa da história ou da história clínica para o sujeito do cuidado.">
+            >
+            ["at0006"] = <
+                text = <"Detalhes Estruturados">
+                description = <"Detalhes estruturados sobre a história do indivíduo ou a história do paciente.">
+                comment = <"Por exemplo: um sintoma específico, tais como náuseas ou dor; um evento como uma queda de bicicleta; ou um problema como o desejo de parar de usar tabaco.">
+            >
+            ["at0008"] = <
+                text = <"Extensão">
+                description = <"Informações adicionais necessárias para capturar o conteúdo local ou para se alinhar com outros modelos/formalismos de referência.">
+                comment = <"*For example: Local information requirements or additional metadata to align with FHIR equivalents. (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Story/History">
+                description = <"The subjective clinical history of the subject of care as recorded directly by the subject, or reported to a clinician by the subject or a carer.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Story">
+                description = <"Narrative description of the story or clinical history for the subject of care.">
+            >
+            ["at0006"] = <
+                text = <"Structured detail">
+                description = <"Structured detail about the individual's story or patient's history.">
+                comment = <"For example: a specific symptom such as nausea or pain; an event such as a fall off a bicycle; or an issue such as a desire to quit using tobacco.">
+            >
+            ["at0008"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: Local information requirements or additional metadata to align with FHIR equivalents.">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"*Story/History(en)">
+                description = <"*The subjective clinical history of the subject of care as recorded directly by the subject, or reported to a clinician by the subject or a carer.(en)">
+            >
+            ["at0002"] = <
+                text = <"إحدى الوقائع">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Story(en)">
+                description = <"*Narrative description of the story or clinical history for the subject of care.(en)">
+            >
+            ["at0006"] = <
+                text = <"*Structured detail(en)">
+                description = <"*Structured detail about the individual's story or patient's history.(en)">
+                comment = <"*For example: a specific symptom such as nausea or pain; an event such as a fall off a bicycle; or an issue such as a desire to quit using tobacco.(en)">
+            >
+            ["at0008"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: Local information requirements or additional metadata to align with FHIR equivalents. (en)">
+            >
+        >
+        ["it"] = <
+            ["at0000"] = <
+                text = <"Storia/Cronologia">
+                description = <"La storia clinica soggettiva del persona assistita come registrata direttamente dal soggetto, o riportata ad un clinico dal soggetto o da chi lo assiste.">
+            >
+            ["at0002"] = <
+                text = <"Qualsiasi evento">
+                description = <"Evento predefinito, non specificato nel tempo o nell'intervallo di tempo, che può essere definito esplicitamente in un modello o in fase di esecuzione.">
+            >
+            ["at0004"] = <
+                text = <"Storia">
+                description = <"Descrizione narrativa della storia o dell'anamnesi clinica del soggetto da curare.">
+            >
+            ["at0006"] = <
+                text = <"Dettaglio strutturato">
+                description = <"Dettagli strutturati sulla storia dell'individuo o sull'anamnesi del paziente.">
+                comment = <"Per esempio: un sintomo specifico come la nausea o il dolore; un evento come una caduta dalla bicicletta; o un fenomeno come il desiderio di smettere di usare il tabacco. ">
+            >
+            ["at0008"] = <
+                text = <"Estensione">
+                description = <"Informazioni aggiuntive necessarie per acquisire contenuti locali o per allinearsi con altri modelli/formalismi di riferimento. ">
+                comment = <"*For example: Local information requirements or additional metadata to align with FHIR equivalents. (en)">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Récit/Antécédents">
+                description = <"Les antécédents cliniques subjectifs de la personne prise en charge, tels qu’ils ont été enregistrés directement par celle-ci, ou rapportés à un clinicien par la personne elle-même ou par un aidant.">
+            >
+            ["at0002"] = <
+                text = <"Tout événement">
+                description = <"Par défaut, événement ponctuel ou d’intervalle non spécifié, pouvant être défini explicitement dans un template ou au moment de l’exécution.">
+            >
+            ["at0004"] = <
+                text = <"Récit">
+                description = <"Description narrative de l’histoire ou des antécédents cliniques de la personne prise en charge.">
+            >
+            ["at0006"] = <
+                text = <"Détails structurés">
+                description = <"Détails structurés concernant le récit de la personne ou les antécédents du patient.">
+                comment = <"Par exemple : un symptôme spécifique tel que des nausées ou une douleur ; un événement tel qu’une chute à vélo ; ou un problème tel que le désir d’arrêter de fumer.">
+            >
+            ["at0008"] = <
+                text = <"Extension">
+                description = <"Informations supplémentaires nécessaires pour représenter un contenu local ou pour assurer l’alignement avec d’autres modèles de référence ou formalismes.">
+                comment = <"Par exemple : exigences locales en matière d’information ou métadonnées supplémentaires permettant l’alignement sur les équivalents FHIR.">
+            >
+        >
+        ["zh-cn"] = <
+            ["at0000"] = <
+                text = <"主观临床病史">
+                description = <"照护服务对象所直接自行记录的主观性临床病史，或者说，照护服务对象或照护人员向临床医务人员/临床医生所报告的主观性临床病史。">
+            >
+            ["at0002"] = <
+                text = <"任何事件">
+                description = <"可在模板之中或运行时明确定义的默认的、未明确指定的时间点型/时间型或时间区间型/时间间隔型事件，。">
+            >
+            ["at0004"] = <
+                text = <"临床病史叙述">
+                description = <"关于照护服务对象的健康状况或临床病史的叙述性描述。">
+            >
+            ["at0006"] = <
+                text = <"结构化详情">
+                description = <"关于个人临床病史叙述或患者病史的结构化详情。">
+                comment = <"例如：特定的症状（如恶心或疼痛）、从自行车上摔下来等事件，或者是希望戒烟等事项。">
+            >
+            ["at0008"] = <
+                text = <"扩展">
+                description = <"采集本地内容或与其他参考模型/形式保持一致时所需的其他信息。">
+                comment = <"例如：本地信息要求，或者是与 FHIR 等效项保持一致时所需的其他元数据。">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"*Story/History(en)">
+                description = <"*The subjective clinical history of the subject of care as recorded directly by the subject, or reported to a clinician by the subject or a carer.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Story(en)">
+                description = <"*Narrative description of the story or clinical history for the subject of care.(en)">
+            >
+            ["at0006"] = <
+                text = <"*Structured detail(en)">
+                description = <"*Structured detail about the individual's story or patient's history.(en)">
+                comment = <"*For example: a specific symptom such as nausea or pain; an event such as a fall off a bicycle; or an issue such as a desire to quit using tobacco.(en)">
+            >
+            ["at0008"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: Local information requirements or additional metadata to align with FHIR equivalents. (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Anamnese">
+                description = <"Et individs sykehistorie/anamnese, som fortalt til kliniker eller dokumentert direkte av individet.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i en templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Anamnese">
+                description = <"Narrativ beskrivelse av sykehistorie/anamnese for et individ.">
+            >
+            ["at0006"] = <
+                text = <"Strukturerte detaljer">
+                description = <"Ytterligere detaljer i strukturert form, knyttet til individets sykehistorie/anamnese.">
+                comment = <"Eksempel: et spesifikt symptom som kvalme eller smerte, en hendelse som en sykkelvelt, eller en problemstilling som et ønske om å slutte med tobakk.">
+            >
+            ["at0008"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+        >
+        ["sl"] = <
+            ["at0000"] = <
+                text = <"Zgodba/Anamneza">
+                description = <"Subjektivna klinična zgodovina subjekta oskrbe, kot jo neposredno zabeleži subjekt ali kot jo poroča subjektu oskrbe klinik, starš, skrbnik ali druga povezana stran.">
+            >
+            ["at0002"] = <
+                text = <"Katerikoli dogodek">
+                description = <"Privzeta, nedoločena časovna točka ali dogodek intervala, ki je lahko eksplicitno določen v predlogi ali med izvajanjem.">
+            >
+            ["at0004"] = <
+                text = <"Zgodba">
+                description = <"Pripovedni opis zgodbe ali klinične zgodovine za subjekt oskrbe.">
+            >
+            ["at0006"] = <
+                text = <"Strukturirane podrobnosti">
+                description = <"Strukturirane podrobnosti o zgodbi posameznika ali zgodovini pacienta.">
+                comment = <"Na primer: specifičen simptom, kot sta slabost ali bolečina; dogodek, kot je padec s kolesa; ali težava, kot je želja po prenehanju uporabe tobaka.">
+            >
+            ["at0008"] = <
+                text = <"Razširitev">
+                description = <"Dodatne informacije, potrebne za zajemanje lokalnih vsebin ali za uskladitev z drugimi referenčnimi modeli/formalizmi.">
+                comment = <"Na primer: lokalne informacijske zahteve ali dodatni metapodatki za uskladitev z ustrezniki FHIR.">
+            >
+        >
+        ["nl"] = <
+            ["at0000"] = <
+                text = <"Anamnese">
+                description = <"*The subjective clinical history of the subject of care as recorded directly by the subject, or reported to a clinician by the subject or a carer.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)">
+            >
+            ["at0004"] = <
+                text = <"Verhaal">
+                description = <"Een narratieve beschriijving van het verhaal of de anamnese van het onderwerp van zorg.">
+            >
+            ["at0006"] = <
+                text = <"Gestructureerde details">
+                description = <"Gestructureerde details over het verhaal van het individu of de anamnese van de patiënt.">
+                comment = <"Bijvoorbeeld: een specifiek symptoom zoals misselijkheid of pijn, een gebeurtenis zoals een val met de fiets, of een vraagstuk zoals de wens om te stoppen met roken.">
+            >
+            ["at0008"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: Local information requirements or additional metadata to align with FHIR equivalents. (en)">
+            >
+        >
+    >

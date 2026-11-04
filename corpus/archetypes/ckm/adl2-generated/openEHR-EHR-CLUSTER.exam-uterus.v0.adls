@@ -1,0 +1,1345 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1a12f3a9-2ea3-4a7b-92f6-df3624852112; build_uid=d81c83c2-7325-4040-b515-331897801ec4)
+    openEHR-EHR-CLUSTER.exam-uterus.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-CLUSTER.exam.v2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Nina Schewe, Natalia Strauch, Darin Leonhardt">
+                ["organisation"] = <"Medizinische Hochschule Hannover, PLRI für medizinische Informatik/ Medizinische Hochschule">
+                ["email"] = <"schewe.nina@mh-hannover.de, Strauch.Natalia@mh-hannover.de, leonhardt.darin@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Erik Sundvall">
+                ["organisation"] = <"Region Östergötland + Linköping University">
+                ["email"] = <"erik.sundvall@regionostergotland.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke, Vebjørn Arntzen">
+                ["organisation"] = <"Nasjonal IKT HF, Oslo University Hospital">
+                ["email"] = <"varntzen@ous-hf.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Adriana Kitajima">
+                ["organisation"] = <"Hospital Alemão Oswaldo Cruz - HAOC">
+                ["email"] = <"adrianakitajima@gmail.com">
+            >
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            author = <
+                ["name"] = <"Erasmia Partafylla">
+                ["organisation"] = <"Sigmasoft">
+                ["email"] = <"c.partafylla@sigmasoft.gr">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Julio de Sosa">
+                ["organisation"] = <"Servei Català de la Salut">
+                ["email"] = <"juliodesosa@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2015-06-23">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Shahla Foozonkhah, Iran ministry of health and education, Iran", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom (openEHR Editor)", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)", "Ingrid Heitmann, Oslo universitetssykehus HF, Norway", "Hilde Hollås, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Sabine Leh, Haukeland University Hospital, Department of Pathology, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Lars Morgan Karlsen, DIPS ASA, Norway", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Vladimir Pizzo, Hospital Sírio Libanês, Brazil", "Jussara Rotzsch, UNB, Brazil", "Anoop Shah, University College London, United Kingdom", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia (openEHR Editor)", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "Jon Tysdahl, Furst medlab AS, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Nicola Ewen Hall, openEHR Fellow 2025, Jamaica", "Keisha Barwise, openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"D26D96AFD939C883256DC2B3089A5F89">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To record findings observed during palpation of the uterus, in both pregnant and non-pregnant individuals. (en)">
+            keywords = <"*uterus, bimanual, palpation, examination, fundal height, Anteversion, Anteflexion, fetus,  foetus, baby, abdomen, vagina, pregnant, pregnancy. (en)", ...>
+            use = <"*Use to record a narrative description and clinical interpretation of the findings observed only by palpation of the uterus, either from an abdominal or a vaginal approach.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the CLUSTER.exam-abdomen, CLUSTER.exam-palpation-vagina or OBSERVATION.exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings - for example, a fetus.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"*Not to be used when multiple modes are used simultaneously to examine a body system or anatomical structure, including inspection or auscultation. Use the CLUSTER.exam family of archetypes for this purpose.
+
+Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used for recording the results of an imaging examination - use the CLUSTER.imaging_exam family of archetypes for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"*To record findings observed during palpation of the uterus, in both pregnant and non-pregnant individuals. (en)">
+            keywords = <"*uterus, bimanual, palpation, examination, fundal height, Anteversion, Anteflexion, fetus,  foetus, baby, abdomen, vagina, pregnant, pregnancy. (en)", ...>
+            use = <"*Use to record a narrative description and clinical interpretation of the findings observed only by palpation of the uterus, either from an abdominal or a vaginal approach.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the CLUSTER.exam-abdomen, CLUSTER.exam-palpation-vagina or OBSERVATION.exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings - for example, a fetus.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"*Not to be used when multiple modes are used simultaneously to examine a body system or anatomical structure, including inspection or auscultation. Use the CLUSTER.exam family of archetypes for this purpose.
+
+Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used for recording the results of an imaging examination - use the CLUSTER.imaging_exam family of archetypes for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"*To record findings observed during palpation of the uterus, in both pregnant and non-pregnant individuals. (en)">
+            keywords = <"*uterus, bimanual, palpation, examination, fundal height, Anteversion, Anteflexion, fetus,  foetus, baby, abdomen, vagina, pregnant, pregnancy. (en)", ...>
+            use = <"*Use to record a narrative description and clinical interpretation of the findings observed only by palpation of the uterus, either from an abdominal or a vaginal approach.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the CLUSTER.exam-abdomen, CLUSTER.exam-palpation-vagina or OBSERVATION.exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings - for example, a fetus.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"*Not to be used when multiple modes are used simultaneously to examine a body system or anatomical structure, including inspection or auscultation. Use the CLUSTER.exam family of archetypes for this purpose.
+
+Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used for recording the results of an imaging examination - use the CLUSTER.imaging_exam family of archetypes for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*To record findings observed during palpation of the uterus, in both pregnant and non-pregnant individuals. (en)">
+            keywords = <"*uterus, bimanual, palpation, examination, fundal height, Anteversion, Anteflexion, fetus,  foetus, baby, abdomen, vagina, pregnant, pregnancy. (en)", ...>
+            use = <"*Use to record a narrative description and clinical interpretation of the findings observed only by palpation of the uterus, either from an abdominal or a vaginal approach.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the CLUSTER.exam-abdomen, CLUSTER.exam-palpation-vagina or OBSERVATION.exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings - for example, a fetus.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"*Not to be used when multiple modes are used simultaneously to examine a body system or anatomical structure, including inspection or auscultation. Use the CLUSTER.exam family of archetypes for this purpose.
+
+Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used for recording the results of an imaging examination - use the CLUSTER.imaging_exam family of archetypes for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            purpose = <"*To record findings observed during palpation of the uterus, in both pregnant and non-pregnant individuals. (en)">
+            keywords = <"*uterus, bimanual, palpation, examination, fundal height, Anteversion, Anteflexion, fetus,  foetus, baby, abdomen, vagina, pregnant, pregnancy. (en)", ...>
+            use = <"*Use to record a narrative description and clinical interpretation of the findings observed only by palpation of the uterus, either from an abdominal or a vaginal approach.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the CLUSTER.exam-abdomen, CLUSTER.exam-palpation-vagina or OBSERVATION.exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings - for example, a fetus.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"*Not to be used when multiple modes are used simultaneously to examine a body system or anatomical structure, including inspection or auscultation. Use the CLUSTER.exam family of archetypes for this purpose.
+
+Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used for recording the results of an imaging examination - use the CLUSTER.imaging_exam family of archetypes for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record findings observed during palpation of the uterus, in both pregnant and non-pregnant individuals.">
+            keywords = <"uterus, bimanual, palpation, examination, fundal height, Anteversion, Anteflexion, fetus,  foetus, baby, abdomen, vagina, pregnant, pregnancy.", ...>
+            use = <"Use to record a narrative description and clinical interpretation of the findings observed only by palpation of the uterus, either from an abdominal or a vaginal approach.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the CLUSTER.exam-abdomen, CLUSTER.exam-palpation-vagina or OBSERVATION.exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings - for example, a fetus.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.">
+            misuse = <"Not to be used when multiple modes are used simultaneously to examine a body system or anatomical structure, including inspection or auscultation. Use the CLUSTER.exam family of archetypes for this purpose.
+
+Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used for recording the results of an imaging examination - use the CLUSTER.imaging_exam family of archetypes for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"*To record findings observed during palpation of the uterus, in both pregnant and non-pregnant individuals. (en)">
+            keywords = <"*uterus, bimanual, palpation, examination, fundal height, Anteversion, Anteflexion, fetus,  foetus, baby, abdomen, vagina, pregnant, pregnancy. (en)", ...>
+            use = <"*Use to record a narrative description and clinical interpretation of the findings observed only by palpation of the uterus, either from an abdominal or a vaginal approach.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the CLUSTER.exam-abdomen, CLUSTER.exam-palpation-vagina or OBSERVATION.exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings - for example, a fetus.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"*Not to be used when multiple modes are used simultaneously to examine a body system or anatomical structure, including inspection or auscultation. Use the CLUSTER.exam family of archetypes for this purpose.
+
+Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used for recording the results of an imaging examination - use the CLUSTER.imaging_exam family of archetypes for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Examination of the uterus
+        items matches {
+            ELEMENT[at0001.1] matches {    -- System or structure examined
+                value matches {
+                    DV_CODED_TEXT[at0.9006] matches {
+                        defining_code matches {[at0.36]}    -- Uterus
+                    }
+                }
+            }
+            after [at0003]
+            ELEMENT[at0.1] occurrences matches {0..1} matches {    -- Length
+                value matches {
+                    DV_QUANTITY[at0.9007]
+                }
+            }
+            ELEMENT[at0.2] occurrences matches {0..1} matches {    -- Size estimation
+                value matches {
+                    DV_DURATION[at0.9008] matches {
+                        value matches {PW/|>=P0D|}
+                    }
+                    DV_TEXT[at0.9009]
+                }
+            }
+            ELEMENT[at0.3] occurrences matches {0..1} matches {    -- Fundal height
+                value matches {
+                    DV_CODED_TEXT[at0.9010] matches {
+                        defining_code matches {[ac0.9000]}    -- Fundal height (synthesised)
+                    }
+                    DV_QUANTITY[at0.9011] matches {
+                        property matches {[at0.9001]}    -- Length
+                        units matches {"cm"}
+                    }
+                }
+            }
+            ELEMENT[at0.8] occurrences matches {0..1} matches {    -- Tenderness
+                value matches {
+                    DV_CODED_TEXT[at0.9012] matches {
+                        defining_code matches {[ac0.9002]}    -- Tenderness (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.11] occurrences matches {0..1} matches {    -- Tenderness decription
+                value matches {
+                    DV_TEXT[at0.9013]
+                }
+            }
+            ELEMENT[at0.12] occurrences matches {0..1} matches {    -- Mobility
+                value matches {
+                    DV_CODED_TEXT[at0.9014] matches {
+                        defining_code matches {[ac0.9003]}    -- Mobility (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.16] occurrences matches {0..1} matches {    -- Shape
+                value matches {
+                    DV_TEXT[at0.9015]
+                }
+            }
+            ELEMENT[at0.17] occurrences matches {0..1} matches {    -- Consistency
+                value matches {
+                    DV_TEXT[at0.9016]
+                }
+            }
+            ELEMENT[at0.18] occurrences matches {0..1} matches {    -- Version
+                value matches {
+                    DV_CODED_TEXT[at0.9017] matches {
+                        defining_code matches {[ac0.9004]}    -- Version (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.22] occurrences matches {0..1} matches {    -- Flexion
+                value matches {
+                    DV_CODED_TEXT[at0.9018] matches {
+                        defining_code matches {[ac0.9005]}    -- Flexion (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"*Examination of the uterus (en)">
+                description = <"*Findings observed during the palpation of the uterus. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Length (en)">
+                description = <"*The estimated length from the fundus to the cervix. (en)">
+                comment = <"*Measured in centimetres. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Size estimation (en)">
+                description = <"*Size estimation of the uterus. (en)">
+                comment = <"*An estimation of uterine size based on physical examination, documented as either a narrative description or a comparative estimate related to size of a pregnant uterus, such as '10 weeks'. These comparisons refer to the typical uterine size at specific stages of pregnancy and provide a standardised reference framework. Alternatively, locally recognised size descriptors, such as 'orange' or 'tennis ball' may be added to the DV_TEXT data type in a template to support a predefined list of terms. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Fundal height (en)">
+                description = <"*The vertical distance from the symphysis pubis to the top of the pregnant uterine fundus. (en)">
+                comment = <"*Usually only possible in pregnancy after approximately 20 weeks of gestation. This can be recorded as the measured distance or by identifying the height of the uterine fundus relative to identifiable anatomical landmarks, such as  the pubic symphysis, umbilicus, xiphoid process). (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Not palpable (en)">
+                description = <"*Uterus is not palpable in the abdomen. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*At public symphsis (en)">
+                description = <"*The uterus is just palpable at the level of the symphysis pubis. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*At umbilicus (en)">
+                description = <"*The uterus is palpable at, or about, the level of the umbilicus. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*At xiphisternum (en)">
+                description = <"*The uterus is palpable at, or about, the level of the xiphisternum. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Mobility (en)">
+                description = <"*The degree to which the uterus can be displaced during bimanual examination, reflecting its freedom of movement within the pelvis. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Mobile (en)">
+                description = <"*The uterus moves freely in response to gentle pressure during bimanual palpation, without resistance or pain. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*LImited (en)">
+                description = <"*The uterus can be displaced on bimanual palpation but with some resistance or reduced range of motion. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Fixed (en)">
+                description = <"*The uterus does not move or is unable to be displaced on bimanual palpation. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Tenderness (en)">
+                description = <"*The presence or absence of pain elicited during bimanual palpation of the uterus. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Present (en)">
+                description = <"*Pain is elicited on bimanual palpation of the uterus. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Absent (en)">
+                description = <"*No pain is elicited on bimanual palpation of the uterus. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Tenderness decription (en)">
+                description = <"*Narrative description about findings of pain or tenderness of the uterus. (en)">
+                comment = <"*For e.g. Tenderness present on anterior uterine wall, elicited during bimanual palpation, described by the patient as sharp and localized. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Shape (en)">
+                description = <"*The overall anatomical contour of the uterus as assessed during bimanual palpation. (en)">
+                comment = <"*For eg. Normal pear-shaped uterus. (en)">
+            >
+            ["at0.17"] = <
+                text = <"*Consistency (en)">
+                description = <"*Narrative description about the texture and firmness of the uterus. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Version (en)">
+                description = <"*The orientation of the cervix relative to the vagina. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Anteverted (en)">
+                description = <"*The cervix tilts forward toward the bladder. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Neutral (en)">
+                description = <"*The cervix is roughly in line with the vagina. (en)">
+            >
+            ["at0.21"] = <
+                text = <"*Retroverted (en)">
+                description = <"*The cervix tilts backward toward the rectum. (en)">
+            >
+            ["at0.22"] = <
+                text = <"*Flexion (en)">
+                description = <"*The orientation of the vagina relative to the cervix. (en)">
+            >
+            ["at0.23"] = <
+                text = <"*Anteflexed (en)">
+                description = <"*The body of the uterus bends forward over the bladder. (en)">
+            >
+            ["at0.24"] = <
+                text = <"*Midflexed (en)">
+                description = <"*The body is aligned with the cervix. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Retroflexed (en)">
+                description = <"*The body of the uterus bends backward toward the rectum. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"Untersuchtes System oder untersuchte Struktur">
+                description = <"Identifizierung des untersuchten Körpersystems oder der anatomischen Struktur.">
+                comment = <"Wenn möglich wird die Kodierung des untersuchten Systems oder der untersuchten Struktur mit einer Terminologie bevorzugt.">
+            >
+            ["at0.36"] = <
+                text = <"*Uterus (en)">
+                description = <"">
+            >
+            ["at0.9001"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Fundal height (en) (synthesised)">
+                description = <"*The vertical distance from the symphysis pubis to the top of the pregnant uterine fundus. (en) (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"*Tenderness (en) (synthesised)">
+                description = <"*The presence or absence of pain elicited during bimanual palpation of the uterus. (en) (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"*Mobility (en) (synthesised)">
+                description = <"*The degree to which the uterus can be displaced during bimanual examination, reflecting its freedom of movement within the pelvis. (en) (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Version (en) (synthesised)">
+                description = <"*The orientation of the cervix relative to the vagina. (en) (synthesised)">
+            >
+            ["ac0.9005"] = <
+                text = <"*Flexion (en) (synthesised)">
+                description = <"*The orientation of the vagina relative to the cervix. (en) (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000.1"] = <
+                text = <"*Examination of the uterus (en)">
+                description = <"*Findings observed during the palpation of the uterus. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Length (en)">
+                description = <"*The estimated length from the fundus to the cervix. (en)">
+                comment = <"*Measured in centimetres. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Size estimation (en)">
+                description = <"*Size estimation of the uterus. (en)">
+                comment = <"*An estimation of uterine size based on physical examination, documented as either a narrative description or a comparative estimate related to size of a pregnant uterus, such as '10 weeks'. These comparisons refer to the typical uterine size at specific stages of pregnancy and provide a standardised reference framework. Alternatively, locally recognised size descriptors, such as 'orange' or 'tennis ball' may be added to the DV_TEXT data type in a template to support a predefined list of terms. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Fundal height (en)">
+                description = <"*The vertical distance from the symphysis pubis to the top of the pregnant uterine fundus. (en)">
+                comment = <"*Usually only possible in pregnancy after approximately 20 weeks of gestation. This can be recorded as the measured distance or by identifying the height of the uterine fundus relative to identifiable anatomical landmarks, such as  the pubic symphysis, umbilicus, xiphoid process). (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Not palpable (en)">
+                description = <"*Uterus is not palpable in the abdomen. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*At public symphsis (en)">
+                description = <"*The uterus is just palpable at the level of the symphysis pubis. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*At umbilicus (en)">
+                description = <"*The uterus is palpable at, or about, the level of the umbilicus. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*At xiphisternum (en)">
+                description = <"*The uterus is palpable at, or about, the level of the xiphisternum. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Mobility (en)">
+                description = <"*The degree to which the uterus can be displaced during bimanual examination, reflecting its freedom of movement within the pelvis. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Mobile (en)">
+                description = <"*The uterus moves freely in response to gentle pressure during bimanual palpation, without resistance or pain. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*LImited (en)">
+                description = <"*The uterus can be displaced on bimanual palpation but with some resistance or reduced range of motion. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Fixed (en)">
+                description = <"*The uterus does not move or is unable to be displaced on bimanual palpation. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Tenderness (en)">
+                description = <"*The presence or absence of pain elicited during bimanual palpation of the uterus. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Present (en)">
+                description = <"*Pain is elicited on bimanual palpation of the uterus. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Absent (en)">
+                description = <"*No pain is elicited on bimanual palpation of the uterus. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Tenderness decription (en)">
+                description = <"*Narrative description about findings of pain or tenderness of the uterus. (en)">
+                comment = <"*For e.g. Tenderness present on anterior uterine wall, elicited during bimanual palpation, described by the patient as sharp and localized. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Shape (en)">
+                description = <"*The overall anatomical contour of the uterus as assessed during bimanual palpation. (en)">
+                comment = <"*For eg. Normal pear-shaped uterus. (en)">
+            >
+            ["at0.17"] = <
+                text = <"*Consistency (en)">
+                description = <"*Narrative description about the texture and firmness of the uterus. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Version (en)">
+                description = <"*The orientation of the cervix relative to the vagina. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Anteverted (en)">
+                description = <"*The cervix tilts forward toward the bladder. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Neutral (en)">
+                description = <"*The cervix is roughly in line with the vagina. (en)">
+            >
+            ["at0.21"] = <
+                text = <"*Retroverted (en)">
+                description = <"*The cervix tilts backward toward the rectum. (en)">
+            >
+            ["at0.22"] = <
+                text = <"*Flexion (en)">
+                description = <"*The orientation of the vagina relative to the cervix. (en)">
+            >
+            ["at0.23"] = <
+                text = <"*Anteflexed (en)">
+                description = <"*The body of the uterus bends forward over the bladder. (en)">
+            >
+            ["at0.24"] = <
+                text = <"*Midflexed (en)">
+                description = <"*The body is aligned with the cervix. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Retroflexed (en)">
+                description = <"*The body of the uterus bends backward toward the rectum. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"System eller struktur som undersökts">
+                description = <"Identifiering av systemet eller strukturen som undersökts.">
+                comment = <"Om möjligt, koda systemet eller strukturen med hjälp av ett terminologisystem.">
+            >
+            ["at0.36"] = <
+                text = <"*Uterus (en)">
+                description = <"">
+            >
+            ["at0.9001"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Fundal height (en) (synthesised)">
+                description = <"*The vertical distance from the symphysis pubis to the top of the pregnant uterine fundus. (en) (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"*Tenderness (en) (synthesised)">
+                description = <"*The presence or absence of pain elicited during bimanual palpation of the uterus. (en) (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"*Mobility (en) (synthesised)">
+                description = <"*The degree to which the uterus can be displaced during bimanual examination, reflecting its freedom of movement within the pelvis. (en) (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Version (en) (synthesised)">
+                description = <"*The orientation of the cervix relative to the vagina. (en) (synthesised)">
+            >
+            ["ac0.9005"] = <
+                text = <"*Flexion (en) (synthesised)">
+                description = <"*The orientation of the vagina relative to the cervix. (en) (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000.1"] = <
+                text = <"*Examination of the uterus (en)">
+                description = <"*Findings observed during the palpation of the uterus. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Length (en)">
+                description = <"*The estimated length from the fundus to the cervix. (en)">
+                comment = <"*Measured in centimetres. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Size estimation (en)">
+                description = <"*Size estimation of the uterus. (en)">
+                comment = <"*An estimation of uterine size based on physical examination, documented as either a narrative description or a comparative estimate related to size of a pregnant uterus, such as '10 weeks'. These comparisons refer to the typical uterine size at specific stages of pregnancy and provide a standardised reference framework. Alternatively, locally recognised size descriptors, such as 'orange' or 'tennis ball' may be added to the DV_TEXT data type in a template to support a predefined list of terms. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Fundal height (en)">
+                description = <"*The vertical distance from the symphysis pubis to the top of the pregnant uterine fundus. (en)">
+                comment = <"*Usually only possible in pregnancy after approximately 20 weeks of gestation. This can be recorded as the measured distance or by identifying the height of the uterine fundus relative to identifiable anatomical landmarks, such as  the pubic symphysis, umbilicus, xiphoid process). (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Not palpable (en)">
+                description = <"*Uterus is not palpable in the abdomen. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*At public symphsis (en)">
+                description = <"*The uterus is just palpable at the level of the symphysis pubis. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*At umbilicus (en)">
+                description = <"*The uterus is palpable at, or about, the level of the umbilicus. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*At xiphisternum (en)">
+                description = <"*The uterus is palpable at, or about, the level of the xiphisternum. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Mobility (en)">
+                description = <"*The degree to which the uterus can be displaced during bimanual examination, reflecting its freedom of movement within the pelvis. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Mobile (en)">
+                description = <"*The uterus moves freely in response to gentle pressure during bimanual palpation, without resistance or pain. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*LImited (en)">
+                description = <"*The uterus can be displaced on bimanual palpation but with some resistance or reduced range of motion. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Fixed (en)">
+                description = <"*The uterus does not move or is unable to be displaced on bimanual palpation. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Tenderness (en)">
+                description = <"*The presence or absence of pain elicited during bimanual palpation of the uterus. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Present (en)">
+                description = <"*Pain is elicited on bimanual palpation of the uterus. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Absent (en)">
+                description = <"*No pain is elicited on bimanual palpation of the uterus. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Tenderness decription (en)">
+                description = <"*Narrative description about findings of pain or tenderness of the uterus. (en)">
+                comment = <"*For e.g. Tenderness present on anterior uterine wall, elicited during bimanual palpation, described by the patient as sharp and localized. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Shape (en)">
+                description = <"*The overall anatomical contour of the uterus as assessed during bimanual palpation. (en)">
+                comment = <"*For eg. Normal pear-shaped uterus. (en)">
+            >
+            ["at0.17"] = <
+                text = <"*Consistency (en)">
+                description = <"*Narrative description about the texture and firmness of the uterus. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Version (en)">
+                description = <"*The orientation of the cervix relative to the vagina. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Anteverted (en)">
+                description = <"*The cervix tilts forward toward the bladder. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Neutral (en)">
+                description = <"*The cervix is roughly in line with the vagina. (en)">
+            >
+            ["at0.21"] = <
+                text = <"*Retroverted (en)">
+                description = <"*The cervix tilts backward toward the rectum. (en)">
+            >
+            ["at0.22"] = <
+                text = <"*Flexion (en)">
+                description = <"*The orientation of the vagina relative to the cervix. (en)">
+            >
+            ["at0.23"] = <
+                text = <"*Anteflexed (en)">
+                description = <"*The body of the uterus bends forward over the bladder. (en)">
+            >
+            ["at0.24"] = <
+                text = <"*Midflexed (en)">
+                description = <"*The body is aligned with the cervix. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Retroflexed (en)">
+                description = <"*The body of the uterus bends backward toward the rectum. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"Undersøkt organsystem eller struktur">
+                description = <"Identifisering av det undersøkte organsystemet eller den anatomiske strukturen.">
+                comment = <"Det anbefales å kode organsystem eller den anatomiske strukturen med en terminologi dersom mulig.">
+            >
+            ["at0.36"] = <
+                text = <"*Uterus (en)">
+                description = <"">
+            >
+            ["at0.9001"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Fundal height (en) (synthesised)">
+                description = <"*The vertical distance from the symphysis pubis to the top of the pregnant uterine fundus. (en) (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"*Tenderness (en) (synthesised)">
+                description = <"*The presence or absence of pain elicited during bimanual palpation of the uterus. (en) (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"*Mobility (en) (synthesised)">
+                description = <"*The degree to which the uterus can be displaced during bimanual examination, reflecting its freedom of movement within the pelvis. (en) (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Version (en) (synthesised)">
+                description = <"*The orientation of the cervix relative to the vagina. (en) (synthesised)">
+            >
+            ["ac0.9005"] = <
+                text = <"*Flexion (en) (synthesised)">
+                description = <"*The orientation of the vagina relative to the cervix. (en) (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000.1"] = <
+                text = <"*Examination of the uterus (en)">
+                description = <"*Findings observed during the palpation of the uterus. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Length (en)">
+                description = <"*The estimated length from the fundus to the cervix. (en)">
+                comment = <"*Measured in centimetres. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Size estimation (en)">
+                description = <"*Size estimation of the uterus. (en)">
+                comment = <"*An estimation of uterine size based on physical examination, documented as either a narrative description or a comparative estimate related to size of a pregnant uterus, such as '10 weeks'. These comparisons refer to the typical uterine size at specific stages of pregnancy and provide a standardised reference framework. Alternatively, locally recognised size descriptors, such as 'orange' or 'tennis ball' may be added to the DV_TEXT data type in a template to support a predefined list of terms. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Fundal height (en)">
+                description = <"*The vertical distance from the symphysis pubis to the top of the pregnant uterine fundus. (en)">
+                comment = <"*Usually only possible in pregnancy after approximately 20 weeks of gestation. This can be recorded as the measured distance or by identifying the height of the uterine fundus relative to identifiable anatomical landmarks, such as  the pubic symphysis, umbilicus, xiphoid process). (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Not palpable (en)">
+                description = <"*Uterus is not palpable in the abdomen. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*At public symphsis (en)">
+                description = <"*The uterus is just palpable at the level of the symphysis pubis. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*At umbilicus (en)">
+                description = <"*The uterus is palpable at, or about, the level of the umbilicus. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*At xiphisternum (en)">
+                description = <"*The uterus is palpable at, or about, the level of the xiphisternum. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Mobility (en)">
+                description = <"*The degree to which the uterus can be displaced during bimanual examination, reflecting its freedom of movement within the pelvis. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Mobile (en)">
+                description = <"*The uterus moves freely in response to gentle pressure during bimanual palpation, without resistance or pain. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*LImited (en)">
+                description = <"*The uterus can be displaced on bimanual palpation but with some resistance or reduced range of motion. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Fixed (en)">
+                description = <"*The uterus does not move or is unable to be displaced on bimanual palpation. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Tenderness (en)">
+                description = <"*The presence or absence of pain elicited during bimanual palpation of the uterus. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Present (en)">
+                description = <"*Pain is elicited on bimanual palpation of the uterus. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Absent (en)">
+                description = <"*No pain is elicited on bimanual palpation of the uterus. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Tenderness decription (en)">
+                description = <"*Narrative description about findings of pain or tenderness of the uterus. (en)">
+                comment = <"*For e.g. Tenderness present on anterior uterine wall, elicited during bimanual palpation, described by the patient as sharp and localized. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Shape (en)">
+                description = <"*The overall anatomical contour of the uterus as assessed during bimanual palpation. (en)">
+                comment = <"*For eg. Normal pear-shaped uterus. (en)">
+            >
+            ["at0.17"] = <
+                text = <"*Consistency (en)">
+                description = <"*Narrative description about the texture and firmness of the uterus. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Version (en)">
+                description = <"*The orientation of the cervix relative to the vagina. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Anteverted (en)">
+                description = <"*The cervix tilts forward toward the bladder. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Neutral (en)">
+                description = <"*The cervix is roughly in line with the vagina. (en)">
+            >
+            ["at0.21"] = <
+                text = <"*Retroverted (en)">
+                description = <"*The cervix tilts backward toward the rectum. (en)">
+            >
+            ["at0.22"] = <
+                text = <"*Flexion (en)">
+                description = <"*The orientation of the vagina relative to the cervix. (en)">
+            >
+            ["at0.23"] = <
+                text = <"*Anteflexed (en)">
+                description = <"*The body of the uterus bends forward over the bladder. (en)">
+            >
+            ["at0.24"] = <
+                text = <"*Midflexed (en)">
+                description = <"*The body is aligned with the cervix. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Retroflexed (en)">
+                description = <"*The body of the uterus bends backward toward the rectum. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"Sistema ou estrutura examinada">
+                description = <"Identificação do sistema do corpo examinado ou da estrutura anatômica.">
+                comment = <"A codificação do sistema ou estrutura examinada com uma terminologia é preferível, sempre que possível.">
+            >
+            ["at0.36"] = <
+                text = <"*Uterus (en)">
+                description = <"">
+            >
+            ["at0.9001"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Fundal height (en) (synthesised)">
+                description = <"*The vertical distance from the symphysis pubis to the top of the pregnant uterine fundus. (en) (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"*Tenderness (en) (synthesised)">
+                description = <"*The presence or absence of pain elicited during bimanual palpation of the uterus. (en) (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"*Mobility (en) (synthesised)">
+                description = <"*The degree to which the uterus can be displaced during bimanual examination, reflecting its freedom of movement within the pelvis. (en) (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Version (en) (synthesised)">
+                description = <"*The orientation of the cervix relative to the vagina. (en) (synthesised)">
+            >
+            ["ac0.9005"] = <
+                text = <"*Flexion (en) (synthesised)">
+                description = <"*The orientation of the vagina relative to the cervix. (en) (synthesised)">
+            >
+        >
+        ["el"] = <
+            ["at0000.1"] = <
+                text = <"*Examination of the uterus (en)">
+                description = <"*Findings observed during the palpation of the uterus. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Length (en)">
+                description = <"*The estimated length from the fundus to the cervix. (en)">
+                comment = <"*Measured in centimetres. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Size estimation (en)">
+                description = <"*Size estimation of the uterus. (en)">
+                comment = <"*An estimation of uterine size based on physical examination, documented as either a narrative description or a comparative estimate related to size of a pregnant uterus, such as '10 weeks'. These comparisons refer to the typical uterine size at specific stages of pregnancy and provide a standardised reference framework. Alternatively, locally recognised size descriptors, such as 'orange' or 'tennis ball' may be added to the DV_TEXT data type in a template to support a predefined list of terms. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Fundal height (en)">
+                description = <"*The vertical distance from the symphysis pubis to the top of the pregnant uterine fundus. (en)">
+                comment = <"*Usually only possible in pregnancy after approximately 20 weeks of gestation. This can be recorded as the measured distance or by identifying the height of the uterine fundus relative to identifiable anatomical landmarks, such as  the pubic symphysis, umbilicus, xiphoid process). (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Not palpable (en)">
+                description = <"*Uterus is not palpable in the abdomen. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*At public symphsis (en)">
+                description = <"*The uterus is just palpable at the level of the symphysis pubis. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*At umbilicus (en)">
+                description = <"*The uterus is palpable at, or about, the level of the umbilicus. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*At xiphisternum (en)">
+                description = <"*The uterus is palpable at, or about, the level of the xiphisternum. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Mobility (en)">
+                description = <"*The degree to which the uterus can be displaced during bimanual examination, reflecting its freedom of movement within the pelvis. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Mobile (en)">
+                description = <"*The uterus moves freely in response to gentle pressure during bimanual palpation, without resistance or pain. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*LImited (en)">
+                description = <"*The uterus can be displaced on bimanual palpation but with some resistance or reduced range of motion. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Fixed (en)">
+                description = <"*The uterus does not move or is unable to be displaced on bimanual palpation. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Tenderness (en)">
+                description = <"*The presence or absence of pain elicited during bimanual palpation of the uterus. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Present (en)">
+                description = <"*Pain is elicited on bimanual palpation of the uterus. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Absent (en)">
+                description = <"*No pain is elicited on bimanual palpation of the uterus. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Tenderness decription (en)">
+                description = <"*Narrative description about findings of pain or tenderness of the uterus. (en)">
+                comment = <"*For e.g. Tenderness present on anterior uterine wall, elicited during bimanual palpation, described by the patient as sharp and localized. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Shape (en)">
+                description = <"*The overall anatomical contour of the uterus as assessed during bimanual palpation. (en)">
+                comment = <"*For eg. Normal pear-shaped uterus. (en)">
+            >
+            ["at0.17"] = <
+                text = <"*Consistency (en)">
+                description = <"*Narrative description about the texture and firmness of the uterus. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Version (en)">
+                description = <"*The orientation of the cervix relative to the vagina. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Anteverted (en)">
+                description = <"*The cervix tilts forward toward the bladder. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Neutral (en)">
+                description = <"*The cervix is roughly in line with the vagina. (en)">
+            >
+            ["at0.21"] = <
+                text = <"*Retroverted (en)">
+                description = <"*The cervix tilts backward toward the rectum. (en)">
+            >
+            ["at0.22"] = <
+                text = <"*Flexion (en)">
+                description = <"*The orientation of the vagina relative to the cervix. (en)">
+            >
+            ["at0.23"] = <
+                text = <"*Anteflexed (en)">
+                description = <"*The body of the uterus bends forward over the bladder. (en)">
+            >
+            ["at0.24"] = <
+                text = <"*Midflexed (en)">
+                description = <"*The body is aligned with the cervix. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Retroflexed (en)">
+                description = <"*The body of the uterus bends backward toward the rectum. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"Εξεταζόμενο σύστημα ή δομή">
+                description = <"Ταυτοποίηση του εξεταζόμενου συστήματος σώματος ή ανατομικής δομής.">
+                comment = <"Προτιμάται η κωδικοποίηση του συστήματος ή της δομής που εξετάζεται με ορολογία, όπου είναι δυνατόν.">
+            >
+            ["at0.36"] = <
+                text = <"*Uterus (en)">
+                description = <"">
+            >
+            ["at0.9001"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Fundal height (en) (synthesised)">
+                description = <"*The vertical distance from the symphysis pubis to the top of the pregnant uterine fundus. (en) (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"*Tenderness (en) (synthesised)">
+                description = <"*The presence or absence of pain elicited during bimanual palpation of the uterus. (en) (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"*Mobility (en) (synthesised)">
+                description = <"*The degree to which the uterus can be displaced during bimanual examination, reflecting its freedom of movement within the pelvis. (en) (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Version (en) (synthesised)">
+                description = <"*The orientation of the cervix relative to the vagina. (en) (synthesised)">
+            >
+            ["ac0.9005"] = <
+                text = <"*Flexion (en) (synthesised)">
+                description = <"*The orientation of the vagina relative to the cervix. (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Examination of the uterus">
+                description = <"Findings observed during the palpation of the uterus.">
+            >
+            ["at0.1"] = <
+                text = <"Length">
+                description = <"The estimated length from the fundus to the cervix.">
+                comment = <"Measured in centimetres.">
+            >
+            ["at0.2"] = <
+                text = <"Size estimation">
+                description = <"Size estimation of the uterus.">
+                comment = <"An estimation of uterine size based on physical examination, documented as either a narrative description or a comparative estimate related to size of a pregnant uterus, such as '10 weeks'. These comparisons refer to the typical uterine size at specific stages of pregnancy and provide a standardised reference framework. Alternatively, locally recognised size descriptors, such as 'orange' or 'tennis ball' may be added to the DV_TEXT data type in a template to support a predefined list of terms.">
+            >
+            ["at0.3"] = <
+                text = <"Fundal height">
+                description = <"The vertical distance from the symphysis pubis to the top of the pregnant uterine fundus.">
+                comment = <"Usually only possible in pregnancy after approximately 20 weeks of gestation. This can be recorded as the measured distance or by identifying the height of the uterine fundus relative to identifiable anatomical landmarks, such as  the pubic symphysis, umbilicus, xiphoid process).">
+            >
+            ["at0.4"] = <
+                text = <"Not palpable">
+                description = <"Uterus is not palpable in the abdomen.">
+            >
+            ["at0.5"] = <
+                text = <"At public symphsis">
+                description = <"The uterus is just palpable at the level of the symphysis pubis.">
+            >
+            ["at0.6"] = <
+                text = <"At umbilicus">
+                description = <"The uterus is palpable at, or about, the level of the umbilicus.">
+            >
+            ["at0.7"] = <
+                text = <"At xiphisternum">
+                description = <"The uterus is palpable at, or about, the level of the xiphisternum.">
+            >
+            ["at0.12"] = <
+                text = <"Mobility">
+                description = <"The degree to which the uterus can be displaced during bimanual examination, reflecting its freedom of movement within the pelvis.">
+            >
+            ["at0.13"] = <
+                text = <"Mobile">
+                description = <"The uterus moves freely in response to gentle pressure during bimanual palpation, without resistance or pain.">
+            >
+            ["at0.14"] = <
+                text = <"LImited">
+                description = <"The uterus can be displaced on bimanual palpation but with some resistance or reduced range of motion.">
+            >
+            ["at0.15"] = <
+                text = <"Fixed">
+                description = <"The uterus does not move or is unable to be displaced on bimanual palpation.">
+            >
+            ["at0.8"] = <
+                text = <"Tenderness">
+                description = <"The presence or absence of pain elicited during bimanual palpation of the uterus.">
+            >
+            ["at0.9"] = <
+                text = <"Present">
+                description = <"Pain is elicited on bimanual palpation of the uterus.">
+            >
+            ["at0.10"] = <
+                text = <"Absent">
+                description = <"No pain is elicited on bimanual palpation of the uterus.">
+            >
+            ["at0.11"] = <
+                text = <"Tenderness decription">
+                description = <"Narrative description about findings of pain or tenderness of the uterus.">
+                comment = <"For e.g. Tenderness present on anterior uterine wall, elicited during bimanual palpation, described by the patient as sharp and localized.">
+            >
+            ["at0.16"] = <
+                text = <"Shape">
+                description = <"The overall anatomical contour of the uterus as assessed during bimanual palpation.">
+                comment = <"For eg. Normal pear-shaped uterus.">
+            >
+            ["at0.17"] = <
+                text = <"Consistency">
+                description = <"Narrative description about the texture and firmness of the uterus.">
+            >
+            ["at0.18"] = <
+                text = <"Version">
+                description = <"The orientation of the cervix relative to the vagina.">
+            >
+            ["at0.19"] = <
+                text = <"Anteverted">
+                description = <"The cervix tilts forward toward the bladder.">
+            >
+            ["at0.20"] = <
+                text = <"Neutral">
+                description = <"The cervix is roughly in line with the vagina.">
+            >
+            ["at0.21"] = <
+                text = <"Retroverted">
+                description = <"The cervix tilts backward toward the rectum.">
+            >
+            ["at0.22"] = <
+                text = <"Flexion">
+                description = <"The orientation of the vagina relative to the cervix.">
+            >
+            ["at0.23"] = <
+                text = <"Anteflexed">
+                description = <"The body of the uterus bends forward over the bladder.">
+            >
+            ["at0.24"] = <
+                text = <"Midflexed">
+                description = <"The body is aligned with the cervix.">
+            >
+            ["at0.25"] = <
+                text = <"Retroflexed">
+                description = <"The body of the uterus bends backward toward the rectum.">
+            >
+            ["at0001.1"] = <
+                text = <"System or structure examined">
+                description = <"Identification of the examined body system or anatomical structure.">
+                comment = <"Coding of the system or structure examined with a terminology is preferred, where possible.">
+            >
+            ["at0.36"] = <
+                text = <"Uterus">
+                description = <"">
+            >
+            ["at0.9001"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac0.9000"] = <
+                text = <"Fundal height (synthesised)">
+                description = <"The vertical distance from the symphysis pubis to the top of the pregnant uterine fundus. (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"Tenderness (synthesised)">
+                description = <"The presence or absence of pain elicited during bimanual palpation of the uterus. (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"Mobility (synthesised)">
+                description = <"The degree to which the uterus can be displaced during bimanual examination, reflecting its freedom of movement within the pelvis. (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"Version (synthesised)">
+                description = <"The orientation of the cervix relative to the vagina. (synthesised)">
+            >
+            ["ac0.9005"] = <
+                text = <"Flexion (synthesised)">
+                description = <"The orientation of the vagina relative to the cervix. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000.1"] = <
+                text = <"*Examination of the uterus (en)">
+                description = <"*Findings observed during the palpation of the uterus. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Length (en)">
+                description = <"*The estimated length from the fundus to the cervix. (en)">
+                comment = <"*Measured in centimetres. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Size estimation (en)">
+                description = <"*Size estimation of the uterus. (en)">
+                comment = <"*An estimation of uterine size based on physical examination, documented as either a narrative description or a comparative estimate related to size of a pregnant uterus, such as '10 weeks'. These comparisons refer to the typical uterine size at specific stages of pregnancy and provide a standardised reference framework. Alternatively, locally recognised size descriptors, such as 'orange' or 'tennis ball' may be added to the DV_TEXT data type in a template to support a predefined list of terms. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Fundal height (en)">
+                description = <"*The vertical distance from the symphysis pubis to the top of the pregnant uterine fundus. (en)">
+                comment = <"*Usually only possible in pregnancy after approximately 20 weeks of gestation. This can be recorded as the measured distance or by identifying the height of the uterine fundus relative to identifiable anatomical landmarks, such as  the pubic symphysis, umbilicus, xiphoid process). (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Not palpable (en)">
+                description = <"*Uterus is not palpable in the abdomen. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*At public symphsis (en)">
+                description = <"*The uterus is just palpable at the level of the symphysis pubis. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*At umbilicus (en)">
+                description = <"*The uterus is palpable at, or about, the level of the umbilicus. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*At xiphisternum (en)">
+                description = <"*The uterus is palpable at, or about, the level of the xiphisternum. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Mobility (en)">
+                description = <"*The degree to which the uterus can be displaced during bimanual examination, reflecting its freedom of movement within the pelvis. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Mobile (en)">
+                description = <"*The uterus moves freely in response to gentle pressure during bimanual palpation, without resistance or pain. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*LImited (en)">
+                description = <"*The uterus can be displaced on bimanual palpation but with some resistance or reduced range of motion. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Fixed (en)">
+                description = <"*The uterus does not move or is unable to be displaced on bimanual palpation. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Tenderness (en)">
+                description = <"*The presence or absence of pain elicited during bimanual palpation of the uterus. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Present (en)">
+                description = <"*Pain is elicited on bimanual palpation of the uterus. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Absent (en)">
+                description = <"*No pain is elicited on bimanual palpation of the uterus. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Tenderness decription (en)">
+                description = <"*Narrative description about findings of pain or tenderness of the uterus. (en)">
+                comment = <"*For e.g. Tenderness present on anterior uterine wall, elicited during bimanual palpation, described by the patient as sharp and localized. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Shape (en)">
+                description = <"*The overall anatomical contour of the uterus as assessed during bimanual palpation. (en)">
+                comment = <"*For eg. Normal pear-shaped uterus. (en)">
+            >
+            ["at0.17"] = <
+                text = <"*Consistency (en)">
+                description = <"*Narrative description about the texture and firmness of the uterus. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Version (en)">
+                description = <"*The orientation of the cervix relative to the vagina. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Anteverted (en)">
+                description = <"*The cervix tilts forward toward the bladder. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Neutral (en)">
+                description = <"*The cervix is roughly in line with the vagina. (en)">
+            >
+            ["at0.21"] = <
+                text = <"*Retroverted (en)">
+                description = <"*The cervix tilts backward toward the rectum. (en)">
+            >
+            ["at0.22"] = <
+                text = <"*Flexion (en)">
+                description = <"*The orientation of the vagina relative to the cervix. (en)">
+            >
+            ["at0.23"] = <
+                text = <"*Anteflexed (en)">
+                description = <"*The body of the uterus bends forward over the bladder. (en)">
+            >
+            ["at0.24"] = <
+                text = <"*Midflexed (en)">
+                description = <"*The body is aligned with the cervix. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Retroflexed (en)">
+                description = <"*The body of the uterus bends backward toward the rectum. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"*System or structure examined(en)">
+                description = <"*Identification of the examined body system or anatomical structure.(en)">
+                comment = <"*Coding of the system or structure examined with a terminology is preferred, where possible.(en)">
+            >
+            ["at0.36"] = <
+                text = <"*Uterus (en)">
+                description = <"">
+            >
+            ["at0.9001"] = <
+                text = <"Longitud">
+                description = <"Longitud">
+            >
+            ["ac0.9000"] = <
+                text = <"*Fundal height (en) (synthesised)">
+                description = <"*The vertical distance from the symphysis pubis to the top of the pregnant uterine fundus. (en) (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"*Tenderness (en) (synthesised)">
+                description = <"*The presence or absence of pain elicited during bimanual palpation of the uterus. (en) (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"*Mobility (en) (synthesised)">
+                description = <"*The degree to which the uterus can be displaced during bimanual examination, reflecting its freedom of movement within the pelvis. (en) (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Version (en) (synthesised)">
+                description = <"*The orientation of the cervix relative to the vagina. (en) (synthesised)">
+            >
+            ["ac0.9005"] = <
+                text = <"*Flexion (en) (synthesised)">
+                description = <"*The orientation of the vagina relative to the cervix. (en) (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at0.9001"] = <http://openehr.org/id/122>
+        >
+        ["SNOMED-CT"] = <
+            ["at0001.1"] = <http://snomed.info/id/35039007>
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.4", "at0.5", "at0.6", "at0.7">
+        >
+        ["ac0.9005"] = <
+            id = <"ac0.9005">
+            members = <"at0.23", "at0.24", "at0.25">
+        >
+        ["ac0.9003"] = <
+            id = <"ac0.9003">
+            members = <"at0.13", "at0.14", "at0.15">
+        >
+        ["ac0.9004"] = <
+            id = <"ac0.9004">
+            members = <"at0.19", "at0.20", "at0.21">
+        >
+        ["ac0.9002"] = <
+            id = <"ac0.9002">
+            members = <"at0.9", "at0.10">
+        >
+    >

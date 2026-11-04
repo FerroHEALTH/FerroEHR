@@ -1,0 +1,528 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=58cbbc1a-d58c-4c81-99aa-70f403d1a616; build_uid=fcf6f269-dd79-4858-b6d8-b3c29ec86947)
+    openEHR-EHR-OBSERVATION.trunk_impairment_scale.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Gustaf Hultgren">
+        ["organisation"] = <"Cambio CDS">
+        ["email"] = <"gustaf.hultgren@cambio.se">
+        ["date"] = <"2021-02-17">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Verheyden G, Nieuwboer A, Mertin J, Preger R, Kiekens C, De Weerdt W. The Trunk Impairment Scale: a new tool to measure motor impairment of the trunk after stroke. Clin Rehabil. 2004 May;18(3):326-34. doi: 10.1191/0269215504cr733oa. PMID: 15137564.">
+        ["2"] = <"Verheyden G, Willems AM, Ooms L, Nieuwboer A. Validity of the trunk impairment scale as a measure of trunk performance in people with Parkinson's disease. Arch Phys Med Rehabil. 2007 Oct;88(10):1304-8. doi: 10.1016/j.apmr.2007.06.772. PMID: 17908573.">
+    >
+    other_details = <
+        ["current_contact"] = <"Gustaf Hultgren, Cambio CDS<gustaf.hultgren@cambio.se>">
+        ["MD5-CAM-1.0.1"] = <"7B241B94E1AF26DF0DA9E65136F1963C">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter and their total sum for the TIS scale.">
+            keywords = <"TIS", "trunk", "impairment", "scale", "stroke", "parkinson's", "disease">
+            use = <"To record the results for each component parameter and their total sum for the TIS scale.">
+            misuse = <"">
+            copyright = <"© Cambio CDS, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Trunk Impairment Scale (TIS)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Maintains starting position
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- No
+                                                    [{2}, {[at0006]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Therapist crosses unaffected leg
+                                        value matches {
+                                            DV_ORDINAL[at9010] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0008]}],    -- Falls or can’t maintain sitting position for 10 seconds without arm support
+                                                    [{2}, {[at0009]}]    -- Maintains sitting position for 10 seconds
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Patient crosses unaffected leg
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0011]}],    -- Falls
+                                                    [{1}, {[at0012]}],    -- Cannot cross legs without arm support
+                                                    [{2}, {[at0013]}],    -- Crosses legs but displaces trunk >10 cm backwards or assists crossing with hand
+                                                    [{3}, {[at0014]}]    -- Crosses legs without displacement or assistance
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Static balance score
+                                        value matches {
+                                            DV_COUNT[at9012] matches {
+                                                magnitude matches {|0..7|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Shortens hemiplegic side
+                                        value matches {
+                                            DV_ORDINAL[at9013] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- Falls, needs support from upper extremity, or elbow does not touch the bed or table
+                                                    [{1}, {[at0018]}]    -- Moves actively without help, elbow touches bed or table
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Shortens hemiplegic side - repetition 1
+                                        value matches {
+                                            DV_ORDINAL[at9014] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0020]}],    -- No (or opposite) shortening/lengthening
+                                                    [{1}, {[at0021]}]    -- Appropriate shortening/lengthening
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Shortens hemiplegic side - repetition 2
+                                        value matches {
+                                            DV_ORDINAL[at9015] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0023]}],    -- Compensation (with upper extremity, hips, knees, or feet)
+                                                    [{1}, {[at0024]}]    -- Moves without compensation
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Shortens unaffected side
+                                        value matches {
+                                            DV_ORDINAL[at9016] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- Falls, needs support from upper extremity, or elbow does not touch the bed or table
+                                                    [{1}, {[at0018]}]    -- Moves actively without help, elbow touches bed or table
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Shorten unaffected side - repetition 1
+                                        value matches {
+                                            DV_ORDINAL[at9017] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0020]}],    -- No (or opposite) shortening/lengthening
+                                                    [{1}, {[at0021]}]    -- Appropriate shortening/lengthening
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Shorten unaffected side - repetition 2
+                                        value matches {
+                                            DV_ORDINAL[at9018] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0023]}],    -- Compensation (with upper extremity, hips, knees, or feet)
+                                                    [{1}, {[at0024]}]    -- Moves without compensation
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Lifts pelvis hemiplegic side
+                                        value matches {
+                                            DV_ORDINAL[at9019] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0020]}],    -- No (or opposite) shortening/lengthening
+                                                    [{1}, {[at0021]}]    -- Appropriate shortening/lengthening
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- Lifts pelvis hemiplegic side - repetition 1
+                                        value matches {
+                                            DV_ORDINAL[at9020] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0030]}],    -- Compensation (with upper extremity or foot)
+                                                    [{1}, {[at0031]}]    -- Moves without compensation
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0032] occurrences matches {0..1} matches {    -- Lifts pelvis unaffected side
+                                        value matches {
+                                            DV_ORDINAL[at9021] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0020]}],    -- No (or opposite) shortening/lengthening
+                                                    [{1}, {[at0021]}]    -- Appropriate shortening/lengthening
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0033] occurrences matches {0..1} matches {    -- Lifts pelvis unaffected side - repetition 1
+                                        value matches {
+                                            DV_ORDINAL[at9022] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0030]}],    -- Compensation (with upper extremity or foot)
+                                                    [{1}, {[at0031]}]    -- Moves without compensation
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0034] occurrences matches {0..1} matches {    -- Dynamic Balance score
+                                        value matches {
+                                            DV_COUNT[at9023] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0035] occurrences matches {0..1} matches {    -- Rotates upper trunk
+                                        value matches {
+                                            DV_ORDINAL[at9024] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0036]}],    -- Hemiplegic side not moved 3x
+                                                    [{1}, {[at0037]}],    -- Assymetrical rotation
+                                                    [{2}, {[at0038]}]    -- Symmetrical rotation
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0039] occurrences matches {0..1} matches {    -- Rotates upper trunk - repetition 1
+                                        value matches {
+                                            DV_ORDINAL[at9025] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0040]}],    -- Assymetrical rotation
+                                                    [{1}, {[at0041]}]    -- Symmetrical rotation
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0042] occurrences matches {0..1} matches {    -- Rotates lower trunk
+                                        value matches {
+                                            DV_ORDINAL[at9026] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0036]}],    -- Hemiplegic side not moved 3x
+                                                    [{1}, {[at0037]}],    -- Assymetrical rotation
+                                                    [{2}, {[at0038]}]    -- Symmetrical rotation
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0049] occurrences matches {0..1} matches {    -- Rotates lower trunk - repetition 1
+                                        value matches {
+                                            DV_ORDINAL[at9027] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0040]}],    -- Assymetrical rotation
+                                                    [{1}, {[at0041]}]    -- Symmetrical rotation
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0043] occurrences matches {0..1} matches {    -- Coordination score
+                                        value matches {
+                                            DV_COUNT[at9028] matches {
+                                                magnitude matches {|0..6|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0044] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9029] matches {
+                                                magnitude matches {|0..23|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0052] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0053] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Trunk Impairment Scale (TIS)">
+                description = <"An assessment score to evaluate trunk mobility and stability in patients with neurological deficits.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Maintains starting position">
+                description = <"Patient maintains starting position without support for 10 seconds.">
+            >
+            ["at0005"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Therapist crosses unaffected leg">
+                description = <"Therapist crosses unaffected leg over hemiplegic leg.">
+            >
+            ["at0008"] = <
+                text = <"Falls or can’t maintain sitting position for 10 seconds without arm support">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Maintains sitting position for 10 seconds">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Patient crosses unaffected leg">
+                description = <"Patient crosses unaffected leg over hemiplegic leg.">
+            >
+            ["at0011"] = <
+                text = <"Falls">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Cannot cross legs without arm support">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Crosses legs but displaces trunk >10 cm backwards or assists crossing with hand">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Crosses legs without displacement or assistance">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Static balance score">
+                description = <"The sum of the three parameters for the Static balance score component.">
+            >
+            ["at0016"] = <
+                text = <"Shortens hemiplegic side">
+                description = <"Patient touches the bed or table with hemiplegic elbow (shortens hemiplegic side and lengthens unaffected side) and returns to starting position.">
+            >
+            ["at0017"] = <
+                text = <"Falls, needs support from upper extremity, or elbow does not touch the bed or table">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Moves actively without help, elbow touches bed or table">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Shortens hemiplegic side - repetition 1">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"No (or opposite) shortening/lengthening">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Appropriate shortening/lengthening">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Shortens hemiplegic side - repetition 2">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Compensation (with upper extremity, hips, knees, or feet)">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Moves without compensation">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Shortens unaffected side">
+                description = <"Patient touches the bed or table with unaffected elbow (shortens unaffected side and lengthens hemiplegic side) and returns to starting position.">
+            >
+            ["at0026"] = <
+                text = <"Shorten unaffected side - repetition 1">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Shorten unaffected side - repetition 2">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Lifts pelvis hemiplegic side">
+                description = <"Lifts pelvis from bed or table at hemiplegic side (shortens hemiplegic side and lengthens unaffected side) and returns to starting position.">
+            >
+            ["at0029"] = <
+                text = <"Lifts pelvis hemiplegic side - repetition 1">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Compensation (with upper extremity or foot)">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Moves without compensation">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Lifts pelvis unaffected side">
+                description = <"Lifts pelvis from bed or table at unaffected side (shortens unaffected side and lengthens hemiplegic side) and returns to starting position.">
+            >
+            ["at0033"] = <
+                text = <"Lifts pelvis unaffected side - repetition 1">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Dynamic Balance score">
+                description = <"The sum of the ten parameters for the Dynamic balance score component.">
+            >
+            ["at0035"] = <
+                text = <"Rotates upper trunk">
+                description = <"Rotates upper trunk 6x (each shoulder moved forward 3x), hemiplegic side must move first, head fixated in starting position.">
+            >
+            ["at0036"] = <
+                text = <"Hemiplegic side not moved 3x">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Assymetrical rotation">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Symmetrical rotation">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Rotates upper trunk - repetition 1">
+                description = <"Repeats upper trunk rotations within 6 seconds.">
+            >
+            ["at0040"] = <
+                text = <"Assymetrical rotation">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Symmetrical rotation">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Rotates lower trunk">
+                description = <"Rotate lower trunk 6x (each knee moved forward 3x), hemiplegic side must move first, upper trunk fixated in starting position.">
+            >
+            ["at0043"] = <
+                text = <"Coordination score">
+                description = <"The sum of the four parameters for the Coordination score component.">
+            >
+            ["at0044"] = <
+                text = <"Total score">
+                description = <"The total sum of the Static balance, Dynamic balance, and Coordination scores.">
+            >
+            ["at0049"] = <
+                text = <"Rotates lower trunk - repetition 1">
+                description = <"Repeats lower trunk rotation within 6 seconds.">
+            >
+            ["at0053"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9029"] = <
+                text = <"Maintains starting position (synthesised)">
+                description = <"Patient maintains starting position without support for 10 seconds. (synthesised)">
+            >
+            ["ac9030"] = <
+                text = <"Therapist crosses unaffected leg (synthesised)">
+                description = <"Therapist crosses unaffected leg over hemiplegic leg. (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"Patient crosses unaffected leg (synthesised)">
+                description = <"Patient crosses unaffected leg over hemiplegic leg. (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"Shortens hemiplegic side (synthesised)">
+                description = <"Patient touches the bed or table with hemiplegic elbow (shortens hemiplegic side and lengthens unaffected side) and returns to starting position. (synthesised)">
+            >
+            ["ac9033"] = <
+                text = <"Shortens hemiplegic side - repetition 1 (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9034"] = <
+                text = <"Shortens hemiplegic side - repetition 2 (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9035"] = <
+                text = <"Lifts pelvis hemiplegic side - repetition 1 (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9036"] = <
+                text = <"Rotates upper trunk (synthesised)">
+                description = <"Rotates upper trunk 6x (each shoulder moved forward 3x), hemiplegic side must move first, head fixated in starting position. (synthesised)">
+            >
+            ["ac9037"] = <
+                text = <"Rotates upper trunk - repetition 1 (synthesised)">
+                description = <"Repeats upper trunk rotations within 6 seconds. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9031"] = <
+            id = <"ac9031">
+            members = <"at0011", "at0012", "at0013", "at0014">
+        >
+        ["ac9030"] = <
+            id = <"ac9030">
+            members = <"at0008", "at0009">
+        >
+        ["ac9035"] = <
+            id = <"ac9035">
+            members = <"at0030", "at0031">
+        >
+        ["ac9034"] = <
+            id = <"ac9034">
+            members = <"at0023", "at0024">
+        >
+        ["ac9033"] = <
+            id = <"ac9033">
+            members = <"at0020", "at0021">
+        >
+        ["ac9032"] = <
+            id = <"ac9032">
+            members = <"at0017", "at0018">
+        >
+        ["ac9037"] = <
+            id = <"ac9037">
+            members = <"at0040", "at0041">
+        >
+        ["ac9036"] = <
+            id = <"ac9036">
+            members = <"at0036", "at0037", "at0038">
+        >
+        ["ac9029"] = <
+            id = <"ac9029">
+            members = <"at0005", "at0006">
+        >
+    >

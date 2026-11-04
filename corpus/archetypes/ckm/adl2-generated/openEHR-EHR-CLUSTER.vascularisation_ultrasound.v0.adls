@@ -1,0 +1,140 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=890ca779-2d4d-46c7-9585-1a403bba718d; build_uid=73710c69-ad1f-4817-a1ec-0cc616fbc788)
+    openEHR-EHR-CLUSTER.vascularisation_ultrasound.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-11-15">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"07783C1F64BDE0F54FF6FC6E814085BF">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record findings related to vascularisation of structures or lesions using ultrasound.">
+            use = <"Use to record findings related to vascularisation of structures or lesions using ultrasound. 
+
+This archetype is intended to be nested within relevant imaging archetypes - for example, vascularisation patterns observed during ultrasound of the uterus (CLUSTER.imaging_exam-uterus) or a specified myometrial lesion (CLUSTER.imaging_myometrial_lesion).">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Vascularisation findings on ultrasound
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Vascularisation pattern
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9000]}    -- Vascularisation pattern (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Vascularisation type
+                value matches {
+                    DV_CODED_TEXT[at9004] matches {
+                        defining_code matches {[ac9001]}    -- Vascularisation type (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Colour score
+                value matches {
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[ac9002]}    -- Colour score (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Vascularisation findings on ultrasound">
+                description = <"Findings related to vascularisation of structures or lesions using ultrasound.">
+            >
+            ["at0002"] = <
+                text = <"Uniform">
+                description = <"">
+            >
+            ["at0003"] = <
+                text = <"Non-uniform">
+                description = <"">
+            >
+            ["at0001"] = <
+                text = <"Vascularisation pattern">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Vascularisation type">
+                description = <"The type of valsular flow observed.">
+            >
+            ["at0005"] = <
+                text = <"Circumferential flow">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Translesional flow">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Colour score">
+                description = <"The colour hue indicating the level of vascularisation in the lesion.">
+            >
+            ["at0008"] = <
+                text = <"No colour">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Minimal colour">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Moderate colour">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Abundant colour">
+                description = <"">
+            >
+            ["ac9000"] = <
+                text = <"Vascularisation pattern (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Vascularisation type (synthesised)">
+                description = <"The type of valsular flow observed. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Colour score (synthesised)">
+                description = <"The colour hue indicating the level of vascularisation in the lesion. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0008", "at0009", "at0010", "at0011">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0005", "at0006">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0002", "at0003">
+        >
+    >

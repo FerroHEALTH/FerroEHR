@@ -1,0 +1,291 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=40f9417e-7c6d-4302-a720-96f579b2b5c7; build_uid=488d9922-0f3d-4a5c-8867-43662b0d0ac0)
+    openEHR-EHR-CLUSTER.acquisition_details_on_eye_fundus_images.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2014-05-19">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"7728C350D489D407A17D7AD0A8129E7A">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Registering specific details about how it has to be acquired an imaging test involving eye fundus.">
+            keywords = <"Eye fundus", ...>
+            use = <"For example defining specific requirements during the planning of the imaging test.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar los detalles específicos sobre la metodología escogida para llevar a cabo la adquisición de una prueba imagenológica que implique fondo de ojo.">
+            keywords = <"Fondo de ojo", ...>
+            use = <"Por ejemplo definir requisitos específicos de la prueba durante la planificación de la misma.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Acquisition details on eye fundus images
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Laterality
+                value matches {
+                    DV_CODED_TEXT[at9002] matches {
+                        defining_code matches {[ac9000]}    -- Laterality (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Method
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9001; at8]}    -- Method (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Attempts Allowed
+                value matches {
+                    DV_COUNT[at9004] matches {
+                        magnitude matches {|>=1|; 3}
+                    }
+                }
+            }
+            ELEMENT[at0027] matches {    -- Zone of Retina
+                value matches {
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[ac2]}    -- Zones of retina
+                    }
+                }
+            }
+            ELEMENT[at0029] matches {    -- Study Fields Photographed
+                value matches {
+                    DV_CODED_TEXT[at9006] matches {
+                        defining_code matches {[ac3]}    -- Subdivision of the retina
+                    }
+                }
+            }
+            ELEMENT[at0020] occurrences matches {0..1} matches {    -- Mosaic
+                value matches {
+                    DV_BOOLEAN[at9007] matches {
+                        value matches {True, False; False}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Acquisition details on eye fundus images">
+                description = <"Defines specific details about the acquisition of images from eye fundus.">
+            >
+            ["at0001"] = <
+                text = <"Method">
+                description = <"Method chosen to perform the funduscopic examination.">
+            >
+            ["at0002"] = <
+                text = <"Direct">
+                description = <"Study performed by direct ophthalmoscopy.">
+            >
+            ["at0003"] = <
+                text = <"Indirect">
+                description = <"Study of eye fundus by indirect ophthalmoscopy method.">
+            >
+            ["at0004"] = <
+                text = <"Contact lens biomicroscopy">
+                description = <"Eye fundus viewing through biomicroscopy lens in contact to patient's eye surface.">
+            >
+            ["at0005"] = <
+                text = <"Non-contact lens biomicroscopy">
+                description = <"Eye fundus viewing through biomicroscopy lens without contact to patient's eye surface.">
+            >
+            ["at0006"] = <
+                text = <"Mydriatic retinography">
+                description = <"Observation of retina through funduscopic images acquired by previous dilatation of patient's pupils.">
+            >
+            ["at0007"] = <
+                text = <"Non-mydriatic retinography">
+                description = <"Observation of retina through funduscopic images acquired without previous dilatation of patient's pupils.">
+            >
+            ["at0008"] = <
+                text = <"Angiography">
+                description = <"Observation of the eye fundus using a fluorescent dye inyected to emphasize the blood vessels in the eye retina.">
+            >
+            ["at0011"] = <
+                text = <"Attempts Allowed">
+                description = <"Limit on the number of attempts allowed to conduct the acquisition (doesn't compute if test is repeated by a specific recognized technical failure).">
+            >
+            ["at0020"] = <
+                text = <"Mosaic">
+                description = <"If true, the study includes a mosaic image that combines all eye fundus fields acquired into a single picture.">
+            >
+            ["at0023"] = <
+                text = <"Laterality">
+                description = <"Eye/s from which the eye fundus is examined.">
+            >
+            ["at0024"] = <
+                text = <"Left eye">
+                description = <"Left eye observation.">
+            >
+            ["at0025"] = <
+                text = <"Right eye">
+                description = <"Right eye observation.">
+            >
+            ["at0026"] = <
+                text = <"Both eyes">
+                description = <"Test acquired on both eyes of the patient.">
+            >
+            ["at0027"] = <
+                text = <"Zone of Retina">
+                description = <"Anatomical structures from retina in which the study of eye fundus is focused.">
+            >
+            ["at0029"] = <
+                text = <"Study Fields Photographed">
+                description = <"Specifies which fields from a specific subdivision of the retina are photographed in the study of eye fundus.">
+            >
+            ["ac2"] = <
+                text = <"Zones of retina">
+                description = <"List of anatomical zones contained in eye retina.">
+            >
+            ["ac3"] = <
+                text = <"Subdivision of the retina">
+                description = <"List of eye fundus fields that correspond to the specific subdivision of the retina chosen.">
+            >
+            ["ac9000"] = <
+                text = <"Laterality (synthesised)">
+                description = <"Eye/s from which the eye fundus is examined. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Method (synthesised)">
+                description = <"Method chosen to perform the funduscopic examination. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Detalles de adquisición de imágenes de fondo de ojo">
+                description = <"Define los detalles específicos relativos a la adquisición de imágenes de fondo de ojo.">
+            >
+            ["at0001"] = <
+                text = <"Método">
+                description = <"Método elegido para llevar a cabo el examen de fondo de ojo.">
+            >
+            ["at0002"] = <
+                text = <"Directo">
+                description = <"Estudio por medio de oftalmoscopia directa.">
+            >
+            ["at0003"] = <
+                text = <"Indirecto">
+                description = <"Estudio del fondo de ojo por medio de oftalmoscopia indirecta.">
+            >
+            ["at0004"] = <
+                text = <"Biomicroscopía con lente de contacto">
+                description = <"Visualización del fondo de ojo por biomicroscopía en contacto con la superficie ocular del paciente.">
+            >
+            ["at0005"] = <
+                text = <"Biomicroscopía con lente de no contacto">
+                description = <"Visualización del fondo de ojo por biomicroscopía sin contacto con la superficie ocular del paciente.">
+            >
+            ["at0006"] = <
+                text = <"Retinografía midriática">
+                description = <"Estudio por medio de imágenes del fondo de ojo requiriendo dilatación previa de la pupila del paciente.">
+            >
+            ["at0007"] = <
+                text = <"Retinografías no midriática">
+                description = <"Estudio por medio de imágenes del fondo de ojo sin necesidad de dilatacr la pupila del paciente.">
+            >
+            ["at0008"] = <
+                text = <"Angiografía">
+                description = <"Observación del fondo de ojo utilizando colorante fluorescente inyectado con objeto de resaltar los vasos sanguíneos de la retina.">
+            >
+            ["at0011"] = <
+                text = <"Intentos Permitidos">
+                description = <"Limita el número de intentos permitidos para llevar a cabo la adquisición (si la prueba se repite por un fallo técnico reconocido específico no se computa el intento).">
+            >
+            ["at0020"] = <
+                text = <"Mosaico">
+                description = <"Identifica si es necesario generar una imagen mosaico que combina todos los campos de fondo de ojo adquiridos en una sola fotografía.">
+            >
+            ["at0023"] = <
+                text = <"Lateralidad">
+                description = <"Determina el ojo sobre el cual se realiza la prueba.">
+            >
+            ["at0024"] = <
+                text = <"Ojo izquierdo">
+                description = <"Se observa el ojo izquierdo.">
+            >
+            ["at0025"] = <
+                text = <"Ojo derecho">
+                description = <"Se observa el ojo derecho.">
+            >
+            ["at0026"] = <
+                text = <"Ambos ojos">
+                description = <"La prueba se realiza en ambos ojos del paciente.">
+            >
+            ["at0027"] = <
+                text = <"Zona de la Retina">
+                description = <"Estructuras anatómicas de la retina en la que se centra el estudio de fondo de ojo.">
+            >
+            ["at0029"] = <
+                text = <"Campos de Estudio Fotografiados">
+                description = <"Especifica que campos, obtenidos de una subdivisión específica de la retina, son fotografiados en el estudio de fondo de ojo.">
+            >
+            ["ac2"] = <
+                text = <"*New constraint(en)">
+                description = <"**(en)">
+            >
+            ["ac3"] = <
+                text = <"*New constraint(en)">
+                description = <"**(en)">
+            >
+            ["ac9000"] = <
+                text = <"Lateralidad (synthesised)">
+                description = <"Determina el ojo sobre el cual se realiza la prueba. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Método (synthesised)">
+                description = <"Método elegido para llevar a cabo el examen de fondo de ojo. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0023"] = <http://snomed.info/id/272741003>
+            ["at0024"] = <http://snomed.info/id/362503005>
+            ["at0025"] = <http://snomed.info/id/362502000>
+            ["at0026"] = <http://snomed.info/id/362508001>
+            ["at0027"] = <http://snomed.info/id/280611009>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0002", "at0003", "at0004", "at0005", "at0006", "at0007", "at0008">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0024", "at0025", "at0026">
+        >
+    >

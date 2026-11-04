@@ -1,0 +1,322 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=99056a0d-69ba-40ee-8d37-b459bfc18f6e; build_uid=13b85f69-2f1d-4096-82c9-e1ce2476ba0e)
+    openEHR-EHR-CLUSTER.severity_rating_scale.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Kanika Kuwelker">
+        ["organisation"] = <"Helse Vest IKT">
+        ["email"] = <"kanika.kuwelker@helse-vest-ikt.no">
+        ["date"] = <"2022-12-08">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Sangster RL. The Effects of Numerical Labels on Response Scales. U.S. Bureau of Labor Statistics; 2001. Available from: https://www.bls.gov/osmr/research-papers/2001/pdf/st010120.pdf.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"AFDDD37CBFCFA08C0414D77BF4393F50">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en numerisk graderingsskala for å kvantifisere en subjektiv evaluering av alvorlighetsgraden av et symptom/sykdomstegn/problem.">
+            keywords = <"numerisk graderingsskala, visuell analog skala, gradering, graderingsskala, alvorlighet", ...>
+            use = <"Brukes for å registrere en numerisk graderingsskala for å kvantifisere en subjektiv evaluering av alvorlighetsgraden av et symptom/sykdomstegn/problem.
+
+Denne arketypen er ment å brukes til å representere en rekke alvorlighetsskalaer, for eksempel visuell analog skala eller numeriske vurderingsskalaer av ulike omfang.
+
+Dette CLUSTERet kan nøstes inn i SLOTet \"Gradering av alvorlighet\" i arketypen CLUSTER.symptom_sign (Symptom/Sykdomstegn), eller andre arketyper der klinisk passende.
+
+Alvorlighetsgrad kan vurderes av individet ved å registrere en poengsum, for eksempel fra 0 (ikke til stede) til 10,0 (så alvorlig som individet kan forestille seg).
+">
+            misuse = <"Skal ikke brukes i etablerte vurderingsskalaer som Clinical Frailty Scale og Glasgow Coma Scale. Bruk en arketype spesifikt for vurderingsskalaen til dette formålet.
+
+Skal ikke brukes til verbale vurderingsskalaer og grafiske vurderingsskalaer, fordi de vanligvis er skreddersydd til det spesifikke vurderte konseptet.
+
+Skal ikke brukes for vurderinger der skalaen er invertert, for eksempel der 10 er det minst alvorlige og 0 er det mest alvorlige.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a numeric rating scale to quantify a subjective evaluation of the severity of a symptom/sign/problem/issue.">
+            keywords = <"numeric rating scale, visual analogue scale, rating scale, severity", ...>
+            use = <"Use to record a numeric rating scale to quantify a subjective evaluation of the severity of a symptom/sign/problem/issue.
+
+This archetype is intended to be used to represent a range of widely used different severity rating scales, such as visual analogue scale, or different ranges of numerical rating scales. 
+
+This cluster can be nested in the 'Severity rating' slot of the archetype CLUSTER.symptom_sign, or in other archetypes where clinically appropriate.
+
+Severity can be rated by the individual by recording a score, for example from 0 (not present) to 10.0 (as severe as the individual can imagine).">
+            misuse = <"Not to be used in established rating scales such as Clinical Frailty Scale and Glasgow Coma Scale. Use an archetype specific for the rating scale for this purpose.
+
+Not to be used for verbal rating scales and graphic rating scales, because they are usually tailored to the specific rated concept.
+
+Not to be used for ratings where the scale is inverted, for example where 10 is the least severe and 0 is the most severe.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Severity rating scale
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Numeric rating scale 0-10
+                value matches {
+                    DV_COUNT[at9002] matches {
+                        magnitude matches {|0..10|}
+                    }
+                    DV_ORDINAL[at9003] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0004]}],    -- 0
+                            [{1}, {[at0005]}],    -- 1
+                            [{2}, {[at0006]}],    -- 2
+                            [{3}, {[at0007]}],    -- 3
+                            [{4}, {[at0008]}],    -- 4
+                            [{5}, {[at0009]}],    -- 5
+                            [{6}, {[at0010]}],    -- 6
+                            [{7}, {[at0011]}],    -- 7
+                            [{8}, {[at0012]}],    -- 8
+                            [{9}, {[at0013]}],    -- 9
+                            [{10}, {[at0014]}]    -- 10
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Numeric rating scale 0-20
+                value matches {
+                    DV_COUNT[at9004] matches {
+                        magnitude matches {|0..20|}
+                    }
+                }
+            }
+            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Numeric rating scale 0-100
+                value matches {
+                    DV_COUNT[at9005] matches {
+                        magnitude matches {|0..100|}
+                    }
+                }
+            }
+            ELEMENT[at0021] occurrences matches {0..1} matches {    -- Visual analogue scale
+                value matches {
+                    DV_QUANTITY[at9006] matches {
+                        property matches {[at9001]}    -- Length
+                        magnitude matches {|0.0..100.0|}
+                        units matches {"mm"}
+                        precision matches {0}
+                    }
+                }
+            }
+            ELEMENT[at0020] occurrences matches {0..1} matches {    -- Numeric rating scale
+                value matches {
+                    DV_PROPORTION[at9007] matches {
+                        type matches {0, 2, 3}
+                    }
+                }
+            }
+            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9008]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Graderingsskala for alvorlighet">
+                description = <"En numerisk graderingsskala for å kvantifisere en subjektiv evaluering av alvorlighetsgraden av et symptom/sykdomstegn/problem.">
+            >
+            ["at0003"] = <
+                text = <"Numerisk graderingsskala 0-10">
+                description = <"Numerisk graderingsskala 0 til 10.">
+                comment = <"Navnet på elementet vil alltid bli omdøpt til det spesifikke spørsmålet i templatet.">
+            >
+            ["at0004"] = <
+                text = <"0">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"1">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"2">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"3">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"4">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"5">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"6">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"7">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"8">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"9">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"10">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om alvorlighetsgraderingen som ikke dekkes i andre felt.">
+            >
+            ["at0016"] = <
+                text = <"Numerisk graderingsskala 0-20">
+                description = <"Numerisk graderingsskala 0 til 20.">
+                comment = <"Navnet på elementet vil alltid bli omdøpt til det spesifikke spørsmålet i templatet.">
+            >
+            ["at0017"] = <
+                text = <"Numerisk graderingsskala 0-100">
+                description = <"Numerisk graderingsskala 0 til 100.">
+                comment = <"Navnet på elementet vil alltid bli omdøpt til det spesifikke spørsmålet i templatet.">
+            >
+            ["at0020"] = <
+                text = <"Numerisk graderingsskala">
+                description = <"Ubegrenset numerisk graderingsskala.">
+                comment = <"Navnet på elementet vil alltid bli omdøpt til det spesifikke spørsmålet i templatet.">
+            >
+            ["at0021"] = <
+                text = <"Visuell analog skala">
+                description = <"Visuell analog skala 0 til 100.">
+                comment = <"Navnet på elementet vil alltid bli omdøpt til det spesifikke spørsmålet i templatet.">
+            >
+            ["at9001"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac9008"] = <
+                text = <"Numerisk graderingsskala 0-10 (synthesised)">
+                description = <"Numerisk graderingsskala 0 til 10. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Severity rating scale">
+                description = <"A numeric rating scale to quantify a subjective evaluation of the severity of a symptom/sign/problem/issue.">
+            >
+            ["at0003"] = <
+                text = <"Numeric rating scale 0-10">
+                description = <"Numeric rating scale 0 to 10.">
+                comment = <"Name of the element will always be renamed to the specific question in the template. ">
+            >
+            ["at0004"] = <
+                text = <"0">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"1">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"2">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"3">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"4">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"5">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"6">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"7">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"8">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"9">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"10">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the severity rating not captured in other fields.">
+            >
+            ["at0016"] = <
+                text = <"Numeric rating scale 0-20">
+                description = <"Numeric rating scale 0 to 20.">
+                comment = <"Name of the element will always be renamed to the specific question in the template. ">
+            >
+            ["at0017"] = <
+                text = <"Numeric rating scale 0-100">
+                description = <"Numeric rating scale 0 to 100.">
+                comment = <"Name of the element will always be renamed to the specific question in the template. ">
+            >
+            ["at0020"] = <
+                text = <"Numeric rating scale">
+                description = <"Unconstrained numeric rating scale.">
+                comment = <"Name of the element will always be renamed to the specific question in the template. ">
+            >
+            ["at0021"] = <
+                text = <"Visual analogue scale">
+                description = <"Visual analogue scale 0 to 100.">
+                comment = <"Name of the element will always be renamed to the specific question in the template. ">
+            >
+            ["at9001"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac9008"] = <
+                text = <"Numeric rating scale 0-10 (synthesised)">
+                description = <"Numeric rating scale 0 to 10. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/122>
+        >
+    >
+    value_sets = <
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0004", "at0005", "at0006", "at0007", "at0008", "at0009", "at0010", "at0011", "at0012", "at0013", "at0014">
+        >
+    >

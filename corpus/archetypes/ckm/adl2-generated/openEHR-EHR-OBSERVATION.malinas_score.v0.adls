@@ -1,0 +1,404 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1036a340-e722-4618-9a49-b4d78a64cfb9; build_uid=bc80fcba-ce1f-44c1-9439-43e5c84b67e5)
+    openEHR-EHR-OBSERVATION.malinas_score.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::pt]>
+    translations = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Gustavo M Bacelar-Silva">
+        ["organisation"] = <"VirtualCare - Systems for Health">
+        ["email"] = <"mail@gustavobacelar.com">
+        ["date"] = <"2016-03-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Douglas Fabiano Lourenço, PUC-SP, Brazil", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Survey on Unexpected Home Births: Regulatory Strategy P.L. Jouan et al. in La Revue des SAMU, 2001, p. 402">
+        ["2"] = <"Prehospital emergencies in Obstetrics: home deliveries V. Marel et al. in Journal Europeen des Urgences Volume 14, Number 3, September 2001">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"216E7D323C4C705A5196D4761D920EEE">
+    >
+    details = <
+        ["pt"] = <
+            language = <[ISO_639-1::pt]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"The Malinas score supports the evaluation of pregnant women allowing to determine whether a  is about to give birth.">
+            use = <"It is mainly used in case of unexpected prehospital cases: the score indicates if it is possible to transport the pregnant woman or if it is best to let her give birth onsite.">
+            misuse = <"Partially complete score and add the 5 to give the total values​​.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Malinas score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- *New element(pt)
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- *new ordinal(pt)
+                                                    [{1}, {[at0006]}],    -- *new ordinal(pt)
+                                                    [{2}, {[at0007]}]    -- *new ordinal(pt)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- *New element(pt)
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0009]}],    -- *new ordinal(pt)
+                                                    [{1}, {[at0010]}],    -- *new ordinal(pt)
+                                                    [{2}, {[at0011]}]    -- *new ordinal(pt)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- *New element(pt)
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0013]}],    -- *new ordinal(pt)
+                                                    [{1}, {[at0014]}],    -- *new ordinal(pt)
+                                                    [{2}, {[at0015]}]    -- *new ordinal(pt)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- *New element(pt)
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- *new ordinal(pt)
+                                                    [{1}, {[at0018]}],    -- *new ordinal(pt)
+                                                    [{2}, {[at0019]}]    -- *new ordinal(pt)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- *New element(pt)
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0021]}],    -- *new ordinal(pt)
+                                                    [{1}, {[at0022]}],    -- *new ordinal(pt)
+                                                    [{2}, {[at0023]}]    -- *new ordinal(pt)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- *New element(pt)
+                                        value matches {
+                                            DV_COUNT[at9010] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0025] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- *New element(pt)
+                        value matches {
+                            DV_TEXT[at9011]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt"] = <
+            ["at0000"] = <
+                text = <"Malinas score">
+                description = <"unknown">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0005"] = <
+                text = <"*new ordinal(pt)">
+                description = <"**(pt)">
+            >
+            ["at0006"] = <
+                text = <"*new ordinal(pt)">
+                description = <"**(pt)">
+            >
+            ["at0007"] = <
+                text = <"*new ordinal(pt)">
+                description = <"**(pt)">
+            >
+            ["at0008"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0009"] = <
+                text = <"*new ordinal(pt)">
+                description = <"**(pt)">
+            >
+            ["at0010"] = <
+                text = <"*new ordinal(pt)">
+                description = <"**(pt)">
+            >
+            ["at0011"] = <
+                text = <"*new ordinal(pt)">
+                description = <"**(pt)">
+            >
+            ["at0012"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0013"] = <
+                text = <"*new ordinal(pt)">
+                description = <"**(pt)">
+            >
+            ["at0014"] = <
+                text = <"*new ordinal(pt)">
+                description = <"**(pt)">
+            >
+            ["at0015"] = <
+                text = <"*new ordinal(pt)">
+                description = <"**(pt)">
+            >
+            ["at0016"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0017"] = <
+                text = <"*new ordinal(pt)">
+                description = <"**(pt)">
+            >
+            ["at0018"] = <
+                text = <"*new ordinal(pt)">
+                description = <"**(pt)">
+            >
+            ["at0019"] = <
+                text = <"*new ordinal(pt)">
+                description = <"**(pt)">
+            >
+            ["at0020"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0021"] = <
+                text = <"*new ordinal(pt)">
+                description = <"**(pt)">
+            >
+            ["at0022"] = <
+                text = <"*new ordinal(pt)">
+                description = <"**(pt)">
+            >
+            ["at0023"] = <
+                text = <"*new ordinal(pt)">
+                description = <"**(pt)">
+            >
+            ["at0026"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0028"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["ac9011"] = <
+                text = <"*New element(pt) (synthesised)">
+                description = <"**(pt) (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"*New element(pt) (synthesised)">
+                description = <"**(pt) (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"*New element(pt) (synthesised)">
+                description = <"**(pt) (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"*New element(pt) (synthesised)">
+                description = <"**(pt) (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"*New element(pt) (synthesised)">
+                description = <"**(pt) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Malinas score">
+                description = <"The Malinas score is an evaluation that allows to determine whether a pregnant woman is about to give birth.">
+            >
+            ["at0002"] = <
+                text = <"Point in time">
+                description = <"Specified point in time which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Number of pregnancies to date">
+                description = <"Number of times a woman has been pregnant, including the current pregnancy, if appropriate.">
+            >
+            ["at0005"] = <
+                text = <"One">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"Two">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Three or more">
+                description = <"*">
+            >
+            ["at0008"] = <
+                text = <"Duration of labour">
+                description = <"Recording the duration of the labour so far.">
+            >
+            ["at0009"] = <
+                text = <"< 3 hours">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Between 3 and 5 hours">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"> 6 hours">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Duration of contractions">
+                description = <"Observation of the duration of each contraction.">
+            >
+            ["at0013"] = <
+                text = <"< 1 minute">
+                description = <"*">
+            >
+            ["at0014"] = <
+                text = <"1 minute">
+                description = <"*">
+            >
+            ["at0015"] = <
+                text = <"> 1 minute">
+                description = <"*">
+            >
+            ["at0016"] = <
+                text = <"Interval between two contractions">
+                description = <"Observation of the interval between two contractions">
+            >
+            ["at0017"] = <
+                text = <"> 5 minutes">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"Between 3 and 5 minutes">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"< 3 minutes (at least 2 in 5 minutes)">
+                description = <"*">
+            >
+            ["at0020"] = <
+                text = <"Breaking of waters">
+                description = <"Observation of whether or not her waters have broken.">
+            >
+            ["at0021"] = <
+                text = <"No">
+                description = <"*">
+            >
+            ["at0022"] = <
+                text = <"Recently (< 1 hour)">
+                description = <"*">
+            >
+            ["at0023"] = <
+                text = <"> 1 hour">
+                description = <"*">
+            >
+            ["at0026"] = <
+                text = <"Notes on measurement">
+                description = <"Notes on measurement of the Malinas score.">
+            >
+            ["at0028"] = <
+                text = <"Total score">
+                description = <"The sum of the 5 ordinal scores for each component parameter.">
+            >
+            ["ac9011"] = <
+                text = <"Number of pregnancies to date (synthesised)">
+                description = <"Number of times a woman has been pregnant, including the current pregnancy, if appropriate. (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Duration of labour (synthesised)">
+                description = <"Recording the duration of the labour so far. (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Duration of contractions (synthesised)">
+                description = <"Observation of the duration of each contraction. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Interval between two contractions (synthesised)">
+                description = <"Observation of the interval between two contractions (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Breaking of waters (synthesised)">
+                description = <"Observation of whether or not her waters have broken. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0013", "at0014", "at0015">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0009", "at0010", "at0011">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0005", "at0006", "at0007">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0021", "at0022", "at0023">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0017", "at0018", "at0019">
+        >
+    >

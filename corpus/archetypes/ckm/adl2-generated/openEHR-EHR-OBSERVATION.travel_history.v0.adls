@@ -1,0 +1,1449 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c8cdb7a6-0870-4f74-b1f0-6624003c4c2a; build_uid=9802c3a9-0ff7-4717-8743-fc5d21873b4b)
+    openEHR-EHR-OBSERVATION.travel_history.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Bjørn Næss">
+                ["organisation"] = <"DIPS AS">
+                ["email"] = <"bna@dips.no">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            author = <
+                ["name"] = <"Paolo Anedda">
+                ["organisation"] = <"Inpeco">
+                ["email"] = <"paolo.anedda@inpeco.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"ian@freshehr.com">
+        ["date"] = <"2020-02-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Bjørn Næss <bna@dips.no>", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Fairley J. General Approach to the Returned Traveler - Chapter 11 - 2020 Yellow Book | Travelers’ Health | CDC. wwwnc.cdc.gov. https://wwwnc.cdc.gov/travel/yellowbook/2020/posttravel-evaluation/general-approach-to-the-returned-traveler. Published 2020. Accessed March 7, 2020.">
+        ["2"] = <"‌">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"2BB7702421CDEDD85484551CA8AB2127">
+    >
+    details = <
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"*To record details of a travel trip with respect to exposure to potential risk.(en)">
+            keywords = <"*travel, trip, tropical(en)", ...>
+            use = <"*To record details of a travel trip with respect to exposure to potential risk.(en)">
+            misuse = <"">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"Benyttes for å kartlegge reiseaktivitet i forbindelse med risiko for smitte og sykdom. ">
+            keywords = <"Reise, smitte", ...>
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details of a travel trip with respect to exposure to potential risk.">
+            keywords = <"travel, trip, tropical", ...>
+            use = <"To record details of a travel trip with respect to exposure to potential risk.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"Registrare i dettagli di un viaggio in relazione all'esposizione a potenziali rischi.">
+            keywords = <"viaggio, trasferta, tropicale", ...>
+            use = <"Registrare i dettagli di un viaggio in relazione all'esposizione a potenziali rischi.">
+            misuse = <"">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Travel trip history
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0111] occurrences matches {0..1} matches {    -- Recent travel
+                                        value matches {
+                                            DV_CODED_TEXT[at9025] matches {
+                                                defining_code matches {[ac9022]}    -- Recent travel (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0115] occurrences matches {0..1} matches {    -- Incubation period
+                                        value matches {
+                                            DV_DURATION[at9026]
+                                        }
+                                    }
+                                    ELEMENT[at0059] matches {    -- Reason for travel
+                                        value matches {
+                                            DV_CODED_TEXT[at9005] matches {
+                                                defining_code matches {[ac9000]}    -- Reason for travel (synthesised)
+                                            }
+                                            DV_TEXT[at9006]
+                                        }
+                                    }
+                                    ELEMENT[at0070] occurrences matches {0..1} matches {    -- Duration of travel
+                                        value matches {
+                                            DV_DURATION[at9007]
+                                        }
+                                    }
+                                    ELEMENT[at0071] occurrences matches {0..1} matches {    -- Date of return
+                                        value matches {
+                                            DV_DATE_TIME[at9008]
+                                        }
+                                    }
+                                    CLUSTER[at0120] occurrences matches {0..1} matches {    -- Known contacts
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0121] occurrences matches {0..1} matches {    -- Confirmed contact
+                                                value matches {
+                                                    DV_CODED_TEXT[at9027] matches {
+                                                        defining_code matches {[ac9023]}    -- Confirmed contact (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0131] occurrences matches {0..1} matches {    -- Contact setting
+                                                value matches {
+                                                    DV_TEXT[at9028]
+                                                }
+                                            }
+                                            CLUSTER[at0125] matches {    -- Contact details
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0126] occurrences matches {0..1} matches {    -- Case identifier
+                                                        value matches {
+                                                            DV_TEXT[at9029]
+                                                            DV_IDENTIFIER[at9030]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0129] occurrences matches {0..1} matches {    -- Date of first exposure
+                                                        value matches {
+                                                            DV_DATE_TIME[at9031]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0130] occurrences matches {0..1} matches {    -- Date of last exposure
+                                                        value matches {
+                                                            DV_DATE_TIME[at9032]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0134] occurrences matches {0..1} matches {    -- Location history
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0132] matches {    -- Likely location for exposure
+                                                value matches {
+                                                    DV_TEXT[at9033]
+                                                }
+                                            }
+                                            allow_archetype CLUSTER[at0135] matches {    -- Location visited
+                                                include
+                                                    archetype_id/value matches {/.*/}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0072] occurrences matches {0..1} matches {    -- Type of accommodations and sleeping arrangements
+                                        value matches {
+                                            DV_CODED_TEXT[at9014]
+                                        }
+                                    }
+                                    ELEMENT[at0116] occurrences matches {0..1} matches {    -- Visited healthcare facilities
+                                        value matches {
+                                            DV_CODED_TEXT[at9034] matches {
+                                                defining_code matches {[ac9024]}    -- Visited healthcare facilities (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0049] matches {    -- Recreational activities
+                                        value matches {
+                                            DV_CODED_TEXT[at9015] matches {
+                                                defining_code matches {[ac9001]}    -- Recreational activities (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0102] occurrences matches {0..1} matches {    -- Common exposures
+                                        value matches {
+                                            DV_TEXT[at9016]
+                                        }
+                                    }
+                                    ELEMENT[at0103] occurrences matches {0..1} matches {    -- Insect bites
+                                        value matches {
+                                            DV_TEXT[at9017]
+                                        }
+                                    }
+                                    ELEMENT[at0085] matches {    -- Foods eaten
+                                        value matches {
+                                            DV_CODED_TEXT[at9018] matches {
+                                                defining_code matches {[ac9002]}    -- Foods eaten (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0104] occurrences matches {0..1} matches {    -- Source of drinking water
+                                        value matches {
+                                            DV_TEXT[at9019]
+                                        }
+                                    }
+                                    ELEMENT[at0091] matches {    -- Other exposures
+                                        value matches {
+                                            DV_CODED_TEXT[at9020] matches {
+                                                defining_code matches {[ac9003]}    -- Other exposures (synthesised)
+                                            }
+                                            DV_TEXT[at9021]
+                                        }
+                                    }
+                                    ELEMENT[at0096] matches {    -- Use of travel precautions
+                                        value matches {
+                                            DV_CODED_TEXT[at9022] matches {
+                                                defining_code matches {[ac9004]}    -- Use of travel precautions (synthesised)
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0109] matches {    -- Exposure details
+                                        include
+                                            archetype_id/value matches {/.*/}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0100] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0101] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"Matkustushistoria">
+                description = <"Matkustustiedot, jolloin on voinut altistua tartunnalle tai on ollut riski altistumiselle.">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"*">
+            >
+            ["at0049"] = <
+                text = <"Aktiviteetit">
+                description = <"*">
+            >
+            ["at0050"] = <
+                text = <"Safari">
+                description = <"*">
+            >
+            ["at0051"] = <
+                text = <"Vaellus">
+                description = <"*">
+            >
+            ["at0052"] = <
+                text = <"Uinti">
+                description = <"*">
+            >
+            ["at0053"] = <
+                text = <"Aktiviteetit merellä">
+                description = <"*">
+            >
+            ["at0054"] = <
+                text = <"Aktiviteetit sisävesillä">
+                description = <"*">
+            >
+            ["at0055"] = <
+                text = <"Uima-allas / poreamme">
+                description = <"*">
+            >
+            ["at0056"] = <
+                text = <"Koskenlasku / veneily">
+                description = <"*">
+            >
+            ["at0057"] = <
+                text = <"Kiertoajelu">
+                description = <"*">
+            >
+            ["at0058"] = <
+                text = <"Muu aktiviteetti">
+                description = <"*">
+            >
+            ["at0059"] = <
+                text = <"Matkustuksen syy">
+                description = <"*">
+            >
+            ["at0060"] = <
+                text = <"Vapaa-ajan matkustus">
+                description = <"*">
+            >
+            ["at0061"] = <
+                text = <"Sukulaisten tai ystävien luona vierailu">
+                description = <"*">
+            >
+            ["at0062"] = <
+                text = <"Liikematka">
+                description = <"*">
+            >
+            ["at0063"] = <
+                text = <"Tutkimus/opetusmatka">
+                description = <"*">
+            >
+            ["at0064"] = <
+                text = <"Vapaaehtoistyö / Lähetystyö">
+                description = <"*">
+            >
+            ["at0065"] = <
+                text = <"Sairaanhoidon tarjoaminen">
+                description = <"*">
+            >
+            ["at0066"] = <
+                text = <"Sairaanhoidon saaminen">
+                description = <"*">
+            >
+            ["at0070"] = <
+                text = <"Matkan kesto">
+                description = <"*">
+            >
+            ["at0071"] = <
+                text = <"Paluu pvm">
+                description = <"*">
+            >
+            ["at0072"] = <
+                text = <"Majoitusjärjestelty">
+                description = <"*">
+            >
+            ["at0085"] = <
+                text = <"Syöty ruoka">
+                description = <"*">
+            >
+            ["at0086"] = <
+                text = <"Raat tuotteet">
+                description = <"*">
+            >
+            ["at0087"] = <
+                text = <"Alikypsennetty liha">
+                description = <"*">
+            >
+            ["at0088"] = <
+                text = <"Pastöroimattomat maitotuotteet">
+                description = <"*">
+            >
+            ["at0089"] = <
+                text = <"Merenelävät">
+                description = <"*">
+            >
+            ["at0091"] = <
+                text = <"Muut altistumiset">
+                description = <"*">
+            >
+            ["at0092"] = <
+                text = <"Seksuaalinen aktiivisuus matkan aikana ( uusi kumppani, kondomin käyttö )">
+                description = <"*">
+            >
+            ["at0093"] = <
+                text = <"Hankitut tatuoinnit / lävistykset matkan aikana">
+                description = <"*">
+            >
+            ["at0094"] = <
+                text = <"Hyönteisten/eläinten puremat, pistot tai raapaisut">
+                description = <"*">
+            >
+            ["at0095"] = <
+                text = <"Tiedetyt puhkeamiset vierailuilla alueilla">
+                description = <"*">
+            >
+            ["at0096"] = <
+                text = <"Matkustus rokotukset">
+                description = <"*">
+            >
+            ["at0097"] = <
+                text = <"Karkotteiden käyttö">
+                description = <"*">
+            >
+            ["at0098"] = <
+                text = <"Harsotettu sänky">
+                description = <"*">
+            >
+            ["at0099"] = <
+                text = <"Malarian ehkäisy">
+                description = <"*">
+            >
+            ["at0101"] = <
+                text = <"Laajennus">
+                description = <"*">
+            >
+            ["at0102"] = <
+                text = <"Yleinen altistuminen">
+                description = <"*">
+            >
+            ["at0103"] = <
+                text = <"Hyönteisen purema / pistos">
+                description = <"*">
+                comment = <"* (for example, mosquito, tick, sand fly, tsetse fly)(en)">
+            >
+            ["at0104"] = <
+                text = <"Juomaveden alkuperä">
+                description = <"*">
+            >
+            ["at0109"] = <
+                text = <"Tietoa altistumisesta">
+                description = <"*">
+            >
+            ["at0111"] = <
+                text = <"Viimeaikainen matkustaminen">
+                description = <"*Has the patient travelled recently? The definition of 'recently' may vary depending on circumstances of the wider patient story and known currnet infection risk.(en)">
+            >
+            ["at0112"] = <
+                text = <"Kyllä">
+                description = <"*The patient has recently traveled.(en)">
+            >
+            ["at0113"] = <
+                text = <"Ei">
+                description = <"*The patient has not recently traveled.(en)">
+            >
+            ["at0114"] = <
+                text = <"Ei tietoa">
+                description = <"*Unknown.(en)">
+            >
+            ["at0115"] = <
+                text = <"itämisaikai">
+                description = <"*">
+            >
+            ["at0116"] = <
+                text = <"Vieraulut terveydenhuollon tiloissa">
+                description = <"*">
+            >
+            ["at0117"] = <
+                text = <"Kyllä">
+                description = <"*The patient has visited a healthcare facility.(en)">
+            >
+            ["at0118"] = <
+                text = <"Ei">
+                description = <"*The patient has not visited a healthcare facility.(en)">
+            >
+            ["at0119"] = <
+                text = <"Ei tietoa">
+                description = <"*It is not known if the patient has visited a healthcare facility.(en)">
+            >
+            ["at0120"] = <
+                text = <"Tiedetyt kontaktit">
+                description = <"*">
+            >
+            ["at0121"] = <
+                text = <"Varmistetut kontaktit">
+                description = <"*">
+            >
+            ["at0122"] = <
+                text = <"Kyllä">
+                description = <"*The patient has had contact with a confirmed case within the known incubation period.(en)">
+            >
+            ["at0123"] = <
+                text = <"Ei">
+                description = <"*The patient has had not contact with a confirmed case within the known incubation period.(en)">
+            >
+            ["at0124"] = <
+                text = <"Ei tietoa">
+                description = <"*It is unknown if the patient has had contact with a confirmed case within the known incubation period.(en)">
+            >
+            ["at0125"] = <
+                text = <"Kontaktin yhteystiedot">
+                description = <"*">
+            >
+            ["at0126"] = <
+                text = <"Tapaustunniste">
+                description = <"*">
+            >
+            ["at0129"] = <
+                text = <"Ensimmäisen altistumisen pvm">
+                description = <"*">
+            >
+            ["at0130"] = <
+                text = <"Viimeinen altistumisen pvm">
+                description = <"*">
+            >
+            ["at0131"] = <
+                text = <"Yhteystiedot">
+                description = <"*">
+            >
+            ["at0132"] = <
+                text = <"Oletettu sijainti altistumiselle">
+                description = <"*">
+            >
+            ["at0134"] = <
+                text = <"Sijainnin historia">
+                description = <"*">
+            >
+            ["at0135"] = <
+                text = <"Vierailu sijainnissa">
+                description = <"*">
+            >
+            ["ac9022"] = <
+                text = <"Viimeaikainen matkustaminen (synthesised)">
+                description = <"*Has the patient travelled recently? The definition of 'recently' may vary depending on circumstances of the wider patient story and known currnet infection risk.(en) (synthesised)">
+            >
+            ["ac9000"] = <
+                text = <"Matkustuksen syy (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Varmistetut kontaktit (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"Vieraulut terveydenhuollon tiloissa (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Aktiviteetit (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Syöty ruoka (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Muut altistumiset (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Matkustus rokotukset (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Reisehistorie">
+                description = <"Detaljer om en reise med hensyn til eksponering for potensiell risiko.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"*">
+            >
+            ["at0049"] = <
+                text = <"Fritidsaktivitet">
+                description = <"*">
+            >
+            ["at0050"] = <
+                text = <"Safari">
+                description = <"*">
+            >
+            ["at0051"] = <
+                text = <"Fottur">
+                description = <"*">
+            >
+            ["at0052"] = <
+                text = <"Svømming">
+                description = <"*">
+            >
+            ["at0053"] = <
+                text = <"Hav (dykking, eksponering for marint liv)">
+                description = <"*">
+            >
+            ["at0054"] = <
+                text = <"Ferskvannseksponering (innsjø, elv, bekk)">
+                description = <"*">
+            >
+            ["at0055"] = <
+                text = <"Svømmebassenger og boblebad">
+                description = <"*">
+            >
+            ["at0056"] = <
+                text = <"Rafting / båt">
+                description = <"*">
+            >
+            ["at0057"] = <
+                text = <"Sightseeing">
+                description = <"*">
+            >
+            ["at0058"] = <
+                text = <"Andre spennende aktiviteter">
+                description = <"*">
+            >
+            ["at0059"] = <
+                text = <"Årsak til reise">
+                description = <"*">
+            >
+            ["at0060"] = <
+                text = <"Fritid">
+                description = <"*">
+            >
+            ["at0061"] = <
+                text = <"Besøke venner og slektninger">
+                description = <"*">
+            >
+            ["at0062"] = <
+                text = <"Forretning">
+                description = <"*">
+            >
+            ["at0063"] = <
+                text = <"Forskning/utdanning">
+                description = <"*">
+            >
+            ["at0064"] = <
+                text = <"Misjons-/frivillig arbeid">
+                description = <"*">
+            >
+            ["at0065"] = <
+                text = <"Gi medisinsk behandling">
+                description = <"*">
+            >
+            ["at0066"] = <
+                text = <"Motta medisinsk behandling">
+                description = <"*">
+            >
+            ["at0070"] = <
+                text = <"Lengden på reisen">
+                description = <"*">
+            >
+            ["at0071"] = <
+                text = <"Dato for hjemkomst">
+                description = <"*">
+            >
+            ["at0072"] = <
+                text = <"Type innkvartering og overnatting">
+                description = <"*">
+            >
+            ["at0085"] = <
+                text = <"Mat spist">
+                description = <"*">
+            >
+            ["at0086"] = <
+                text = <"Råvarer">
+                description = <"*">
+            >
+            ["at0087"] = <
+                text = <"Underkokt kjøtt">
+                description = <"*">
+            >
+            ["at0088"] = <
+                text = <"Upasteuriserte meieriprodukter">
+                description = <"*">
+            >
+            ["at0089"] = <
+                text = <"Sjømat">
+                description = <"*">
+            >
+            ["at0091"] = <
+                text = <"Andre eksponeringer">
+                description = <"*">
+            >
+            ["at0092"] = <
+                text = <"Seksuell aktivitet under reise (bruk av kondom, ny partner)">
+                description = <"*">
+            >
+            ["at0093"] = <
+                text = <"Tatoveringer eller piercinger tatt under reise">
+                description = <"*">
+            >
+            ["at0094"] = <
+                text = <"Bitt, stikk eller ripe fra dyr eller leddyr">
+                description = <"*">
+            >
+            ["at0095"] = <
+                text = <"Kjente utbrudd i besøkte land">
+                description = <"*">
+            >
+            ["at0096"] = <
+                text = <"Bruk av reiseforholdsregler">
+                description = <"*">
+            >
+            ["at0097"] = <
+                text = <"Effektiv insektavvisende middel (DEET 25% –40% eller annet EPA-registrert produkt)">
+                description = <"*">
+            >
+            ["at0098"] = <
+                text = <"Sengegarn/-nett">
+                description = <"*">
+            >
+            ["at0099"] = <
+                text = <"Overholdelse av malaria profylakse">
+                description = <"*">
+            >
+            ["at0101"] = <
+                text = <"Utvidelse">
+                description = <"*">
+            >
+            ["at0102"] = <
+                text = <"Vanlige eksponeringer">
+                description = <"*">
+            >
+            ["at0103"] = <
+                text = <"Insektbutt">
+                description = <"*">
+                comment = <"* (for example, mosquito, tick, sand fly, tsetse fly) (en)">
+            >
+            ["at0104"] = <
+                text = <"Kilde for drikkevann">
+                description = <"*">
+            >
+            ["at0109"] = <
+                text = <"Eksponeringsdetaljer">
+                description = <"*">
+            >
+            ["at0111"] = <
+                text = <"*DV_BOOLEAN (en)">
+                description = <"*">
+            >
+            ["at0112"] = <
+                text = <"*Yes (en)">
+                description = <"*The patient has recently traveled. (en)">
+            >
+            ["at0113"] = <
+                text = <"*No (en)">
+                description = <"*The patient has not recently traveled. (en)">
+            >
+            ["at0114"] = <
+                text = <"*Unknown (en)">
+                description = <"*Unknown. (en)">
+            >
+            ["at0115"] = <
+                text = <"*DV_DURATION (en)">
+                description = <"*">
+            >
+            ["at0116"] = <
+                text = <"*DV_CODED_TEXT (en)">
+                description = <"*">
+            >
+            ["at0117"] = <
+                text = <"*Yes (en)">
+                description = <"*The patient has visited a healthcare facility. (en)">
+            >
+            ["at0118"] = <
+                text = <"*No (en)">
+                description = <"*The patient has not visited a healthcare facility. (en)">
+            >
+            ["at0119"] = <
+                text = <"*Unknown (en)">
+                description = <"*It is not known if the patient has visited a healthcare facility. (en)">
+            >
+            ["at0120"] = <
+                text = <"*CLUSTER (en)">
+                description = <"*">
+            >
+            ["at0121"] = <
+                text = <"*DV_CODED_TEXT (en)">
+                description = <"*">
+            >
+            ["at0122"] = <
+                text = <"*Yes (en)">
+                description = <"*The patient has had contact with a confirmed case within the known incubation period. (en)">
+            >
+            ["at0123"] = <
+                text = <"*No (en)">
+                description = <"*The patient has had not contact with a confirmed case within the known incubation period. (en)">
+            >
+            ["at0124"] = <
+                text = <"*Unknown (en)">
+                description = <"*It is unknown if the patient has had contact with a confirmed case within the known incubation period. (en)">
+            >
+            ["at0125"] = <
+                text = <"*CLUSTER (en)">
+                description = <"*">
+            >
+            ["at0126"] = <
+                text = <"*DV_TEXT (en)">
+                description = <"*">
+            >
+            ["at0129"] = <
+                text = <"*DV_DATE_TIME (en)">
+                description = <"*">
+            >
+            ["at0130"] = <
+                text = <"*DV_DATE_TIME (en)">
+                description = <"*">
+            >
+            ["at0131"] = <
+                text = <"*DV_TEXT (en)">
+                description = <"*">
+            >
+            ["at0132"] = <
+                text = <"*DV_TEXT (en)">
+                description = <"*">
+            >
+            ["at0134"] = <
+                text = <"*CLUSTER (en)">
+                description = <"*">
+            >
+            ["at0135"] = <
+                text = <"*CLUSTER_SLOT (en)">
+                description = <"*">
+            >
+            ["ac9022"] = <
+                text = <"*DV_BOOLEAN (en) (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9000"] = <
+                text = <"Årsak til reise (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"*DV_CODED_TEXT (en) (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"*DV_CODED_TEXT (en) (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Fritidsaktivitet (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Mat spist (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Andre eksponeringer (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Bruk av reiseforholdsregler (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Travel trip history">
+                description = <"Details of a travel trip with respect to exposure to potential risk.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"*">
+            >
+            ["at0049"] = <
+                text = <"Recreational activities">
+                description = <"*">
+            >
+            ["at0050"] = <
+                text = <"Safari">
+                description = <"*">
+            >
+            ["at0051"] = <
+                text = <"Hiking">
+                description = <"*">
+            >
+            ["at0052"] = <
+                text = <"Swimming">
+                description = <"*">
+            >
+            ["at0053"] = <
+                text = <"Ocean (scuba diving, marine life exposure)">
+                description = <"*">
+            >
+            ["at0054"] = <
+                text = <"Freshwater exposure (lake, river, stream)">
+                description = <"*">
+            >
+            ["at0055"] = <
+                text = <"Swimming pools and hot tubs">
+                description = <"*">
+            >
+            ["at0056"] = <
+                text = <"Rafting/boating">
+                description = <"*">
+            >
+            ["at0057"] = <
+                text = <"Sightseeing">
+                description = <"*">
+            >
+            ["at0058"] = <
+                text = <"Other adventuresome activities">
+                description = <"*">
+            >
+            ["at0059"] = <
+                text = <"Reason for travel">
+                description = <"*">
+            >
+            ["at0060"] = <
+                text = <"Leisure">
+                description = <"*">
+            >
+            ["at0061"] = <
+                text = <"Visiting friends and relatives">
+                description = <"*">
+            >
+            ["at0062"] = <
+                text = <"Business">
+                description = <"*">
+            >
+            ["at0063"] = <
+                text = <"Research/education">
+                description = <"*">
+            >
+            ["at0064"] = <
+                text = <"Missionary/volunteer work">
+                description = <"*">
+            >
+            ["at0065"] = <
+                text = <"Providing medical care">
+                description = <"*">
+            >
+            ["at0066"] = <
+                text = <"Receiving medical care">
+                description = <"*">
+            >
+            ["at0070"] = <
+                text = <"Duration of travel">
+                description = <"*">
+            >
+            ["at0071"] = <
+                text = <"Date of return">
+                description = <"*">
+            >
+            ["at0072"] = <
+                text = <"Type of accommodations and sleeping arrangements">
+                description = <"*">
+            >
+            ["at0085"] = <
+                text = <"Foods eaten">
+                description = <"*">
+            >
+            ["at0086"] = <
+                text = <"Raw produce">
+                description = <"*">
+            >
+            ["at0087"] = <
+                text = <"Undercooked meat">
+                description = <"*">
+            >
+            ["at0088"] = <
+                text = <"Unpasteurized dairy products">
+                description = <"*">
+            >
+            ["at0089"] = <
+                text = <"Seafood">
+                description = <"*">
+            >
+            ["at0091"] = <
+                text = <"Other exposures">
+                description = <"*">
+            >
+            ["at0092"] = <
+                text = <"Sexual activity during travel (use of condoms, new partner)">
+                description = <"*">
+            >
+            ["at0093"] = <
+                text = <"Tattoos or piercings received while traveling">
+                description = <"*">
+            >
+            ["at0094"] = <
+                text = <"Animal or arthropod bites, stings, or scratches">
+                description = <"*">
+            >
+            ["at0095"] = <
+                text = <"Known outbreaks in the countries visited">
+                description = <"*">
+            >
+            ["at0096"] = <
+                text = <"Use of travel precautions">
+                description = <"*">
+            >
+            ["at0097"] = <
+                text = <"Effective insect repellent (DEET 25%–40% or other EPA-registered product)">
+                description = <"*">
+            >
+            ["at0098"] = <
+                text = <"Bed nets">
+                description = <"*">
+            >
+            ["at0099"] = <
+                text = <"Adherence to malaria prophylaxis">
+                description = <"*">
+            >
+            ["at0101"] = <
+                text = <"Extension">
+                description = <"*">
+            >
+            ["at0102"] = <
+                text = <"Common exposures">
+                description = <"*">
+            >
+            ["at0103"] = <
+                text = <"Insect bites">
+                description = <"*">
+                comment = <" (for example, mosquito, tick, sand fly, tsetse fly)">
+            >
+            ["at0104"] = <
+                text = <"Source of drinking water">
+                description = <"*">
+            >
+            ["at0109"] = <
+                text = <"Exposure details">
+                description = <"*">
+            >
+            ["at0111"] = <
+                text = <"Recent travel">
+                description = <"Has the patient travelled recently? The definition of 'recently' may vary depending on circumstances of the wider patient story and known currnet infection risk.">
+            >
+            ["at0112"] = <
+                text = <"Yes">
+                description = <"The patient has recently traveled.">
+            >
+            ["at0113"] = <
+                text = <"No">
+                description = <"The patient has not recently traveled.">
+            >
+            ["at0114"] = <
+                text = <"Unknown">
+                description = <"Unknown.">
+            >
+            ["at0115"] = <
+                text = <"Incubation period">
+                description = <"*">
+            >
+            ["at0116"] = <
+                text = <"Visited healthcare facilities">
+                description = <"*">
+            >
+            ["at0117"] = <
+                text = <"Yes">
+                description = <"The patient has visited a healthcare facility.">
+            >
+            ["at0118"] = <
+                text = <"No">
+                description = <"The patient has not visited a healthcare facility.">
+            >
+            ["at0119"] = <
+                text = <"Unknown">
+                description = <"It is not known if the patient has visited a healthcare facility.">
+            >
+            ["at0120"] = <
+                text = <"Known contacts">
+                description = <"*">
+            >
+            ["at0121"] = <
+                text = <"Confirmed contact">
+                description = <"*">
+            >
+            ["at0122"] = <
+                text = <"Yes">
+                description = <"The patient has had contact with a confirmed case within the known incubation period.">
+            >
+            ["at0123"] = <
+                text = <"No">
+                description = <"The patient has had not contact with a confirmed case within the known incubation period.">
+            >
+            ["at0124"] = <
+                text = <"Unknown">
+                description = <"It is unknown if the patient has had contact with a confirmed case within the known incubation period.">
+            >
+            ["at0125"] = <
+                text = <"Contact details">
+                description = <"*">
+            >
+            ["at0126"] = <
+                text = <"Case identifier">
+                description = <"*">
+            >
+            ["at0129"] = <
+                text = <"Date of first exposure">
+                description = <"*">
+            >
+            ["at0130"] = <
+                text = <"Date of last exposure">
+                description = <"*">
+            >
+            ["at0131"] = <
+                text = <"Contact setting">
+                description = <"*">
+            >
+            ["at0132"] = <
+                text = <"Likely location for exposure">
+                description = <"*">
+            >
+            ["at0134"] = <
+                text = <"Location history">
+                description = <"*">
+            >
+            ["at0135"] = <
+                text = <"Location visited">
+                description = <"*">
+            >
+            ["ac9022"] = <
+                text = <"Recent travel (synthesised)">
+                description = <"Has the patient travelled recently? The definition of 'recently' may vary depending on circumstances of the wider patient story and known currnet infection risk. (synthesised)">
+            >
+            ["ac9000"] = <
+                text = <"Reason for travel (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Confirmed contact (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"Visited healthcare facilities (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Recreational activities (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Foods eaten (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Other exposures (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Use of travel precautions (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+        ["it"] = <
+            ["at0000"] = <
+                text = <"Cronologia del viaggio">
+                description = <"Dettagli del viaggio rispetto all'esposizione al rischio potenziale.">
+            >
+            ["at0002"] = <
+                text = <"Qualsiasi evento">
+                description = <"*">
+            >
+            ["at0049"] = <
+                text = <"Attività ricreative">
+                description = <"*">
+            >
+            ["at0050"] = <
+                text = <"Safari">
+                description = <"*">
+            >
+            ["at0051"] = <
+                text = <"Escursioni">
+                description = <"*">
+            >
+            ["at0052"] = <
+                text = <"Nuoto">
+                description = <"*">
+            >
+            ["at0053"] = <
+                text = <"Mare (immersione, esposizione alla vita marina)">
+                description = <"*">
+            >
+            ["at0054"] = <
+                text = <"Bagni in acqua dolce (lago, fiume, torrente)">
+                description = <"*">
+            >
+            ["at0055"] = <
+                text = <"Piscine e vasche idromassaggio">
+                description = <"*">
+            >
+            ["at0056"] = <
+                text = <"Rafting/boating">
+                description = <"*">
+            >
+            ["at0057"] = <
+                text = <"Visite turistiche">
+                description = <"*">
+            >
+            ["at0058"] = <
+                text = <"Altre attività avventurose">
+                description = <"*">
+            >
+            ["at0059"] = <
+                text = <"Scopo del viaggio">
+                description = <"*">
+            >
+            ["at0060"] = <
+                text = <"Piacere">
+                description = <"*">
+            >
+            ["at0061"] = <
+                text = <"Visita di amici e parenti">
+                description = <"*">
+            >
+            ["at0062"] = <
+                text = <"Lavoro">
+                description = <"*">
+            >
+            ["at0063"] = <
+                text = <"Ricerca/Studio">
+                description = <"*">
+            >
+            ["at0064"] = <
+                text = <"Lavoro missionario/volontario">
+                description = <"*">
+            >
+            ["at0065"] = <
+                text = <"Fornire assistenza medica">
+                description = <"*">
+            >
+            ["at0066"] = <
+                text = <"Ricevere assistenza medica">
+                description = <"*">
+            >
+            ["at0070"] = <
+                text = <"Durata del viaggio">
+                description = <"*">
+            >
+            ["at0071"] = <
+                text = <"Data di ritorno">
+                description = <"*">
+            >
+            ["at0072"] = <
+                text = <"Tipo di alloggio e sistemazione dei posti letto">
+                description = <"*">
+            >
+            ["at0085"] = <
+                text = <"Cibi mangiati">
+                description = <"*">
+            >
+            ["at0086"] = <
+                text = <"Prodotti grezzi">
+                description = <"*">
+            >
+            ["at0087"] = <
+                text = <"Carne cotta">
+                description = <"*">
+            >
+            ["at0088"] = <
+                text = <"Prodotti lattiero-caseari non pastorizzati">
+                description = <"*">
+            >
+            ["at0089"] = <
+                text = <"Cibo di mare">
+                description = <"*">
+            >
+            ["at0091"] = <
+                text = <"Altre esposizioni">
+                description = <"*">
+            >
+            ["at0092"] = <
+                text = <"Attività sessuale durante il viaggio (uso del preservativo, nuovo partner)">
+                description = <"*">
+            >
+            ["at0093"] = <
+                text = <"Tatuaggi o piercing ricevuti durante il viaggio">
+                description = <"*">
+            >
+            ["at0094"] = <
+                text = <"Morsi, punture o graffi di animali o artropodi (it)">
+                description = <"*">
+            >
+            ["at0095"] = <
+                text = <"Focolai noti nei paesi visitati">
+                description = <"*">
+            >
+            ["at0096"] = <
+                text = <"Uso delle precauzioni di viaggio">
+                description = <"*">
+            >
+            ["at0097"] = <
+                text = <"Repellente efficace per insetti (DEET 25%-40% o altro prodotto registrato EPA)">
+                description = <"*">
+            >
+            ["at0098"] = <
+                text = <"Reti da letto">
+                description = <"*">
+            >
+            ["at0099"] = <
+                text = <"Aderenza alla profilassi della malaria">
+                description = <"*">
+            >
+            ["at0101"] = <
+                text = <"Estensione">
+                description = <"*">
+            >
+            ["at0102"] = <
+                text = <"Esposizioni comuni">
+                description = <"*">
+            >
+            ["at0103"] = <
+                text = <"Morsi di insetti">
+                description = <"*">
+                comment = <"* (for example, mosquito, tick, sand fly, tsetse fly)(en)">
+            >
+            ["at0104"] = <
+                text = <"Fonte di acqua potabile">
+                description = <"*">
+            >
+            ["at0109"] = <
+                text = <"Dettagli dell'esposizione">
+                description = <"*">
+            >
+            ["at0111"] = <
+                text = <"Viaggio recente">
+                description = <"Il paziente ha viaggiato di recente? La definizione di \"di recente\" può variare a seconda delle circostanze della storia più ampia del paziente e del rischio noto di infezione corrente.">
+            >
+            ["at0112"] = <
+                text = <"Si">
+                description = <"Il paziente ha viaggiato di recente. ">
+            >
+            ["at0113"] = <
+                text = <"No">
+                description = <"Il paziente non ha viaggiato di recente.">
+            >
+            ["at0114"] = <
+                text = <"Sconosciuto">
+                description = <"Sconosciuto">
+            >
+            ["at0115"] = <
+                text = <"Periodo di incubazione">
+                description = <"*">
+            >
+            ["at0116"] = <
+                text = <"Strutture sanitarie visitate">
+                description = <"*">
+            >
+            ["at0117"] = <
+                text = <"Si">
+                description = <"Il paziente ha visitato una struttura sanitaria.">
+            >
+            ["at0118"] = <
+                text = <"No">
+                description = <"Il paziente non ha visitato una struttura sanitaria.">
+            >
+            ["at0119"] = <
+                text = <"Sconosciuto">
+                description = <"Non si sa se il paziente ha visitato una struttura sanitaria. ">
+            >
+            ["at0120"] = <
+                text = <"Contatti noti">
+                description = <"*">
+            >
+            ["at0121"] = <
+                text = <"Contatto confermato">
+                description = <"*">
+            >
+            ["at0122"] = <
+                text = <"Si">
+                description = <"Il paziente ha avuto contatto con un caso confermato nel periodo di incubazione conosciuto.">
+            >
+            ["at0123"] = <
+                text = <"No">
+                description = <"Il paziente non ha avuto contatti con un caso confermato nel periodo di incubazione conosciuto. ">
+            >
+            ["at0124"] = <
+                text = <"Sconosciuto">
+                description = <"Non si sa se il paziente ha avuto contatti con un caso confermato entro il periodo di incubazione noto. ">
+            >
+            ["at0125"] = <
+                text = <"Dettagli del contatto">
+                description = <"*">
+            >
+            ["at0126"] = <
+                text = <"Identificatore del caso">
+                description = <"*">
+            >
+            ["at0129"] = <
+                text = <"Data della prima esposizione">
+                description = <"*">
+            >
+            ["at0130"] = <
+                text = <"Data dell'ultima esposizione">
+                description = <"*">
+            >
+            ["at0131"] = <
+                text = <"Impostazione del contatto">
+                description = <"*">
+            >
+            ["at0132"] = <
+                text = <"Posizione ideale per l'esposizione">
+                description = <"*">
+            >
+            ["at0134"] = <
+                text = <"Storia della posizione">
+                description = <"*">
+            >
+            ["at0135"] = <
+                text = <"Località visitata">
+                description = <"*">
+            >
+            ["ac9022"] = <
+                text = <"Viaggio recente (synthesised)">
+                description = <"Il paziente ha viaggiato di recente? La definizione di \"di recente\" può variare a seconda delle circostanze della storia più ampia del paziente e del rischio noto di infezione corrente. (synthesised)">
+            >
+            ["ac9000"] = <
+                text = <"Scopo del viaggio (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Contatto confermato (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"Strutture sanitarie visitate (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Attività ricreative (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Cibi mangiati (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Altre esposizioni (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Uso delle precauzioni di viaggio (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0086", "at0087", "at0088", "at0089">
+        >
+        ["ac9024"] = <
+            id = <"ac9024">
+            members = <"at0117", "at0118", "at0119">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0050", "at0051", "at0052", "at0053", "at0054", "at0055", "at0056", "at0057", "at0058">
+        >
+        ["ac9023"] = <
+            id = <"ac9023">
+            members = <"at0122", "at0123", "at0124">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0060", "at0061", "at0062", "at0063", "at0064", "at0065", "at0066">
+        >
+        ["ac9022"] = <
+            id = <"ac9022">
+            members = <"at0112", "at0113", "at0114">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0097", "at0098", "at0099">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0092", "at0093", "at0094", "at0095">
+        >
+    >

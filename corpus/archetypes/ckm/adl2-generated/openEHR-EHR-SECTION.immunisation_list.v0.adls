@@ -1,0 +1,82 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b48f667c-03fe-4c38-b817-cc18cbefb4db; build_uid=4cb62ae4-0f0c-4a80-bdb2-ad6427834dc3)
+    openEHR-EHR-SECTION.immunisation_list.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-02-11">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"6D33ECAE951870774131B9C6BB600560">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To provide a framework and design guidance for consistent modelling of content within a template for a Vaccination list.">
+            keywords = <"immunisation", "vaccination", "exclusion", "absence", "list">
+            use = <"Use as a framework and suggested design guidance for consistent modelling of content within a template for a Vaccination list.
+
+This archetype is intended to be used within the COMPOSITION.vaccination_list or as one component of other COMPOSITION archetypes. For example: complex documents, such as a referral.
+
+This list can be comprised of three types of statements, each represented by specific archetypes:
+- statements about the positive presence of vaccinations administered are recorded using the ACTION.medication OR
+- statements about the positive exclusion of vaccinations administered can be recorded using the specific EVALUATION.exclusion-global; OR
+- statements about no information being available - neither a positive presence of an administered vaccination nor a positive exclusion - can be recorded using the EVALUATION.absence archetype.">
+            misuse = <"Not to be used to record the actual administration of a vaccination. Use ACTION.medication for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Vaccination list
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype ENTRY[at0001] matches {    -- Vaccinations administered
+                include
+                    archetype_id/value matches {/openEHR-EHR-ACTION\.medication(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype EVALUATION[at0002] matches {    -- Exclusion statement
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.exclusion_global(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype EVALUATION[at0003] matches {    -- Absence statement
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.absence(-[a-zA-Z0-9_]+)*\.v2\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Vaccination list">
+                description = <"Framework for consistent modelling of content within a template for an Vaccination List.">
+            >
+            ["at0001"] = <
+                text = <"Vaccinations administered">
+                description = <"Positive statements about vaccinations that have been administered.">
+            >
+            ["at0002"] = <
+                text = <"Exclusion statement">
+                description = <"A positive statement about the exclusion of vaccinations administered.">
+                comment = <"For example: \"No vaccinations administered\".">
+            >
+            ["at0003"] = <
+                text = <"Absence statement">
+                description = <"A positive statement that no information is available about vaccinations administered.">
+                comment = <"For example: \"No information available about vaccinations administered\".">
+            >
+        >
+    >

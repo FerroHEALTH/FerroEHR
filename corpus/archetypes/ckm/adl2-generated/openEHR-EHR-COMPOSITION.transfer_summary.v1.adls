@@ -1,0 +1,142 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=4105cc95-2bff-4534-9668-516be413d7e4; build_uid=de403730-7da5-4136-927c-00c216664812)
+    openEHR-EHR-COMPOSITION.transfer_summary.v1.0.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Adriana Kitajima, Débora Farage, Fernanda Maia, Laíse Figueiredo, Marivan Abrahão">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"contato@coreconsulting.com.br">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sistine Barretto-Daniels">
+        ["organisation"] = <"Ocean Informatics Pty Ltd">
+        ["email"] = <"Sistine.Barretto-Daniels@oceaninformatics.com">
+        ["date"] = <"2012-01-30">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjoern Arntzen, Oslo university hospital, Norway", "Silje Ljosland Bakke, Bergen Hospital Trust, Norway (openEHR Editor)", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Lars Karlsen, DIPS ASA, Norway", "Heather Leslie, Ocean Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Andrej Orel, Marand d.o.o., Slovenia", "Jussara Rotzsch, UNB, Brazil", "Micaela Thierley, Helse Bergen, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics<heather.leslie@oceaninformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"0712A2A1FBF1AB594DD2247C102E6BD6">
+    >
+    details = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Para compartilhar informação clínica essencial registrada pela organização/provedor de saúde emitente para a organização/provedor que será responsável pela prestação dos cuidados de saúde do indivíduo.">
+            keywords = <"sumário de alta", "comunidade", "transferência", "continuidade", "alta", "sumário", "cuidado">
+            use = <"Usado para fornecer um relatório de sumário clínico sobre um episódio, ou período, de cuidado promovido por uma instituição ou profissional de saúde, para dar suporte à continuidade do cuidado enquanto o indivíduo transita sob os cuidados de outras instituições ou profissionais de saúde, incluindo o retorno às sua comunidade de origem. Esse documento irá tipicamente transmitir informações sobre eventos que ocorreram durante o período do cuidado, diagnósticos, resultados de investigação, gestão na alta e planos para continuidade.
+Transmissores típicos deste relatório serão os profissionais de saúde alocados dentro de uma instituição clínica incluindo, mas não limitados a:
+
+- clínicos que promovem o cuidado durante a internação hospitalar de um paciente;
+- clínicos que promovem tratamentos agudos ou avaliações como parte de uma visita de emergência.
+
+Receptores típicos deste relatório serão profissionais de saúde incluindo, mas não limitados a:
+- o clínico geral ou serviço de saúde usualmente procurado pelo indivíduo;
+- especialistas, cuidado domiciliar geriátrico ou instituição de reabilitação, bem-estar ou provedor de serviços comunitários; e
+- todos os profissionais de saúde que participam do cuidado pós-transferência do indivíduo.
+
+Um sumário de alta pode ser considerado como um tipo específico de sumário de transferência de cuidado. 
+
+Múltiplos sumários de transferência de cuidado podem ser necessários para acompanhar o indivíduo em qualquer transferência individual, para garantir que o conjunto completo de informações médicas, de enfermagem e outros sejam compartilhadas com os provedores de saúde apropriados.
+
+">
+            misuse = <"Não deve ser usado para representar dados registrados como parte de um único encontro clínico ou visitas. Use COMPOSITION.encounter para esta finalidade.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To share critical clinical information recorded by the sending healthcare organisation/provider to the healthcare organisation/provider who is taking over responsbility for provision of health care for the subject.">
+            keywords = <"discharge summary", "community", "transfer", "continuity", "discharge", "summary", "care">
+            use = <"Use to provide a summary clinical report about about an episode, or period, of care provided by a healthcare organisation or provider, to support continuity of care as the subject moves under the care or another healthcare organisation or provider, including a return to their original community. This document will typically convey information about events that occurred during the period of care, diagnoses, investigation results, management at discharge and plans for follow-up.
+
+Typical senders of this report will be healthcare providers located within a clinical facility including, but not limited to:
+- clinicians providing care during a hospital inpatient admission; and
+- clinicians providing acute treatment or assessment as part of an emergency department visit.
+
+Typical recipients of this report will be healthcare providers including, but not limited to: 
+- the subject's usual primary healthcare provider or health service;
+- specialists, residential aged care or rehabilitation facility, welfare or community service provider; and 
+- all health professionals who need to participate in post-transfer care of the subject.
+
+A discharge summary can be considered as a specific type of transfer of care summary.
+
+Multiple transfer of care summaries may be required to accompany the subject in any single transfer, to ensure that the full breadth of medical, nursing and other care information is shared with the appropriate receiving healthcare providers.">
+            misuse = <"Not to be used to represent the notes recorded as part of a single clinical encounters or visits. Use COMPOSITION.encounter for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    COMPOSITION[at0000] matches {    -- Transfer of care summary
+        category matches {
+            DV_CODED_TEXT[at9001] matches {
+                defining_code matches {[at9000]}    -- event
+            }
+        }
+        context matches {
+            EVENT_CONTEXT[at9002] matches {
+                other_context matches {
+                    ITEM_TREE[at0001] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            allow_archetype CLUSTER[at0002] matches {    -- Extension
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.document_entry_metadata(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Sumário de transferência de cuidados">
+                description = <"Documento de síntese para apoiar a transferência da informação clínica essencial emitida pela organização/provedor de saúde à organização/provedor de saúde receptora.">
+            >
+            ["at0002"] = <
+                text = <"Extensão">
+                description = <"Informações adicionais necessárias para capturar contexto local ou para alinhar com outros modelos de referência / formalismos.">
+                comment = <"Por exemplo: Informação de departamento hospitalar local ou metadados adicionais para alinhar com equivalentes de FHIR ou CIMI">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Transfer of care summary">
+                description = <"Summary document to support transfer of critical clinical information from the sending healthcare organisation/provider to the receiving healthcare organisation/provider.">
+            >
+            ["at0002"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at9000"] = <
+                text = <"event">
+                description = <"event">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/433>
+        >
+    >

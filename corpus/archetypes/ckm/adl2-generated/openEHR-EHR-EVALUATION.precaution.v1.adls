@@ -1,0 +1,627 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=8e02deb2-7500-4703-81a3-e2bfb22c4bc2; build_uid=504c8b10-ac7b-446d-8e1b-2efcc0d0828b)
+    openEHR-EHR-EVALUATION.precaution.v1.1.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Daniel Hall">
+                ["organisation"] = <"Region Östergötland">
+                ["email"] = <"daniel.hall@regionostergotland.se">
+            >
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Alan March">
+                ["organisation"] = <"Hospital Universitario Austral">
+                ["email"] = <"amarch@cas.austral.edu.ar">
+            >
+            accreditation = <"MD">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke og John Tore Valand">
+                ["organisation"] = <"Helse Vest IKT">
+                ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no, john.tore.valand@helse-vest-ikt.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Débora Farage, Fernanda Maia, Laíse Figueiredo">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"contato@coreconsulting.com.br">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Silje Ljosland Bakke / John Tore Valand">
+        ["organisation"] = <"Helse Vest IKT">
+        ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no/ john.tore.valand@helse-vest-ikt.no">
+        ["date"] = <"2016-02-29">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Morten Aas, Oslo Universitetssykehus, Norway", "Tomas Alme, DIPS, Norway", "Ole Andreas Bjordal, Webmed, Norway", "Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (Nasjonal IKT redaktør)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom", "Heather Grain, Llewelyn Grain Informatics, Australia", "Cecilie Graver, Oslo universitetssykehus HF, Norway", "Daniel Habashi, PasientSky AS, Norway", "Annette Hole Sjøborg, DIPS ASA, Norway", "Hilde Hollås, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Siv Marie Lien, DIPS ASA, Norway", "Hildegard McNicoll, freshEHR Clinical Informatics Ltd., United Kingdom", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Rune Pedersen, Universitetssykehuset i Nord Norge, Norway", "Vladimir Pizzo, Hospital Sírio Libanês, Brazil", "Tanja Riise, Nasjonal IKT HF, Norway", "Anoop Shah, University College London, United Kingdom", "Arild Stangeland, Helse Bergen, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia", "Tesfay Teame, OUS, Norway", "John Tore Valand, Helse Bergen, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Silje Ljosland Bakke, Helse Vest IKT, silje.ljosland.bakke@helse-vest-ikt.no">
+        ["MD5-CAM-1.0.1"] = <"1F847D0C7A85E138BBBDEA568702B601">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Används för att dokumentera ett tillstånd eller status hos en individ som är kliniskt signifikant och unik eller idiosynkratisk för den här individen, och anses vara vital information i samband med beslut om behandling.">
+            keywords = <"Försiktighet", "Förhindra", "Avvikande händelse", "Förebygga", "Försiktighet", "Uppmärksamhet", "Varning">
+            use = <"Används för att dokumentera ett tillstånd eller status hos en individ som är kliniskt signifikant och unik eller idiosynkratisk för den här individen, och anses vara vital information i samband med beslut om behandling.
+
+Den här arketypen bör betraktas som en kritisk arketyp för kliniska beslutsstödssystem när det ska testa relevanta terapeutiska försiktighetsåtgärder i samband med att en kliniker inleder en ny klinisk intervention för en individ.
+
+Exempel på tillstånd som berättigar skapandet av en försiktighetsåtgärder kan vara:
+- Immunosupprimerad eller genomgår immunosupprimerande behandling - kopplad till en läkemedelsordination för cytostatika eller steroider, eller diagnosen leukemi
+- Njursvikt - kopplad till njurfunktionstest eller formell diagnos av njursvikt eller båda
+- Väntar på organtransplantation
+- Genomgår behandling som strålbehandling eller dialys
+- Organtransplanterad eller metallimplantat in situ
+- Pågående utredning eller uppföljning av misstänkt eller verifierad malign sjukdom
+- Deltagande i läkemedelsprövning; eller
+- Använder blodförtunnande läkemedel
+">
+            misuse = <"*Not to be used to record a clinical intervention (including, but not limited to, use of a treatment or performance of a test or procedure) that should not be carried out due to the likelihood, or possibility, of harm being caused to an individual. Use the EVALUATION.contraindication for this purpose.
+
+Not to be used to record decisions about limitations on the individuals care or future interventions or the individuals preferences of future medical treatment and care. Use EVALUATION.advance_intervention_decisions and EVALUATION.advance_care_directive respectively for this purpose.(en)">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"El registro de una condición o estado del individuo que es clínicamente significativa y única o idiosincrática para con este individuo, y que se considera información vital al momento de la toma de decisiones.">
+            keywords = <"precaución", "prevenir", "evitar", "evento adverso", "prevención", "precaución", "advertencia">
+            use = <"Utilizado para el registro de una condición o estado del individuo que es clínicamente significativa y única o idiosincrática para con este individuo, y que se considera información vital al momento de la toma de decisiones.
+
+Este arquetipo debe ser considerado crítico por parte de cualquier sistema de apoyo a la decisión clínica y para cualquier precaución terapéuticamente relevante cuando un médico comienza una nueva intervención clínica para con un individuo.
+
+Los ejemplos de afecciones que ameritan la creación de una precaución incluyen, pero no se limitan a:
+- estado de inmunosupresión o terapia inmunosupresora asociada a una orden de medicamento para quimioterapia o esteroides, o diagnóstico de leucemia;
+- fallo renal, asociado a pruebas de función renal y/o el diagnóstico formal de fallo renal;
+- en espera de trasplante de órgano;
+- bajo tratamiento radiante o diálisis;
+- trasplantado de órgano o sujeto de implante metálico;
+- bajo estudio o bajo seguimiento de enfermedad maligna presuntiva o confirmada;
+- participante de ensayo farmacológico;
+- anticoagulado.">
+            misuse = <"*Not to be used to record a clinical intervention (including, but not limited to, use of a treatment or performance of a test or procedure) that should not be carried out due to the likelihood, or possibility, of harm being caused to an individual. Use the EVALUATION.contraindication for this purpose.
+
+Not to be used to record decisions about limitations on the individuals care or future interventions or the individuals preferences of future medical treatment and care. Use EVALUATION.advance_intervention_decisions and EVALUATION.advance_care_directive respectively for this purpose. (en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en klinisk tilstand eller status som er unik eller særegen for et individ, og som regnes som viktig informasjon i forbindelse med beslutninger om behandling.">
+            keywords = <"forsiktighetshensyn", "forhindre", "unngå", "uønsket hendelse", "forebygging", "forsiktighet", "advarsel", "varsel">
+            use = <"Brukes for å registrere en klinisk tilstand eller status som er unik eller særegen for et individ, og som regnes som viktig informasjon i forbindelse med beslutning om behandling.
+
+Denne arketypen bør regnes som en viktig arketype for beslutningsstøttesystemer i forbindelse med forordning av nye kliniske intervensjoner.
+
+Eksempler på tilstander som kan være grunnlag for å registrere forholdsregler kan være:
+- Immunhemmende/-modulerende behandling - knyttet til en ordinasjon av kjemoterapi eller steroider, eller en leukemidiagnose
+- Nyresvikt - knyttet til nyrefunksjonstester eller en formell nyresviktdiagnose.
+- Står i transplantasjonskø
+- Pågående regelmessig behandling, som strålebehandling eller dialyse
+- Har fått transplantert et organ eller implantert metall i kroppen.
+- Pågående utredning/oppfølging av mistenkt eller verifisert malign lidelse.
+- Deltagelse i klinisk studie.
+- Står på blodfortynnende behandling.">
+            misuse = <"Skal ikke brukes for å registrere en klinisk intervensjon (f.eks. en undersøkelse eller behandling) som ikke må utføres på grunn av sannsynligheten eller muligheten for skade på individet. Bruk EVALUATION.contraindication (Norsk: Kontraindikasjon) for dette formålet.
+
+Skal ikke brukes for beslutninger om avgrensing av behandling eller fremtidige intervensjoner, eller for å registrere individets preferanser om fremtidig behandling og omsorg. Bruk henholdsvis EVALUATION.advance_intervention_decisions (Behandlingsbegrensning) og EVALUATION.advance_care_directive (Fremtidig behandlingsvalg) for dette formålet.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Para gravar uma condição ou estado do indivíduo que é clinicamente significante e único ou idiossincrásico para este indivíduo, e é considerada informação vital na tomada de decisão clínica.">
+            keywords = <"precaução", "prevenir", "evitar", "evento adverso", "prevenção", "cuidado", "alerta", "atenção">
+            use = <"Usado para gravar uma condição ou estado do indivíduo que é clinicamente significante e único ou idiossincrásico para este indivíduo, e é considerada informação vital na tomada de decisão clínica.
+
+Este arquétipo deve ser considerado como crítico para qualquer teste de sistema de suporte à decisão clínica para qualquer precaução terapêutica relevante como o início de uma intervenção clínica a um indivíduo por um clínico.
+
+Exemplos de condições que garantem a criação de uma precaução incluem, mas não são limitadas a:
+- imunossuprimido/em terapia imunossupressiva - ligado à solicitação de medicação para quimioterápicos ou esteróides; ou diagnóstico de leucemia;
+- falência renal - ligado a testes de função renal e/ou um diagnóstico formal de falência renal;
+- na espera por transplante de órgãos;
+- em tratamento regular de radioterapia ou diálise;
+- transplantado ou com implante metálico in situ;
+- em investigação ou acompanhamento de suspeita ou confirmação de doença maligna;
+- participação em pesquisa farmacológica; ou
+- em tratamento com anticoagulante.
+">
+            misuse = <"*Not to be used to record a clinical intervention (including, but not limited to, use of a treatment or performance of a test or procedure) that should not be carried out due to the likelihood, or possibility, of harm being caused to an individual. Use the EVALUATION.contraindication for this purpose.
+
+Not to be used to record decisions about limitations on the individuals care or future interventions or the individuals preferences of future medical treatment and care. Use EVALUATION.advance_intervention_decisions and EVALUATION.advance_care_directive respectively for this purpose. (en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a condition or state of the individual that is clinically significant and unique or idiosyncratic for this individual, and is considered vital information when making treatment decisions.">
+            keywords = <"precaution", "prevent", "avoid", "adverse event", "prevention", "caution", "alert", "warning">
+            use = <"Use to record a condition or state of the individual that is clinically significant and unique or idiosyncratic for this individual, and which are considered vital information when making treatment decisions.
+
+This archetype should be regarded as a critical archetype by any clinical decision support system testing for any relevant therapeutic precautions as a clinician commences a new clinical intervention for an individual. 
+
+Examples of conditions that warrant creation of a precaution include, but are not limited to:
+- Immunosuppressed/on immunosuppressive therapy – linked to medication order for chemo or steroids; or diagnosis of leukaemia;
+- Renal failure – linked to renal function tests and/or a formal diagnosis of renal failure;
+- Waiting for organ transplant;
+- Undergoing a regular treatment such as radiation therapy or dialysis;
+- Transplanted organ or metal implant in situ;
+- Ongoing investigation or follow up of suspected or verified malignant disease;
+- Participation in a pharmacological trial; or
+- Using anticoagulant treatment.">
+            misuse = <"Not to be used to record a clinical intervention (including, but not limited to, use of a treatment or performance of a test or procedure) that should not be carried out due to the likelihood, or possibility, of harm being caused to an individual. Use the EVALUATION.contraindication for this purpose.
+
+Not to be used to record decisions about limitations on the individuals care or future interventions or the individuals preferences of future medical treatment and care. Use EVALUATION.advance_intervention_decisions and EVALUATION.advance_care_directive respectively for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Precaution
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {1} matches {    -- Condition
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Status
+                        value matches {
+                            DV_CODED_TEXT[at9002] matches {
+                                defining_code matches {[ac9009]}    -- Status (synthesised)
+                            }
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0003] matches {    -- Evidence
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Category
+                        value matches {
+                            DV_TEXT[at9005]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0025] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.clinical_evidence\.v1\..*/}
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0006] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0020] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Valid period start
+                        value matches {
+                            DV_DATE_TIME[at9007]
+                        }
+                    }
+                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Valid period end
+                        value matches {
+                            DV_DATE_TIME[at9010]
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Review date
+                        value matches {
+                            DV_DATE_TIME[at9008]
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9009]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Försiktighetsåtgärd">
+                description = <"Ett tillstånd eller status hos en individ som är kliniskt signifikant och unik eller idiosynkratisk för den här individen och anses vara vital information i samband med beslut om behandling.">
+            >
+            ["at0002"] = <
+                text = <"Tillstånd">
+                description = <"Namnet på tillståndet eller statusen.">
+                comment = <"Kodning med en terminologi till det identifierade tillståndet är önskvärt där så är möjligt.">
+            >
+            ["at0003"] = <
+                text = <"Belägg">
+                description = <"Beskrivning av de belägg som identifierats vilka stödjer försiktighetsåtgärden.">
+                comment = <"Det här data elementet kan valfritt länkas till en diagnos, testresultat, läkemedelsordination etc via ett URI (enligt Referensmodellen) i syfte att förse den logiska grunden eller bevisen för den påstådda försiktighetsåtgärden. Vänligen notera: eftersom den här URI-länken kanske inte är tillgänglig från ett meddelande eller att kliniska system inte kan ta emot den är det önskvärt att en berättande beskrivning görs av fynden samt att de blir tydligt dokumenterade.">
+            >
+            ["at0004"] = <
+                text = <"Senast uppdaterad">
+                description = <"Datum då informationen om försiktighetsåtgärden senast uppdaterades.">
+            >
+            ["at0008"] = <
+                text = <"Kommentar">
+                description = <"Ytterligare beskrivning av försiktighetsåtgärden som inte fångas i några andra fält.">
+            >
+            ["at0009"] = <
+                text = <"Granskningsdatum">
+                description = <"Lämpligt datum för nästa granskning av en kliniker.">
+                comment = <"Vid omständigheter där försiktighetsåtgärden inte är definitiv eller livslång, använd då det här dataelementet för att dokumentera datum eller tid när försiktighetsåtgärden bör omvärderas i förhållande till den kliniska kontexten för det aktuella tillfället.">
+            >
+            ["at0013"] = <
+                text = <"Kategori">
+                description = <"Typ av identifierat tillstånd.">
+                comment = <"Det här dataelementet har inkluderats eftersom det för närvarande fångas i en del kliniska system. Informationen kan härledas när terminologikoder används för att representera tillståndet i ett kliniskt system och är effektivt redundant i en sådan situation.">
+            >
+            ["at0014"] = <
+                text = <"Status">
+                description = <"Försiktighetsåtgärdens nuvarande status.">
+                comment = <"Beslutsstöd bör meddela varningar för 'Aktiv' och ignorera 'Upphört' eller 'Avfärdad'. Kliniska system kan välja att inte visa anteckningar om försiktighetsåtgärder med statusen 'Avfärdad' i en lista med försiktighetsåtgärder. Emellertid kan 'Avfärdad' vara användbar vid sammanställning av listor med försiktighetsåtgärder eller vid kommunikation mellan system. Några system kan välja att göra detta element till obligatoriskt. 'Upphört' kan användas olika över olika system beroende på klinisk användning och kontext. Fritextdatatypen tillåter lokal variation, vilket gör att andra värdesatser kan användas i det här dataelementet i en template. Vid sådana situationer rekommenderas att värden kodas med hjälp av en terminologi.">
+            >
+            ["at0015"] = <
+                text = <"Aktiv">
+                description = <"Försiktighetsåtgärden är för närvarande aktiv.">
+            >
+            ["at0018"] = <
+                text = <"Upphört">
+                description = <"Den tidigare kända försiktighetsåtgärden har blivit kliniskt omvärderad och anses inte längre vara en aktiv risk.">
+            >
+            ["at0019"] = <
+                text = <"Avfärdad">
+                description = <"Försiktighetsåtgärden har blivit kliniskt omvärderad eller genom tester blivit motbevisad med en hög grad av klinisk säkerhet">
+            >
+            ["at0020"] = <
+                text = <"Tilläggsinformation">
+                description = <"Plats för att infoga tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.">
+                comment = <"Exempelvis lokala informationskrav eller metadata för anpassning till FHIR- eller CIMI-motsvarigheter.">
+            >
+            ["at0022"] = <
+                text = <"Giltlig startperiod">
+                description = <"Datum eller tid från vilket tillståndet anses vara aktivt.">
+                comment = <"Det här dataelementet syftar till att användas när en försiktighetsåtgärd beräknas starta någon gång i framtiden. Exempelvis det inledande datumet för en läkemedelsprövning.">
+            >
+            ["at0024"] = <
+                text = <"Giltlig slutperiod">
+                description = <"Datum eller tid från vilket tillståndet anses vara inaktivt.">
+                comment = <"Det här dataelementet syftar till att användas när en försiktighetsåtgärd har ett definitivt slutdatum eller tid någon gång i framtiden. Exempelvis det datum då en läkemedelsprövning upphör.">
+            >
+            ["at0025"] = <
+                text = <"*Additional details(en)">
+                description = <"*Additional structured details about the precaution.(en)">
+                comment = <"*For example: clinical evidence supporting the precaution.(en)">
+            >
+            ["ac9009"] = <
+                text = <"Status (synthesised)">
+                description = <"Försiktighetsåtgärdens nuvarande status. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Forholdsregel">
+                description = <"En klinisk tilstand eller status som er unik eller særegen for et individ, og som regnes som viktig informasjon i forbindelse med beslutninger om behandling.">
+            >
+            ["at0002"] = <
+                text = <"Tilstand">
+                description = <"Navnet på tilstanden eller statusen.">
+                comment = <"Koding av tilstanden med en terminologi er ønskelig, dersom mulig.">
+            >
+            ["at0003"] = <
+                text = <"Underlag">
+                description = <"Beskrivelse av underlaget som understøtter forholdsregelen.">
+                comment = <"Dette dataelementet kan dersom ønskelig lenkes til en diagnose, testresultat eller legemiddelordinering ved hjelp av en URI (spesifisert i referansemodellen) for å oppgi rasjonalet eller evidensen for forholdsregelen. NB: Siden URI-lenken kan være utilgjengelige fra en melding eller et mottakende system, er det ønskelig at en fritekstbeskrivelse av underlaget registreres eksplisitt.">
+            >
+            ["at0004"] = <
+                text = <"Sist oppdatert">
+                description = <"Dato da forholdsregelinformasjonen sist ble oppdatert.">
+            >
+            ["at0008"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere informasjon om forholdsregelen, som ikke kan registreres i andre felter.">
+            >
+            ["at0009"] = <
+                text = <"Evalueringsdato">
+                description = <"Dato for neste kliniske evaluering.">
+                comment = <"Ved omstendigheter der forholdsregler ikke er på ubestemt tid eller livslange, kan dette dataelementet brukes til å registrere når forholdsregelen bør evalueres.">
+            >
+            ["at0013"] = <
+                text = <"Kategori">
+                description = <"Type \"Tilstand\".">
+                comment = <"Dette dataelementet er inkludert fordi det registreres i flere eksisterende kliniske systemer. Informasjonen kan avledes fra Tilstand dersom hierarkiske kodesystemer er brukt, og vil i slike tilfeller være redundant.">
+            >
+            ["at0014"] = <
+                text = <"Status">
+                description = <"Forholdsregelens nåværende status.">
+                comment = <"Beslutningsstøtte vil typisk utløse advarsler for \"Aktiv\", og ignorere \"Opphørt\" eller \"Avkreftet\". Kliniske systemer kan velge å ikke vise registreringer med status \"Avkreftet\" i en liste. Likevel kan \"Avkreftet\" være nyttig for sammenstilling av ulike lister eller ved kommunikasjon mellom systemer. Noen systemer kan velge å gjøre dette elementet obligatorisk. \"Opphørt\" kan brukes ulikt i ulike systemer avhengig av klinisk bruk og kontekst. Fritekst-datatypen tillater lokal variasjon ved å gjøre det mulig å bruke andre verdisett for dette dataelementet i en templat. Det er i denne situasjonen anbefalt å kode verdiene med en terminologi.">
+            >
+            ["at0015"] = <
+                text = <"Aktiv">
+                description = <"Forholdsregelen er aktiv.">
+            >
+            ["at0018"] = <
+                text = <"Opphørt">
+                description = <"Den tidligere kjente forholdsregelen er klinisk revurdert ved testing, og regnes ikke lenger for å være en aktiv risiko.">
+            >
+            ["at0019"] = <
+                text = <"Avkreftet">
+                description = <"Forholdsregelen har blitt klinisk revurdert eller er avkreftet med høy grad av sikkerhet ved testing.">
+            >
+            ["at0020"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at0022"] = <
+                text = <"Gyldighetsperiode start">
+                description = <"Forholdsregelen regnes som aktiv etter denne datoen.">
+                comment = <"Dette dataelementet er ment for å brukes når en forholdregel er ment å starte på et tidspunkt i fremtiden, for eksempel startdatoen for en farmakologisk studie.">
+            >
+            ["at0024"] = <
+                text = <"Gyldighetsperiode slutt">
+                description = <"Forholdsregelen regnes som inaktiv etter denne datoen.">
+                comment = <"Dette dataelementet er ment for å brukes når en forholdsregel er ment å avsluttes på et tidspunkt i fremtiden, for eksempel sluttdatoen for en farmakologisk studie.">
+            >
+            ["at0025"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere strukturerte detaljer om forholdsregelen.">
+                comment = <"For eksempel: det kliniske grunnlaget for forholdsregelen.">
+            >
+            ["ac9009"] = <
+                text = <"Status (synthesised)">
+                description = <"Forholdsregelens nåværende status. (synthesised)">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"Precaución">
+                description = <"Una afección o estado del individuo que es clínicamente significativa y única o idiosincrática para con este individuo, y que se considera información vital al momento de la toma de decisiones.">
+            >
+            ["at0002"] = <
+                text = <"Condición">
+                description = <"Identificación, por nombre, de la condición o estado.">
+                comment = <"La codificación de la 'condición' identificada mediante una terminología es deseable cuando sea posible.">
+            >
+            ["at0003"] = <
+                text = <"Evidencia">
+                description = <"Descripción de la evidencia identificada que fundamenta la precaución.">
+                comment = <"Este elemento puede ser opcionalmente vinculado a un diagnóstico, resultado de prueba, orden de medicamento, etc., a través de una URI (conforme al Modelo de Referencia) a fin de proveer la base o evidencia para la precaución declarada. Se debe tener en cuenta que dado que este vínculo URI puede no ser accesible desde un mensaje o por el sistema clínico receptor, resulta deseable que se registre explícitamente una descripción narrativa de la evidencia.">
+            >
+            ["at0004"] = <
+                text = <"Última actualización">
+                description = <"Fecha en la cual la información sobre la precaución fue actualizada por última vez.">
+            >
+            ["at0008"] = <
+                text = <"Comentario">
+                description = <"Narrativa adicional acerca de la precaución, no registrada en otros campos.">
+            >
+            ["at0009"] = <
+                text = <"Fecha de Revisión">
+                description = <"La fecha en la cual un clínico debe efectuar una revisión.">
+                comment = <"En circunstancias en las cuales las precauciones no son indefinidas o de por vida, se debe utilizar este elemento para registrar la fecha y hora en la cual esta precaución debe ser reevaluada en el contexto de las circunstancias clínicas imperantes en el momento.">
+            >
+            ["at0013"] = <
+                text = <"Categoría">
+                description = <"Tipo de 'condición' identificada.">
+                comment = <"Este elemento ha sido incluido dado que esta siendo actualmente registrado en algunos sistemas clínicos. Esta información podrá ser derivada cuando se utilicen códigos terminológicos para representar la condición en sistemas clínicos y es efectivamente redundante en tales situaciones.">
+            >
+            ["at0014"] = <
+                text = <"Estado">
+                description = <"Aserción acerca del estado actual de la 'Precaución' identificada.">
+                comment = <"El apoyo a la decisión típicamente producirá alertas para una precaución 'Activa' e ignorará las del tipo 'Resuelta' o 'Refutada'. Los sistemas clínicos podrían optar por no exhibir asientos con un estado 'Refutada' en la lista de Precauciones. No obstante, 'Refutada' puede resultar útil para la conciliación de la lista de Precauciones o en la comunicación entre sistemas. Algunas implementaciones podrían resolver hacer obligatorio este campo. 'Resuelta' puede ser utilizada en forma diversa dependiendo del uso clínico o del contexto. El tipo de dato de texto libre habilita a la adaptación a usos locales al permitir otros conjuntos de datos para este elemento en una plantilla. En tales casos se recomienda que los valores sean codificados mediante una terminología.">
+            >
+            ["at0015"] = <
+                text = <"Activa">
+                description = <"La precaución se encuentra actualmente activa.">
+            >
+            ["at0018"] = <
+                text = <"Resuelta">
+                description = <"La precaución previamente declarada ha sido reevaluada clínicamente y ya no es considerada como un riesgo activo.">
+            >
+            ["at0019"] = <
+                text = <"Refutada">
+                description = <"La precaución previamente declarada ha sido reevaluada clínicamente o negada con un grado alto de certeza a través de pruebas.">
+            >
+            ["at0020"] = <
+                text = <"Extensión">
+                description = <"Información adicional requerida para registrar contenido local o para el alineamiento con otros modelos de referencia o formalismos.">
+                comment = <"Por ejemplo: requerimientos locales de información o metadatos adicionales para el alineamiento con equivalentes FHIR o CIMI.">
+            >
+            ["at0022"] = <
+                text = <"Comienzo del período de validez">
+                description = <"Fecha y hora a partir de la cual la 'condición' debe considerarse activa.">
+                comment = <"Este elemento se utiliza cuando se pretende que una precaución tenga vigencia en algún momento futuro. Por ejemplo: la fecha de comienzo de un ensayo farmacológico.">
+            >
+            ["at0024"] = <
+                text = <"Final del período de validez">
+                description = <"Fecha y hora a partir de la cual la 'condición' debe considerarse inactiva.">
+                comment = <"Este elemento se utiliza cuando una precaución tiene una fecha de finalización futura conocida. Por ejemplo: la fecha de finalización de un ensayo farmacológico.">
+            >
+            ["at0025"] = <
+                text = <"*Additional details (en)">
+                description = <"*Additional structured details about the precaution. (en)">
+                comment = <"*For example: clinical evidence supporting the precaution. (en)">
+            >
+            ["ac9009"] = <
+                text = <"Estado (synthesised)">
+                description = <"Aserción acerca del estado actual de la 'Precaución' identificada. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Precaução">
+                description = <"Uma condição ou estado do indivíduo que é clinicamente significante e único ou idiossincrásico para este indivíduo, e é considerada informação vital na tomada de decisão clínica.">
+            >
+            ["at0002"] = <
+                text = <"Condição">
+                description = <"Identificação da condição ou estado pelo nome.">
+                comment = <"A codificação da \"Condição\" identificada com uma terminologia é desejável, quando possível.">
+            >
+            ["at0003"] = <
+                text = <"Evidência">
+                description = <"Descrição da evidência identificada para suportar a precaução.">
+                comment = <"Este elemento de dado pode ser opcionalmente ligado a um diagnóstico, resultado de exame, solicitação de medicamento etc via URI (como pelo Modelo de Referência) para prover uma razão ou evidência para a assertiva de precaução. Por favor note: como este link URI pode não ser acessível por uma mensagem ou pelo sistema clínico receptor é desejável que a descrição narrativa da evidência seja também explicitamente gravada.">
+            >
+            ["at0004"] = <
+                text = <"Última atualização">
+                description = <"Data na qual a informação de precaução foi atualizada pela última vez.">
+            >
+            ["at0008"] = <
+                text = <"Comentário">
+                description = <"Narrativa adicional sobre a precaução, não capturada em outros campos.">
+            >
+            ["at0009"] = <
+                text = <"Data de revisão">
+                description = <"Data na qual a revisão pelo clínico deverá ser realizada.">
+                comment = <"Em circunstâncias onde as precauções não são de longo prazo ou vitalícias, use este elemento de dado para gravar a data/hora na qual esta precaução deve ser reavaliada no contexto das circunstâncias clínicas do momento.">
+            >
+            ["at0013"] = <
+                text = <"Categoria">
+                description = <"Tipo de \"Condição\" identificada.">
+                comment = <"Este elemento de dado foi incluído porque é atualmente capturado em alguns sistemas clínicos. Esta informação pode ser derivada quando códigos terminológicos são utilizados para representar a condição em sistemas clínicos, e é efetivamente redundante nesta situação.">
+            >
+            ["at0014"] = <
+                text = <"Estado">
+                description = <"Assertiva sobre o estado atual da \"Precaução\" identificada.">
+                comment = <"A decisão de suporte tipicamente iria levantar alertas para \"Ativa\" e ignorar uma precaução \"Resolvida\" ou \"Refutada\". Sistemas clínicos podem escolher não mostrar entradas com estado de \"refutada\" na lista de precauções. Entretanto, \"Refutada\" pode ser útil para a reconciliação da lista de precaução ou na comunicação entre sistemas. Algumas implementações podem escolher em classificar este campo como obrigatório. \"Resolvida\" pode ser usada de forma variável entre sistemas, dependendo do uso e contexto clínico. O tipo de dado texto livre irá permitir variabilidade local por possibilitar outros conjuntos de valores a serem aplicados a este elemento de dado em um modelo - neste situação é recomendado que estes valores sejam codificados utilizando uma terminologia.">
+            >
+            ["at0015"] = <
+                text = <"Ativa">
+                description = <"A precaução é atualmente ativa.">
+            >
+            ["at0018"] = <
+                text = <"Resolvida">
+                description = <"A precaução previamente observada foi reavaliada clinicamente e não foi considerada como um risco ativo atualmente.">
+            >
+            ["at0019"] = <
+                text = <"Refutada">
+                description = <"A precaução foi reavaliada clinicamente ou foi reprovada com um alto grau de certeza clínica por meio de testes.">
+            >
+            ["at0020"] = <
+                text = <"Extensão">
+                description = <"Informação adicional requerida para capturar conteúdo local ou alinhar a outros modelos de referência/formalismos.">
+                comment = <"Por exemplo: requisitos de informação local ou metadados adicionais para alinhar a equivalentes de FHIR ou CIMI.">
+            >
+            ["at0022"] = <
+                text = <"Início do período válido">
+                description = <"Data/hora na qual a \"Condição\" foi considerada ativa.">
+                comment = <"Este elemento de dado é indicado para uso quando é identificado o início da precaução em algum momento no futuro. Por exemplo: a data de início para uma pesquisa farmacêutica.">
+            >
+            ["at0024"] = <
+                text = <"Final do período válido">
+                description = <"Data/hora na qual a \"Condição\" foi considerada inativa.">
+                comment = <"Este elemento de dado é indicado para uso quando sabe-se que a precaução tem uma data de finalização no futuro. Por exemplo: a data de término de uma pesquisa clínica.">
+            >
+            ["at0025"] = <
+                text = <"*Additional details (en)">
+                description = <"*Additional structured details about the precaution. (en)">
+                comment = <"*For example: clinical evidence supporting the precaution. (en)">
+            >
+            ["ac9009"] = <
+                text = <"Estado (synthesised)">
+                description = <"Assertiva sobre o estado atual da \"Precaução\" identificada. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Precaution">
+                description = <"A condition or state of the individual that is clinically significant and unique or idiosyncratic for this individual, and is considered vital information when making treatment decisions.">
+            >
+            ["at0002"] = <
+                text = <"Condition">
+                description = <"Identification, by name, of a condition or state.">
+                comment = <"Coding of the identified 'Condition' with a terminology is desirable, where possible.">
+            >
+            ["at0003"] = <
+                text = <"Evidence">
+                description = <"Description of the evidence identified to support the precaution.">
+                comment = <"This data element can be optionally linked to a diagnosis, test result, medication order etc via a URI (as per the Reference Model) in order to provide the rationale or evidence for the precaution assertion. Please note: as this URI link may not be accessible from a message or by receiving clinical system it is desirable that a narrative description of the evidence should also be explicitly recorded.">
+            >
+            ["at0004"] = <
+                text = <"Last updated">
+                description = <"Date when the precaution information was last updated.">
+            >
+            ["at0008"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the precaution, not captured in other fields.">
+            >
+            ["at0009"] = <
+                text = <"Review date">
+                description = <"Date when next due for review by a clinician.">
+                comment = <"In circumstances where precautions are not indefinite or life-long, use this data element to record the date/time when this precaution should be reassessed in the context of the clinical circumstances at the time.">
+            >
+            ["at0013"] = <
+                text = <"Category">
+                description = <"Type of the 'Condition' identified.">
+                comment = <"This data element has been included because it is currently being captured in some clinical systems. This information could be derived when terminology codes are used to represent the condition in clinical systems, and is effectively redundant in that situation.">
+            >
+            ["at0014"] = <
+                text = <"Status">
+                description = <"Assertion about the current state of the identified 'Precaution'.">
+                comment = <"Decision support would typically raise alerts for 'Active' and ignore a 'Resolved' or 'Refuted' precaution. Clinical systems may choose not to display Precaution entries with a 'Refuted' status in the Precaution list. However, 'Refuted' may be useful for reconciliation of the Precaution list or when communicating between systems. Some implementations may choose to make this field mandatory. 'Resolved' may be used variably across systems, depending on clinical use and context. The free text data type will allow for local variation by enabling other value sets to be applied to this data element in a template - in this situation it is recommended that values should be coded using a terminology.">
+            >
+            ["at0015"] = <
+                text = <"Active">
+                description = <"The precaution is currently active.">
+            >
+            ["at0018"] = <
+                text = <"Resolved">
+                description = <"The previously asserted precaution has been clinically reassessed and considered no longer to be an active risk.">
+            >
+            ["at0019"] = <
+                text = <"Refuted">
+                description = <"The precaution has been clinically reassessed or has been disproved with a high level of clinical certainty by testing.">
+            >
+            ["at0020"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0022"] = <
+                text = <"Valid period start">
+                description = <"Date/time after which the 'Condition' is regarded as active.">
+                comment = <"This data element is intended for use when a precaution is identified to start at some time in the future. For example: the commencement date for a pharmaceutical trial.">
+            >
+            ["at0024"] = <
+                text = <"Valid period end">
+                description = <"Date/time after which the 'Condition' is regarded as inactive.">
+                comment = <"This data element is intended for use when a precaution is known to have a definitive end date/time in the future. For example: the cessation date for a pharmaceutical trial.">
+            >
+            ["at0025"] = <
+                text = <"Additional details">
+                description = <"Additional structured details about the precaution.">
+                comment = <"For example: clinical evidence supporting the precaution.">
+            >
+            ["ac9009"] = <
+                text = <"Status (synthesised)">
+                description = <"Assertion about the current state of the identified 'Precaution'. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0015", "at0018", "at0019">
+        >
+    >

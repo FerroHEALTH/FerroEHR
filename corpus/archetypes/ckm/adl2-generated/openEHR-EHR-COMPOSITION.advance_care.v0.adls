@@ -1,0 +1,149 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1d9417b0-2abe-4cb6-b725-eeaa5b493f8b; build_uid=9547b630-7b02-4d29-b0c2-00aa40054052)
+    openEHR-EHR-COMPOSITION.advance_care.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Olha Nikolaieva">
+                ["organisation"] = <"University Hospital Basel">
+                ["email"] = <"olha.nikolaieva@usb.ch">
+            >
+            other_details = <
+                ["other_contributors"] = <"Maren Diepenbruck, University Hospital Basel, Switzerland">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-04-13">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"8DF84A7856DED7EAB026E030722C508B">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zum Erfassen von Informationen über einen Plan zur Versorgung zukünftiger gesundheitlicher und sozialer Bedürfnisse, einschließlich chronischer Erkrankungen und der Versorgung am Lebensende.">
+            keywords = <"vorausschauende Versorgungsplanung, Patientenverfügung, Intervention, Entscheidung", ...>
+            use = <"Als Container zur Erfassung von Informationen über einen Plan zur Versorgung zukünftiger gesundheitlicher und sozialer Bedürfnisse, einschließlich chronischer Erkrankungen und der Versorgung am Lebensende. Der Inhalt sollte die individuelle gesundheitliche Situation und die persönlichen Umstände der betroffenen Person widerspiegeln.
+
+Dieser Archetyp wurde speziell dafür entwickelt, einen oder mehrere der folgenden Inhalte aufzunehmen:
+- den Archetyp EVALUATION.advance_care_directive, der die Präferenzen einer Person hinsichtlich ihrer zukünftigen Versorgung aus Sicht der Person selbst oder ihrer gesetzlichen Vertretung abbildet;
+- den Archetyp EVALUATION.advance_intervention_decisions, der aus Sicht einer klinischen Fachperson Entscheidungen über die allgemeine Behandlungsabsicht sowie über mögliche Behandlungen, Maßnahmen und diagnostische oder therapeutische Verfahren abbildet, die lebensrettend oder lebensverlängernd sein oder unerwünschte Nebenwirkungen verursachen können;
+- weitere Archetypen, die klinisch relevant sowie für die integrierte Versorgung oder die Versorgungsplanung am Lebensende von Bedeutung sind.
+
+Dieser Archetyp kann als einzelne COMPOSITION verwendet werden, um Informationen zu vorausschauenden Versorgungspräferenzen oder -entscheidungen abzufragen. Dabei wird die Herkunft der Informationen – von der betroffenen Person oder von einer klinischen Fachperson – durch unterschiedliche Archetypen klar unterschieden.
+">
+            misuse = <"Nicht zu verwenden für die Erfassung von Archetypen, die sich auf Anordnungen oder die Behandlung einer akuten oder Notfallsituation beziehen.
+
+Nicht zu verwenden für die Erfassung von Archetypen, die Versorgungspläne zur Behandlung aktueller gesundheitlicher und sozialer Bedürfnisse abbilden. Verwenden Sie hierfür COMPOSITION.care_plan.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To hold information about a plan for the management of future health and social care requirements, including chronic illness and end of life care.">
+            keywords = <"advance care, directive, intervention, decision,", ...>
+            use = <"Use as a container to hold information about a plan for the management of future health and social care requirements, including chronic illness and end of life care, and the content should reflect the individual's unique health situation and circumstances.
+
+This archetype has been specifically designed to carry one, or more, of:
+- the EVALUATION.advance_care_directive, representing the preferences of an individual about their future care, from the point of view of the individual or their guardian; and
+- the EVALUATION.advance_intervention_decisions archetypes, representing the decisions about the overall intent of care and possible treatments, activities and diagnostic or therapeutic procedures that may be life-saving, life-prolonging or cause undesirable side effects, from the point of view of a clinician; or 
+- other archetypes that are clinically relevant and relevant to integrated care or end-of-life planning. 
+
+This archetype can be used as a single COMPOSITION for querying information about any anticipatory care preferences or decisions, with different archetypes clearly differentiating the source of the information as individual or clinician.">
+            misuse = <"Not to be used to carry archetypes that are related to orders or management of an acute or emergency situation.
+
+Not to be used to carry archetypes that are related to care plans related to management current health and social requirements - use COMPOSITION.care_plan for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    COMPOSITION[at0000] matches {    -- Advance care
+        category matches {
+            DV_CODED_TEXT[at0001] matches {    -- Coded text
+                defining_code matches {[at9000]}    -- persistent
+            }
+        }
+        context matches {
+            EVENT_CONTEXT[at0002] matches {    -- Event Context
+                other_context matches {
+                    ITEM_TREE[at0003] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            allow_archetype CLUSTER[at0004] matches {    -- Extension
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Vorausschauende Versorgung">
+                description = <"Ein Plan zur Versorgung zukünftiger gesundheitlicher und sozialer Bedürfnisse, einschließlich chronischer Erkrankungen und der Versorgung am Lebensende.">
+            >
+            ["at0001"] = <
+                text = <"Coded text">
+                description = <"">
+            >
+            ["at0002"] = <
+                text = <"Ereigniskontext">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen.">
+            >
+            ["at9000"] = <
+                text = <"* persistent (en)">
+                description = <"* persistent (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Advance care">
+                description = <"A plan for the management of future health and social care requirements, including chronic illness and end of life care.">
+            >
+            ["at0001"] = <
+                text = <"Coded text">
+                description = <"">
+            >
+            ["at0002"] = <
+                text = <"Event Context">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at9000"] = <
+                text = <"persistent">
+                description = <"persistent">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/431>
+        >
+    >

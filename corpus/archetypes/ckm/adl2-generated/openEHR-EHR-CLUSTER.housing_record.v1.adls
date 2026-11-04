@@ -1,0 +1,508 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=a5ca0e87-da18-4a4e-8c51-4425eebee190; build_uid=5de993b1-99d9-4416-a4f9-9f6d8055acd6)
+    openEHR-EHR-CLUSTER.housing_record.v1.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Maximilian Meixner">
+                ["organisation"] = <"Berlin Institute of Health - BIH @Charité, BIH @ Charité">
+                ["email"] = <"maximilian.meixner@bih-charite.de">
+            >
+            other_details = <
+                ["other_contributors"] = <"Severin Kohler, Berlin Institute of Health - BIH @Charité, severin.kohler@bih-charite.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Therese Lindberg">
+                ["organisation"] = <"Cambio CDS">
+                ["email"] = <"therese.lindberg@cambio.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke, John Tore Valand and Vebjørn Arntzen">
+                ["organisation"] = <"Nasjonal IKT HF, Helse Bergen HF, Oslo University Hospital HF">
+                ["email"] = <"silje.ljosland.bakke@nasjonalikt.no / john.tore.valand@helse-bergen.no / varntzen@ous-hf.no">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Vanessa Pereira">
+                ["organisation"] = <"Luxembourg Institute of Health (LIH)">
+                ["email"] = <"vanessapereira@protonmail.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2018-05-29">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Amund Aakerholt, Helse Stavanger, KORFOR, Norway", "Morten Aas, Diakonhjemmet Sykehus, Norway", "Marit Alice Venheim, Helse Vest IKT, Norway", "Tomas Alme, DIPS ASA, Norway", "Erling Are Hole, Helse Bergen, Norway", "Stein Arne Rimehaug, Sunnaas sykehus, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Marcus Baw, openGPSoC / BawMedical Ltd, United Kingdom", "Ivar Berge, Oslo Universitetssykehus, Norway", "Bjørn Christensen, Helse Bergen HF, Norway", "Angela Crovetti, CDC/NIOSH, United States", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Jayne Donaldson, University of Stirling, United Kingdom", "Bjørg Eli Hollund, helse-bergen, Norway", "Stig Erik Hegrestad, Helse Førde, Norway", "Samuel Frade, Marand, Portugal", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom", "Sergio Freire, State University of Rio de Janeiro, Brazil", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)", "Carrick Gillespie, Omniq AB, Sweden", "Heather Grain, Llewelyn Grain Informatics, Australia", "Anne Gunn Haugland, Helse Bergen HF, Norway", "Sam Heard, Ocean Informatics, Australia", "Kristian Heldal, Telemark Hospital Trust, Norway", "Jørn Henrik Vold, Helse Bergen, Avdeling for rusmedisin, Norway", "Anca Heyd, DIPS ASA, Norway", "Teresa Highway, Alberta Health Services, Canada", "Annette Hole Sjøborg, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Susanna Jönsson, Landstinget i Värmland, Sweden", "Lars Morgan Karlsen, DIPS ASA, Norway", "Tone Klund, DIPS AS, Norway", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Harmony Kosola, Alberta Health Services, Canada", "Ron Krawec, Alberta Health Services, Canada", "Ronald Krawec, Alberta Health Services, Canada", "Anita Lagos, Haraldsplass Diakonale Sykehus, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Pedro Leuschner, Centro Hospitalar do Porto, Portugal", "Hallvard Lærum, Direktoratet for e-helse, Norway", "Anne M Gromsrud, DIPS AS, Norway", "Siv Marie Lien, DIPS ASA, Norway", "Hildegard McNicoll, freshEHR Clinical Informatics Ltd., United Kingdom", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "John Meredith, NHS Wales Informatics Service, United Kingdom", "Erik Nissen, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Anne Pauline Anderssen, Helse Nord RHF, Norway", "Martin Paulson, Sykehuset i Vestfold, Norway", "Georg Reinhardt, Helse Fonna, Norway", "Tanja Riise, Nasjonal IKT HF, Norway", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Ragnhild Sandvold, Vestre Viken HF, Norway", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Ingrid Skard, Edproof, Norway", "Niclas Skyttberg, Karolinska Institutet, Sweden", "Andreas Sundstrom, Capio S:t Gorans Hospital, Sweden", "Nyree Taylor, Ocean Informatics, Australia", "Tesfay Teame, Folkehelseinstittutet, Norway", "Susanne Trønnes, Norway", "Jon Tysdahl, Furst medlab AS, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Ingrid Vange, Helse Bergen, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Housing, Rejected archetype [Internet]. openEHR Foundation, openEHR Clinical Knowledge Manager [cited: 2018-05-30]. Available from: http://www.openehr.org/ckm/#showArchetype_1013.1.1667.">
+        ["2"] = <"National Health Data Dictionary [Internet]. Canberra, Australia: Australian Institute of Health and Welfare (AIHW); 2012 [cited 2018 May 30].  Version 16 Cat. no.">
+        ["3"] = <"HWI 119. Available from: https://www.aihw.gov.au/getmedia/a90ff140-8abf-4e30-8861-da2ebf368d35/14306.pdf">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"7FFDAC1E024C791BF5695F63B39692AE">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Um Details eines Wohnsitzes oder einer anderen Wohnumgebung einer Person während eines bestimmten Zeitraums aufzuzeichnen.">
+            keywords = <"Behausung", "Unterbringung", "Unterkunft", "Pflegeheim", "Pflegewohnheim", "Wohnheim", "betreutes Wohnen", "betreute Wohneinrichtung", "Altersheim", "Wohnort", "Wohnsitz", "Haus", "Wohnung", "obdachlos", "Miete", "Eigentum", "Eigentümer", "gemeinsam", "Gemeinschaftsunterkunft", "Wohngemeinschaft", "geteilt", "vorübergehend", "Institution", "Apartment", "Eigentumswohnung", "Wohnungseigentum", "Hospiz", "Umzug">
+            use = <"Um Details eines Wohnsitzes oder einer anderen Wohnumgebung einer Person während eines bestimmten Zeitraums aufzuzeichnen.
+
+Der Geltungsbereich dieses Archetyps umfasst alle von einer Einzelperson bewohnten Wohnorte. Zum Beispiel: alle im Laufe der Zeit gemieteten Wohnorte, Wechsel zwischen Wohnorten während eines bestimmten Zeitraums, vorübergehende Aufenthalte, beispielsweise bei nomadischen Hirten, die zwischen saisonalen Weiden ziehen, Wanderreisenden oder Obdachlosen.
+
+Eine Person benötigt möglicherweise mehr als einen aktiven Wohnorteintrag gleichzeitig. Jeder neue Wohnort oder jede neue Adresse sollte in einer separaten Instanz dieses Archetyps erfasst werden. Zum Beispiel, wenn eine Person von einem Haus in ein anderes Haus oder eine andere Wohnung umzieht oder dasselbe Wohnmobil von einer Adresse an eine andere verlegt.
+
+Mehrere im Laufe der Zeit erfasste Instanzen dieses Archetyps ergeben eine Zusammenfassung der Geschichte vergangener und gegenwärtiger Wohnsituationen.
+
+Ein aktiver oder aktueller Wohnort kann durch ein \"Startdatum\", ohne \"Enddatum\", vermerkt werden.
+
+Ändert sich die Wohnsituation erheblich, etwa durch eine Änderung der Adresse oder der Besitzverhältnisse, so sollte dies ebenfalls als separate Instanz dieses Archetyps erfasst werden.
+
+Dieser Archetyp wurde speziell für die Verwendung im SLOT „Housing record“ innerhalb des Archetyps EVALUATION.housing_summary entwickelt, kann aber auch in allen anderen ENTRY- oder CLUSTER-Archetypen verwendet werden, sofern klinisch angemessen.
+
+Es kann zu scheinbaren oder tatsächlichen Überschneidungen zwischen den Datenelementen in diesem Archetyp und Wohn-/Adressdetails kommen, die als demografische Details in klinischen oder administrativen Systemen gespeichert werden können. Diese Datenelemente wurden speziell zur Unterstützung klinischer Zwecke entwickelt.">
+            misuse = <"Dient nicht zur Aufzeichnung von Informationen über ein physisches Gebäude, in dem eine Person lebt. Nutzen Sie hierfür CLUSTER.dwelling.
+
+Dient nicht dazu, Informationen über die Lebensumstände einer Einzelperson aufzuzeichnen. Nutzen Sie hierfür CLUSTER.household.
+
+Darf nicht dazu verwendet werden, aufzuzeichnen, mit wem eine Person zusammenlebt. Nutzen Sie hierfür EVALUATION.social_network.
+
+Nicht zur Aufzeichnung vorübergehender Änderungen oder Vorfälle innerhalb eines einzelnen Wohnorteintrags, wie z. B. Urlaub, geeignet.
+
+Nicht für detaillierte Beschreibungen von Gesundheitsrisiken oder der Exposition gegenüber gefährlichen Stoffen im häuslichen Umfeld oder der Wohnumgebung geeignet. Nutzen Sie hierfür die Archetypen EVALUATION.health_risk oder EVALUATION.exposure.
+
+Dient nicht zur Aufzeichnung von Informationen über die Wohnsituation einer Person zu einem bestimmten Zeitpunkt (z. B. am 16. Juni 2014) oder während eines relativen Zeitintervalls (z. B. „in den letzten 30 Tagen“). Verwenden Sie dafür einen geeigneten OBSERVATION-Archetyp.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera detaljer om ett enskilt hem eller annan bostadsmiljö för en individ under en viss tidsperiod.">
+            keywords = <"hus", "boende", "bostadsvård", "Hem", "hus", "lägenhet", "hemlös", "hyra", "ägare", "delad", "tillfälliga", "institution", "lägenhet", "lägenhet", "bostadsrätt", "härbärge">
+            use = <"Används för att registrera detaljer om ett enskilt hem eller annan bostadsmiljö för en individ under en viss tidsperiod.
+
+Omfattningen av den här arketypen inkluderar alla bostadsinställningar som används av en individ. Till exempel: alla hyrda bostäder över tiden; växla mellan två hem under en viss tidsperiod; förgänglighet, såsom nomadiska herdar som flyttar mellan säsongsbetesmarker; resande resenärer; eller hemlösa.
+
+En individ kan kräva mer än en aktiv bostadsregistrering åt gången. Varje ny bostadsinställning eller adress ska registreras i en separat instans av denna arketyp. Till exempel om en person flyttar från ett hus till ett annat hus eller lägenhet, eller flyttar samma husbil från en adress till en annan.
+
+Flera instanser av den här arketypen som fångats över tiden kommer att resultera i en sammanställning av en historia av tidigare och nuvarande bostadsituationer.
+
+En aktiv eller aktuell bostadssituation kan antydas från ett \"Datum inleddes\" men inget \"Datum upphört\".
+
+Om bostadssituationen förändras avsevärt, till exempel adressändring eller typ av tjänstgöring, bör detta också registreras som en separat instans av denna arketyp.
+
+Den här arketypen har utformats speciellt för att användas i 'Bostadsregistrering' SLOT inom EVALUATION.housing_summary arketyp, men kan också användas inom alla andra ENTRY- eller CLUSTER-arketyper, där det är kliniskt lämpligt.
+
+Det kan finnas någon uppenbar eller verklig överlappning mellan dataelementen i denna arketyp och bostads- / adressuppgifter som kan lagras som demografiska detaljer i kliniska eller administrativa system. Dessa dataelement har utformats specifikt för att stödja kliniska ändamål.">
+            misuse = <"Inte utformad för att registrera information om en fysisk byggnad där en individ bor. Använd CLUSTER.dwelling för detta ändamål.
+
+Inte utformad för att registrera information om en persons levnadsarrangemang. Använd CLUSTER.household för detta ändamål.
+
+Inte utformad för att registrera vem en individ bor med. Använd EVALUATION.social_network för detta ändamål.
+
+Inte utformad för att registrera tillfälliga ändringar eller avsnitt inom en enda bostadsregistrering, som att vara på semester.
+
+Får inte användas för detaljerade beskrivningar av hälsorisker eller exponering för farliga ämnen i hemmet eller bostaden. Använd arketyperna EVALUATION.health_risk eller EVALUATION.exposure för detta ändamål.
+
+Inte utformad för att registrera information om en persons bostadssituation vid en viss tidpunkt (till exempel den 16 juni 2014) eller under ett relativt tidsintervall (till exempel 'under de senaste 30 dagarna'. Använd en lämplig OBSERVATION-arketyp för detta ändamål.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljer om et individs bolig eller boform i en spesifisert tidsperiode.">
+            keywords = <"bolig", "aldersbolig", "hjem", "hjemmesituasjon", "sykehjem", "omsorgsbolig", "midlertidig", "institusjon", "leilighet", "hospits", "uten fast bopel", "bopel", "UFB", "enebolig", "oppholdssted", "bokollektiv", "hybel", "hospice", "aldershjem", "bosted", "adresse", "hytte", "fritidsbolig", "tilrettelagt", "bofellesskap", "støtte", "botrening", "leieforhold", "småbruk", "gård">
+            use = <"Brukes for å registrere detaljer om et individs bolig eller boform i en spesifisert tidsperiode.
+
+Arketypen omfatter alle former for bolig og/eller boform. For eksempel: alle leide eller eide boliger over tid, veksling mellom to boliger i en spesifisert tidsperiode, gjennomreisende som nomader som flytter gjennom sesongen, omreisende eller hjemløse. 
+
+Et individ kan ha flere aktive boliger samtidig. Hver bolig/boform eller adresse registreres i egne instanser av denne arketypen, for eksempel dersom et individ flytter fra ett hus til et annet eller til en leilighet, eller flytter den samme bobilen/campingvognen fra en adresse til en annen.
+
+Flere instanser av denne arketypen registrert over tid vil gi en oversikt over tidligere og nåværende bolig og/eller boform.
+
+En aktiv eller nåværende bolig/boform kan bli utledet fra \"Dato for oppstart\" hvis det ikke er registrert noe i \"Dato for opphør\".
+
+Hvis detaljer om en bolig/boform endrer seg vesentlig, som ved endring av adresse eller besittelsesrett, registreres dette i egne instanser av denne arketypen.
+
+Arketypen er laget for å benyttes i SLOTet \"Bolig\" i arketypen EVALUATION.housing_summary (Boligsammendrag), men kan også brukes innen andre ENTRY- eller CLUSTER-arketyper der det er klinisk relevant.
+
+Det kan være tilsynelatende eller reell overlapp mellom dataelementene i denne arketypen og opplysninger om bolig/adresse i demografisk informasjon i kliniske systemer. Dataelementene i denne arketypen er laget spesifikt for å støtte kliniske formål.">
+            misuse = <"Brukes ikke for å registrere informasjon om en den fysiske bygningen der individet bor. Bruk arketypen CLUSTER.dwelling for dette formålet.
+
+Brukes ikke for å registrere informasjon om individets boforhold. Bruk arketypen CLUSTER.household for dette formålet.
+
+Brukes ikke for å registrere hvem et individ bor med. Bruk arketypen EVALUATION.social_network for dette formålet.
+
+Brukes ikke for å registrere midlertidige endringer eller episoder innen en enkelt bolig eller boform, som å være på en kort ferie.
+
+Brukes ikke for å beskrive helserisikoer eller eksponering for farlige substanser i boligen eller boformen. Til dette brukes henholdsvis arketypene EVALUATION.health_risk eller EVALUATION.exposure.
+
+Brukes ikke for å registrere informasjon om bolig/boform for et individ på en bestemt dato (for eksempel 16. juni 2014) eller i løpet av en relativ tidsperiode, som for eksempel \"siste 30 dager\". Bruk en egnet OBSERVATION-arketype for dette formålet.">
+            copyright = <"© 2010 NEHTA, openEHR Foundation, Nasjonal IKT HF">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about a single home or other residential setting of an individual during a specified period of time.">
+            keywords = <"housing", "accommodation", "residential care", "home", "house", "apartment", "homeless", "rent", "owner", "shared", "temporary", "institution", "flat", "condo", "condominium", "hospice">
+            use = <"Use to record details about a single home or other residential setting of an individual during a specified period of time.
+
+The scope of this archetype is inclusive of all residential settings occupied by an individual. For example: all rented homes over time; alternating between two homes during a specified period of time; transience, such as nomadic herders moving between seasonal pastures; itinerant travellers; or homeless.
+
+An individual may require more than one active housing record at a time. Each new residential setting or address should be recorded in a separate instance of this archetype. For example if an individual is moving from a house to another house or apartment, or moving the same mobile home from one address to another.
+
+Multiple instances of this archetype captured over time will result in the aggregation of a history of past and present housing situations.
+
+An active, or current housing situation may be implied from a 'Date commenced' but no 'Date ceased'. 
+
+If the housing situation changes significantly, such as a change of address or type of tenure, then this should also be recorded as a separate instance of this archetype.
+
+This archetype has been specifically designed to be used in the 'Housing record' SLOT within the EVALUATION.housing_summary archetype, but can also be used within any other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+There may be some apparent or real overlap between the data elements in this archetype and housing/address details that may be stored as demographic details in clinical or administrative systems. These data elements have been designed specifically to support clinical purposes.">
+            misuse = <"Not to be used to record information about a physical building where an individual lives. Use CLUSTER.dwelling for this purpose.
+
+Not to be used to record information about the living arrangements for an individual. Use EVALUATION.living_arrangement for this purpose.
+
+Not to be used to record who an individual lives with. Use EVALUATION.social_network for this purpose.
+
+Not to be used to record temporary changes or episodes within a single housing record, such as being on holiday.
+
+Not to be used for detailed descriptions of health risks or exposure to hazardous substances in the home or residential setting. Use the archetypes EVALUATION.health_risk or EVALUATION.exposure for this purpose.
+
+Not to be used to record information about the housing situation of an individual at a specific point in time (for example, on June 16, 2014) or during a relative interval of time (for example 'in the past 30 days'. Use an appropriate OBSERVATION archetype for this purpose.">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation, Nasjonal IKT HF">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Enregistrer des détails sur un domicile unique ou un autre lieu de résidence d'une personne au cours d'une période donnée.">
+            keywords = <"logement", "soins résidentiels", "maison", "appartement", "sans-abri", "louer", "propriétaire", "partagé", "temporaire", "institution", "appartement", "condo", "condominium", "hospice">
+            use = <"Sert à enregistrer les détails d'une seule maison ou d'un autre lieu de résidence d'un individu au cours d'une période donnée.
+
+Le champ d'application de cet archétype englobe tous les lieux de résidence occupés par un individu. Par exemple : toutes les maisons louées au fil du temps ; l'alternance entre deux maisons au cours d'une période donnée ; l'itinérance, comme les éleveurs nomades qui se déplacent entre les pâturages saisonniers ; les voyageurs itinérants ; ou les sans-abri.
+
+Une personne peut avoir besoin de plus d'un dossier de logement actif à la fois. Chaque nouveau cadre résidentiel ou adresse doit être enregistré dans une instance distincte de cet archétype. Par exemple, si un individu déménage d'une maison à une autre maison ou à un autre appartement, ou s'il déménage le même mobil-home d'une adresse à une autre.
+
+Plusieurs instances de cet archétype saisies au fil du temps permettront d'agréger un historique des situations de logement passées et présentes.
+
+Une situation de logement active ou actuelle peut être déduite d'une \"date de début\" mais pas d'une \"date de fin\". 
+
+Si la situation de logement change de manière significative, par exemple en cas de changement d'adresse ou de mode d'occupation, il convient de l'enregistrer dans une instance distincte de cet archétype.
+
+Cet archétype a été spécifiquement conçu pour être utilisé dans le SLOT \"dossier de logement\" de l'archétype EVALUATION.housing_summary, mais il peut également être utilisé dans tout autre archétype ENTRY ou CLUSTER, lorsque cela s'avère cliniquement approprié.
+
+Il peut y avoir un chevauchement apparent ou réel entre les éléments de données de cet archétype et les détails du logement/de l'adresse qui peuvent être stockés en tant que détails démographiques dans les systèmes cliniques ou administratifs. Ces éléments de données ont été conçus spécifiquement à des fins cliniques.">
+            misuse = <"Ne doit pas être utilisé pour enregistrer des informations sur le bâtiment physique où vit une personne. Utiliser CLUSTER.dwelling à cette fin.
+
+Ne pas utiliser pour enregistrer des informations sur les conditions de vie d'une personne. Utiliser CLUSTER.household à cette fin.
+
+Ne doit pas être utilisé pour enregistrer les personnes avec lesquelles un individu vit. Utiliser EVALUATION.social_network à cette fin.
+
+Ne pas utiliser pour enregistrer des changements temporaires ou des épisodes dans un seul dossier de logement, tels que des vacances.
+
+Ne pas utiliser pour des descriptions détaillées des risques pour la santé ou de l'exposition à des substances dangereuses dans le logement ou le cadre résidentiel. Utilisez les archétypes EVALUATION.health_risk ou EVALUATION.exposure à cette fin.
+
+Ne pas utiliser pour enregistrer des informations sur la situation de logement d'un individu à un moment précis (par exemple, le 16 juin 2014) ou pendant un intervalle de temps relatif (par exemple, \"au cours des 30 derniers jours\"). Utilisez un archétype d'OBSERVATION approprié à cette fin.">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Housing record
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Name/label
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Date commenced
+                value matches {
+                    DV_DATE_TIME[at9003]
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Residential setting
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Tenure
+                value matches {
+                    DV_TEXT[at9009]
+                }
+            }
+            allow_archetype CLUSTER[at0004] occurrences matches {0..1} matches {    -- Address details
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.address(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0018] matches {    -- Additional details
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.living_arrangement(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.dwelling(-[a-zA-Z0-9_]+)*\.v0\..*/}
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Date ceased
+                value matches {
+                    DV_DATE_TIME[at9007]
+                }
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9008]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Wohnorteintrag">
+                description = <"Details eines Wohnsitzes oder einer anderen Wohnumgebung einer Person während eines bestimmten Zeitraums.">
+            >
+            ["at0001"] = <
+                text = <"Wohnsituation">
+                description = <"Eine Kategorie, die den Ort beschreibt, an dem eine Person lebt.">
+                comment = <"Kodierung der Wohnsituation mit einer Terminologie ist, wo möglich, zu bevorzugen. Die Wertemengen für dieses Datenelement können zwischen Zuständigkeitsbereichen variieren - es wird erwartet, dass diese üblicherweise innerhalb Use-Case spezifischer Templates platziert werden. Zum Beispiel: \"privater Wohnsitz\", \"betreute Wohneinrichtung\", \"Altenpflegeeinrichtung\", \"kurzfristige Krisenunterbringung\" oder \"öffentlicher Ort / vorübergehende Unterkunft\".">
+            >
+            ["at0004"] = <
+                text = <"Adressdetails">
+                description = <"Die Adresse des Wohnsitzes.">
+            >
+            ["at0005"] = <
+                text = <"Name / Bezeichnung">
+                description = <"Ein Name oder eine Bezeichnung, die mit einem Wohnsitz oder einer Wohnsituation verknüpft ist, um diesen bzw. diese von anderen Wohnungseinträgen unterscheiden zu können.">
+                comment = <"Zum Beispiel: \"Ferienhaus\", <Name einer Institution>, \"erstes Zuhause\" oder \"Obdachlos\".">
+            >
+            ["at0007"] = <
+                text = <"Startdatum">
+                description = <"Das Datum, an dem eine Person begonnen hat an diesem Wohnort oder in dieser Wohnumgebung zu leben.">
+            >
+            ["at0008"] = <
+                text = <"Enddatum">
+                description = <"Das Datum, an dem eine Person aufgehört hat an diesem Wohnort oder in dieser Wohnumgebung zu leben.">
+            >
+            ["at0013"] = <
+                text = <"Besitzverhältnis">
+                description = <"Der Rechtsanspruch einer Person, den Wohnsitz oder die Wohnumgebung zu bewohnen.">
+                comment = <"Kodierung der Wohnsituation mit einer Terminologie ist, wo möglich, zu bevorzugen. Die Wertemengen für dieses Datenelement können zwischen Zuständigkeitsbereichen variieren - es wird erwartet, dass diese üblicherweise innerhalb Use-Case spezifischer Templates platziert werden. Zum Beispiel: \"Eigentümer mit Hypothek\", \"Mieter\" oder \"ohne Besitz\".">
+            >
+            ["at0014"] = <
+                text = <"Kommentar">
+                description = <"Ergänzende Informationen zum Wohnsitz oder zur Wohnsituation, die nicht in anderen Bereichen erfasst wurden.">
+            >
+            ["at0016"] = <
+                text = <"Beschreibung">
+                description = <"Narrative Beschreibung des Wohnsitzes oder der Wohnumgebung.">
+            >
+            ["at0018"] = <
+                text = <"Zusätzliche Details">
+                description = <"Weitere Details zum Wohnsitz oder zur Wohnumgebung.">
+                comment = <"Zum Beispiel: Angaben zur Struktur einer Wohnung oder eines Hauses, einschließlich Treppen, Aufzug, Stromversorgung, Keller, oder die Personen, die am selben Ort wohnen, wie z. B. Familienmitglieder und die Anzahl der in der Wohnung lebenden Kinder.">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Bostadsregistrering">
+                description = <"Detaljer om ett enskilt hem eller annan bostadsmiljö för en individ under en viss tidsperiod.">
+            >
+            ["at0001"] = <
+                text = <"Bostadsmiljö">
+                description = <"Kategorin som beskriver platsen där en individ bor.">
+                comment = <"Kodning av bostadsmiljön med en terminologi är att föredra, där det är möjligt. Värdeuppsättningarna för detta dataelement kommer sannolikt att variera mellan jurisdiktioner - det förväntas att de vanligtvis kommer att ställas in i en användningsspecifik mall. Till exempel: \"privat bostad\"; stödbostadsanläggning\";'' vårdinrättning för åldershem''; \"kortvarig krisboende; eller \"allmän plats / tillfälligt skydd\".">
+            >
+            ["at0004"] = <
+                text = <"Adressuppgifter">
+                description = <"Adressen till bostaden.">
+            >
+            ["at0005"] = <
+                text = <"Namn / etikett">
+                description = <"Ett namn eller etikett som är associerat med denna hem- eller bostadsmiljö, så att den kan särskiljas från andra bostäder.">
+                comment = <"Till exempel: \"Semesterhus\"; <institutionens namn>; \"Första hem\"; eller 'Hemlösa'.">
+            >
+            ["at0007"] = <
+                text = <"Startdatum">
+                description = <"Datumet då en person började bo i hemmet eller i bostadsmiljön.">
+            >
+            ["at0008"] = <
+                text = <"Upphörandedatum">
+                description = <"Datumet då en person slutade att bo i hemmet eller i bostadsmiljön.">
+            >
+            ["at0013"] = <
+                text = <"Tidsperiod">
+                description = <"Den enskildes lagliga rätt att ockupera hemmet eller bostadsmiljön.">
+                comment = <"Kodning av tidsperiod med en terminologi är att föredra, om möjligt. Värdeuppsättningarna för detta dataelement kommer sannolikt att variera mellan jurisdiktioner - det förväntas att de vanligtvis kommer att ställas in i en användningsspecifik mall. Till exempel: \"ägare med inteckning\"; 'hyresgäst'; eller 'ingen tjänstgöringstid'.">
+            >
+            ["at0014"] = <
+                text = <"Kommentar">
+                description = <"Ytterligare beskrivning om hemmet eller bostadsmiljön som inte redan inkluderats.">
+            >
+            ["at0016"] = <
+                text = <"Beskrivning">
+                description = <"Berättande beskrivning om hemmet eller bostadsmiljön.">
+            >
+            ["at0018"] = <
+                text = <"Ytterligare detaljer">
+                description = <"Mer information om hemmet eller bostadsmiljön.">
+                comment = <"Till exempel: detaljer om en bostads struktur, inklusive trappor, hiss, el eller källare; eller personer som bor på samma plats, såsom familjemedlemmar och antalet barn som bor i lägenheten.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Bolig">
+                description = <"Detaljer om et individs bolig eller boform i en spesifisert tidsperiode.">
+            >
+            ["at0001"] = <
+                text = <"Boform">
+                description = <"Kategori som beskriver stedet individet bor.">
+                comment = <"Koding av boform med en terminologi er foretrukket om mulig. Verdisettet vil sannsynligvis variere mellom myndighetsområder, det forventes at det vil defineres i en bruksspesifikk templat. For eksempel: \"Egen bolig\", \"Institusjon\", \"Hospits\", \"Fengsel\", \"Hybelhus\".">
+            >
+            ["at0004"] = <
+                text = <"Adressedetaljer">
+                description = <"Adressen til boligen.">
+            >
+            ["at0005"] = <
+                text = <"Navn/merkelapp">
+                description = <"Et navn eller merkelapp (label) på denne boligen eller boformen, slik at den kan atskilles fra andre registrerte boliger.">
+                comment = <"For eksempel: \"Feriehus\", \"Primærbolig\", \"Uten fast bopæl\" eller navnet på institusjonen individet bor på.">
+            >
+            ["at0007"] = <
+                text = <"Dato for oppstart">
+                description = <"Datoen da individet begynte å bo i boligen eller boformen.">
+            >
+            ["at0008"] = <
+                text = <"Dato for opphør">
+                description = <"Datoen da individet sluttet å bo i boligen eller det ble endring i boformen.">
+            >
+            ["at0013"] = <
+                text = <"Råderett">
+                description = <"Den juridiske rettigheten individet har for å bo på stedet.">
+                comment = <"Koding av råderett med en terminologi er foretrukket om mulig. Verdisettet vil sannsynligvis variere mellom myndighetsområder, det forventes at det vil defineres i en bruksspesifikk templat. For eksempel: \"Selveier\", \"Leietaker\", \"Fast plass\".">
+            >
+            ["at0014"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om bolig eller boformen som ikke er fanget opp i andre felt.">
+            >
+            ["at0016"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse av boligen eller boformen.">
+            >
+            ["at0018"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere detaljer om boligen eller boformen.">
+                comment = <"For eksempel: Detaljer om boligkonstruksjon (trapper, heis, elektrisitet eller fuktig kjeller), eller folkene som bor på samme sted (som familie og antall barn i boligen).">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Housing record">
+                description = <"Details about a single home or other residential setting of an individual during a specified period of time.">
+            >
+            ["at0001"] = <
+                text = <"Residential setting">
+                description = <"The category that describes the place where an individual lives.">
+                comment = <"Coding of the residential setting with a terminology is preferred, where possible. The value sets for this data element are likely to vary between jurisdictions - it is anticipated that they will usually be set within a use-case specific template. For example: 'private residence'; supported accommodation facility'; 'residential aged care facility'; 'short term crisis accommodation facility; or 'public place/temporary shelter'.">
+            >
+            ["at0004"] = <
+                text = <"Address details">
+                description = <"The address of the residential setting.">
+            >
+            ["at0005"] = <
+                text = <"Name/label">
+                description = <"A name or label associated with this home or residential setting, to allow it to be distinguished from other housing records.">
+                comment = <"For example: 'Holiday house'; <name of institution>; 'First home'; or 'Homeless'.">
+            >
+            ["at0007"] = <
+                text = <"Date commenced">
+                description = <"The date when an individual commenced living in the home or residential setting.">
+            >
+            ["at0008"] = <
+                text = <"Date ceased">
+                description = <"The date when an individual ceased living in the home or residential setting.">
+            >
+            ["at0013"] = <
+                text = <"Tenure">
+                description = <"The legal right of the individual to occupy the home or residential setting.">
+                comment = <"Coding of tenure with a terminology is preferred, where possible. The value sets for this data element are likely to vary between jurisdictions - it is anticipated that they will usually be set within a use-case specific template. For example: 'owner with a mortgage'; 'renter'; or 'no tenure'.">
+            >
+            ["at0014"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the home or residential setting not captured in other fields.">
+            >
+            ["at0016"] = <
+                text = <"Description">
+                description = <"Narrative description about the home or residential setting.">
+            >
+            ["at0018"] = <
+                text = <"Additional details">
+                description = <"Further details about the home or residential setting.">
+                comment = <"For example: details about the structure of a dwelling, including stairs, elevator, electricity or cellar; or the people who reside in the same place such as members of family and the number of children living in the apartment.">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Fiche de logement">
+                description = <"Détails concernant un domicile unique ou un autre lieu de résidence d'une personne pendant une période donnée.">
+            >
+            ["at0001"] = <
+                text = <"Cadre résidentiel">
+                description = <"Catégorie décrivant le lieu de vie d'un individu.">
+                comment = <"Dans la mesure du possible, il est préférable de coder le cadre résidentiel à l'aide d'une terminologie. Les ensembles de valeurs pour cet élément de données sont susceptibles de varier d'une juridiction à l'autre - on s'attend à ce qu'ils soient généralement définis dans un modèle spécifique au cas d'utilisation. Par exemple : \"résidence privée\", \"établissement d'hébergement assisté\", \"établissement de soins pour personnes âgées\", \"établissement d'hébergement de crise à court terme\" ou \"lieu public/refuge temporaire\".">
+            >
+            ["at0004"] = <
+                text = <"Détails de l'adresse">
+                description = <"L'adresse de la résidence.">
+            >
+            ["at0005"] = <
+                text = <"Nom/label">
+                description = <"Un nom ou une étiquette associé(e) à ce logement ou à ce cadre résidentiel, qui permet de le distinguer d'autres dossiers de logement.">
+                comment = <"Par exemple : \"Maison de vacances\" ; ; \"Premier domicile\" ; ou \"Sans domicile fixe\".">
+            >
+            ["at0007"] = <
+                text = <"Date de début">
+                description = <"Date à laquelle une personne a commencé à vivre dans le foyer ou l'établissement résidentiel.">
+            >
+            ["at0008"] = <
+                text = <"Date de cessation">
+                description = <"Date à laquelle une personne a cessé de vivre dans le foyer ou l'établissement résidentiel.">
+            >
+            ["at0013"] = <
+                text = <"Durée du contrat">
+                description = <"Le droit légal de l'individu d'occuper le domicile ou le cadre résidentiel.">
+                comment = <"Dans la mesure du possible, il est préférable de coder l'occupation à l'aide d'une terminologie. Les ensembles de valeurs pour cet élément de données sont susceptibles de varier d'une juridiction à l'autre - il est prévu qu'ils soient généralement définis dans le cadre d'un modèle spécifique à un cas d'utilisation. Par exemple : \"propriétaire ayant contracté une hypothèque\" ; \"locataire\" ; ou \"pas de mode d'occupation\".">
+            >
+            ["at0014"] = <
+                text = <"Commentaire">
+                description = <"Informations supplémentaires sur le foyer ou l'établissement résidentiel qui n'ont pas été saisies dans d'autres champs.">
+            >
+            ["at0016"] = <
+                text = <"Description">
+                description = <"Description narrative du domicile ou du cadre résidentiel.">
+            >
+            ["at0018"] = <
+                text = <"Détails supplémentaires">
+                description = <"Plus de détails sur le foyer ou l'établissement résidentiel.">
+                comment = <"Par exemple : des détails sur la structure d'un logement, y compris les escaliers, l'ascenseur, l'électricité ou la cave ; ou les personnes qui résident au même endroit, telles que les membres de la famille et le nombre d'enfants vivant dans l'appartement.">
+            >
+        >
+    >

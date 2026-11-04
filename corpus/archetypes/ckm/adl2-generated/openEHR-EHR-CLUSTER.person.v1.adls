@@ -1,0 +1,871 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3f7fbe34-4e64-4c02-8d1a-402f7b0f57ce; build_uid=8c7cbe6a-27d2-4889-aecc-186c4fc52428)
+    openEHR-EHR-CLUSTER.person.v1.0.5
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch, Alina Rehberg">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de, rehberg.alina@mh-hannover.de">
+            >
+        >
+        ["pt-pt"] = <
+            language = <[ISO_639-1::pt-pt]>
+            author = <
+                ["name"] = <"Beatriz Soares">
+                ["organisation"] = <"Promptly Health">
+                ["email"] = <"beatriz.soares@promptlyhealth.com">
+            >
+            accreditation = <"Beatriz Soares, Promptly Health, Portugal">
+            other_details = <
+                ["other_contributors"] = <"Alex Anguelov, Promptly Health, Portugal
+Diogo Neto, Promptly Health, Portugal">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Elham Gholami, Erik Sundvall">
+                ["organisation"] = <"Region Stockholm">
+                ["email"] = <"erik.sundvall@regionstockholm.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Liv Laugen, John Tore Valand, Vebjørn Arntzen, Kanika Kuwelker">
+                ["organisation"] = <"​Oslo University Hospital, Norway, Helse Bergen, Helse Vest IKT">
+                ["email"] = <"liv.laugen@ous-hf.no, john.tore.valand@helse-bergen.no, john.tore.valand@helse-vest-ikt.no, varntzen@ous-hf.no, kanika.kuwelker@helse-vest-ikt.no">
+            >
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            author = <
+                ["name"] = <"Erasmia Partafylla">
+                ["organisation"] = <"Sigmasoft">
+                ["email"] = <"c.partafylla@sigmasoft.gr">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Jonas Bucher">
+                ["organisation"] = <"Cistec AG">
+                ["email"] = <"jonas.bucher@cistec.com">
+            >
+        >
+        ["zh"] = <
+            language = <[ISO_639-1::zh]>
+            author = <
+                ["name"] = <"Yexuan Cheng">
+                ["organisation"] = <"浙江大学">
+                ["email"] = <"3160100913@zju.edu.cn">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Diego Bosca">
+                ["organisation"] = <"VeraTech for Health">
+                ["email"] = <"yampeku@veratech.es">
+            >
+            accreditation = <"Native speaker. First Certificate in English">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-04-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Dag Aarhus, Vestre Viken HF, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Astrid Askeland, Dips AS, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Keisha Barwise, MOHW/IDB HSSP Project, Jamaica", "itai Basel, Private, Israel", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Yexuan Cheng, 浙江大学, China", "Candice de Lisser, Ministry of Health and Wellness, Jamaica", "Ludvig Eek Hofmann, Cambio Healthcare Systems AB, Sweden", "Valborg Ellingsen, Haraldsplass Diakonale sykehus, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Martin Grundberg, Cambio Healthcare Systems, Sweden", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (openEHR Editor)", "Rebecka Hansson, Cambio Healthcare Systems AB, Sweden", "Anca Heyd, DIPS ASA, Norway", "Roar Holm, Helse Vest IKT A/S, Norway", "Joost Holslag, Nedap, Netherlands", "Evelyn Hovenga, EJSH Consulting, Australia", "Gunnar Jårvik, Helse Vest IKT AS, Norway", "Gunn-Lisbeth Kleiven, Oslo universitetssykehus HF, Norway", "Kanika Kuwelker, Helse Vest IKT, Norway", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Erik Skjemstad, Helse Nord RHF, Norway", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Nyree Taylor, Ocean Health Systems, Australia", "Tesfay Teame, Bærum kommune, Norway", "Anders Thurin, VGR, Sweden", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Health Care Client Identification - AS 5017-2006. New South Wales (AU): Standards Australia; 2006.">
+        ["2"] = <"Health Care Provider Identification - AS 4846-2006. New South Wales (AU): Standards Australia; 2006.">
+        ["3"] = <"Health informatics — Identification of subjects of health care - ISO/TS 22220:2007. Geneva: International Organization for Standardization; 2007.">
+        ["4"] = <"HL7 FHIR Resource - Person v4.0.1: R4 [Internet]. Health Level Seven International; [accessed 2021 05 04]. Available from: http://hl7.org/fhir/2021May/person.html.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"CD21C16BEF470E3B1A24F31D027D3F0B">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung von Informationen zu einer Person, wie sie bekannt sind oder im Rahmen der klinischen Dokumentation verstanden werden.">
+            keywords = <"Anbieter, Dienstleister, Betreuer, Personal, medizinisches Fachpersonal, Verwandter, Angehöriger, Hausarzt, Zeuge, Freund, Nachbar, Kind, Familie, Geschwister, Elternteil, Einzelperson", ...>
+            use = <"Der Archetyp wird verwendet, um Informationen zur einer Person darzustellen, wie sie bekannt sind oder im Rahmen der klinischen Dokumentation verstanden werden, oft ad hoc oder wenn die Verwendung von einem formellen demografischen Register oder einem Index nicht angemessen oder nicht möglich ist.
+Beispiele beinhalten:
+- der Inhaber einer Patientenverfügung unter Verwendung des SLOT „Inhaber der Kopie“ innerhalb des Archetyps EVALUATION.advance_care_directive;
+- die Rolle und Kontaktdaten eines benannten Ansprechpartners in einer Organisation, unter Verwendung des SLOT „Kontaktperson“ innerhalb des Archetyps CLUSTER.organisation;
+- Angaben zu einem Verwandten in einer Familienanamnese unter Verwendung des SLOT „Angaben zum Familienmitglied“ innerhalb des Archetyps openEHR-EHR-EVALUATION.family_history;
+- der Name der Person, die eine Laborprobe von einem Patienten entnommen hat, unter Verwendung der „Angaben zum Probennehmer“ innerhalb des Archetyps CLUSTER.specimen oder
+- ein Zeuge eines Sturzes oder Unfalls, unter Verwendung des SLOT \"Zeuge\" innerhalb des Archetyps CLUSTER.health_event.
+
+In den meisten einfachen Anwendungsfällen reicht das unstrukturierte Element „Name“ innerhalb des Archetyps CLUSTER.person aus, um den Namen einer Person als Teil einer Gesundheitsakte darzustellen. In Fällen, in denen ein strukturierter Name für klinische Aufzeichnungszwecke erforderlich oder wünschenswert ist, verschachteln Sie diesen Archetyp jedoch im SLOT „Name strukturiert“ im Archetyp CLUSTER.person. Wenn der Archetyp CLUSTER.structured_name in den SLOT „Name strukturiert“ eingebettet ist, können beliebige oder alle Datenelemente als Textzeichenfolge kombiniert und im Element „Name“ dargestellt werden, solange sie konsistent sind.
+
+Dieser Archetyp könnte auch stellvertretend für formale demografische Daten verwendet werden, wenn ein Template mit Domänenexperten überprüft wird – beispielsweise eine Bewertung, bei der Prüfer erwarten würden, dass die Details einer Person oben im Bewertungsformular angezeigt werden.">
+            misuse = <"Der Archetyp darf nicht verwendet werden, um das formelle Identifikationsmanagement darzustellen oder zu ersetzen oder um ein offizielles demografisches Register oder einen Index zu führen. Verwenden Sie zu diesem Zweck einen formellen Master Patient Index oder Health Provider Index oder Archetypen, die auf dem demografischen Informationsmodell von openEHR basieren.
+
+Darf nicht verwendet werden, um den Patienten, die Teilnehmer oder den Verfasser der Akte und ähnliche Datenelemente darzustellen, die formal in der Patientenakte unter Verwendung der Referenzmodellattribute dargestellt werden sollten.
+
+Darf nicht verwendet werden, um das Geburtsdatum einer Person darzustellen – verwenden Sie zu diesem Zweck das Datenelement „Geburtsdatum“ im Archetyp EVALUATION.birth_summary.
+
+Darf nicht verwendet werden, um biometrische Details oder Biomarker über eine Person darzustellen – verwenden Sie zu diesem Zweck einen speziellen ENTRY-Archetyp.">
+        >
+        ["pt-pt"] = <
+            language = <[ISO_639-1::pt-pt]>
+            purpose = <"Para registar detalhes sobre uma pessoa tal como são conhecidos ou compreendidos aquando da documentação clínica.">
+            keywords = <"prestador de cuidados, cuidador, funcionário, profissional de saúde, familiar, familiar mais próximo, testemunha, amigo, vizinho, criança, família, irmão, pai, indivíduo", ...>
+            use = <"Utilizado para registar detalhes de uma pessoa conforme são conhecidos ou compreendidos aquando da documentação clínica, frequentemente ad hoc ou quando não é apropriado ou possível usar um registo demográfico ou índice formal. Exemplos incluem:
+- o detentor da cópia de um registo de cuidados avançados, utilizando o SLOT 'Copyholder' dentro do arquétipo EVALUATION.advance_care_directive;
+- o papel e detalhes de contacto de uma pessoa designada dentro de uma organização, utilizando o SLOT 'Contact person' dentro do arquétipo CLUSTER.organisation;
+- detalhes sobre um familiar num registo de histórico familiar, utilizando o SLOT 'Family member details' dentro do arquétipo openEHR-EHR-EVALUATION.family_history;
+- o nome da pessoa que recolheu uma amostra laboratorial de um paciente, utilizando os 'Specimen collector details' dentro do arquétipo CLUSTER.specimen; ou
+- uma testemunha de uma queda ou acidente, utilizando o SLOT 'Witness' dentro do arquétipo CLUSTER.health_event.
+
+Na maioria dos casos simples de registo clínico, o elemento não estruturado 'Name' dentro do arquétipo CLUSTER.person será suficiente para registar o nome de uma pessoa como parte de um registo de saúde. No entanto, em circunstâncias em que um nome estruturado é necessário ou desejável para fins de registo clínico, incorpore este arquétipo dentro do SLOT 'Structured name' no arquétipo CLUSTER.person. Se o arquétipo CLUSTER.structured_name estiver incorporado dentro do SLOT 'Structured name', todos ou alguns dos elementos de dados podem ser combinados como uma string de texto e representados no elemento 'Name', desde que sejam consistentes.
+
+Este arquétipo também poderia ser utilizado como um proxy para dados demográficos formais ao rever um template com especialistas do domínio - por exemplo, uma avaliação onde os revisores esperariam ver os detalhes de uma pessoa no topo do formulário de avaliação.">
+            misuse = <"Não deve ser utilizado para representar ou substituir a gestão formal de identificação ou para efeitos de manutenção de um registo ou índice demográfico oficial. Utilize um Master Patient Index formal ou Health Provider Index para este fim, ou arquétipos baseados no Demographic Information Model do openEHR.
+
+Não deve ser utilizado para representar o sujeito do cuidado, participantes ou autor do registo e elementos de dados semelhantes que devem ser representados formalmente no registo de saúde utilizando os atributos do Reference Model.
+
+Não deve ser utilizado para registar a data de nascimento de um indivíduo - utilize o elemento de dados 'Date of birth' dentro do EVALUATION.birth_summary para este fim.
+
+Não deve ser utilizado para registar detalhes biométricos ou biomarcadores sobre um indivíduo - utilize um arquétipo ENTRY específico para este fim.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Används för att registrera information om en person som behöver representeras i patientjournalen.">
+            keywords = <"Leverantör, vårdare, vårdgivare, personal, vårdpersonal, släkting, anhöriga, läkare, vittne, vän, granne, barn, familj, syskon, förälder, individ", ...>
+            use = <"Används för att registrera uppgifter om en person i den elektroniska journalen, när det inte är lämpligt eller möjligt att använda ett formellt demografiskt register eller index. Exempelvis:
+- Namn och kontaktuppgifter för en person som innehar en fysisk kopia av ett dokument om framtida behandlingsval eller behandlingsreservationer; exempelvis 'Copyholder'-attributet i arketypen EVALUATION.advance_care_directive;
+- Namn och kontaktuppgifter för en vårdgivare i en remiss;
+- Namn, roll och kontaktuppgifter för en medlem av ett vårdgivarteam;
+- Rollen och kontaktuppgifterna för en namngiven kontaktperson inom en organisation;
+- uppgifter om en släkting i en släkthistoria; eller
+- ett vittne till ett epileptisk anfall.
+
+I de flesta vanliga användningsfallen där ett namn måste inkluderas i en journal räcker det med fritextinmatning inom elementet 'Ostrukturerat namn'. I situationer när det krävs mer detaljerade detaljer om en eller flera namnkomponenter, använd de ytterligare strukturerade dataelementen i arketypen CLUSTER.structured_name. I denna arketyp finns en SLOT kapslade i \"Structured name\" . Om arketypen CLUSTER.structured name är kapslad i 'Structured name' SLOT, kan något eller alla av de strukturerade namnelementen sammanfogas och representeras i elementet 'Ostrukturerat namn'.
+
+Denna arketyp kan också användas som en proxy för formella demografiska data när man granskar en mall med domänexperter – till exempel en bedömning där granskare förväntar sig att se patientens uppgifter högst upp i bedömningsformuläret.">
+            misuse = <"Får inte användas för att representera eller ersätta formell identifieringshantering eller i syfte att upprätthålla ett officiellt demografiskt register eller index. Använd ett formellt Master Patient Index eller Vårdgivare Index för detta ändamål, eller arketyper baserade på openEHR Demographic Information Model.
+
+Får inte användas för att representera patienten, deltagare eller författare till journalen och liknande dataelement som bör representeras formellt i journalen med hjälp av Referensmodellens attribut.
+
+Får inte användas för att registrera en individs födelsedatum - använd istället dataelementet \"Födelsedatum\" i EVALUATION.birth_summary för detta ändamål
+
+Får inte användas för att registrera biometriska detaljer eller biomarkörer om en individ - använd en specifik ENTRY-arketyp för detta ändamål.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljer om en person i en pasientjournal.">
+            keywords = <"tjenesteyter, omsorgsperson, helsepersonell, slektning, pårørende, vitne, venn, nabo, barn, familie, søsken, forelder, arbeidsgiver, rekvirent, henviser, ektefelle, verge, samboer, kjæreste", ...>
+            use = <"Brukes for å registrere detaljer om en person i en pasientjournal, når det ikke er ønskelig eller mulig å bruke et formelt demografisk register eller indeks.
+
+For eksempel:
+- navn og kontaktdetaljer til en person som har en kopi av et fremtidig behandlingsvalg, i SLOTet \"Kopiholder\" i arketypen EVALUATION.advance_care_directive (Fremtidig behandlingsvalg).
+- navn og kontaktdetaljer til en omsorgsperson eller helsepersonell i en organisasjon, i SLOTet \"Kontaktperson\" i arketypen CLUSTER.organisation (Organisasjon).
+- detaljer om en slektning i en familieanamnese, I SLOTet \"Detaljer om familiemedlem\" i arketypen EVALUATION.family_history (Familieanamnese).
+- navnet på en person som gjennomførte prøvetakning på en pasient, i SLOTet \"Detaljer om prøvetaker\" i arketypen CLUSTER.specimen (Prøvemateriale).
+- et vitne til et fall eller en ulykke, i SLOTet \"Witness\" i arketypen CLUSTER.health_event.
+
+I de mest vanlige brukscasene der navn skal registreres i pasientjournalen, vil dataelementet \"Navn\" i denne arketypen være tilstrekkelig. I tilfeller der det er nødvendig eller ønskelig med detaljer om en eller flere navnekomponenter, bruk arketypen CLUSTER.structured_name i SLOTet \"Strukturert navn\" i denne arketypen. 
+Om det er gjort, kan noen eller alle de strukturerte navnelementene slås sammen av programvaren man benytter, og lagres i dataelementet \"Navn\".
+
+Denne arketypen kan også brukes som en midlertidig erstatning for formelle demografiske data når man gjennomgår et templat med domeneeksperter - for eksempel en vurdering der man i templatet forventer å se detaljer om en person på toppen av vurderingsskjema.">
+            misuse = <"Brukes ikke til å representere eller erstatte de formelle demografiske opplysninger for formell identitetsforvaltning eller for å opprettholde et demografisk register eller en indeks. Bruk et formelt pasientregister, helsepersonellregister eller arketyper basert på openEHR demografisk informasjonsmodell til dette formålet.
+
+Brukes ikke for å representere pasient, deltakere eller forfatter av skjema eller lignende, som skal representeres formelt i pasientjournalen. Bruk attributter fra Referansemodellen for dette formålet.
+
+Brukes ikke for å registrere fødselsdato for individet - bruk dataelementet \"Fødselsdato\" i arketypen EVALUATION.birth_summary for dette formålet.
+
+Brukes ikke for å registrere detaljer om biometri eller biomarkører for personen - bruk en spesifikk ENTRY-arketype for dette formålet.">
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            purpose = <"*To record details about a person as they are known or understood in the course of clinical documentation.(en)">
+            use = <"*Use to record details of a person as they are known or understood in the course of clinical documentation, often ad hoc or when it is not appropriate or possible to use a formal demographic register or index. Examples include:
+- the copyholder of an advanced care record, using the 'Copyholder' SLOT within the EVALUATION.advance_care_directive archetype;
+- the role and contact details of a named contact person within an organisation, using the 'Contact person' SLOT within the CLUSTER.organisation archetype;
+- details about a relative in a family history record, using the 'Family member details' SLOT within the openEHR-EHR-EVALUATION.family_history archetype; 
+- the name of the person who collected a laboratory specimen from a patient, using the 'Specimen collector details' within the CLUSTER.specimen archetype; or
+- a witness to a fall or accident, using the 'Witness' SLOT within the CLUSTER.health_event archetype.
+
+In most simple clinical recording use cases, the unstructured 'Name' element within the CLUSTER.person archetype will be sufficient to record the name of a person as part of a health record. However, in circumstances where a structured name is necessary or desirable for clinical recording purposes, nest this archetype within the 'Structured name' SLOT in CLUSTER.person archetype. If the CLUSTER.structured_name archetype is nested within the 'Structured name' SLOT, any or all of the data elements can be combined together as a text string and represented in the 'Name' element, as long as they are consistent.
+
+This archetype could also be used as a proxy for formal demographic data when reviewing a template with domain experts - for example, an assessment where reviewers would expect to see a person's details at the top of the assessment form.(en)">
+            misuse = <"*Not to be used to represent or replace formal identification management or for the purposes of maintaining an official demographic register or index. Use a formal Master Patient Index or Health Provider Index for this purpose, or archetypes based on the openEHR Demographic Information Model.
+
+Not to be used to represent the subject of care, participants or author of the record and similar data elements that should be represented formally in the health record using the Reference Model attributes.
+
+Not to be used to record the date of birth of an individual - use the 'Date of birth' data element within the EVALUATION.birth_summary for this purpose
+
+Not to be used to record biometric detail or biomarkers about an individual - use a specific ENTRY archetype for this purpose.(en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about a person as they are known or understood in the course of clinical documentation.">
+            keywords = <"provider, carer, staff, healthcare professional, relative, next-of-kin, practitioner, witness, friend, neighbour, child, family, sibling, parent, individual", ...>
+            use = <"Use to record details of a person as they are known or understood in the course of clinical documentation, often ad hoc or when it is not appropriate or possible to use a formal demographic register or index. Examples include:
+- the copyholder of an advanced care record, using the 'Copyholder' SLOT within the EVALUATION.advance_care_directive archetype;
+- the role and contact details of a named contact person within an organisation, using the 'Contact person' SLOT within the CLUSTER.organisation archetype;
+- details about a relative in a family history record, using the 'Family member details' SLOT within the openEHR-EHR-EVALUATION.family_history archetype; 
+- the name of the person who collected a laboratory specimen from a patient, using the 'Specimen collector details' within the CLUSTER.specimen archetype; or
+- a witness to a fall or accident, using the 'Witness' SLOT within the CLUSTER.health_event archetype.
+
+In most simple clinical recording use cases, the unstructured 'Name' element within the CLUSTER.person archetype will be sufficient to record the name of a person as part of a health record. However, in circumstances where a structured name is necessary or desirable for clinical recording purposes, nest this archetype within the 'Structured name' SLOT in CLUSTER.person archetype. If the CLUSTER.structured_name archetype is nested within the 'Structured name' SLOT, any or all of the data elements can be combined together as a text string and represented in the 'Name' element, as long as they are consistent.
+
+This archetype could also be used as a proxy for formal demographic data when reviewing a template with domain experts - for example, an assessment where reviewers would expect to see a person's details at the top of the assessment form.">
+            misuse = <"Not to be used to represent or replace formal identification management or for the purposes of maintaining an official demographic register or index. Use a formal Master Patient Index or Health Provider Index for this purpose, or archetypes based on the openEHR Demographic Information Model.
+
+Not to be used to represent the subject of care, participants or author of the record and similar data elements that should be represented formally in the health record using the Reference Model attributes.
+
+Not to be used to record the date of birth of an individual - use the 'Date of birth' data element within the EVALUATION.birth_summary for this purpose
+
+Not to be used to record biometric detail or biomarkers about an individual - use a specific ENTRY archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Pour enregistrer les informations relatives à une personne telles qu'elles sont connues ou entendues dans le cadre de la documentation clinique.">
+            keywords = <"prestataire de soins, aidant, membre du personnel, professionnel de santé, proche, parent, praticien, témoin, ami, voisin, enfant, famille, frère, sœur, parent, personne", ...>
+            use = <"À utiliser pour enregistrer les informations relatives à une personne telles qu’elles sont connues ou entendues dans le cadre de la documentation clinique, souvent de manière ponctuelle ou lorsqu’il n’est pas approprié ou possible d’utiliser un registre ou un index démographique officiel. Exemples :
+- le détenteur d’une directive anticipée de soins, en utilisant le SLOT « Copyholder » au sein de l’archétype EVALUATION.advance_care_directive ;
+- le rôle et les coordonnées d’une personne de contact désignée au sein d’une organisation, en utilisant le SLOT « Contact person » de l’archétype CLUSTER.organisation ;
+- les informations concernant un proche dans un dossier d’antécédents familiaux, en utilisant le SLOT « Family member details » de l’archétype openEHR-EHR-EVALUATION.family_history ; 
+- le nom de la personne ayant prélevé un échantillon de laboratoire sur un patient, à l’aide du SLOT « Specimen collector details » de l’archétype CLUSTER.specimen ; ou
+- un témoin d’une chute ou d’un accident, à l’aide du SLOT « Witness » de l’archétype CLUSTER.health_event.
+
+Dans la plupart des cas d’utilisation simples de la documentation clinique, l’élément non structuré « Name » de l’archétype CLUSTER.person suffira pour enregistrer le nom d’une personne dans un dossier médical. Toutefois, dans les cas où un nom structuré est nécessaire ou souhaitable à des fins de documentation clinique, imbriquez l’archétype CLUSTER.structured_name dans le SLOT « Structured name ».
+
+Cet archétype pourrait également servir de substitut aux données démographiques formelles lors de la révision d’un modèle avec des experts du domaine — par exemple, dans le cadre d’une évaluation où les évaluateurs s’attendent à voir les coordonnées d’une personne en haut du formulaire d’évaluation.">
+            misuse = <"À ne pas utiliser pour enregister la gestion formelle de l’identification, ni à des fins de tenue d’un registre ou d’un index démographique officiel. Utilisez un index principal des patients (Master Patient Index) ou un index des prestataires de soins (Health Provider Index) officiel à cette fin, ou encore des archétypes basés sur le modèle d’informations démographiques openEHR.
+
+À ne pas utiliser pour représenter le sujet des soins, les participants ou l’auteur du dossier, ni des éléments de données similaires qui doivent être représentés formellement dans le dossier de santé à l’aide des attributs du modèle de référence.
+
+À ne pas utiliser pour enregister la date de naissance d’une personne – utilisez l’élément de données « Date of birth » au sein de l'archétype EVALUATION.birth_summary à cette fin.
+
+À ne pas utiliser pour enregistrer des données biométriques ou des biomarqueurs concernant une personne – utilisez un archétype ENTRY spécifique à cette fin.">
+        >
+        ["zh"] = <
+            language = <[ISO_639-1::zh]>
+            purpose = <"*To record details about a person as they are known or understood in the course of clinical documentation. (en)">
+            keywords = <"*provider, carer, staff, healthcare professional, relative, next-of-kin, practitioner, witness, friend, neighbour, child, family, sibling, parent, individual (en)", ...>
+            use = <"*Use to record details of a person as they are known or understood in the course of clinical documentation, often ad hoc or when it is not appropriate or possible to use a formal demographic register or index. Examples include:
+- the copyholder of an advanced care record, using the 'Copyholder' SLOT within the EVALUATION.advance_care_directive archetype;
+- the role and contact details of a named contact person within an organisation, using the 'Contact person' SLOT within the CLUSTER.organisation archetype;
+- details about a relative in a family history record, using the 'Family member details' SLOT within the openEHR-EHR-EVALUATION.family_history archetype; 
+- the name of the person who collected a laboratory specimen from a patient, using the 'Specimen collector details' within the CLUSTER.specimen archetype; or
+- a witness to a fall or accident, using the 'Witness' SLOT within the CLUSTER.health_event archetype.
+
+In most simple clinical recording use cases, the unstructured 'Name' element within the CLUSTER.person archetype will be sufficient to record the name of a person as part of a health record. However, in circumstances where a structured name is necessary or desirable for clinical recording purposes, nest this archetype within the 'Structured name' SLOT in CLUSTER.person archetype. If the CLUSTER.structured_name archetype is nested within the 'Structured name' SLOT, any or all of the data elements can be combined together as a text string and represented in the 'Name' element, as long as they are consistent.
+
+This archetype could also be used as a proxy for formal demographic data when reviewing a template with domain experts - for example, an assessment where reviewers would expect to see a person's details at the top of the assessment form. (en)">
+            misuse = <"*Not to be used to represent or replace formal identification management or for the purposes of maintaining an official demographic register or index. Use a formal Master Patient Index or Health Provider Index for this purpose, or archetypes based on the openEHR Demographic Information Model.
+
+Not to be used to represent the subject of care, participants or author of the record and similar data elements that should be represented formally in the health record using the Reference Model attributes.
+
+Not to be used to record the date of birth of an individual - use the 'Date of birth' data element within the EVALUATION.birth_summary for this purpose
+
+Not to be used to record biometric detail or biomarkers about an individual - use a specific ENTRY archetype for this purpose. (en)">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Para registrar detalles sobre una persona tal y como se conocen o entienden en el curso de la documentación clínica.">
+            keywords = <"proveedor, cuidador, personal, profesional sanitario, familiar, pariente cercano, profesional, testigo, amigo, vecino, niño, familia, hermano, padre, individuo", ...>
+            use = <"Utilizar para registrar los detalles de una persona tal y como se conocen o entienden en el curso de la documentación clínica, a menudo ad hoc o cuando no es apropiado o posible utilizar un registro o índice demográfico formal. Algunos ejemplos son:
+- El nombre y los datos de contacto de una persona que posee una copia física de un documento de voluntades anticipadas, usando el slot 'Encargado de la copia' en el arquetipo EVALUATION.advance_care_directive;
+- La función y los datos de una persona de contacto nombrada dentro de una organización, utilizando el SLOT \"Persona de contacto\" dentro del arquetipo CLUSTER.organisation;
+- Los datos de un pariente en un registro de historia familiar, utilizando el SLOT 'Family member details' dentro del arquetipo openEHR-EHR-EVALUATION.family_history;
+- El nombre de la persona que recogió una muestra de laboratorio de un paciente, utilizando los \"detalles del recolector de muestras\" dentro del arquetipo CLUSTER.specimen; o
+- Un testigo de una caída o accidente, utilizando el SLOT \"Testigo\" dentro del arquetipo CLUSTER.health_event.
+
+En la mayoría de los casos de uso de registros clínicos sencillos, el elemento no estructurado \"Nombre\" dentro del arquetipo CLUSTER.person será suficiente para registrar el nombre de una persona como parte de un registro sanitario. Sin embargo, en circunstancias en las que sea necesario o deseable un nombre estructurado para fines de registro clínico, incluya este arquetipo dentro del SLOT 'Nombre estructurado' en el arquetipo CLUSTER.person. Si el arquetipo CLUSTER.structured_name se incluye dentro del SLOT 'Structured name', cualquiera de los elementos de datos, o todos ellos, pueden combinarse juntos como una cadena de texto y representarse en el elemento 'Nombre' siempre que sean coherentes.
+
+Este arquetipo también puede utilizarse como sustituto de los datos demográficos formales cuando se revise una plantilla con expertos del dominio - por ejemplo, una evaluación en la que los revisores esperarían ver los datos del paciente en la parte superior del formulario.">
+            misuse = <"No debe utilizarse para representar o sustituir la gestión de la identificación formal ni para mantener un registro o índice demográfico oficial. Utilice para ello un Índice Maestro de Pacientes o un Índice de Proveedores de Salud formales o arquetipos basados en el Modelo de Información Demográfico de openEHR.
+
+No debe utilizarse para representar el sujeto de la atención, los participantes o el autor del registro y elementos de datos similares que deberían representarse formalmente en el registro sanitario utilizando los atributos del Modelo de Referencia.
+
+No debe utilizarse para registrar la fecha de nacimiento de un individuo: utilice el elemento de datos \"Fecha de nacimiento\" dentro de EVALUATION.birth_summary para este fin
+
+No debe utilizarse para registrar detalles biométricos o biomarcadores sobre un individuo - utilice un arquetipo de ENTRY específico para este fin.
+">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Person
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Name
+                value matches {
+                    DV_TEXT[at9037]
+                }
+            }
+            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Label
+                value matches {
+                    DV_TEXT[at9039]
+                }
+            }
+            allow_archetype CLUSTER[at0002] matches {    -- Structured name
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.structured_name(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0003] matches {    -- Identifier
+                value matches {
+                    DV_IDENTIFIER[at9038]
+                    DV_TEXT[at9040]
+                }
+            }
+            ELEMENT[at0004] matches {    -- Role
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            allow_archetype CLUSTER[at0005] matches {    -- Address
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.address(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0006] matches {    -- Electronic communication
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.electronic_communication(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0007] matches {    -- Organisation
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0008]    -- Additional details
+            allow_archetype CLUSTER[at0009] matches {    -- Photo
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.media_file(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9041]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Person">
+                description = <"Ein identifizierter Mensch.">
+            >
+            ["at0001"] = <
+                text = <"Name">
+                description = <"Der unstrukturierte Name der Person.">
+                comment = <"Der Inhalt dieses Datenelements kann aus einer oder mehreren Komponenten vom CLUSTER.structured_name abgeleitet werden, die zusammen als ein Textstring kombiniert werden. Zum Beispiel: „John Markham“, „Professor Sir John Markham“, „John Markham Jnr MP“.">
+            >
+            ["at0002"] = <
+                text = <"Name strukturiert">
+                description = <"Alternative Darstellung des vollständigen Namens der Person durch Trennung in diskrete, strukturierte Komponenten.">
+                comment = <"Es können beliebige oder alle strukturierte Elemente des Namens als Textzeichenfolge kombiniert und im Datenelement „Name“ präsentieren werden.
+">
+            >
+            ["at0003"] = <
+                text = <"Identifikator">
+                description = <"Mit der Person verbundener Identifikator.">
+                comment = <"Kardinalität für dieses Datenelement wird auf 0..* gesetzt, damit mehr als einer Identifikator dargestellt werden kann. Beachten Sie, dass der DV_IDENTIFIER-Datentyp mehrere Unterkomponenten zum Aufzeichnen des ID-Werts, -Typs, -Ausstellers und -Zuweisers enthält. Zum Beispiel - Sozialversicherungsnummer, Führerschein oder Passnummer.">
+            >
+            ["at0004"] = <
+                text = <"Rolle">
+                description = <"Die Beziehung oder die Rolle der Person zur Person in der elektronischen Gesundheitsakte.
+">
+                comment = <"Zum Beispiel - der Inhaber einer Patientenverfügung, Kontaktperson in einer Organisation, Verwandter in einem Eintrag zur Familienananese, Probenabnehmer oder Zeuge eines Sturzes oder Unfalls. Wenn die anhand dieses Archetyps beschriebene Person der/die Patient/in der Gesundheitsakte ist, dann ist dieses Datenelement redundant.">
+            >
+            ["at0005"] = <
+                text = <"Adresse">
+                description = <"Angaben zu einer Adresse der Person.">
+            >
+            ["at0006"] = <
+                text = <"Elektronische Kommunikation">
+                description = <"Angaben zu einer oder mehreren Arten der elektronischen Kommunikation für die Person.">
+            >
+            ["at0007"] = <
+                text = <"Organisation">
+                description = <"Angaben über den organisatorischen Kontext für die Person.">
+                comment = <"Zum Beispiel: Identifizierung des Unternehmens oder der Gemeinschaftsorganisation, die mit der „Rolle“ der Person assoziiert ist.">
+            >
+            ["at0008"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Weitere Angaben zur Person.">
+            >
+            ["at0009"] = <
+                text = <"Foto">
+                description = <"Foto der Person.">
+            >
+            ["at0010"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Beschreibung zu der Person, die in anderen Bereichen nicht erfasst wird.">
+            >
+            ["at0011"] = <
+                text = <"Bezeichnung">
+                description = <"Bezeichnung der Person.">
+                comment = <"Zum Beispiel: „Nachbar im Haus mit der roten Tür“.">
+            >
+        >
+        ["pt-pt"] = <
+            ["at0000"] = <
+                text = <"Pessoa">
+                description = <"Um ser humano individual.">
+            >
+            ["at0001"] = <
+                text = <"Nome">
+                description = <"O nome informal do indivíduo.">
+                comment = <"O conteúdo deste elemento de dados pode ser derivado de um ou mais componentes de CLUSTER.structured_name combinados numa string de texto. Por exemplo: 'John Markham', 'Professor Sir John Markham', 'John Markham Jnr MP'.">
+            >
+            ["at0002"] = <
+                text = <"Nome formal">
+                description = <"Representação alternativa do nome completo de um indivíduo por meio da separação em componentes estruturados e discretos.">
+                comment = <"Qualquer ou todos os elementos de nome estruturados podem ser combinados numa string de texto e representados no elemento de dados 'Name' neste arquétipo.">
+            >
+            ["at0003"] = <
+                text = <"Identificador">
+                description = <"Identificador associado ao indivíduo.">
+                comment = <"As ocorrências para este elemento de dados estão definidas como 0..* para permitir que mais do que um Identificador seja registado. Note que o tipo de dados DV_IDENTIFIER contém vários sub-componentes para registrar o valor do ID, tipo, emissor e atribuição. Por exemplo - número de segurança social; carta de condução; ou número de passaporte.">
+            >
+            ["at0004"] = <
+                text = <"Papel">
+                description = <"A relação ou papel do indivíduo em relação ao sujeito do registo de saúde.">
+                comment = <"Por exemplo - o detentor de uma cópia de um registo de cuidados avançados; pessoa de contacto numa organização; familiar num registo de histórico familiar; coletor de espécimes; ou testemunha de uma queda ou acidente. Se o indivíduo descrito usando este arquétipo é o sujeito do registo de saúde, então este elemento de dados é redundante.">
+            >
+            ["at0005"] = <
+                text = <"Morada">
+                description = <"Detalhes sobre a morada do indivíduo.">
+            >
+            ["at0006"] = <
+                text = <"Comunicação eletrónica">
+                description = <"Detalhes sobre um ou mais tipos de comunicação eletrónica para o indivíduo.">
+            >
+            ["at0007"] = <
+                text = <"Organização">
+                description = <"Detalhes sobre o contexto organizacional do indivíduo.">
+                comment = <"Por exemplo: identificando o negócio ou organização comunitária associada ao 'Role' do indivíduo.">
+            >
+            ["at0008"] = <
+                text = <"Detalhes adicionais">
+                description = <"Detalhes adicionais sobre o indivíduo">
+            >
+            ["at0009"] = <
+                text = <"Fotografia">
+                description = <"Fotografia do indivíduo">
+            >
+            ["at0010"] = <
+                text = <"Comentário">
+                description = <"Informação adicional acerca do indivíduo, que não pode ser extraída a partir de outros campos.">
+            >
+            ["at0011"] = <
+                text = <"Rótulo">
+                description = <"Um rótulo para o indivíduo.">
+                comment = <"Por exemplo: 'Vizinho da casa com a porta vermelha'.">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Person">
+                description = <"En mänsklig individ.">
+            >
+            ["at0001"] = <
+                text = <"Namn">
+                description = <"Individens namn i ostrukturerad form.">
+                comment = <"Innehållet i detta dataelement kan exempelvis skapas genom en sammanslagning av en eller flera komponenter från CLUSTER.structured_name. Till exempel: 'John Markham', 'Professor Sir John Markham', 'John Markham Jnr MP'">
+            >
+            ["at0002"] = <
+                text = <"Strukturerat namn">
+                description = <"Alternativ representation av en individs fullständiga namn genom uppdelning i enskilda komponenter.">
+                comment = <"Några eller alla strukturerade namnelement kan kombineras som en textsträng och representeras i dataelementet 'Namn' i denna arketyp.
+">
+            >
+            ["at0003"] = <
+                text = <"Identifierare">
+                description = <"Identifierare förknippad med personen.">
+                comment = <"Förekomster för detta dataelement är satt till 0..* för att tillåta att mer än en identifierare kan registreras. Observera att DV_IDENTIFIER-datatypen innehåller flera underkomponenter för registrering av ID-värde, typ, utfärdare och tilldelad. Till exempel - personnummer; körkort; eller passnummer.
+">
+            >
+            ["at0004"] = <
+                text = <"Roll">
+                description = <"Personens relation eller roll till individen eller patienten.">
+                comment = <"Exempelvis: Person som har en fysisk kopia av patientens önskemål om vård i händelse av att patienten inte längre kan kommunicera; kontaktperson i en organisation; en släkting i en familjehistorik; provtagare; vittne till en fallolycka.
+
+Om individen som beskrivs med denna arketyp är den som själva journalen gäller, då är detta dataelement redundant/överflödigt.">
+            >
+            ["at0005"] = <
+                text = <"Adress">
+                description = <"Detaljer om en adress för personen.">
+            >
+            ["at0006"] = <
+                text = <"Elektronisk kommunikation">
+                description = <"Detaljer om en eller flera specifika typer av elektronisk kommunikation för personen.">
+            >
+            ["at0007"] = <
+                text = <"Organisation">
+                description = <"Detaljer om det organisatoriska sammanhanget/kopplingen för denna person.">
+                comment = <"Exempelvis: Företaget eller organisationen som är kopplad till individens \"roll\".">
+            >
+            ["at0008"] = <
+                text = <"Ytterligare detaljer">
+                description = <"Ytterligare information om personen.">
+            >
+            ["at0009"] = <
+                text = <"Foto">
+                description = <"Fotografi på individen.">
+            >
+            ["at0010"] = <
+                text = <"Kommentar">
+                description = <"Ytterligare information om personen som inte rean beskrivits i andra fält.">
+            >
+            ["at0011"] = <
+                text = <"Beskrivning">
+                description = <"Identifierande beskrivning av en person">
+                comment = <"Exempelvis: 'Granne i huset med den röda dörren'.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Person">
+                description = <"Et identifisert menneske.">
+            >
+            ["at0001"] = <
+                text = <"Navn">
+                description = <"Ustrukturert navn for personen.">
+                comment = <"Innholdet i dette elementet kan være en sammenstilling av en eller flere komponenter fra arketypen CLUSTER.structured_name. For eksempel: \"John Markham\", \"Professor Sir John Markham\", \"John Markham Jnr MP\".">
+            >
+            ["at0002"] = <
+                text = <"Strukturert navn">
+                description = <"Alternativ representasjon av det fullstendige navnet til en person ved å splitte det opp i strukturerte enkeltkomponenter.">
+                comment = <"Et utvalg av eller alle de strukturerte navneelementene kan kombineres til en tekststreng og representeres i dataelementet \"Navn\" i denne arketypen.">
+            >
+            ["at0003"] = <
+                text = <"Identifikator">
+                description = <"Identifikator for personen.">
+                comment = <"Forekomster for dette dataelementet er satt til 0..* for å tillatte registrering av mer enn én Identifikator. Legg merke til at DV_IDENTIFIER-datatypen inneholder flere underkomponenter for å registrere ID-verdi, type, utsteder og tilordnet. For eksempel: personnummer, førerkort eller passnummer.">
+            >
+            ["at0004"] = <
+                text = <"Rolle">
+                description = <"Relasjonen eller rollen personen har til individet som pasientjournalen omhandler.">
+                comment = <"For eksempel: kopiinnhaver av et fremtidig behandlingsvalg, kontaktperson i en organisasjon, slektning, prøvetaker eller et vitne til et fall eller ulykke. Hvis personen som beskrives i denne arketypen er pasienten, er dette dataelementet unødvendig.">
+            >
+            ["at0005"] = <
+                text = <"Adresse">
+                description = <"Detaljer om en persons adresse.">
+            >
+            ["at0006"] = <
+                text = <"Elektronisk kommunikasjon">
+                description = <"Detaljer om en eller flere typer elektronisk kommunikasjon.">
+            >
+            ["at0007"] = <
+                text = <"Organisasjon">
+                description = <"Detaljer om organisasjonstilknytning for personen.">
+                comment = <"For eksempel: Identifisere virksomheten eller samfunnsorganisasjonen knyttet til rollen til personen.">
+            >
+            ["at0008"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere detaljer om personen.">
+            >
+            ["at0009"] = <
+                text = <"Bilde">
+                description = <"Bilde av personen.">
+            >
+            ["at0010"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om personen som ikke er registrert i andre felt.">
+            >
+            ["at0011"] = <
+                text = <"Betegnelse">
+                description = <"En betegnelse (label) for personen.">
+                comment = <"For eksempel: \"Naboen i huset med den rød døren\".">
+            >
+        >
+        ["el"] = <
+            ["at0000"] = <
+                text = <"Άτομο">
+                description = <"Ένας μεμονωμένος άνθρωπος.">
+            >
+            ["at0001"] = <
+                text = <"Όνομα">
+                description = <"Το μη δομημένο όνομα για το άτομο.">
+            >
+            ["at0002"] = <
+                text = <"Ολόκληρο όνομα">
+                description = <"Εναλλακτική αναπαράσταση του πλήρους ονόματος ενός ατόμου με διαχωρισμό σε διακριτά, δομημένα στοιχεία.">
+            >
+            ["at0003"] = <
+                text = <"Αναγνωριστικό">
+                description = <"Αναγνωριστικό που σχετίζεται με το άτομο.">
+                comment = <"Οι εμφανίσεις για αυτό το στοιχείο δεδομένων έχουν οριστεί σε 0..* για να επιτρέπεται η καταγραφή περισσότερων του ενός αναγνωριστικών. Σημειώστε ότι ο τύπος δεδομένων DV_IDENTIFIER περιέχει πολλαπλά υποστοιχεία για την καταγραφή της τιμής, του τύπου, του εκδότη και του εκχωρημένου αναγνωριστικού. Για παράδειγμα - αριθμός κοινωνικής ασφάλισης. άδεια οδήγησης; ή τον αριθμό διαβατηρίου.">
+            >
+            ["at0004"] = <
+                text = <"Ρόλος">
+                description = <"Η σχέση ή ο ρόλος του ατόμου με το αντικείμενο του φακέλου υγείας.">
+                comment = <"Για παράδειγμα - ο κάτοχος ενός αρχείου προκαταρκτικής φροντίδας. πρόσωπο επικοινωνίας σε έναν οργανισμό· συγγενής σε καταχώριση οικογενειακού ιστορικού. συλλέκτης δειγμάτων? ή μάρτυρας πτώσης ή ατυχήματος. Εάν το άτομο που περιγράφεται χρησιμοποιώντας αυτό το αρχέτυπο αποτελεί αντικείμενο του μητρώου υγείας, τότε αυτό το στοιχείο δεδομένων είναι περιττό.">
+            >
+            ["at0005"] = <
+                text = <"Διεύθυνση">
+                description = <"Λεπτομέρειες σχετικά με μια διεύθυνση για το άτομο.">
+            >
+            ["at0006"] = <
+                text = <"Στοιχεία ηλεκτρονικής επικοινωνίας">
+                description = <"Λεπτομέρειες σχετικά με έναν ή περισσότερους τύπους ηλεκτρονικής επικοινωνίας για το άτομο.">
+            >
+            ["at0007"] = <
+                text = <"Οργανισμός">
+                description = <"Λεπτομέρειες σχετικά με το οργανωτικό πλαίσιο για το άτομο.">
+                comment = <"Για παράδειγμα: προσδιορισμός της επιχείρησης ή της κοινοτικής οργάνωσης που σχετίζεται με τον «Ρόλο» του ατόμου.">
+            >
+            ["at0008"] = <
+                text = <"Επιπλέον πληροφορίες">
+                description = <"Πρόσθετες λεπτομέρειες για το άτομο.">
+            >
+            ["at0009"] = <
+                text = <"Φωτογραφία">
+                description = <"Φωτογραφία του ατόμου.">
+            >
+            ["at0010"] = <
+                text = <"Σχόλιο">
+                description = <"Πρόσθετη αφήγηση για το άτομο που δεν έχει αποτυπωθεί σε άλλα πεδία.">
+            >
+            ["at0011"] = <
+                text = <"Ετικέτα">
+                description = <"Μια ετικέτα για το άτομο.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Person">
+                description = <"An individual human being.">
+            >
+            ["at0001"] = <
+                text = <"Name">
+                description = <"The unstructured name for the individual.">
+                comment = <"The content of this data element may be derived from one or more components from CLUSTER.structured_name combined together as a text string. For example: 'John Markham', 'Professor Sir John Markham', 'John Markham Jnr MP'.">
+            >
+            ["at0002"] = <
+                text = <"Structured name">
+                description = <"Alternative representation of an individual's complete name by separation into discrete, structured components.">
+                comment = <"Any or all of the structured name elements can be combined together as a text string and represented in the 'Name' data element in this archetype.">
+            >
+            ["at0003"] = <
+                text = <"Identifier">
+                description = <"Identifier associated with the individual.">
+                comment = <"Occurrences for this data element is set to 0..* to allow for more than one Identifier to be recorded. Note that the DV_IDENTIFIER data type contains multiple subcomponents for recording the ID value, type, issuer and assigned. For example - social security number; driver's license; or passport number.">
+            >
+            ["at0004"] = <
+                text = <"Role">
+                description = <"The relationship or role of the individual to the subject of the health record.">
+                comment = <"For example - the copyholder of an advance care record; contact person in an organisation; relative in a family history entry; specimen collector; or witness to a fall or accident. If the individual being described using this archetype is the subject of the health record, then this data element is redundant.">
+            >
+            ["at0005"] = <
+                text = <"Address">
+                description = <"Details about an address for the individual.">
+            >
+            ["at0008"] = <
+                text = <"Additional details">
+                description = <"Additional details about the individual.">
+            >
+            ["at0010"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the individual not captured in other fields.">
+            >
+            ["at0007"] = <
+                text = <"Organisation">
+                description = <"Details about the organisational context for the individual.">
+                comment = <"For example: identifying the business or community organisation associated with the 'Role' of the individual.">
+            >
+            ["at0006"] = <
+                text = <"Electronic communication">
+                description = <"Details about one or more types of electronic communication for the individual.">
+            >
+            ["at0009"] = <
+                text = <"Photo">
+                description = <"Photograph of the individual.">
+            >
+            ["at0011"] = <
+                text = <"Label">
+                description = <"A label for the individual.">
+                comment = <"For example: 'Neighbour in the house with the red door'.">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Personne">
+                description = <"Un être humain en tant qu'individu.">
+            >
+            ["at0001"] = <
+                text = <"Nom">
+                description = <"Nom non structuré de la personne.">
+                comment = <"Le contenu de cet élément de données peut être dérivé d’un ou plusieurs composants du CLUSTER.structured_name combinés sous la forme d’une chaîne de caractères. Par exemple : « John Markham », « Professeur Sir John Markham », « John Markham Jnr, député ».">
+            >
+            ["at0002"] = <
+                text = <"Nom structuré">
+                description = <"Représentation alternative du nom complet d'une personne, par décomposition en éléments distincts et structurés.">
+                comment = <"Tout ou partie des éléments structurés du nom peuvent être combinés sous forme de chaîne de caractères et représentés dans l'élément de données « Nom » de cet archétype.">
+            >
+            ["at0003"] = <
+                text = <"Identifiant">
+                description = <"Identifiant associé à la personne.">
+                comment = <"Le nombre d'occurrences pour cet élément de données est défini à 0..* afin de permettre l'enregistrement de plusieurs identifiants. Notez que le type de données DV_IDENTIFIER contient plusieurs sous-composants permettant d'enregistrer la valeur de l'identifiant, son type, son émetteur et son attribution. Par exemple : numéro de sécurité sociale, permis de conduire ou numéro de passeport.">
+            >
+            ["at0004"] = <
+                text = <"Rôle">
+                description = <"La relation ou le rôle de la personne par rapport au sujet du dossier médical.">
+                comment = <"Par exemple : le détenteur d’un dossier de soins anticipés ; la personne de contact au sein d’une organisation ; un proche mentionné dans une entrée relative aux antécédents familiaux ; la personne chargée du prélèvement d’échantillons ; ou un témoin d’une chute ou d’un accident. Si la personne décrite à l’aide de cet archétype est le sujet du dossier médical, cet élément de données est alors redondant.">
+            >
+            ["at0005"] = <
+                text = <"Adresse">
+                description = <"Informations relatives à l'adresse de la personne.">
+            >
+            ["at0008"] = <
+                text = <"Détails supplémentaires">
+                description = <"Détails supplémentaires sur la personne.">
+            >
+            ["at0010"] = <
+                text = <"Commentaire">
+                description = <"Informations supplémentaires sur la personne qui ne figurent pas dans les autres champs.">
+            >
+            ["at0007"] = <
+                text = <"Organisation">
+                description = <"Informations relatives au contexte organisationnel de la personne.">
+                comment = <"Par exemple : identifiant l'entreprise ou l'organisation communautaire associée au « rôle » de la personne.">
+            >
+            ["at0006"] = <
+                text = <"Communication électronique">
+                description = <"Informations relatives à un ou plusieurs types de communication électronique concernant cette personne.">
+            >
+            ["at0009"] = <
+                text = <"Photo">
+                description = <"Photographie de la personne.">
+            >
+            ["at0011"] = <
+                text = <"Étiquette">
+                description = <"Une désignation de la personne.">
+                comment = <"Par exemple : « Voisin de la maison à la porte rouge ».">
+            >
+        >
+        ["zh"] = <
+            ["at0000"] = <
+                text = <"人">
+                description = <"*An individual human being. (en)">
+            >
+            ["at0001"] = <
+                text = <"*Name (en)">
+                description = <"*The unstructured name for the individual. (en)">
+                comment = <"*The content of this data element may be derived from one or more components from CLUSTER.structured_name combined together as a text string. For example: 'John Markham', 'Professor Sir John Markham', 'John Markham Jnr MP'. (en)">
+            >
+            ["at0002"] = <
+                text = <"结构化姓名">
+                description = <"*Alternative representation of an individual's complete name by separation into discrete, structured components. (en)">
+                comment = <"*Any or all of the structured name elements can be combined together as a text string and represented in the 'Name' data element in this archetype. (en)">
+            >
+            ["at0003"] = <
+                text = <"标识符">
+                description = <"*Identifier associated with the person. (en)">
+                comment = <"*Occurrences for this data element is set to 0..* to allow for more than one Identifier to be recorded. Note that the DV_IDENTIFIER data type contains multiple subcomponents for recording the ID value, type, issuer and assigned. For example - social security number; driver's license; or passport number. (en)">
+            >
+            ["at0004"] = <
+                text = <"角色">
+                description = <"*The relationship or role of the individual to the subject of the health record (en)">
+                comment = <"*For example - the copyholder of an advance care record; contact person in an organisation; relative in a family history entry; specimen collector; or witness to a fall or accident. If the individual being described using this archetype is the subject of the health record, then this data element is redundant. (en)">
+            >
+            ["at0005"] = <
+                text = <"地址">
+                description = <"*Details about an address for the individual. (en)">
+            >
+            ["at0008"] = <
+                text = <"其他详细信息">
+                description = <"有关此人的其他详细信息。">
+            >
+            ["at0010"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the individual not captured in other fields. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Organisation (en)">
+                description = <"*Details about the organisational context for the individual. (en)">
+                comment = <"*For example: identifying the business or community organisation associated with the 'Role' of the individual. (en)">
+            >
+            ["at0006"] = <
+                text = <"*Electronic communication (en)">
+                description = <"*Details about one or more types of electronic communication for the individual. (en)">
+            >
+            ["at0009"] = <
+                text = <"*Photo (en)">
+                description = <"*Photograph of the individual. (en)">
+            >
+            ["at0011"] = <
+                text = <"*Label (en)">
+                description = <"*A label for the individual. (en)">
+                comment = <"*For example: 'Neighbour in the house with the red door'. (en)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Persona">
+                description = <"Un ser humano individual">
+            >
+            ["at0001"] = <
+                text = <"Nombre">
+                description = <"El nombre no estructurado del individuo">
+                comment = <"El contenido de este elemento de datos puede derivarse de uno o más componentes de CLUSTER.structured_name combinados como una cadena de texto. Por ejemplo: \"John Markham\", \"Professor Sir John Markham\", \"John Markham Jnr MP\".">
+            >
+            ["at0002"] = <
+                text = <"Nombre estructurado">
+                description = <"Una representación alternativa del nombre completo del individuo separado en componentes estructurados">
+                comment = <"Cualquiera de los elementos del nombre estructurado, o todos ellos, pueden combinarse como una cadena de texto y utilizarse en el elemento de datos \"Nombre\" de este arquetipo.">
+            >
+            ["at0003"] = <
+                text = <"Identificador">
+                description = <"Identificador asociado con el individuo">
+                comment = <"Las ocurrencias de este elemento de datos se establecen en 0..* para permitir que se registre más de un identificador. Obsérvese que el tipo de datos DV_IDENTIFIER contiene múltiples subcomponentes para registrar el valor del identificador, el tipo, el emisor y el asignador. Por ejemplo, el número de la seguridad social, el del carnet de conducir o el del pasaporte.">
+            >
+            ["at0004"] = <
+                text = <"Rol">
+                description = <"La relación o rol del individuo con el sujeto al que pertenece el registro de salud">
+                comment = <"Por ejemplo: el encargado de guardar la copia física del documento de voluntades anticipadas; la persona de contacto en una organización; el pariente en una entrada de historia familiar; el recolector de muestras; o el testigo de una caída o accidente. Si la persona que se describe mediante este arquetipo es el sujeto de la historia clínica, estos datos son redundantes.">
+            >
+            ["at0005"] = <
+                text = <"Dirección">
+                description = <"Detalles sobre la dirección de un individuo">
+            >
+            ["at0006"] = <
+                text = <"Comunicación electrónica">
+                description = <"Detalles sobre uno o más tipos de comunicación electrónica del individuo.">
+            >
+            ["at0007"] = <
+                text = <"Organización">
+                description = <"Detalles sobre el contexto organizacional del individuo">
+                comment = <"Por ejemplo: identificar la empresa u organización comunitaria asociada al 'rol' del individuo.">
+            >
+            ["at0008"] = <
+                text = <"Detalles adicionales">
+                description = <"Detalles adicionales sobre el individuo.">
+            >
+            ["at0009"] = <
+                text = <"Foto">
+                description = <"Fotografía del individuo">
+            >
+            ["at0010"] = <
+                text = <"Comentario">
+                description = <"Información narrativa adicional sobre el individuo no capturada en otros campos.">
+            >
+            ["at0011"] = <
+                text = <"Etiqueta">
+                description = <"Una etiqueta para el individuo">
+                comment = <"Por ejemplo: 'Vecino de la casa con la puerta roja'">
+            >
+        >
+    >

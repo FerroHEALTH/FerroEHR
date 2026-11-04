@@ -1,0 +1,289 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d4ecbe3e-f10d-4d92-9aea-44894954e285; build_uid=2ccfdee3-9e3d-4921-bf2a-d2d3dc46ec26)
+    openEHR-EHR-OBSERVATION.briganti_risk_score.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Hildegard Franke">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"hildi@freshehr.com">
+        ["date"] = <"2016-05-30">
+    >
+    original_namespace = <"uk.org.clinicalmodels">
+    original_publisher = <"UK Clinical Models">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"uk.org.clinicalmodels">
+    custodian_organisation = <"UK Clinical Models">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"https://www.mskcc.org/nomograms/prostate/pre-op">
+    >
+    other_details = <
+        ["current_contact"] = <"Hildegard Franke, freshEHR Clinical Informatics Ltd.<hildi@freshehr.com>">
+        ["MD5-CAM-1.0.1"] = <"9130AAF2B659E0BAD35E8FAC80F8299C">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Intended for recording details of Briganti Risk Score for prostate cancer.">
+            keywords = <"Briganti", "score", "prostate", "cancer", "lymph", "malignancy", "recurrence">
+            use = <"Use to capture details and total scores under Briganti Risk score.">
+            misuse = <"">
+            copyright = <"© Clinical Models UK">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Briganti Risk Score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Point in time
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Age
+                                        value matches {
+                                            DV_DURATION[at9001] matches {
+                                                value matches {PY/|P0D..P150Y|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- PSA level before biopsy
+                                        value matches {
+                                            DV_QUANTITY[at9002] matches {
+                                                property matches {[at9000]}    -- Concentration
+                                                magnitude matches {|0.1..100.0|}
+                                                units matches {"nanogm/ml"}
+                                                precision matches {1}
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0035] matches {    -- Gleason Grade
+                                        include
+                                            archetype_id/value matches {/.*/}
+                                    }
+                                    allow_archetype CLUSTER[at0019] matches {    -- Tumour Staging
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.tnm_staging_7th-prostate(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Positive biopsy cores
+                                        value matches {
+                                            DV_COUNT[at9003] matches {
+                                                magnitude matches {|0..20|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Negative biopsy cores
+                                        value matches {
+                                            DV_COUNT[at9004] matches {
+                                                magnitude matches {|0..20|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Percentage positive
+                                        value matches {
+                                            DV_PROPORTION[at9005] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                is_integral matches {False}
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Probability 10-year survival
+                                        value matches {
+                                            DV_PROPORTION[at9006] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                is_integral matches {False}
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Probability 15-year survival
+                                        value matches {
+                                            DV_PROPORTION[at9007] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                is_integral matches {False}
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Progression free probability 5 years
+                                        value matches {
+                                            DV_PROPORTION[at9008] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                is_integral matches {False}
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Progression free probability 10 years
+                                        value matches {
+                                            DV_PROPORTION[at9009] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                is_integral matches {False}
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Organ-confined disease probability
+                                        value matches {
+                                            DV_PROPORTION[at9010] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                is_integral matches {False}
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Extra-capsular extension probability
+                                        value matches {
+                                            DV_PROPORTION[at9011] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                is_integral matches {False}
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- Lymph node involvement probability
+                                        value matches {
+                                            DV_PROPORTION[at9012] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                is_integral matches {False}
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- Seminal invasion probability
+                                        value matches {
+                                            DV_PROPORTION[at9013] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                is_integral matches {False}
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0031] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0032] matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9014]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0033] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0034] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Briganti Risk Score">
+                description = <"The Briganti risk score is a score for predicting probabilities of survival, recurrence, lymph node involvement, organ-defined involvement, extracapsular extension and seminal invasion.">
+            >
+            ["at0002"] = <
+                text = <"Point in time">
+                description = <"A specific date and/or time which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Age">
+                description = <"Patient age when risk score is calculated.">
+            >
+            ["at0005"] = <
+                text = <"PSA level before biopsy">
+                description = <"PSA level from laboratory report before the biopsy.">
+            >
+            ["at0019"] = <
+                text = <"Tumour Staging">
+                description = <"Clinical tumor stage is determined by digital rectal examination and does not include stages determined by imaging studies.
+What was your clinical tumor stage, using the AJCC Version 7/2010 Staging System?
+Note: Although it is possible to be stage TX or stage T4, this nomogram is not applicable for these stages.">
+            >
+            ["at0020"] = <
+                text = <"Positive biopsy cores">
+                description = <"Number of positive cores taken during biopsy. Information on cores taken at biopsy is optional. The nomogram can provide predictions without this information if not available. However, using this information, the nomogram can provide more refined predictions.">
+            >
+            ["at0021"] = <
+                text = <"Negative biopsy cores">
+                description = <"Number of negative cores taken during biopsy. Information on cores taken at biopsy is optional. The nomogram can provide predictions without this information if not available. However, using this information, the nomogram can provide more refined predictions.">
+            >
+            ["at0022"] = <
+                text = <"Percentage positive">
+                description = <"What percentage of the biopsy samples taken were positive?">
+            >
+            ["at0023"] = <
+                text = <"Probability 10-year survival">
+                description = <"Probability of cancer-specific survival for 10 years after radical prostatectomy.">
+            >
+            ["at0024"] = <
+                text = <"Probability 15-year survival">
+                description = <"Probability of cancer-specific survival for 15 years after radical prostatectomy.">
+            >
+            ["at0025"] = <
+                text = <"Progression free probability 5 years">
+                description = <"Progression-free probability for 5 years after radical prostatectomy.">
+            >
+            ["at0026"] = <
+                text = <"Progression free probability 10 years">
+                description = <"Progression-free probability for 10 years after radical prostatectomy.">
+            >
+            ["at0027"] = <
+                text = <"Organ-confined disease probability">
+                description = <"This number shows, as a percentage, the probability that the cancer will be found to be confined to the prostate gland when the prostate is removed.">
+            >
+            ["at0028"] = <
+                text = <"Extra-capsular extension probability">
+                description = <"This number shows, as a percentage, the probability of “extracapsular extension,” meaning the probability that the cancer extends through the capsule of the prostate into the surrounding tissue.">
+            >
+            ["at0029"] = <
+                text = <"Lymph node involvement probability">
+                description = <"This number shows, as a percentage, the probability that prostate cancer has spread to the pelvic lymph nodes.">
+            >
+            ["at0030"] = <
+                text = <"Seminal invasion probability">
+                description = <"This number shows, as a percentage, the probability of “seminal vesicle invasion,” which occurs when prostate cancer has spread into the seminal vesicles — glands attached to the prostate that help to produce semen. This number shows the probability that the cancer has spread to one or both seminal vesicles.">
+            >
+            ["at0032"] = <
+                text = <"Confounding factors">
+                description = <"Description of any incidental factors that may have contributed to the score.">
+            >
+            ["at0034"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"e.g. Local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0035"] = <
+                text = <"Gleason Grade">
+                description = <"Primary, secondary and tertiary Gleason grades and Total Gleason score.">
+            >
+            ["at9000"] = <
+                text = <"Concentration">
+                description = <"Concentration">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/119>
+        >
+    >

@@ -1,0 +1,242 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6824e914-72f4-40e0-b546-e4c44f6a6fef; build_uid=7ba95473-26db-4f13-b0df-92b39b63f1ca)
+    openEHR-EHR-ADMIN_ENTRY.health_event_investigation_metadata.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2023-09-04">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"1FE79FF11C5DBE9FB6343AE9B31DC0CF">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ADMIN_ENTRY[at0000] matches {    -- Health event investigation metadata
+        data matches {
+            ITEM_TREE[at0025] matches {    -- ITEM_TREE
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0001] occurrences matches {0..1} matches {    -- Notified event
+                        value matches {
+                            DV_TEXT[at9000]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Notification ID
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Investigation ID
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Date of notification
+                        value matches {
+                            DV_DATE_TIME[at9003]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0009] matches {    -- Notifier
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    allow_archetype CLUSTER[at0026] matches {    -- Notifier facility
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0011] matches {    -- Investigator
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Date investigation initiated
+                        value matches {
+                            DV_DATE_TIME[at9004]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0013] matches {    -- Treating clinician
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    allow_archetype CLUSTER[at0014] matches {    -- Treating health facility
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Date investigation completed
+                        value matches {
+                            DV_DATE_TIME[at9005]
+                        }
+                    }
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Date submitted for local review/sign-off
+                        value matches {
+                            DV_DATE_TIME[at9006]
+                        }
+                    }
+                    CLUSTER[at0017] matches {    -- Local review details
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0018] occurrences matches {0..1} matches {    -- Date received for review
+                                value matches {
+                                    DV_DATE_TIME[at9007]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0019] matches {    -- Reviewer
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                            ELEMENT[at0020] occurrences matches {0..1} matches {    -- Review type
+                                value matches {
+                                    DV_TEXT[at9008]
+                                }
+                            }
+                            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Health region
+                                value matches {
+                                    DV_TEXT[at9009]
+                                }
+                            }
+                            ELEMENT[at0021] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_TEXT[at9010]
+                                }
+                            }
+                            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Date review completed
+                                value matches {
+                                    DV_DATE_TIME[at9011]
+                                }
+                            }
+                            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Date review submitted
+                                value matches {
+                                    DV_DATE_TIME[at9012]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Date submitted to national authorities
+                        value matches {
+                            DV_DATE_TIME[at9013]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Health event investigation metadata">
+                description = <"Health event investigation metadata">
+            >
+            ["at0002"] = <
+                text = <"Investigation ID">
+                description = <"The unique identifier for this health event investigation.">
+                comment = <"The investigation ID and the notification ID may be identical if both the notification and investigation are carried out within the same system.">
+            >
+            ["at0003"] = <
+                text = <"Notification ID">
+                description = <"The unique identifier for the notification that triggered this health event investigation.">
+                comment = <"The investigation ID and the notification ID may be identical if both the notification and investigation are carried out within the same system.">
+            >
+            ["at0009"] = <
+                text = <"Notifier">
+                description = <"Details about the person notifying about the health event.">
+            >
+            ["at0008"] = <
+                text = <"Date of notification">
+                description = <"Details about the person who notified public health authorities about the health event.">
+            >
+            ["at0011"] = <
+                text = <"Investigator">
+                description = <"Details about the person completing the investigation and corresponding report.">
+            >
+            ["at0012"] = <
+                text = <"Date investigation initiated">
+                description = <"The date when the investigator commenced the investigation.">
+            >
+            ["at0013"] = <
+                text = <"Treating clinician">
+                description = <"Details about one or more clinicians who have been treating the infected individual.">
+            >
+            ["at0015"] = <
+                text = <"Date investigation completed">
+                description = <"The date when the investigator finished the investigation report.">
+            >
+            ["at0019"] = <
+                text = <"Reviewer">
+                description = <"Details about the person reviewing the completed investigation report.">
+                comment = <"For example: the local or regional public health officer.">
+            >
+            ["at0017"] = <
+                text = <"Local review details">
+                description = <"Details about review, sign off or approval by local or regional clinical authorities.">
+            >
+            ["at0018"] = <
+                text = <"Date received for review">
+                description = <"The date when the reviewer received the investigation for review.">
+            >
+            ["at0020"] = <
+                text = <"Review type">
+                description = <"Type of review requested.">
+                comment = <"For example: sign-off, ready for submission to national public health authorities">
+            >
+            ["at0021"] = <
+                text = <"Comment">
+                description = <"Narrative description about the investigation report.">
+            >
+            ["at0022"] = <
+                text = <"Date review completed">
+                description = <"The date when the reviewer completed the review of the investigation. ">
+            >
+            ["at0023"] = <
+                text = <"Date review submitted">
+                description = <"The date when the reviewer submitted the investigation report to the next level of review.">
+                comment = <"This data element is redundant if there are no further levels of review required.">
+            >
+            ["at0024"] = <
+                text = <"Date submitted to national authorities">
+                description = <"The date on which the investigation was submitted to public health authorities.">
+            >
+            ["at0016"] = <
+                text = <"Date submitted for local review/sign-off">
+                description = <"The date when the investigator submitted the investigation report for review.">
+            >
+            ["at0014"] = <
+                text = <"Treating health facility">
+                description = <"Details about one or more health facilities who may have information about the infected individual.">
+            >
+            ["at0004"] = <
+                text = <"Health region">
+                description = <"Name of the local health region.">
+            >
+            ["at0001"] = <
+                text = <"Notified event">
+                description = <"The name of the disease under investigation.">
+            >
+            ["at0025"] = <
+                text = <"ITEM_TREE">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Notifier facility">
+                description = <"Details about the facility where the notifier is working when notifying about the health event.">
+            >
+        >
+    >

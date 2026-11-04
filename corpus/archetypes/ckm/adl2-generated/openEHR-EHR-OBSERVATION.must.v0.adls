@@ -1,0 +1,612 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7aa7f578-0b71-4313-8322-eca9ada2c8c7; build_uid=f478ac45-d50e-4a27-bc39-6002a63fe76b)
+    openEHR-EHR-OBSERVATION.must.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Alan D. March">
+                ["organisation"] = <"Hospital Universitario Austral, Pilar, Buenos Aires, Argentina">
+                ["email"] = <"alandmarch@gmail.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Alan D. March">
+        ["organisation"] = <"Hospital Universitario Austral, Pilar, Buenos Aires, Argentina">
+        ["email"] = <"alandmarch@gmail.com">
+        ["date"] = <"2016-06-12">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Elia, Marinos (2003): Screening for malnutrition: a multidisciplinary responsibility. Development and use of the ‘Malnutrition Universal Screening Tool’ (‘MUST’) for adults. Malnutrition Advisory Group, a Standing Committee of BAPEN. Redditch: BAPEN (ISBN 1899467 70 X).">
+        ["2"] = <"Stratton, RJ, Hackston, A, Longmore, D, et al. (2004): Malnutrition in hospital outpatients and inpatients: prevalence, concurrent validity and ease of use of the ‘malnutrition universal screening tool’ (‘MUST’) for adults. Br J Nutr 92, 799–808. http://tinyurl.com/jj8grzo">
+        ["3"] = <"Todorovic, Vera, Russell, Christine, Elia, Marinos (2011): The ‘MUST’explanatory booklet: A Guide to the ‘Malnutrition Universal Screening Tool’ (‘MUST’) for adults. Redditch: BAPEN (ISBN 978-1-899467-71-6). http://tinyurl.com/7vrjsyb">
+    >
+    other_details = <
+        ["current_contact"] = <"Alan D. March, Alan D. March<alandmarch@gmail.com>">
+        ["MD5-CAM-1.0.1"] = <"FF37872118D906244EC8BCEAB503FC3E">
+    >
+    details = <
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"La \"Herramienta Universal para la Exploración de Malnutrición\" (MUST, del inglés Malnutrition Universal Screening Tool es un sistema de asignación de puntaje diseñado para asistir en la identificación de adultos desnutridos, en riesgo de desnutrición (subnutrición) u obesidad. Busca identificar el riesgo de estados de desnutrición proteico-calórica mas que el estado de nutrientes individuales. No ha sido diseñada para detectar deficiencias o excesos en la ingesta de vitaminas y minerales. Fué desarrollada y es mantenida por la Asociación Británica para la Nutrición Parenteral y Enteral (BAPEN, del inglés British Association for Parenteral and Enteral Nutrition).">
+            keywords = <"MUST", "desnutrición", "subnutrición", "obesidad", "nutrición", "alimentación">
+            use = <"La Herramienta Universal para la Exploración de Malnutrición se desarrolla en cinco pasos:
+Paso 1.- Medición de la altura y el peso para determinar el puntaje para el Índice de Masa Corporal (BMI, del inglés Body Mass Index). Si no es posible obtener la altura y el peso, se deben utilizar los procedimientos alternativos descritos en el Manual explicativo MUST.
+Paso 2.- Determina el porcentaje de perdida de peso no esperada y el puntaje que corresponde a dicho porcentaje.
+Paso 3.- Establecer el puntaje correspondiente al efecto de una enfermedad aguda.
+Paso 4.- Sumas los puntajes de los pasos 1, 2 y 3 para obtener el riesgo total de malnutrición.
+Paso 5.- Utilizar las guías de manejo y/o las políticas locales para desarrollar un plan de cuidados.
+Este arquetipo permite registrar los datos para el cálculo del riesgo total de malnutrición.">
+            misuse = <"No debe ser utilizado en niños.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"The Malnutrition Universal Screening Tool (MUST) is a scoring system designed to help identify adults who are malnourished, at risk of malnutrition (undernutrition), or obese. It intends to identify risk of poor protein-energy status, rather than status of individual nutrients. It has not been designed to detect deficiencies in or excessive intakes of vitamins and minerals. It was developed and is maintained by the British Association for Parenteral and Enteral Nutrition (BAPEN).">
+            keywords = <"MUST", "malnutrition", "undernutrition", "obesity", "nutrition", "nourishment">
+            use = <"MUST is a five-step screening tool:
+Step 1.- Measure height and weight to get a BMI score. If unable to obtain height and weight, the alternative procedures shown in the MUST Explanatory Booklet should be used.
+Step 2.- Note percentage unplanned weight loss and score using tool specific tables.
+Step 3.- Establish acute disease effect and score.
+Step 4.- Add scores from steps 1, 2 and 3 together to obtain overall risk of malnutrition.
+Step 5.- Use management guidelines and/or local policy to develop care plan.
+This archetype registers data for calculation of the overall risk of malnutrition score.">
+            misuse = <"Not to be used for children.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Malnutrition Universal Screening Tool (MUST)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {5..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {1} matches {    -- Body mass index score
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- >20 (>30 Obese)
+                                                    [{1}, {[at0006]}],    -- 18.5 -20
+                                                    [{2}, {[at0007]}]    -- <18.5
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {1} matches {    -- Weight loss score
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0009]}],    -- <5 %
+                                                    [{1}, {[at0010]}],    -- 5-10 %
+                                                    [{2}, {[at0011]}]    -- >10 %
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {1} matches {    -- Acute disease effect score
+                                        value matches {
+                                            DV_ORDINAL[at9010] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0013]}],    -- Not acutely ill and sufficient nutritional intake for >5 days
+                                                    [{2}, {[at0014]}]    -- Acutely ill and there has been or is likely to be no nutritional intake for >5 days
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9011] matches {
+                                                magnitude matches {|0..6|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {1} matches {    -- Risk category
+                                        value matches {
+                                            DV_CODED_TEXT[at9012] matches {
+                                                defining_code matches {[ac9003]}    -- Risk category (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0039] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9014]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0040] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0038] matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9015]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0020] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Height determination method for body mass index
+                        value matches {
+                            DV_CODED_TEXT[at9016] matches {
+                                defining_code matches {[ac9004]}    -- Height determination method for body mass index (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Weight determination method for body mass index
+                        value matches {
+                            DV_CODED_TEXT[at9017] matches {
+                                defining_code matches {[ac9005]}    -- Weight determination method for body mass index (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- Body mass index estimation method
+                        value matches {
+                            DV_CODED_TEXT[at9018] matches {
+                                defining_code matches {[ac9006]}    -- Body mass index estimation method (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0033] occurrences matches {0..1} matches {    -- Weight loss determination method
+                        value matches {
+                            DV_CODED_TEXT[at9019] matches {
+                                defining_code matches {[ac9007]}    -- Weight loss determination method (synthesised)
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0042] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"*Malnutrition Universal Screening Tool (MUST)(en)">
+                description = <"*Screening tool for malnourishment, undernutrition or obesity.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"*Default, unspecified point in time event which may be explicitly defined in a template or at run-time.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Body mass index score(en)">
+                description = <"*Derived from the subject’s body mass index.(en)">
+            >
+            ["at0005"] = <
+                text = <"*>20 (>30 Obese)(en)">
+                description = <"**(en)">
+            >
+            ["at0006"] = <
+                text = <"18.5 -20">
+                description = <"18.5 -20">
+            >
+            ["at0007"] = <
+                text = <"<18.5">
+                description = <"<18.5">
+            >
+            ["at0008"] = <
+                text = <"*Weight loss score(en)">
+                description = <"*To establish the subject’s weight loss score, ask if there has been any weight loss in the last 3 – 6 months, and if so how much (or look in their medical records).(en)">
+                comment = <"*Deduct current weight from previous weight to calculate amount of weight lost and calculate percentage. If the subject has not lost weight (or has gained weight) score 0.(en)">
+            >
+            ["at0009"] = <
+                text = <"<5 %">
+                description = <"<5 %">
+            >
+            ["at0010"] = <
+                text = <"5-10 %">
+                description = <"5-10 %">
+            >
+            ["at0011"] = <
+                text = <">10 %">
+                description = <">10 %">
+            >
+            ["at0012"] = <
+                text = <"*Acute disease effect score(en)">
+                description = <"*If the subject is currently affected by an acute patho-physiological or psychological condition, and there has been no nutritional intake or likelihood of no intake for more than 5 days, they are likely to be at nutritional risk.(en)">
+                comment = <"*Such patients include those who are critically ill, those who have swallowing difficulties (e.g. after stroke), or head injuries or are undergoing gastrointestinal surgery.(en)">
+            >
+            ["at0013"] = <
+                text = <"*Not acutely ill and sufficient nutritional intake for >5 days(en)">
+                description = <"*If patient is not acutely ill and there has not been or is not likely to be no nutritional intake for >5 days.(en)">
+            >
+            ["at0014"] = <
+                text = <"*Acutely ill and there has been or is likely to be no nutritional intake for >5 days(en)">
+                description = <"*If patient is acutely ill and there has been or is likely to be no nutritional intake for >5 days.(en)">
+            >
+            ["at0015"] = <
+                text = <"*Total score(en)">
+                description = <"*The sum of scores for body mass index, weight loss and acute disease effect.(en)">
+            >
+            ["at0016"] = <
+                text = <"*Risk category(en)">
+                description = <"*The overall risk of malnutrition as derived from the total score.(en)">
+            >
+            ["at0017"] = <
+                text = <"*Low risk(en)">
+                description = <"*Total score equal to 0.(en)">
+            >
+            ["at0018"] = <
+                text = <"*Medium risk(en)">
+                description = <"*Total score equal to 1.(en)">
+            >
+            ["at0019"] = <
+                text = <"*High risk(en)">
+                description = <"*Total score equal or greater than 2.(en)">
+            >
+            ["at0021"] = <
+                text = <"*Height determination method for body mass index(en)">
+                description = <"*Method used for determining height as a part of body mass index calculation.(en)">
+            >
+            ["at0022"] = <
+                text = <"Método de determinación del peso para el cálculo del índice de masa corporal">
+                description = <"Método utilizado para la determinación del peso para el cálculo del índice de masa corporal.">
+            >
+            ["at0023"] = <
+                text = <"Medición directa de la altura">
+                description = <"*">
+            >
+            ["at0024"] = <
+                text = <"Altura documentada recientemente o referida por el paciente">
+                description = <"Altura documentada recientemente o referida por el paciente (si es confiable y realista).">
+            >
+            ["at0025"] = <
+                text = <"Derivada de la longitud del antebrazo (cúbito)">
+                description = <"*">
+            >
+            ["at0026"] = <
+                text = <"Derivada de la altura de la rodilla">
+                description = <"*">
+            >
+            ["at0027"] = <
+                text = <"Derivada de la semienvergadura">
+                description = <"*">
+            >
+            ["at0028"] = <
+                text = <"Medición directa del peso">
+                description = <"*">
+            >
+            ["at0029"] = <
+                text = <"Peso documentado recientemente o referido por el paciente">
+                description = <"Peso documentado recientemente o referido por el paciente (si es confiable y realista).">
+            >
+            ["at0030"] = <
+                text = <"Método de estimación del índice de masa corporal">
+                description = <"Método utilizado para la estimación del índice de masa corporal">
+            >
+            ["at0031"] = <
+                text = <"Calculado a partir de las mediciones de altura y peso">
+                description = <"*">
+            >
+            ["at0032"] = <
+                text = <"Derivado de la medición del perímetro braquial">
+                description = <"*">
+            >
+            ["at0033"] = <
+                text = <"Método de determinación de la pérdida de peso">
+                description = <"Método utilizado para la determinación de la pérdida de peso">
+            >
+            ["at0034"] = <
+                text = <"Medición directa del cambio de peso">
+                description = <"*">
+            >
+            ["at0035"] = <
+                text = <"Cambio de peso documentado recientemente o referido por el paciente">
+                description = <"*">
+            >
+            ["at0036"] = <
+                text = <"Impresión clínica">
+                description = <"*">
+            >
+            ["at0037"] = <
+                text = <"Derivado de la cambios en la medición del perímetro braquial">
+                description = <"*">
+            >
+            ["at0038"] = <
+                text = <"*Confounding factors(en)">
+                description = <"*Some variables used in the calculation of the MUST score may be influenced by confunding factors, specially in the case of weight and BMI determination.(en)">
+                comment = <"*Examples of confunding factors are fluid disturbances, lactation, pregnancy, critical illness and amputations. These and other situations deemed as confunding should be registered here.(en)">
+            >
+            ["at0039"] = <
+                text = <"*Comment(en)">
+                description = <"*Additional narrative about the screening, not captured in other fields.(en)">
+            >
+            ["at0042"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local context or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+            ["ac9019"] = <
+                text = <"*Body mass index score(en) (synthesised)">
+                description = <"*Derived from the subject’s body mass index.(en) (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"*Weight loss score(en) (synthesised)">
+                description = <"*To establish the subject’s weight loss score, ask if there has been any weight loss in the last 3 – 6 months, and if so how much (or look in their medical records).(en) (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"*Acute disease effect score(en) (synthesised)">
+                description = <"*If the subject is currently affected by an acute patho-physiological or psychological condition, and there has been no nutritional intake or likelihood of no intake for more than 5 days, they are likely to be at nutritional risk.(en) (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"*Risk category(en) (synthesised)">
+                description = <"*The overall risk of malnutrition as derived from the total score.(en) (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"*Height determination method for body mass index(en) (synthesised)">
+                description = <"*Method used for determining height as a part of body mass index calculation.(en) (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Método de determinación del peso para el cálculo del índice de masa corporal (synthesised)">
+                description = <"Método utilizado para la determinación del peso para el cálculo del índice de masa corporal. (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Método de estimación del índice de masa corporal (synthesised)">
+                description = <"Método utilizado para la estimación del índice de masa corporal (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"Método de determinación de la pérdida de peso (synthesised)">
+                description = <"Método utilizado para la determinación de la pérdida de peso (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Malnutrition Universal Screening Tool (MUST)">
+                description = <"Screening tool for malnourishment, undernutrition or obesity.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Body mass index score">
+                description = <"Derived from the subject’s body mass index.">
+            >
+            ["at0005"] = <
+                text = <">20 (>30 Obese)">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"18.5 -20">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"<18.5">
+                description = <"*">
+            >
+            ["at0008"] = <
+                text = <"Weight loss score">
+                description = <"To establish the subject’s weight loss score, ask if there has been any weight loss in the last 3 – 6 months, and if so how much (or look in their medical records).">
+                comment = <"Deduct current weight from previous weight to calculate amount of weight lost and calculate percentage. If the subject has not lost weight (or has gained weight) score 0.">
+            >
+            ["at0009"] = <
+                text = <"<5 %">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"5-10 %">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <">10 %">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Acute disease effect score">
+                description = <"If the subject is currently affected by an acute patho-physiological or psychological condition, and there has been no nutritional intake or likelihood of no intake for more than 5 days, they are likely to be at nutritional risk.">
+                comment = <"Such patients include those who are critically ill, those who have swallowing difficulties (e.g. after stroke), or head injuries or are undergoing gastrointestinal surgery.">
+            >
+            ["at0013"] = <
+                text = <"Not acutely ill and sufficient nutritional intake for >5 days">
+                description = <"If patient is not acutely ill and there has not been or is not likely to be no nutritional intake for >5 days.">
+            >
+            ["at0014"] = <
+                text = <"Acutely ill and there has been or is likely to be no nutritional intake for >5 days">
+                description = <"If patient is acutely ill and there has been or is likely to be no nutritional intake for >5 days.">
+            >
+            ["at0015"] = <
+                text = <"Total score">
+                description = <"The sum of scores for body mass index, weight loss and acute disease effect.">
+            >
+            ["at0016"] = <
+                text = <"Risk category">
+                description = <"The overall risk of malnutrition as derived from the total score.">
+            >
+            ["at0017"] = <
+                text = <"Low risk">
+                description = <"Total score equal to 0.">
+            >
+            ["at0018"] = <
+                text = <"Medium risk">
+                description = <"Total score equal to 1.">
+            >
+            ["at0019"] = <
+                text = <"High risk">
+                description = <"Total score equal or greater than 2.">
+            >
+            ["at0021"] = <
+                text = <"Height determination method for body mass index">
+                description = <"Method used for determining height as a part of body mass index calculation.">
+            >
+            ["at0022"] = <
+                text = <"Weight determination method for body mass index">
+                description = <"Method used for determining weight as a part of body mass index calculation.">
+            >
+            ["at0023"] = <
+                text = <"Direct height measurement">
+                description = <"*">
+            >
+            ["at0024"] = <
+                text = <"Recently documented or self-reported height">
+                description = <"Recently documented or self-reported height (if reliable and realistic).">
+            >
+            ["at0025"] = <
+                text = <"Derived from ulna length">
+                description = <"*">
+            >
+            ["at0026"] = <
+                text = <"Derived from knee height">
+                description = <"*">
+            >
+            ["at0027"] = <
+                text = <"Derived from demispan">
+                description = <"*">
+            >
+            ["at0028"] = <
+                text = <"Direct weight measurement">
+                description = <"*">
+            >
+            ["at0029"] = <
+                text = <"Recently documented or self-reported weight">
+                description = <"Recently documented or self-reported weight (if reliable and realistic).">
+            >
+            ["at0030"] = <
+                text = <"Body mass index estimation method">
+                description = <"Method used for determining body mass index.">
+            >
+            ["at0031"] = <
+                text = <"Calculation from height and weight measurements">
+                description = <"*">
+            >
+            ["at0032"] = <
+                text = <"Derived from mid upper arm circumference measurement">
+                description = <"*">
+            >
+            ["at0033"] = <
+                text = <"Weight loss determination method">
+                description = <"Method used for determining weight change.">
+            >
+            ["at0034"] = <
+                text = <"Direct weight change measurement">
+                description = <"*">
+            >
+            ["at0035"] = <
+                text = <"Recently documented or self-reported weight change">
+                description = <"*">
+            >
+            ["at0036"] = <
+                text = <"Clinical impression">
+                description = <"*">
+            >
+            ["at0037"] = <
+                text = <"Derived from changes in mid upper arm circumference measurement">
+                description = <"*">
+            >
+            ["at0038"] = <
+                text = <"Confounding factors">
+                description = <"Some variables used in the calculation of the MUST score may be influenced by confunding factors, specially in the case of weight and BMI determination.">
+                comment = <"Examples of confunding factors are fluid disturbances, lactation, pregnancy, critical illness and amputations. These and other situations deemed as confunding should be registered here.">
+            >
+            ["at0039"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the screening, not captured in other fields.">
+            >
+            ["at0042"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9019"] = <
+                text = <"Body mass index score (synthesised)">
+                description = <"Derived from the subject’s body mass index. (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"Weight loss score (synthesised)">
+                description = <"To establish the subject’s weight loss score, ask if there has been any weight loss in the last 3 – 6 months, and if so how much (or look in their medical records). (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Acute disease effect score (synthesised)">
+                description = <"If the subject is currently affected by an acute patho-physiological or psychological condition, and there has been no nutritional intake or likelihood of no intake for more than 5 days, they are likely to be at nutritional risk. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Risk category (synthesised)">
+                description = <"The overall risk of malnutrition as derived from the total score. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Height determination method for body mass index (synthesised)">
+                description = <"Method used for determining height as a part of body mass index calculation. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Weight determination method for body mass index (synthesised)">
+                description = <"Method used for determining weight as a part of body mass index calculation. (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Body mass index estimation method (synthesised)">
+                description = <"Method used for determining body mass index. (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"Weight loss determination method (synthesised)">
+                description = <"Method used for determining weight change. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0015"] = <http://snomed.info/id/444297006>
+        >
+    >
+    value_sets = <
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at0034", "at0035", "at0036", "at0037">
+        >
+        ["ac9020"] = <
+            id = <"ac9020">
+            members = <"at0009", "at0010", "at0011">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0013", "at0014">
+        >
+        ["ac9006"] = <
+            id = <"ac9006">
+            members = <"at0031", "at0032">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0028", "at0029">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0023", "at0024", "at0025", "at0026", "at0027">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0017", "at0018", "at0019">
+        >
+        ["ac9019"] = <
+            id = <"ac9019">
+            members = <"at0005", "at0006", "at0007">
+        >
+    >

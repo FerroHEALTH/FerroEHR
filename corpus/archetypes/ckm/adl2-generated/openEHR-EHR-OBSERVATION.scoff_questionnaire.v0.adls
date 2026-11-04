@@ -1,0 +1,499 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=860b2c3b-2beb-4667-b77d-83945e14be68; build_uid=2a76b96e-a933-4e62-a561-e61a79ec0732)
+    openEHR-EHR-OBSERVATION.scoff_questionnaire.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            author = <
+                ["name"] = <"Vesa Peltola">
+                ["organisation"] = <"Tieto Finland">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Vesa Peltola">
+                ["organisation"] = <"Tieto Finland">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Vesa Peltola">
+        ["organisation"] = <"Tieto Finland">
+        ["date"] = <"2019-03-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Morgan JF, Reid F, Lacey JH (2000). \"The SCOFF questionnaire: a new screening tool for eating disorders\". West J Med. 172 (3): 164–5. (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1070794/pdf/wjm17200164.pdf)">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"546421DE55FA40451569821D872027CF">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Ett enkelt fem frågetest utarbetat för att användas av icke-professionella för att bedöma eventuell närvaro av en ätstörning.
+
+Bokstäverna i full akronym tas från nyckelord i frågorna:
+- Sick
+- Control
+- One stone (14 lbs./6.5 kg.)
+- Fat
+- Food">
+            keywords = <"ätande, störning, screening", ...>
+            use = <"Varje \"Ja\" svar ges en poäng. Med ett övergripande poäng på ≥ 2 är anorexi eller bulimi möjlig.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"Yksinkertainen viiden kysymyksen testi, joka on suunniteltu käytettäväksi muille kuin ammattilaisille syömishäiriön mahdollisen esiintymisen arvioimiseksi.
+
+Lyhenteen kirjaimet on otettu kysymysten avainsanoista:
+- Sick
+- Control
+- One stone (14 lbs./6.5 kg.)
+- Fat
+- Food">
+            keywords = <"syöminen, häiriö, seulonta", ...>
+            use = <"Jokaisesta \"Kyllä\" -vastauksesta annetaan yksi piste. Kokonaispisteiden ollessa ≥2, mahdollinen anoreksia tai bulimia.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"A simple five question test devised for use by non-professionals to assess the possible presence of an eating disorder.
+
+The letters in the full acronym are taken from key words in the questions:
+- Sick
+- Control
+- One stone (14 lbs./6.5 kg.)
+- Fat
+- Food">
+            keywords = <"eating, disorder, screening", ...>
+            use = <"One point is assigned for every \"yes\"; a score greater than two (≥2) indicates a possible case of anorexia nervosa or bulimia nervosa.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Eating disorder screening (SCOFF)
+        data matches {
+            HISTORY[at0001] matches {    -- History
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Do you make yourself sick because you feel uncomfortably full?
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- No
+                                                    [{1}, {[at0006]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Do you worry that you have lost control over how much you eat?
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0008]}],    -- No
+                                                    [{1}, {[at0009]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Have you recently lost more than one stone (14 lb, 6,5 kg) in a 3-month period?
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0011]}],    -- No
+                                                    [{1}, {[at0012]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Do you believe yourself to be fat when others say you are too thin?
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0014]}],    -- No
+                                                    [{1}, {[at0015]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Would you say that food dominates your life?
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{1}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9010] matches {
+                                                magnitude matches {|0..5|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9011]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"Syömishäiriöseula (SCOFF)">
+                description = <"Syömishäiriöseula (SCOFF)">
+            >
+            ["at0001"] = <
+                text = <"*History (en)">
+                description = <"*">
+            >
+            ["at0002"] = <
+                text = <"Mikä tahansa tapahtuma">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Oksennatko tuntiessasi olosi epämiellyttävän kylläiseksi?">
+                description = <"Oksennatko tuntiessasi olosi epämiellyttävän kylläiseksi?">
+            >
+            ["at0005"] = <
+                text = <"Ei">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"Kyllä">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Pelkäätkö menettäväsi hallinnan siihen kuinka paljon syöt?">
+                description = <"Pelkäätkö menettäväsi hallinnan siihen kuinka paljon syöt?">
+            >
+            ["at0008"] = <
+                text = <"Ei">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"Kyllä">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Onko Sinulla hiljattain ollut 3 kk kestänyttä jaksoa, jolloin laihduit yli kuusi kiloa?">
+                description = <"Onko Sinulla hiljattain ollut 3 kk kestänyttä jaksoa, jolloin laihduit yli kuusi kiloa?">
+            >
+            ["at0011"] = <
+                text = <"Ei">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Kyllä">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"Tunnetko itsesi lihavaksi, vaikka muiden mielestä olet liian laiha?">
+                description = <"Tunnetko itsesi lihavaksi, vaikka muiden mielestä olet liian laiha?">
+            >
+            ["at0014"] = <
+                text = <"Ei">
+                description = <"*">
+            >
+            ["at0015"] = <
+                text = <"Kyllä">
+                description = <"*">
+            >
+            ["at0016"] = <
+                text = <"Hallitseeko ruoka mielestäsi elämääsi?">
+                description = <"Hallitseeko ruoka mielestäsi elämääsi?">
+            >
+            ["at0017"] = <
+                text = <"Ei">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"Kyllä">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"Yhteispisteet">
+                description = <"Jokaisesta \"Kyllä\" -vastauksesta annetaan yksi piste. Kokonaispisteiden ollessa ≥2, mahdollinen anoreksia tai bulimia.">
+            >
+            ["at0020"] = <
+                text = <"Kommentti">
+                description = <"Narratiivista tekstiä SCOFF-kyselylomakkeen arvioinnista, jota ei ole kuvattu muissa strukturoiduissa elementeissä.">
+            >
+            ["ac9011"] = <
+                text = <"Oksennatko tuntiessasi olosi epämiellyttävän kylläiseksi? (synthesised)">
+                description = <"Oksennatko tuntiessasi olosi epämiellyttävän kylläiseksi? (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Pelkäätkö menettäväsi hallinnan siihen kuinka paljon syöt? (synthesised)">
+                description = <"Pelkäätkö menettäväsi hallinnan siihen kuinka paljon syöt? (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Onko Sinulla hiljattain ollut 3 kk kestänyttä jaksoa, jolloin laihduit yli kuusi kiloa? (synthesised)">
+                description = <"Onko Sinulla hiljattain ollut 3 kk kestänyttä jaksoa, jolloin laihduit yli kuusi kiloa? (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Tunnetko itsesi lihavaksi, vaikka muiden mielestä olet liian laiha? (synthesised)">
+                description = <"Tunnetko itsesi lihavaksi, vaikka muiden mielestä olet liian laiha? (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Hallitseeko ruoka mielestäsi elämääsi? (synthesised)">
+                description = <"Hallitseeko ruoka mielestäsi elämääsi? (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Screeningtest för ätstörning (SCOFF)">
+                description = <"Screeningtest för ätstörning (SCOFF)">
+            >
+            ["at0001"] = <
+                text = <"*History (en)">
+                description = <"*">
+            >
+            ["at0002"] = <
+                text = <"Valfri händelse">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Gör du så att du kräks för att du känner dig obehagligt mätt?">
+                description = <"Gör du så att du kräks för att du känner dig obehagligt mätt?">
+            >
+            ["at0005"] = <
+                text = <"Nej">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"Ja">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Oroar du dig för att du har förlorat kontrollen över hur mycket du äter?">
+                description = <"Oroar du dig för att du har förlorat kontrollen över hur mycket du äter?">
+            >
+            ["at0008"] = <
+                text = <"Nej">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"Ja">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Har du nyligen gått ner mer än 6 kg inom loppet av 3 månader?">
+                description = <"Har du nyligen gått ner mer än 6 kg inom loppet av 3 månader?">
+            >
+            ["at0011"] = <
+                text = <"Nej">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Ja">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"Tycker du att du är fet även när andra säger att du är för smal?">
+                description = <"Tycker du att du är fet även när andra säger att du är för smal?">
+            >
+            ["at0014"] = <
+                text = <"Nej">
+                description = <"*">
+            >
+            ["at0015"] = <
+                text = <"Ja">
+                description = <"*">
+            >
+            ["at0016"] = <
+                text = <"Skulle du säga att mat dominerar ditt liv?">
+                description = <"Skulle du säga att mat dominerar ditt liv?">
+            >
+            ["at0017"] = <
+                text = <"Nej">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"Ja">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"Totalt antal poäng">
+                description = <"Varje \"Ja\" svar ges en poäng. Med ett övergripande poäng på ≥ 2 är anorexi eller bulimi möjlig.">
+            >
+            ["at0020"] = <
+                text = <"Kommentar">
+                description = <"Ytterligare berättande beskrivning av SCOFF som inte registrerats i övriga fält.">
+            >
+            ["ac9011"] = <
+                text = <"Gör du så att du kräks för att du känner dig obehagligt mätt? (synthesised)">
+                description = <"Gör du så att du kräks för att du känner dig obehagligt mätt? (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Oroar du dig för att du har förlorat kontrollen över hur mycket du äter? (synthesised)">
+                description = <"Oroar du dig för att du har förlorat kontrollen över hur mycket du äter? (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Har du nyligen gått ner mer än 6 kg inom loppet av 3 månader? (synthesised)">
+                description = <"Har du nyligen gått ner mer än 6 kg inom loppet av 3 månader? (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Tycker du att du är fet även när andra säger att du är för smal? (synthesised)">
+                description = <"Tycker du att du är fet även när andra säger att du är för smal? (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Skulle du säga att mat dominerar ditt liv? (synthesised)">
+                description = <"Skulle du säga att mat dominerar ditt liv? (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Eating disorder screening (SCOFF)">
+                description = <"Screening tool for eating disorders.">
+            >
+            ["at0001"] = <
+                text = <"History">
+                description = <"*">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Do you make yourself sick because you feel uncomfortably full?">
+                description = <"Do you make yourself sick because you feel uncomfortably full?">
+            >
+            ["at0005"] = <
+                text = <"No">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"Yes">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Do you worry that you have lost control over how much you eat?">
+                description = <"Do you worry that you have lost control over how much you eat?">
+            >
+            ["at0008"] = <
+                text = <"No">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"Yes">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Have you recently lost more than one stone (14 lb, 6,5 kg) in a 3-month period?">
+                description = <"Have you recently lost more than one stone (14 lb, 6,5 kg) in a 3-month period?">
+            >
+            ["at0011"] = <
+                text = <"No">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Yes">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"Do you believe yourself to be fat when others say you are too thin?">
+                description = <"Do you believe yourself to be fat when others say you are too thin?">
+            >
+            ["at0014"] = <
+                text = <"No">
+                description = <"*">
+            >
+            ["at0015"] = <
+                text = <"Yes">
+                description = <"*">
+            >
+            ["at0016"] = <
+                text = <"Would you say that food dominates your life?">
+                description = <"Would you say that food dominates your life?">
+            >
+            ["at0017"] = <
+                text = <"No">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"Yes">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"Total score">
+                description = <"One point is assigned for every \"yes\"; a score greater than two (≥2) indicates a possible case of anorexia nervosa or bulimia nervosa.">
+            >
+            ["at0020"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the assessment of the SCOFF questionnaire, not captured in the structured elements.">
+            >
+            ["ac9011"] = <
+                text = <"Do you make yourself sick because you feel uncomfortably full? (synthesised)">
+                description = <"Do you make yourself sick because you feel uncomfortably full? (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Do you worry that you have lost control over how much you eat? (synthesised)">
+                description = <"Do you worry that you have lost control over how much you eat? (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Have you recently lost more than one stone (14 lb, 6,5 kg) in a 3-month period? (synthesised)">
+                description = <"Have you recently lost more than one stone (14 lb, 6,5 kg) in a 3-month period? (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Do you believe yourself to be fat when others say you are too thin? (synthesised)">
+                description = <"Do you believe yourself to be fat when others say you are too thin? (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Would you say that food dominates your life? (synthesised)">
+                description = <"Would you say that food dominates your life? (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0011", "at0012">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0008", "at0009">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0005", "at0006">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0017", "at0018">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0014", "at0015">
+        >
+    >

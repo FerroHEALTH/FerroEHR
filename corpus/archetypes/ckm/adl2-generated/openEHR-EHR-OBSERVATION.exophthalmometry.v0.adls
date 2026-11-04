@@ -1,0 +1,321 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=a350f536-8f3b-4168-a3da-aa260913eb30; build_uid=a160eb9b-4a4d-4887-8ecc-b61f20a2a041)
+    openEHR-EHR-OBSERVATION.exophthalmometry.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Lars Fuhrmann">
+        ["organisation"] = <"Deutsche Ophthalmologische Gesellschaft ">
+        ["email"] = <"lars.fuhrmann@dog.org">
+        ["date"] = <"2025-06-11">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Bobby S. Korn et al; 2021-2022 BASIC AND CLINICAL SCIENCE COURSE, SECTION 07: Oculofacial Plastic and Orbital. Surgery, American Academy of Ophthalmology.">
+        ["2"] = <"Stijn W Genders et al: Orbit 2015 Feb;34(1):23-9. doi: 10.3109/01676830.2014.963877. Epub 2014 Oct 14.">
+        ["3"] = <"Parallax-free exophthalmometry: a comprehensive review of the literature on clinical exophthalmometry and the introduction of the first parallax-free exophthalmometer,">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B1118E98A0AFCB521ADEB6E72AF5591F">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record measurements of eye globe position in relation to the orbital rim for assessment of exophthalmos or enophthalmos.">
+            keywords = <"exophthalmometry, exophthalmos, enophthalmos, eye, globe position, orbital measurement, orbit, Hertel, orbital disorders", ...>
+            use = <"Use to record all measurements of eye globe position that include a measure of anterior-posterior position,  regardless of the measurement method or device used.">
+            misuse = <"Not to be used for measurements of orbital dimensions that do not relate to globe position relative to the orbital rim.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Exophthalmometry
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Result
+                                        value matches {
+                                            DV_QUANTITY[at9004] matches {
+                                                property matches {[at9000]}    -- Length
+                                                units matches {"mm"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Globe position in vertical axis
+                                        value matches {
+                                            DV_QUANTITY[at9005]
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Eye examined
+                                        value matches {
+                                            DV_CODED_TEXT[at9006] matches {
+                                                defining_code matches {[ac9001]}    -- Eye examined (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9007]
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Interpretation
+                                        value matches {
+                                            DV_TEXT[at9008]
+                                        }
+                                    }
+                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- No test result
+                                        value matches {
+                                            DV_BOOLEAN[at9009]
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Reason for no test result
+                                        value matches {
+                                            DV_TEXT[at9010]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0025] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Provocative Maneuvers
+                                        value matches {
+                                            DV_CODED_TEXT[at9011] matches {
+                                                defining_code matches {[at0013]}    -- Valsalva Maneuver
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Confounding Factors
+                                        value matches {
+                                            DV_TEXT[at9012]
+                                            DV_CODED_TEXT[at9013] matches {
+                                                defining_code matches {[ac9002]}    -- Confounding Factors (synthesised)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0008] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Horizontal Base Distance
+                        value matches {
+                            DV_QUANTITY[at9014] matches {
+                                property matches {[at9000]}    -- Length
+                                units matches {"mm"}
+                            }
+                        }
+                    }
+                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Measurement Device Type
+                        value matches {
+                            DV_CODED_TEXT[at9015] matches {
+                                defining_code matches {[ac9003]}    -- Measurement Device Type (synthesised)
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0020] matches {    -- Device Specification
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Exophthalmometry">
+                description = <"Measurement of eye globe position relative to the orbital rim to assess protrusion or retraction of the eyeball.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"@ internal @">
+            >
+            ["at0004"] = <
+                text = <"Result">
+                description = <"The measurement of globe position in the anterior-posterior axis, the main measure of exomphthalmometry.">
+                comment = <"The landmarks compared along this axis may vary by method. For instance, in case of Hertel Exophthalmometry, it is the anterior-posterior distance between a line connecting the lateral orbital rims and the apex of the cornea. 
+High values indicate Exophthalmus, low Values indicate Enophthalmus">
+            >
+            ["at0005"] = <
+                text = <"Eye examined">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Right Eye">
+                description = <"The right eye was examined.">
+            >
+            ["at0007"] = <
+                text = <"Left Eye">
+                description = <"The left eye was examined.">
+            >
+            ["at0009"] = <
+                text = <"Horizontal Base Distance">
+                description = <"The Horizontal distance between the reference points that are being compared to the globe position. In a Hertel exomphtalmometry, this refers to the distance between the lateral orbital rims.">
+            >
+            ["at0010"] = <
+                text = <"Globe position in vertical axis">
+                description = <"A measure of the globe position in the vertical position.">
+                comment = <"The landmarks compared along this axis may vary by method, and it is not measured by all Exomphthalmometry devices. The most commonly used Exophthalmometer (Hertel) does not produce this value, but the Naugle Exophthalmometer does. Abnormal Values reflect hyper-ophthalmus or hypo-ophthalmus. ">
+            >
+            ["at0012"] = <
+                text = <"Provocative Maneuvers">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Valsalva Maneuver">
+                description = <"A maneuver by which exhalation is attempted against closed airways.">
+            >
+            ["at0014"] = <
+                text = <"Measurement Device Type">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Hertel">
+                description = <"A measurement device positioned against both lateral orbital rims to measure the anterioposterior distance to the corneal apexes.">
+            >
+            ["at0016"] = <
+                text = <"Naugle">
+                description = <"A measurement device positioned against the superior and inferior orbital rims to measure both the anterioposterior distance to the corneal apices and the vertial position of the globes.">
+            >
+            ["at0017"] = <
+                text = <"Luedde">
+                description = <"A measurement device positioned against the orbital lateral rim of one orbit to measure the anterioposterior position of the globe.">
+            >
+            ["at0018"] = <
+                text = <"Mourits">
+                description = <"A parallax-free exophthalmometry device, positioned similarly to the Hertel exophthalmometer.">
+            >
+            ["at0019"] = <
+                text = <"Computer Tomography">
+                description = <"An imaging-based method to measure Globe position.">
+            >
+            ["at0020"] = <
+                text = <"Device Specification">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Comment">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Interpretation">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"No test result">
+                description = <"No visual acuity test result is available for the test eye.">
+                comment = <"Record as True if the clinician was unable to record a result for the test eye.">
+            >
+            ["at0024"] = <
+                text = <"Reason for no test result">
+                description = <"Reason why no visual acuity test result is available for the test eye.">
+                comment = <"For example, patient was not cooperative; patient was not capable; ran out of time.">
+            >
+            ["at0026"] = <
+                text = <"Confounding Factors">
+                description = <"Patient circumstances or actions which affect interpretation of the result. Often termed 'reliability' in opthalmological documentation.
+May include actions aiming improve the patient's ability to participate such as holding the lid open.">
+                comment = <"Examples: 'Patient was confused', \"Lid held open by hand\" \"Excentric Fixation\" ">
+            >
+            ["at0028"] = <
+                text = <"Lid Swelling">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Blepharospasm">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Confusion">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Excentric Fixation">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Manually holding lid open">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Uncooperative">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Good cooperation">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Lying in Bed">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Lack of Fixation">
+                description = <"">
+            >
+            ["at9000"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac9001"] = <
+                text = <"Eye examined (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Confounding Factors (synthesised)">
+                description = <"Patient circumstances or actions which affect interpretation of the result. Often termed 'reliability' in opthalmological documentation.
+May include actions aiming improve the patient's ability to participate such as holding the lid open. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Measurement Device Type (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/122>
+        >
+        ["SNOMED-CT"] = <
+            ["at0006"] = <http://snomed.info/id/1290043002>
+            ["at0007"] = <http://snomed.info/id/1290041000>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0028", "at0029", "at0030", "at0031", "at0032", "at0033", "at0035", "at0036", "at0037">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0006", "at0007">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0015", "at0016", "at0017", "at0018", "at0019">
+        >
+    >

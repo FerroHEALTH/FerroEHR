@@ -1,0 +1,326 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=dd630075-b2ce-4fbc-b915-44e6b0e5d67e; build_uid=5d860041-362d-4dba-9b46-ad297396bd54)
+    openEHR-EHR-ACTION.health_assessment.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2025-09-16">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"AUCDI Clinical Design Group (CDG), Sparked FHIR accelerator, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Requirements identified by clinicians, reflecting current clinical practice and workflows.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"CC0D796BDF13830ABCAFC6132B55EF32">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about the provision of a health assessment at clinically relevant events in the intervention lifecycle, from planning to completion, and including deviations or interruptions.">
+            keywords = <"assessment, screening, evaluation, checkup, prevention, wellness, monitoring, review, development", ...>
+            use = <"Use to record details about the provision of a health assessment at clinically relevant events in the intervention lifecycle, from planning to completion, and including deviations or interruptions.
+
+The scope of this archetype is focused on the provision of any health assessment to the individual, including by other service providers. It includes, but is not limited to:
+- Comprehensive assessments, such as a general health check-up, an annual 'medical' or a pre-employment medical assessment.
+- Age- or gender-specific assessments, such as child and adolescent developmental checks, over 75 health assessment or gender specific health checks.
+- Condition-specific assessments, such as cardiovascular risk assessment, cancer screening, mental health screening
+- Functional assessments, such as activities of daily living, falls risk assessment, Timed Up and Go test (TUG), or Mini-Mental State Examination (MMSE)
+- Health risk appraisals, such as lifestyle and behaviour risk assessments (smoking, alcohol, diet, exercise, gambling)
+- Targeted clinical assessments - Mental health plan review, Asthma annual review, or Medication review.
+- Community or population-based assessments, such as a first nations health check, school-entry health screening.
+
+Record one instance per careflow step or event for each specified health assessment, in a health record. If the assessment to be provided consists of a single component, the 'Assessment provided' and the 'Assessment completed' careflow step may be recorded simultaneously. However, if the assessment consists of multiple components, record a separate instance of the 'Assessment provided' careflow step for each component delivered, and record the 'Assessment completed' step only after the final component has been provided.">
+            misuse = <"">
+            copyright = <"© Sparked AU FHIR accelerator, openEHR Foundation">
+        >
+    >
+
+definition
+    ACTION[at0000] matches {    -- Health assessment
+        description matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {1} matches {    -- Assessment name
+                        value matches {
+                            DV_TEXT[at9008]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Category
+                        value matches {
+                            DV_TEXT[at9009]
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9010]
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Clinical indication
+                        value matches {
+                            DV_TEXT[at9011]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0007] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Scheduled date/time
+                        value matches {
+                            DV_DATE_TIME[at9012]
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9013]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0013] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0024] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+        ism_transition matches {
+            ISM_TRANSITION[at0010] matches {    -- Assessment planned
+                current_state matches {
+                    DV_CODED_TEXT[at9014] matches {
+                        defining_code matches {[at9000]}    -- planned
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9015] matches {
+                        defining_code matches {[at0010]}    -- Assessment planned
+                    }
+                }
+            }
+            ISM_TRANSITION[at0012] matches {    -- Assessment postponed
+                current_state matches {
+                    DV_CODED_TEXT[at9016] matches {
+                        defining_code matches {[at9001]}    -- postponed
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9017] matches {
+                        defining_code matches {[at0012]}    -- Assessment postponed
+                    }
+                }
+            }
+            ISM_TRANSITION[at0014] matches {    -- Assessment cancelled
+                current_state matches {
+                    DV_CODED_TEXT[at9018] matches {
+                        defining_code matches {[at9002]}    -- cancelled
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9019] matches {
+                        defining_code matches {[at0014]}    -- Assessment cancelled
+                    }
+                }
+            }
+            ISM_TRANSITION[at0015] matches {    -- Assessment scheduled
+                current_state matches {
+                    DV_CODED_TEXT[at9020] matches {
+                        defining_code matches {[at9003]}    -- scheduled
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9021] matches {
+                        defining_code matches {[at0015]}    -- Assessment scheduled
+                    }
+                }
+            }
+            ISM_TRANSITION[at0016] matches {    -- Assessment provided
+                current_state matches {
+                    DV_CODED_TEXT[at9022] matches {
+                        defining_code matches {[at9004]}    -- active
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9023] matches {
+                        defining_code matches {[at0016]}    -- Assessment provided
+                    }
+                }
+            }
+            ISM_TRANSITION[at0017] matches {    -- Assessment suspended
+                current_state matches {
+                    DV_CODED_TEXT[at9024] matches {
+                        defining_code matches {[at9005]}    -- suspended
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9025] matches {
+                        defining_code matches {[at0017]}    -- Assessment suspended
+                    }
+                }
+            }
+            ISM_TRANSITION[at0018] matches {    -- Assessment abandoned
+                current_state matches {
+                    DV_CODED_TEXT[at9026] matches {
+                        defining_code matches {[at9006]}    -- aborted
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9027] matches {
+                        defining_code matches {[at0018]}    -- Assessment abandoned
+                    }
+                }
+            }
+            ISM_TRANSITION[at0019] matches {    -- Assessment completed
+                current_state matches {
+                    DV_CODED_TEXT[at9028] matches {
+                        defining_code matches {[at9007]}    -- complete
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9029] matches {
+                        defining_code matches {[at0019]}    -- Assessment completed
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Health assessment">
+                description = <"Provision of a health assessment required to evaluate an individual’s physical, mental, developmental, or functional health status, for the purposes of prevention, screening, diagnosis, or care planning.">
+            >
+            ["at0002"] = <
+                text = <"Assessment name">
+                description = <"Name of the assessment, or type of assessment.">
+                comment = <"For example: neonatal hip dysplasia screening, Adverse Childhood Experiences (ACE) screening, pre-employment medical, interRAI Community Health Assessment, medication review, Mini Mental State Examination (MMSE), or a cardiovascular risk assessment. Use of a clinical terminology is recommended whenever possible. Free text entry should be allowed only when an appropriate coded value is not available.">
+            >
+            ["at0003"] = <
+                text = <"Category">
+                description = <"An overarching grouping for the health assessment identified in 'Assessment name'.">
+                comment = <"For example: comprehensive, age-specific, condition-specific, functional, or population.">
+            >
+            ["at0004"] = <
+                text = <"Description">
+                description = <"Narrative description about the provision of the health assessment, applicable to the careflow step.">
+            >
+            ["at0005"] = <
+                text = <"Clinical indication">
+                description = <"The clinical reason for the health assessment.">
+                comment = <"For example: diabetes control; or cancer treatment'. Coding of the indication with a terminology is preferred, where possible. This data element allows multiple occurrences.">
+            >
+            ["at0007"] = <
+                text = <"Additional details">
+                description = <"Additional structured details about the health assessment provision.">
+            >
+            ["at0008"] = <
+                text = <"Scheduled date/time">
+                description = <"The intended date and/or time for delivery of the equipment.">
+                comment = <"This data element must only be used in conjunction with the 'Assessment scheduled' careflow step.">
+            >
+            ["at0009"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the supply activity or careflow step not captured in other fields.">
+            >
+            ["at0010"] = <
+                text = <"Assessment planned">
+                description = <"An intent or need to initiate a health assessment process has been recognised; active careflow steps have not commenced.">
+            >
+            ["at0012"] = <
+                text = <"Assessment postponed">
+                description = <"The planned assessment has been temporarily stopped; active careflow steps have not commenced.">
+            >
+            ["at0014"] = <
+                text = <"Assessment cancelled">
+                description = <"The planned assessment has been permanently stopped; active careflow steps have not commenced.">
+            >
+            ["at0015"] = <
+                text = <"Assessment scheduled">
+                description = <"A date and/or time has been scheduled for the planned assessment; active careflow steps have not commenced.">
+            >
+            ["at0016"] = <
+                text = <"Assessment provided">
+                description = <"The assessment has been provided; active careflow steps are in process.">
+                comment = <"If the assessment consists of a single component, this careflow step and the 'Assessment completed' step may be recorded simultaneously.
+If the assessment consists of multiple components, record a separate instance of this careflow step for each component provided, and record the 'Assessment completed' step only after the final component has been delivered.">
+            >
+            ["at0017"] = <
+                text = <"Assessment suspended">
+                description = <"The active assessment process has been temporarily stopped; active careflow steps have been put on hold.">
+            >
+            ["at0018"] = <
+                text = <"Assessment abandoned">
+                description = <"The active assessment process has been permanently stopped; active careflow steps have been aborted.">
+            >
+            ["at0019"] = <
+                text = <"Assessment completed">
+                description = <"All components of the assessment have been provided; active careflow steps have been completed.">
+                comment = <"If the equipment to be supplied consists of a single component, this careflow step and the 'Assessment provided' step may be recorded simultaneously.">
+            >
+            ["at0024"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at9000"] = <
+                text = <"planned">
+                description = <"planned">
+            >
+            ["at9001"] = <
+                text = <"postponed">
+                description = <"postponed">
+            >
+            ["at9002"] = <
+                text = <"cancelled">
+                description = <"cancelled">
+            >
+            ["at9003"] = <
+                text = <"scheduled">
+                description = <"scheduled">
+            >
+            ["at9004"] = <
+                text = <"active">
+                description = <"active">
+            >
+            ["at9005"] = <
+                text = <"suspended">
+                description = <"suspended">
+            >
+            ["at9006"] = <
+                text = <"aborted">
+                description = <"aborted">
+            >
+            ["at9007"] = <
+                text = <"complete">
+                description = <"complete">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/526>
+            ["at9001"] = <http://openehr.org/id/527>
+            ["at9002"] = <http://openehr.org/id/528>
+            ["at9003"] = <http://openehr.org/id/529>
+            ["at9004"] = <http://openehr.org/id/245>
+            ["at9005"] = <http://openehr.org/id/530>
+            ["at9006"] = <http://openehr.org/id/531>
+            ["at9007"] = <http://openehr.org/id/532>
+        >
+    >

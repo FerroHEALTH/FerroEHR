@@ -1,0 +1,298 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=eef15b41-efbe-4a76-8289-6b170136a11d; build_uid=12da84d9-8528-4e22-8607-5435c87c31c9)
+    openEHR-EHR-OBSERVATION.medication_statement-JM.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-OBSERVATION.medication_statement.v0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch, Darin Leonhardt">
+                ["organisation"] = <"Medizinische Hochschule Hannover, PLRI für medizinische Informatik/ Medizinische Hochschule">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de, leonhardt.darin@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Marit Alice Venheim, John Tore Valand, Hanne Marte Bårholm">
+                ["organisation"] = <"Helse Vest IKT, Helse Bergen">
+                ["email"] = <"marit.alice.venheim@helse-vest-ikt.no, john.tore.valand@helse-vest-ikt.no, hanne.marte.sandal.barholm@helse-vest-ikt.no">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Joost Holslag">
+                ["organisation"] = <"Nedap">
+                ["email"] = <"joost.holslag@nedap.com">
+            >
+            accreditation = <"MD">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-08-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"MedicationStatement, HL7 FHIR Resource [Internet]. Health Level Seven International; [accessed 2024 Jan 30]. Available from: https://hl7.org/fhir/R5/medicationstatement.html.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"CAD1E2DB405C1162C85A0C3D974AC743">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Aufzeichnung einer Aussage über die aktuelle Einnahme eines einzelnen Medikaments durch eine Person zu einem bestimmten Zeitpunkt.">
+            keywords = <"Aussage", "Momentaufnahme">
+            use = <"Zur Aufzeichnung einer Aussage über die aktuelle Einnahme eines einzelnen Medikaments durch eine Person zu einem bestimmten Zeitpunkt.
+
+In diesem Zusammenhang beschreibt der Begriff \"Medikamente\" eine breite Palette von Gegenständen, die verschrieben oder \"rezeptfrei\" erworben werden können. Dazu gehören:
+- einen einzelnen pharmazeutischen Artikel oder Wirkstoff; 
+- eine Magistralrezeptur; 
+- ein Kombinationspräparat; 
+- ein Nahrungsergänzungsmittel; oder 
+- ein anderer therapeutischer Artikel, der zur Behandlung oder Vorbeugung von Krankheiten verwendet wird, wie z. B. ein Verband oder eine Wundauflage, die ein antimikrobielles Mittel enthält.
+
+Es wird davon ausgegangen, dass dieser Archetyp üblicherweise in einem Austauschkontext verwendet wird, z. B. als Teil eines Gesundheitsberichts oder eines Berichts über den Übergang der Versorgung, wobei eine oder mehrere Instanzen dieser Datengruppe verwendet werden können, um eine \"Aktuelle Medikamentenliste\" darzustellen. Zum Beispiel: 
+- bei der Aufnahme ins Krankenhaus;
+- als Teil einer fachärztlichen Überweisung; oder
+- als Grundlage für eine Überprüfung der Medikation.
+
+Die Informationsquelle kann eine Person, ihr Betreuer oder ein Kliniker sein.
+
+Dieser Archetyp wurde so konzipiert, dass er möglichst mit INSTRUCTION.medictation oder ACTION.medication_management übereinstimmt. Er wurde jedoch so eingeschränkt, dass er nur wesentliche Informationen enthält, die für den Austausch oder die Zusammenfassung erforderlich sind, sowie zusätzliche ereignisbasierte Datenelemente wie das Datenelement \"Zuletzt verabreicht\", um einen nahtlosen Übergang der Versorgung zu unterstützen. 
+
+Für jedes Medikament oder jede Kombinationspackung ist eine Instanz dieses Archetyps zu erfassen. Wenn dasselbe Medikament in verschiedenen Dosierungen oder mit unterschiedlicher Häufigkeit verwendet wird, sollte jede einzelne Dosierungs- und Häufigkeitsänderung als separate Instanz erfasst werden.
+
+Dieser Archetyp sollte nur zum Zeitpunkt der Erstellung als aktuell betrachtet werden. 
+
+Dieser Archetyp wurde so konzipiert, dass er mit der FHIR-Ressource MedicationStatement übereinstimmt, ist aber absichtlich auf die \"aktuelle Verwendung\" und nicht auf die vergangene oder zukünftige Verwendung beschränkt.
+">
+            misuse = <"Nicht für die Aufzeichnung von zusammenfassenden oder dauerhaften Informationen über die frühere Einnahme eines Medikaments zu verwenden - verwenden Sie zu diesem Zweck EVALUATION.medication_summary.
+
+Nicht zur Aufzeichnung von Details über eine Medikamentenverfügung verwenden - verwenden Sie zu diesem Zweck INSTRUCTION.medication_order.
+
+Nicht zur Aufzeichnung von Details über bestimmte medikamentenbezogene Aktivitäten, wie Verabreichung oder Abgabe, zu verwenden - verwenden Sie zu diesem Zweck ACTION.medication.
+
+Nicht zur Erstellung eines Frameworks zum Aufzeichnen von Antworten auf vordefinierte Screening-Fragen zur Verwendung eines bestimmten Medikaments oder einer Medikamentengruppe geeignet. Verwenden Sie zu diesem Zweck OBSERVATION.medication_screening.
+
+Nicht für die Darstellung einer verabreichten Impfung zu verwenden - verwenden Sie zu diesem Zweck einen geeigneten Archetyp.
+
+Nicht zu verwenden, um Informationen über verwendete oder implantierte medizinische Geräte zu erfassen.">
+            copyright = <"© openEHR Foundation, Ministry of Health and Wellness Jamaica">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en beskrivelse av den nåværende bruken av et enkelt legemiddel for et individ på et spesifisert tidspunkt.">
+            keywords = <"utsagn", "snapshot">
+            use = <"Brukes for å registrere en beskrivelse av den nåværende bruken av et enkelt legemiddel for et individ på et spesifisert tidspunkt.
+
+I denne av denne arketypen brukes en bred definisjon av \"legemiddel\", og omhandler både legemidler på og uten resept. Dette inkluderer:
+- et enkelt farmasøytisk produkt eller middel;
+- en tilberedning;
+- et kombinasjonsprodukt;
+- et ernæringsprodukt; eller
+- et annet terapeutisk produkt brukt til å behandle eller forebygge sykdom, for eksempel en bandasje med et antimikrobielt middel.
+
+Denne arketypen vil vanligvis bli brukt ved utveksling av informasjon, for eksempel som en del av en helseoppsummering eller en oppsummering ved overflytting mellom helseinstitusjoner. I slike tilfeller kan en eller flere instanser av denne arketypen brukes til å representere en \"Nåværende medikamentliste\". For eksempel:
+- ved innleggelse på sykehus,
+- som en del av en spesialisthenvisning,
+- som grunnlag for en medikamentgjennomgang.
+
+Kilden til informasjon kan være en person, deres omsorgsperson eller en kliniker.
+
+Denne arketypen er utformet for å kunne samsvare med INSTRUCTION.medication_order (Legemiddelordinering) eller ACTION.medication (Legemiddelhåndtering) ved behov. Imidlertid er arketypen begrenset til å kun representere essensiell informasjon som er nødvendig for utveksling eller oppsummeringsformål, i tillegg til hendelsesbaserte dataelementer som \"Sist administrert\". Dette er gjort for å støtte en sømløs omsorgsovergang.
+
+Registrer én forekomst av denne arketypen per legemiddel eller kombinasjonspakke. Brukes samme legemiddel i ulike doser eller dosefrekvenser, skal hver unike doserings- og frekvensvariasjon registreres som en separat forekomst.
+
+Denne arketypen bør bare betraktes som oppdatert på registreringstidspunktet.
+
+Denne arketypen er utformet for å samsvare med FHIR MedicationStatement-ressursen, men er bevisst begrenset til \"nåværende bruk\", og ikke for tidligere eller fremtidig bruk av et legemiddel.">
+            misuse = <"Brukes ikke for å registrere et sammendrag om all bruk av et spesifisert legemiddel over et individs livstid, bruk arketypen EVALUATION.medication_summary (Legemiddelsammendrag) til dette formålet.
+
+Brukes ikke for å dokumentere forordningen av et legemiddel - bruk arketypen INSTRUCTION.medication_order (Legemiddelordinering) til dette formålet.
+
+Brukes ikke for å dokumentere administreringen av et legemiddel - bruk arketypen ACTION.medication (Legemiddelhåndtering) til dette formålet.
+
+Brukes ikke for å lage et rammeverk for registrering av svar på forhåndsdefinerte spørsmål om bruken av et hvilket som helst legemiddel eller gruppe av legemidler. Bruk OBSERVATION.medication_screening (Kartleggingsspørsmål om legemidler) til dette formålet.
+
+Brukes ikke for å dokumentere en vaksine som er administrert - bruk en egnet arketype til dette formålet.
+
+Brukes ikke for å registrere infomrasjon om medisinsk utstyr som er brukt eller implantert. Bruk en egnet arketype til dette formålet.">
+            copyright = <"© openEHR Foundation, Ministry of Health and Wellness Jamaica">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record an assertion about the current use of a single medication by an individual at a specified point in time.">
+            keywords = <"statement", "snapshot">
+            use = <"Use to record an assertion about the current use of a single medication by an individual at a specified point in time.
+
+In this medication statement context, ‘medication’ describes a wide range of items that may be prescribed or obtained 'over the counter'. This includes:
+- a single pharmaceutical item or agent; 
+- an extemporaneous preparation; 
+- a combination therapy product; 
+- a nutritional product; or 
+- another therapeutic item used to treat or prevent disease, such as a bandage or dressing containing an antimicrobial agent.
+
+It is anticipated that this archetype will commonly be used within an exchange context, for example as part of a health summary or transition of care summary, where one or more instances of this data group may be used to represent a ‘Current medication list’. For example: 
+- on admission to hospital;
+- as part of a specialist referral; or
+- as the basis for a medication review.
+
+The source of information may be an individual, their carer or a clinician.
+
+This archetype has been designed to align with INSTRUCTION.medictation or ACTION.medication_management, where possible. However, it has been constrained to represent only essential information necessary for exchange or summary purposes, plus the addition of event-based data elements such as the ‘Last administered’ data element to support a seamless transition of care. 
+
+Record one instance of this archetype per medication or combination pack. If the same medication is being used in different dose amounts or varying dose frequencies, each unique dosage and frequency variation should be recorded as a separate instance.
+
+This archetype should only be considered up-to-date at the time of authoring. 
+
+This archetype has been designed to align with the FHIR MedicationStatement resource but is intentionally constrained to 'current use', rather than past or future use.">
+            misuse = <"Not to be used to record summary or persistent information about past use of a medication - use EVALUATION.medication_summary for this purpose.
+
+Not to be used to record details about a medication order - use INSTRUCTION.medication_order for this purpose.
+
+Not to be used to record details about specific medication related activities, such as administration or dispensing - use ACTION.medication for this purpose.
+
+Not to be used to create a framework for recording answers to pre-defined screening questions about the use of any specified medication or grouping of medications - use OBSERVATION.medication_screening for this purpose.
+
+Not to be used to represent a vaccination that has been administered - use an appropriate archetype for this purpose.
+
+Not to be used to record information about medical devices that are used or implanted.">
+            copyright = <"© openEHR Foundation, Ministry of Health and Wellness Jamaica">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"*To record an assertion about the current use of a single medication by an individual at a specified point in time. (en)">
+            keywords = <"*statement (en)", "*snapshot (en)">
+            use = <"*Use to record an assertion about the current use of a single medication by an individual at a specified point in time.
+
+In this medication statement context, ‘medication’ describes a wide range of items that may be prescribed or obtained 'over the counter'. This includes:
+- a single pharmaceutical item or agent; 
+- an extemporaneous preparation; 
+- a combination therapy product; 
+- a nutritional product; or 
+- another therapeutic item used to treat or prevent disease, such as a bandage or dressing containing an antimicrobial agent.
+
+It is anticipated that this archetype will commonly be used within an exchange context, for example as part of a health summary or transition of care summary, where one or more instances of this data group may be used to represent a ‘Current medication list’.  For example: 
+- on admission to hospital;
+- as part of a specialist referral; or
+- as the basis for a medication review.
+
+The source of information may be an individual, their carer or a clinician.
+
+This archetype has been designed to align with INSTRUCTION.medictation or ACTION.medication_management, where possible. However, it has been constrained to represent only essential information necessary for exchange or summary purposes, plus the addition of event-based data elements such as the ‘Last administered’ data element to support a seamless transition of care. 
+
+Record one instance of this archetype per medication or combination pack. If the same medication is being used in different dose amounts or varying dose frequencies, each unique dosage and frequency variation should be recorded as a separate instance.
+
+This archetype should only be considered up-to-date at the time of authoring. 
+
+This archetype has been designed to align with the FHIR MedicationStatement resource but is intentionally constrained to 'current use', rather than past or future use. (en)">
+            misuse = <"*Not to be used to record summary or persistent information about past use of a medication - use EVALUATION.medication_summary for this purpose.
+
+Not to be used to record details about a medication order - use INSTRUCTION.medication_order for this purpose.
+
+Not to be used to record details about specific medication related activities, such as administration or dispensing - use ACTION.medication for this purpose.
+
+Not to be used to create a framework for recording answers to pre-defined screening questions about the use of any specified medication or grouping of medications - use OBSERVATION.medication_screening for this purpose.
+
+Not to be used to represent a vaccination that has been administered - use an appropriate archetype for this purpose.
+
+Not to be used to record information about medical devices that are used or implanted. (en)">
+            copyright = <"© openEHR Foundation, Ministry of Health and Wellness Jamaica">
+        >
+    >
+
+definition
+    OBSERVATION[at0000.1] matches {    -- Medication use statement - JM
+        /data[at0001]/events[at0002]/data[at0003]/items matches {
+            ELEMENT[at0.1] occurrences matches {0..1} matches {    -- First administered
+                value matches {
+                    DV_DATE_TIME[at0.9000]
+                }
+            }
+            ELEMENT[at0.2] occurrences matches {0..1} matches {    -- Number of doses administered
+                value matches {
+                    DV_COUNT[at0.9001]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"*Medication use statement - JM (en)">
+                description = <"Eine Aussage über die aktuelle Einnahme eines einzelnen Medikaments durch eine Person.">
+            >
+            ["at0.1"] = <
+                text = <"*First administered (en)">
+                description = <"*The date and time when the medication was first taken by, or administered to, the individual. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Number of doses administered (en)">
+                description = <"*The total number of doses administered. (en)">
+                comment = <"*For example: 1 stat dose of prophylactic antibiotics; or 10 doses in an antibiotic course over 5 days. (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000.1"] = <
+                text = <"*Medication use statement - JM (en)">
+                description = <"En beskrivelse av nåværende bruk av et enkelt legemiddel for et individ.">
+            >
+            ["at0.1"] = <
+                text = <"*First administered (en)">
+                description = <"*The date and time when the medication was first taken by, or administered to, the individual. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Number of doses administered (en)">
+                description = <"*The total number of doses administered. (en)">
+                comment = <"*For example: 1 stat dose of prophylactic antibiotics; or 10 doses in an antibiotic course over 5 days. (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Medication use statement - JM">
+                description = <"An assertion about the current use of a single medication by an individual.">
+            >
+            ["at0.1"] = <
+                text = <"First administered">
+                description = <"The date and time when the medication was first taken by, or administered to, the individual.">
+            >
+            ["at0.2"] = <
+                text = <"Number of doses administered">
+                description = <"The total number of doses administered.">
+                comment = <"For example: 1 stat dose of prophylactic antibiotics; or 10 doses in an antibiotic course over 5 days.">
+            >
+        >
+        ["nl"] = <
+            ["at0000.1"] = <
+                text = <"*Medication use statement - JM (en)">
+                description = <"*An assertion about the current use of a single medication by an individual. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*First administered (en)">
+                description = <"*The date and time when the medication was first taken by, or administered to, the individual. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Number of doses administered (en)">
+                description = <"*The total number of doses administered. (en)">
+                comment = <"*For example: 1 stat dose of prophylactic antibiotics; or 10 doses in an antibiotic course over 5 days. (en)">
+            >
+        >
+    >

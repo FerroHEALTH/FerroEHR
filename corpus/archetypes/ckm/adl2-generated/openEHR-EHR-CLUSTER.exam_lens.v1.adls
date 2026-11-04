@@ -1,0 +1,302 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-CLUSTER.exam_lens.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, UK">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"2013-03-01">
+    >
+    lifecycle_state = <"AuthorDraft">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"9416B8BF7089D7E5681BD12DC0FC005A">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For recording the findings on physical examination of the lens.">
+            keywords = <"eye", "examination", "physical", "cataract">
+            use = <"Use to record the findings on physical examination of the lens of the eye.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Description' data element.
+
+Specifically designed to be used within the OBSERVATION.exam archetype, but may be used within any clinically appropriate ENTRY or CLUSTER archetype.">
+            misuse = <"Not to be used to record findings of the physical examination of other parts of the eye, such as the retina or conjunctiva - use other specific archetypes for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Examination Findings  -  Lens
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Eye Examined
+                value matches {
+                    DV_CODED_TEXT[at9006] matches {
+                        defining_code matches {[ac9000]}    -- Eye Examined (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0008] matches {    -- Lens Opacity
+                value matches {
+                    DV_CODED_TEXT[at9007] matches {
+                        defining_code matches {[ac9001]}    -- Lens Opacity (synthesised)
+                    }
+                    DV_TEXT[at9008]
+                }
+            }
+            ELEMENT[at0033] occurrences matches {0..1} matches {    -- Lens Position
+                value matches {
+                    DV_CODED_TEXT[at9009] matches {
+                        defining_code matches {[ac9002]}    -- Lens Position (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0021] occurrences matches {0..1} matches {    -- Cataract Maturity
+                value matches {
+                    DV_CODED_TEXT[at9010] matches {
+                        defining_code matches {[ac9003]}    -- Cataract Maturity (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0037] occurrences matches {0..1} matches {    -- Posterior Capsule Fibrosis
+                value matches {
+                    DV_CODED_TEXT[at9011] matches {
+                        defining_code matches {[ac9004]}    -- Posterior Capsule Fibrosis (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0026] occurrences matches {0..1} matches {    -- Cataract Location
+                value matches {
+                    DV_CODED_TEXT[at9012] matches {
+                        defining_code matches {[ac9005]}    -- Cataract Location (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0002] matches {    -- Interpretation
+                value matches {
+                    DV_TEXT[at9013]
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9014]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Examination Findings  -  Lens">
+                description = <"Findings on physical examination of the lens of the eye.">
+            >
+            ["at0001"] = <
+                text = <"Description">
+                description = <"An overall narrative description of  findings of examination of the lens.">
+            >
+            ["at0002"] = <
+                text = <"Interpretation">
+                description = <"An interpretation of the lens examination findings, preferably coded.">
+            >
+            ["at0003"] = <
+                text = <"Eye Examined">
+                description = <"The eye examined.">
+            >
+            ["at0004"] = <
+                text = <"Left eye">
+                description = <"The left eye was examined.">
+            >
+            ["at0005"] = <
+                text = <"Right eye">
+                description = <"The right eye was examined.">
+            >
+            ["at0008"] = <
+                text = <"Lens Opacity">
+                description = <"The morphology of the lens / or cataract.">
+            >
+            ["at0009"] = <
+                text = <"Normal, clear crystalline lens">
+                description = <"The lens is normal, clear and crystalline.">
+            >
+            ["at0010"] = <
+                text = <"Nuclear sclerosis">
+                description = <"Nucelar sclerosia is present.">
+            >
+            ["at0011"] = <
+                text = <"Brunescent nucleus">
+                description = <"A brunescent catract nucleus is present.">
+            >
+            ["at0012"] = <
+                text = <"Cortical cataract">
+                description = <"A cortical cataract is present.">
+            >
+            ["at0013"] = <
+                text = <"Posterior sub capsular cataract">
+                description = <"A posterior sub-capsular cataract is present.">
+            >
+            ["at0014"] = <
+                text = <"Mature (white cortex) cataract">
+                description = <"A mature cataract is present.">
+            >
+            ["at0015"] = <
+                text = <"Hypermature / Morgagnian cataract">
+                description = <"A hypermature, Morgagnian catarct is present.">
+            >
+            ["at0016"] = <
+                text = <"Watercleft cataract">
+                description = <"A watercleft cataract is present.">
+            >
+            ["at0017"] = <
+                text = <"Retrodot cataract">
+                description = <"A retrodot cataract is present.">
+            >
+            ["at0018"] = <
+                text = <"Coronary cataract">
+                description = <"A coronary cataract is present.">
+            >
+            ["at0019"] = <
+                text = <"Polar cataract">
+                description = <"A polar cataract is present.">
+            >
+            ["at0020"] = <
+                text = <"Lamellar cataract">
+                description = <"A lamellar cataract is present.">
+            >
+            ["at0021"] = <
+                text = <"Cataract Maturity">
+                description = <"The maturity of cataract development.">
+            >
+            ["at0022"] = <
+                text = <"None">
+                description = <"There is no cataract present.">
+            >
+            ["at0023"] = <
+                text = <"Early">
+                description = <"The cataract is at an early stage of maturity.">
+            >
+            ["at0024"] = <
+                text = <"Moderate">
+                description = <"A moderate cataract is present.">
+            >
+            ["at0025"] = <
+                text = <"Mature">
+                description = <"A mature cataract is present.">
+            >
+            ["at0026"] = <
+                text = <"Cataract Location">
+                description = <"The location of the catract identified.">
+            >
+            ["at0028"] = <
+                text = <"Nuclear cataract">
+                description = <"The cataract is located in the nucleus.">
+            >
+            ["at0029"] = <
+                text = <"Nucelo-cortical cataract">
+                description = <"The cataract is located in a nucelo-cortical position.">
+            >
+            ["at0030"] = <
+                text = <"Early opacity">
+                description = <"A hazy, early opacity is visible.">
+            >
+            ["at0031"] = <
+                text = <"Diffuse opacities">
+                description = <"Multiple diffuse lens opacities are visible.">
+            >
+            ["at0032"] = <
+                text = <"Pseudophakia">
+                description = <"Psedophakia is present.">
+            >
+            ["at0033"] = <
+                text = <"Lens Position">
+                description = <"The position of the lens.">
+            >
+            ["at0034"] = <
+                text = <"Normal">
+                description = <"The lens is in a normal position.">
+            >
+            ["at0035"] = <
+                text = <"Subluxation">
+                description = <"The lens shows subluxation.">
+            >
+            ["at0036"] = <
+                text = <"Dislocation">
+                description = <"The lens is dislocated into the vitreous.">
+            >
+            ["at0037"] = <
+                text = <"Posterior Capsule Fibrosis">
+                description = <"The degree of posterior lens capsule fibrosis.">
+            >
+            ["at0038"] = <
+                text = <"Absent / clear">
+                description = <"There is no evidence of posterior capsule fibrosis">
+            >
+            ["at0039"] = <
+                text = <"Mild fibrosis (+)">
+                description = <"Mild posterior capsule fibrosis is evident.">
+            >
+            ["at0040"] = <
+                text = <"Moderate fibrosis (++)">
+                description = <"Moderate posterior capsule fibrosis is evident.">
+            >
+            ["at0041"] = <
+                text = <"Severe fibrosis (+++)">
+                description = <"Severe posterior capsule fibrosis is evident.">
+            >
+            ["ac9000"] = <
+                text = <"Eye Examined (synthesised)">
+                description = <"The eye examined. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Lens Opacity (synthesised)">
+                description = <"The morphology of the lens / or cataract. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Lens Position (synthesised)">
+                description = <"The position of the lens. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Cataract Maturity (synthesised)">
+                description = <"The maturity of cataract development. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Posterior Capsule Fibrosis (synthesised)">
+                description = <"The degree of posterior lens capsule fibrosis. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Cataract Location (synthesised)">
+                description = <"The location of the catract identified. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0034", "at0035", "at0036">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0009", "at0030", "at0010", "at0011", "at0014", "at0015", "at0016", "at0017", "at0031", "at0032">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0004", "at0005">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0012", "at0013", "at0018", "at0019", "at0020", "at0028", "at0029">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0038", "at0039", "at0040", "at0041">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0022", "at0023", "at0024", "at0025">
+        >
+    >

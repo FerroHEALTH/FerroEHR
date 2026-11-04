@@ -1,0 +1,135 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=5c4b8ea6-4c9c-4c8f-9c37-b95e0a5e0aff; build_uid=4d801686-8c5f-4d96-b62b-9dcaf4008936)
+    openEHR-DEMOGRAPHIC-ADDRESS.address-provider.v0.0.1-alpha
+
+specialize
+    openEHR-DEMOGRAPHIC-ADDRESS.address.v0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            author = <
+                ["name"] = <"Seung-Jong Yu">
+                ["organisation"] = <"NOUSCO Co., Ltd.">
+            >
+            accreditation = <"Certified Board of Family Medicine in South Korea">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Sergio Miranda Freire">
+                ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+                ["email"] = <"sergio@lampada.uerj.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sergio Miranda Freire & Rigoleta Dutra Mediano Dias">
+        ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+        ["email"] = <"sergio@lampada.uerj.br">
+        ["date"] = <"2009-05-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Rigoleta Dutra, Ministry of Defense, Brazil (openEHR Editor)", "Sergio Freire, State University of Rio de Janeiro, Brazil (openEHR Editor)", "Sebastian Garde, Ocean Informatics, Germany (Editor)", "Omer Hotomaroglu, Turkey (Editor)", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"ISO/DTS 27527:2007(E) - Provider Identification - Draft Technnical Specification - International Organization for Standardization">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"7B288FEED37BD006D14048650C371F58">
+    >
+    details = <
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            purpose = <"ISO 22220 표준에 기반한 진료제공자 주소에 대한 데이터의 표현. 이 주소는 지리학적 위치를 나타나면 여러 방식으로 사용할 수 있음 : 거주지 주소, 우편 주소 등.">
+            keywords = <"*인적정보 서비스(ko)", "*진료제공자 주소(ko)", "*지리적 주소(ko)">
+            use = <"진료제공자 주소에 대한 등록하는 인적정보 서비스에서 사용됨.">
+            misuse = <"이 archetype은 이메일 주소, IP 주소, 전화, 팩스 그리고 페이져를 위해 사용될 수 없음. 그러한 아이템들을 위해서는 electronic_communication archetype를 사용.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Representação dos detalhes do endereço de um prestador de assistência à saúde. Este endereço representa uma localização geográfica que pode ser utilizada para diversos fins: consultório, endereço postal, etc.">
+            keywords = <"serviço demográfico", "endereço de um prestador de assistência à saúde", "localização geográfica.">
+            use = <"Usado em serviços demográficos para registrar os detalhes de um endereço de um prestador de assistência à saúde.">
+            misuse = <"Este arquétipo não deve ser usado para endereços de correio eletrônico, endereços IP, endereços de computador, telefone, fax e pager. Para estes itens, use o arquétipo electronic_communication.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Representation of data about a healthcare provider address, based on ISO standards. This address represents a geographic location which can be used in several ways: business address, postal address, etc.">
+            keywords = <"demographic service", "healthcare provider address", "geographic location">
+            use = <"Used in demographic services to register data about a healthcare provider address.">
+            misuse = <"This archetype can not used for email address, IP address, computer address, telephone, fax and pager. For these items use the electronic_communication archetype.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ADDRESS[at0000.1] matches {    -- Healthcare provider address
+        /details[at0001]/items matches {
+            ELEMENT[at0.2] occurrences matches {0..1} matches {    -- Communication privacy
+                value matches {
+                    DV_BOOLEAN[at0.9007]
+                }
+            }
+            ELEMENT[at0.3] matches {    -- Healthcare provider identifier
+                value matches {
+                    DV_TEXT[at0.9008]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["ko"] = <
+            ["at0.2"] = <
+                text = <"통신 보안">
+                description = <"이 통신 메커니즘이 특정 진료제공자 외에는 공개적으로 표시되지 않는다는 것을 나타냄.">
+            >
+            ["at0.3"] = <
+                text = <"진료제공자 식별자">
+                description = <"이 통신 메커니즘을 액세스할지도 모르는 진료자 제공자의 식별자.">
+            >
+            ["at0000.1"] = <
+                text = <"진료제공자 주소">
+                description = <"ISO 표준에 기반한 진료제공자 주소.">
+            >
+        >
+        ["pt-br"] = <
+            ["at0.2"] = <
+                text = <"Indicador de privacidade">
+                description = <"Indica quando um mecanismo de comunicação não é para ser exibido abertamente, exceto para organizações específicas.">
+            >
+            ["at0.3"] = <
+                text = <"Identificador do prestador">
+                description = <"Identificador de um prestador que pode acessar este meio de comunicação.">
+            >
+            ["at0000.1"] = <
+                text = <"Endereço de um Prestador de Assistência à Saúde">
+                description = <"Endereço Postal de um Prestador de Assistência à Saúde.">
+            >
+        >
+        ["en"] = <
+            ["at0.2"] = <
+                text = <"Communication privacy">
+                description = <"Indicates that this communication mechanism is not to be openly displayed, except to specific providers.">
+            >
+            ["at0.3"] = <
+                text = <"Healthcare provider identifier">
+                description = <"Identifier of a healthcare provider who may access this communication mechanism.">
+            >
+            ["at0000.1"] = <
+                text = <"Healthcare provider address">
+                description = <"Healthcare provider address, based on ISO standards.">
+            >
+        >
+    >

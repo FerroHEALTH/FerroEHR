@@ -1,0 +1,95 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-CLUSTER.healthcare_provider_parent.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics">
+        ["email"] = <"ian@freshehr.com">
+        ["date"] = <"2014-07-11">
+    >
+    lifecycle_state = <"AuthorDraft">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"DABDB6247145103B067D2DAF31B22D5E">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details of a healthcare provider organisation compliant withe the PARENT Framework.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Healthcare provider (PARENT)
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Organisation name
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Organisation identifier
+                value matches {
+                    DV_IDENTIFIER[at9001]
+                }
+            }
+            allow_archetype CLUSTER[at0003] occurrences matches {0..1} matches {    -- Organisation Address
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Department name
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Department identifier
+                value matches {
+                    DV_IDENTIFIER[at9003]
+                }
+            }
+            ELEMENT[at0004] matches {    -- Contact details
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Healthcare provider (PARENT)">
+                description = <"Details of a healthcare provider organisation.">
+            >
+            ["at0001"] = <
+                text = <"Organisation name">
+                description = <"The name of the organisation.">
+            >
+            ["at0002"] = <
+                text = <"Organisation identifier">
+                description = <"The unique identifier of the organisation.">
+            >
+            ["at0003"] = <
+                text = <"Organisation Address">
+                description = <"The address of the organisation.">
+            >
+            ["at0004"] = <
+                text = <"Contact details">
+                description = <"Contact details for the organisation.">
+            >
+            ["at0005"] = <
+                text = <"Department name">
+                description = <"The name of a specific department within the organisation.">
+            >
+            ["at0006"] = <
+                text = <"Department identifier">
+                description = <"The identifier of a specific department.">
+            >
+        >
+    >

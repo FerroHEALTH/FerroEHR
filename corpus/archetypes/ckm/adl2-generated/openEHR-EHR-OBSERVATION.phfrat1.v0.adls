@@ -1,0 +1,658 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6d499e58-2479-4f56-bd51-87cb6a0e7876; build_uid=9c8ff041-d074-4bfb-aae9-3fd4725df122)
+    openEHR-EHR-OBSERVATION.phfrat1.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            author = <
+                ["name"] = <"Vesa Peltola">
+                ["organisation"] = <"Tieto Finland Oy">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Vesa Peltola">
+                ["organisation"] = <"Tieto Finland Oy">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Vesa Peltola">
+        ["organisation"] = <"Tieto Finland">
+        ["date"] = <"2018-12-12">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Development and preliminary examination of the predictive validity of the Falls Risk Assessment Tool (FRAT) for use in primary care, Journal of Public Health, Volume 26, Issue 2, June 2004, Pages 138–143, https://doi.org/10.1093/pubmed/fdh132">
+        ["2"] = <"https://www2.health.vic.gov.au/about/publications/policiesandguidelines/falls-risk-assessment-tool">
+        ["3"] = <"https://onlinelibrary.wiley.com/doi/full/10.1111/ajag.12476">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"76A29BAE4C23081A8612EFD2AB306E3C">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"">
+            keywords = <"fallrisk, bedömning", ...>
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"Kaatumisriskin arviointiin käytettävä mittari.">
+            keywords = <"kaatuminen, riski, arviointi", ...>
+            use = <"FRAT sisältää kolme osiota: Osio 1 - kaatumisriskin status; Osio 2 - riskitekijöiden tarkistuslista; ja Osio 3 - toimintasuunnitelma. Osiota 1 voidaan käyttää kaatumisriskin arviointiin. Tämä arkkityyppi sisältää ainoastaan FRAT työkalusta osion 1.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the outcomes of a screening assessment of an individual at risk for falling.">
+            keywords = <"fall, risk, assessment, FRAT, peninsula, screening, falls", ...>
+            use = <"Use to record the outcomes of a screening assessment of an individual at risk for falling.
+
+Peninsula Health Falls Risk Assessment Tool (PHFRAT) has three sections: Part 1 - falls risk status; Part 2 – risk factor checklist; and Part 3 –action plan. The complete tool (including instructions for use) is a complete falls risk assessment tool. Part 1 is validated as a falls risk screen. This archetype contains only Part 1.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Falls risk assessment screening tool (PHFRAT - part 1)
+        data matches {
+            HISTORY[at0001] matches {    -- History
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Recent falls
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{2}, {[at0005]}],    -- None in last 12 months
+                                                    [{4}, {[at0006]}],    -- One or more between 3 and 12 months ago
+                                                    [{6}, {[at0007]}],    -- One or more in last 3 months
+                                                    [{8}, {[at0008]}]    -- One or more in last 3 months whilst inpatient/resident
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Medications
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0010]}],    -- Not taking any of these
+                                                    [{2}, {[at0011]}],    -- Taking one
+                                                    [{3}, {[at0012]}],    -- Taking two
+                                                    [{4}, {[at0013]}]    -- Taking more than two
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Psychological
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0015]}],    -- Does not appear to have any of these
+                                                    [{2}, {[at0016]}],    -- Appears mildly affected by one or more
+                                                    [{3}, {[at0017]}],    -- Appears moderately affected by one or more
+                                                    [{4}, {[at0018]}]    -- Appears severely affected by one or more
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Cognitive status
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0020]}],    -- Intact or AMTS score 9-10
+                                                    [{2}, {[at0021]}],    -- Mildly impaired or AMTS score 7-8
+                                                    [{3}, {[at0022]}],    -- Moderately impaired or AMTS score 5-6
+                                                    [{4}, {[at0023]}]    -- Severely impaired or AMTS score 4 or less
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9009] matches {
+                                                magnitude matches {|5..20|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- Recent (or anticipated) changes affecting safe mobility
+                                        value matches {
+                                            DV_BOOLEAN[at9010] matches {
+                                                value matches {True}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0031] occurrences matches {0..1} matches {    -- Dizziness/postural hypotension
+                                        value matches {
+                                            DV_BOOLEAN[at9011] matches {
+                                                value matches {True}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Interpretation
+                                        value matches {
+                                            DV_CODED_TEXT[at9012] matches {
+                                                defining_code matches {[ac9004]}    -- Interpretation (synthesised)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0032] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0033] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"Lyhyt kaatumisvaaran arviointi (FRAT)">
+                description = <"Lyhyt kaatumisvaaran arviointi (FRAT)">
+            >
+            ["at0001"] = <
+                text = <"*History (en)">
+                description = <"*">
+            >
+            ["at0002"] = <
+                text = <"*Any event (en)">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time. (en)">
+            >
+            ["at0004"] = <
+                text = <"Kaatumishistoria">
+                description = <"*Frequency/timing of most recent fall. (en)">
+            >
+            ["at0005"] = <
+                text = <"Ei yhtään kaatumista">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"Yksi tai useampi kaatuminen viimeisen 12 kuukauden aikana">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Yksi kaatuminen viimeisen 3 kuukauden aikana">
+                description = <"*">
+            >
+            ["at0008"] = <
+                text = <"Useampia kaatumisia viimeisen 3 kuukauden aikana">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"Lääkitys">
+                description = <"*Assessment of medications.  (en)">
+                comment = <"*List of medication classes: Sedatives, Anti-depressants, Anti-Parkinson's, Diuretics, Anti-hypertensives, Hypnotics. (en)">
+            >
+            ["at0010"] = <
+                text = <"Ei mitään mainittujen lääkeryhmän lääkkeitä">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"Yksi lääke">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Kaksi lääkettä">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"Useampi kuin kaksi lääkettä">
+                description = <"*">
+            >
+            ["at0014"] = <
+                text = <"Henkinen tila">
+                description = <"*Assessment of psychological conditions.  (en)">
+                comment = <"*List of conditions: Anxiety, depression, difficulties in cooperation, insight or judgement. (en)">
+            >
+            ["at0015"] = <
+                text = <"Ei mitään mainituista">
+                description = <"*">
+            >
+            ["at0016"] = <
+                text = <"Vähäisesti yksi tai useampia oireita">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"Kohtalaisesti yksi tai useampia oireita">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"Vaikea-asteista ongelmaa yhdellä tai useammalla osa-alueella">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"Kognitio/muisti">
+                description = <"*Subjective assessment of cognitive status or Abbreviated Mental Test Score (AMTS).  (en)">
+            >
+            ["at0020"] = <
+                text = <"Ei vaikeuksia tai MMSE pisteet 24-30">
+                description = <"*">
+            >
+            ["at0021"] = <
+                text = <"Vähäisiä muisti-vaikeuksia tai MMSE pisteet 18-23">
+                description = <"*">
+            >
+            ["at0022"] = <
+                text = <"Kohtalaisesti muisti-vaikeuksia tai MMSE pisteet 12-17">
+                description = <"*">
+            >
+            ["at0023"] = <
+                text = <"Etenevä muistisairaus tai MMSE pisteet 0-11">
+                description = <"*">
+            >
+            ["at0025"] = <
+                text = <"Kokonaispisteet">
+                description = <"Neljästä vastausta varten kirjattujen tietojen yhteispistemäärä.">
+                comment = <"Potilaan kaatumisriski arvioidaan kokonaispistemäärästä: lievästi kohonnut kaatumisvaara: 5-11, kohonnut kaatumisvaara: 12-15, erittäin korkea kaatumisvaara: 16-20.">
+            >
+            ["at0026"] = <
+                text = <"Tulkinta">
+                description = <"*Assessment of falls status risk, based on the Total score and additional boolean questions. (en)">
+            >
+            ["at0027"] = <
+                text = <"Lievästi kohonnut kaatumisvaara">
+                description = <"Lievästi kohonnut kaatumisvaara">
+            >
+            ["at0028"] = <
+                text = <"Kohonnut kaatumisvaara">
+                description = <"Kohonnut kaatumisvaara">
+            >
+            ["at0029"] = <
+                text = <"Erittäin korkea kaatumisvaara">
+                description = <"Erittäin korkea kaatumisvaara">
+            >
+            ["at0030"] = <
+                text = <"*Recent (or anticipated) changes affecting safe mobility (en)">
+                description = <"*Recent change in functional status and / or medications affecting safe mobility (or anticipated).          (en)">
+                comment = <"*Record as true if recent or anticipated changes are assessed as present. If selected this will place the individual automatically into a high risk status. (en)">
+            >
+            ["at0031"] = <
+                text = <"*Dizziness/postural hypotension (en)">
+                description = <"*Presence of dizziness/postural hypotension (en)">
+                comment = <"*Record as true if dizziness or postural hypotension  is assessed as present. If selected this will place the individual automatically into a high risk status. (en)">
+            >
+            ["at0033"] = <
+                text = <"*Extension (en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms. (en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents. (en)">
+            >
+            ["ac9012"] = <
+                text = <"Kaatumishistoria (synthesised)">
+                description = <"*Frequency/timing of most recent fall. (en) (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Lääkitys (synthesised)">
+                description = <"*Assessment of medications.  (en) (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Henkinen tila (synthesised)">
+                description = <"*Assessment of psychological conditions.  (en) (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Kognitio/muisti (synthesised)">
+                description = <"*Subjective assessment of cognitive status or Abbreviated Mental Test Score (AMTS).  (en) (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Tulkinta (synthesised)">
+                description = <"*Assessment of falls status risk, based on the Total score and additional boolean questions. (en) (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Kort fallriskbedömning (FRAT)">
+                description = <"Kort fallriskbedömning (FRAT)">
+            >
+            ["at0001"] = <
+                text = <"*History (en)">
+                description = <"*">
+            >
+            ["at0002"] = <
+                text = <"*Any event (en)">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time. (en)">
+            >
+            ["at0004"] = <
+                text = <"Fallhistoria">
+                description = <"*Frequency/timing of most recent fall. (en)">
+            >
+            ["at0005"] = <
+                text = <"Inga fall">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"Ett eller flera fall under senaste 12 månader">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Ett fall under senaste 3 månader">
+                description = <"*">
+            >
+            ["at0008"] = <
+                text = <"Flera fall under senaste 3 månader">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"Medicinering">
+                description = <"*Assessment of medications.  (en)">
+                comment = <"*List of medication classes: Sedatives, Anti-depressants, Anti-Parkinson's, Diuretics, Anti-hypertensives, Hypnotics. (en)">
+            >
+            ["at0010"] = <
+                text = <"Inga vidstående mediciner">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"En medicin">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Två mediciner">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"Mer än två mediciner">
+                description = <"*">
+            >
+            ["at0014"] = <
+                text = <"Psykiska tillståndet">
+                description = <"*Assessment of psychological conditions.  (en)">
+                comment = <"*List of conditions: Anxiety, depression, difficulties in cooperation, insight or judgement. (en)">
+            >
+            ["at0015"] = <
+                text = <"Inget av ovannämnda">
+                description = <"*">
+            >
+            ["at0016"] = <
+                text = <"Lindrigt, ett eller flera symptom">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"Måttligt, ett eller flera symptom">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"Svårt, ett eller flera delområden">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"Kognition/minne">
+                description = <"*Subjective assessment of cognitive status or Abbreviated Mental Test Score (AMTS).  (en)">
+            >
+            ["at0020"] = <
+                text = <"Inga svårigheter">
+                description = <"*">
+            >
+            ["at0021"] = <
+                text = <"Små minnesproblem">
+                description = <"*">
+            >
+            ["at0022"] = <
+                text = <"Måttl. minnesproblem">
+                description = <"*">
+            >
+            ["at0023"] = <
+                text = <"Fortskridande minnessjukdom">
+                description = <"*">
+            >
+            ["at0025"] = <
+                text = <"Sammanlagda poäng">
+                description = <"*The sum of the ordinal scores recorded for each of the four component responses. (en)">
+                comment = <"*The assessment of risk of the patient to fall is inferred from the total score: Low risk: 5-11, medium risk: 12-15, High risk: 16-20. (en)">
+            >
+            ["at0026"] = <
+                text = <"Tolkning">
+                description = <"*Assessment of falls status risk, based on the Total score and additional boolean questions. (en)">
+            >
+            ["at0027"] = <
+                text = <"Lindrigt förhöjd fallrisk">
+                description = <"Lindrigt förhöjd fallrisk">
+            >
+            ["at0028"] = <
+                text = <"Förhöjd fallrisk">
+                description = <"Förhöjd fallrisk">
+            >
+            ["at0029"] = <
+                text = <"Mycket hög fallrisk">
+                description = <"Mycket hög fallrisk">
+            >
+            ["at0030"] = <
+                text = <"*Recent (or anticipated) changes affecting safe mobility (en)">
+                description = <"*Recent change in functional status and / or medications affecting safe mobility (or anticipated).          (en)">
+                comment = <"*Record as true if recent or anticipated changes are assessed as present. If selected this will place the individual automatically into a high risk status. (en)">
+            >
+            ["at0031"] = <
+                text = <"*Dizziness/postural hypotension (en)">
+                description = <"*Presence of dizziness/postural hypotension (en)">
+                comment = <"*Record as true if dizziness or postural hypotension  is assessed as present. If selected this will place the individual automatically into a high risk status. (en)">
+            >
+            ["at0033"] = <
+                text = <"*Extension (en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms. (en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents. (en)">
+            >
+            ["ac9012"] = <
+                text = <"Fallhistoria (synthesised)">
+                description = <"*Frequency/timing of most recent fall. (en) (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Medicinering (synthesised)">
+                description = <"*Assessment of medications.  (en) (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Psykiska tillståndet (synthesised)">
+                description = <"*Assessment of psychological conditions.  (en) (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Kognition/minne (synthesised)">
+                description = <"*Subjective assessment of cognitive status or Abbreviated Mental Test Score (AMTS).  (en) (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Tolkning (synthesised)">
+                description = <"*Assessment of falls status risk, based on the Total score and additional boolean questions. (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Falls risk assessment screening tool (PHFRAT - part 1)">
+                description = <"Validated Part 1 of the Peninsula Health Falls Risk Assessment Tool (PHFRAT) to screen an individual at risk for falling.">
+            >
+            ["at0001"] = <
+                text = <"History">
+                description = <"*">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Recent falls">
+                description = <"Frequency/timing of most recent fall.">
+            >
+            ["at0005"] = <
+                text = <"None in last 12 months">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"One or more between 3 and 12 months ago">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"One or more in last 3 months">
+                description = <"*">
+            >
+            ["at0008"] = <
+                text = <"One or more in last 3 months whilst inpatient/resident">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"Medications">
+                description = <"Assessment of medications.">
+                comment = <"List of medication classes: Sedatives, Anti-depressants, Anti-Parkinson's, Diuretics, Anti-hypertensives, Hypnotics.">
+            >
+            ["at0010"] = <
+                text = <"Not taking any of these">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"Taking one">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Taking two">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"Taking more than two">
+                description = <"*">
+            >
+            ["at0014"] = <
+                text = <"Psychological">
+                description = <"Assessment of psychological conditions.">
+                comment = <"List of conditions: Anxiety, depression, difficulties in cooperation, insight or judgement.">
+            >
+            ["at0015"] = <
+                text = <"Does not appear to have any of these">
+                description = <"*">
+            >
+            ["at0016"] = <
+                text = <"Appears mildly affected by one or more">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"Appears moderately affected by one or more">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"Appears severely affected by one or more">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"Cognitive status">
+                description = <"Subjective assessment of cognitive status or Abbreviated Mental Test Score (AMTS).">
+            >
+            ["at0020"] = <
+                text = <"Intact or AMTS score 9-10">
+                description = <"*">
+            >
+            ["at0021"] = <
+                text = <"Mildly impaired or AMTS score 7-8">
+                description = <"*">
+            >
+            ["at0022"] = <
+                text = <"Moderately impaired or AMTS score 5-6">
+                description = <"*">
+            >
+            ["at0023"] = <
+                text = <"Severely impaired or AMTS score 4 or less">
+                description = <"*">
+            >
+            ["at0025"] = <
+                text = <"Total score">
+                description = <"The sum of the ordinal scores recorded for each of the four component responses.">
+                comment = <"The assessment of risk of the patient to fall is inferred from the total score: Low risk: 5-11, medium risk: 12-15, High risk: 16-20.">
+            >
+            ["at0026"] = <
+                text = <"Interpretation">
+                description = <"Assessment of falls status risk, based on the Total score and additional boolean questions.">
+            >
+            ["at0027"] = <
+                text = <"Low risk">
+                description = <"Low risk.">
+            >
+            ["at0028"] = <
+                text = <"Medium risk">
+                description = <"Medium risk.">
+            >
+            ["at0029"] = <
+                text = <"High risk">
+                description = <"High risk.">
+            >
+            ["at0030"] = <
+                text = <"Recent (or anticipated) changes affecting safe mobility">
+                description = <"Recent change in functional status and / or medications affecting safe mobility (or anticipated).">
+                comment = <"Record as true if recent or anticipated changes are assessed as present. If selected this will place the individual automatically into a high risk status.">
+            >
+            ["at0031"] = <
+                text = <"Dizziness/postural hypotension">
+                description = <"Presence of dizziness/postural hypotension.">
+                comment = <"Record as true if dizziness or postural hypotension  is assessed as present. If selected this will place the individual automatically into a high risk status.">
+            >
+            ["at0033"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9012"] = <
+                text = <"Recent falls (synthesised)">
+                description = <"Frequency/timing of most recent fall. (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Medications (synthesised)">
+                description = <"Assessment of medications. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Psychological (synthesised)">
+                description = <"Assessment of psychological conditions. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Cognitive status (synthesised)">
+                description = <"Subjective assessment of cognitive status or Abbreviated Mental Test Score (AMTS). (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Interpretation (synthesised)">
+                description = <"Assessment of falls status risk, based on the Total score and additional boolean questions. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0010", "at0011", "at0012", "at0013">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0005", "at0006", "at0007", "at0008">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0027", "at0028", "at0029">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0020", "at0021", "at0022", "at0023">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0015", "at0016", "at0017", "at0018">
+        >
+    >

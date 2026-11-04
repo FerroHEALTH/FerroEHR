@@ -1,0 +1,259 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f2b1d844-0ea6-4142-8d8e-181ea070d96e; build_uid=86574d3b-6bc9-4020-a277-22059ac2d806)
+    openEHR-EHR-CLUSTER.genomic_repeated_sequence_variant.v1.0.3
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Aurelie Tomczak, Natalia Strauch">
+                ["organisation"] = <"Institute of Pathology, University Hospital Heidelberg, Germany, Medizinische Hochschule Hannover">
+                ["email"] = <"au.tomczak@yahoo.com, Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Liv Laugen">
+                ["organisation"] = <"Oslo University Hospital, Norway">
+                ["email"] = <"liv.laugen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Cecilia Mascia">
+        ["organisation"] = <"CRS4, Italy">
+        ["email"] = <"cecilia.mascia@crs4.it">
+        ["date"] = <"2017-02-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Francesca Frexia, CRS4, Italy", "Gideon Giacomelli, Charité Berlin, Germany", "Christina Jaeger-Schmidt, Heidelberg University Hospital, Germany", "Florian Kaercher, Charité Berlin, Germany", "Liv Laugen, ​Oslo University Hospital, Norway, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Cecilia Mascia, CRS4, Italy (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Andrej Orel, Marand d.o.o., Slovenia", "Simon Schumacher, HiGHmed, Germany", "Aurelie Tomczak, Uniklinikum Heidelberg, Germany (openEHR Editor)", "Paolo Uva, CRS4, Italy", "Gianluigi Zanetti, CRS4, Italy", "Gyri Aasland Gradek, Haukeland University Hospital, Norway", "Asbjørg Stray-Pedersen, Oslo University Hospital, Norway", "Toril Fagerheim, University Hospital of Northern Norway, Norway", "Camilla F. Skjelbred, Telemark Hospital HF, Norway", "Dag Erik Undlien, Oslo University Hospital, Norway", "Rune Østern, St Olavs Hospital, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"den Dunnen JT, Dalgleish R, Maglott DR, Hart RK, Greenblatt MS, McGowan-Jordan J, Roux AF, Smith T, Antonarakis SE, Taschner PE. HGVS Recommendations for the Description of Sequence Variants: 2016 Update. Hum Mutat. 2016 Jun;37(6):564-9. doi: 10.1002/humu.22981. Epub 2016 Mar 25. PubMed PMID: 26931183.">
+        ["2"] = <"Sequence Variant Nomenclature - Repeated sequences Variant [Internet]. Human Genome Variation Society. [2019] - [cited 2020-02-26]. Available from: https://varnomen.hgvs.org/recommendations/DNA/variant/repeated/">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"46FB5ED4B9ABE631DFE655742BFD3417">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Beschreibung der in einer Sequenz beobachteten \"Repeated sequence Variante\" menschlicher DNA.">
+            keywords = <"Wiederholte Sequenz ", "Variation", "genetisch", "genomisch", "Variante", "DNA", "Chromosom", "Mutation", "Nukleotid">
+            use = <"Verwenden Sie diesen Archetyp, um die Details einer \"Repeated sequence Variante\" menschlicher DNA darzustellen, die in einer genomischen Sequenz beobachtet wurde.
+
+Dieser Archetyp wurde speziell für die Verwendung im SLOT \"Structured variant\" innerhalb des Archetyps CLUSTER.genomic_variant_result entwickelt, kann jedoch auch in anderen ENTRY- oder CLUSTER-Archetypen verwendet werden, sofern dies klinisch angemessen ist.
+
+In den Beispielen in diesem Archetyp sollen Nukleotide in Kleinbuchstaben nur die veränderten Positionen der DNA-Sequenz hervorheben.
+
+Alle Definitionen und Beispiele in diesem Archetyp folgen den HGVS-Standard.">
+            misuse = <"Nicht zur Darstellung von Informationen über Varianten nicht-menschlicher DNA oder jeglicher Art von RNA oder Protein.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljene om en repetert sekvensvariant i humant DNA, funnet i en genomisk sekvens.">
+            keywords = <"repetert sekvens", "variasjon", "gen", "genom", "variant", "DNA", "kromosom", "mutasjon", "nukleotid", "sekvens", "tandem repeat", "trinukleotid repeat">
+            use = <"Brukes for å registrere detaljene om en repetert sekvensvariant i humant DNA, funnet i en genomisk sekvens.
+
+Denne arketypen har blitt laget for å brukes i SLOT'et \"Strukturert variantbeskrivelse\" i arketypen CLUSTER.genomic_variant_result (Genetisk variant resultat). Den kan også brukes i andre ENTRY- eller CLUSTER-arketyper der det er klinisk hensiktsmessig.
+
+I eksemplene i denne arketypen er det brukt små bokstaver på nukleotidene for å markere endringen/-e i DNA-sekvensen.
+Alle definisjoner og eksempler i denne arketypen følger HGVS-nomenklaturen.">
+            misuse = <"Skal ikke brukes til å registrere informasjon om varianter av ikke-humant DNA, eller noen form for RNA eller protein">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the details about a repeated sequence variant of human DNA, observed in a genomic sequence.">
+            keywords = <"repeated sequence", "variation", "genetic", "genomic", "variant", "DNA", "chromosome", "mutation", "nucleotide">
+            use = <"Use to record the details about a repeated sequence variant of human DNA, observed in a genomic sequence.
+
+This archetype has been specifically designed to be used in the 'Structured variant' SLOT within the CLUSTER.genomic_variant_result archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+In the examples in this archetype, lower case nucleotides are only intended to highlight the changed positions of the DNA sequence.
+All definitions and examples in this archetype follow the HGVS nomenclature.">
+            misuse = <"Not to be used to record information about variants of non-human DNA, or any kind of RNA or protein.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Genomic repeated sequence variant
+        items cardinality matches {2..*} matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- Start position
+                value matches {
+                    DV_COUNT[at9000]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- End position
+                value matches {
+                    DV_COUNT[at9001]
+                }
+            }
+            CLUSTER[at0009] occurrences matches {1..*} matches {    -- Repeat unit
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Repeat order
+                        value matches {
+                            DV_COUNT[at9002]
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Repeated sequence
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0007] occurrences matches {1} matches {    -- Copy number
+                        value matches {
+                            DV_COUNT[at9004] matches {
+                                magnitude matches {|>=2|}
+                            }
+                        }
+                    }
+                }
+            }
+            allow_archetype CLUSTER[at0008] matches {    -- Reference sequence
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.reference_sequence(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Genomic repeated sequence variant">
+                description = <"Eine humangenetische Sequenzänderung, bei der im Vergleich zu einer genomischen Referenzsequenz ein Segment von einem oder mehreren Nukleotiden (die Wiederholungseinheit) mehrmals nacheinander vorhanden ist.">
+                comment = <"For example: changing \"CACGGCCT\" to \"CACGGcggcggCCT\".">
+            >
+            ["at0001"] = <
+                text = <"Start position">
+                description = <"Position of the first nucleotide of the repeated range.">
+                comment = <"For example: for a variant where the reference sequence \"CACGGCCT\" is changed to \"CACGGcggcggCCT\", the start position is 3.">
+            >
+            ["at0003"] = <
+                text = <"End position">
+                description = <"Position of the last nucleotide of the repeated range.">
+                comment = <"For example: for a variant where the reference sequence \"CACGGCCT\" is changed to \"CACGGcggcggCCT\", the end position is 5.">
+            >
+            ["at0005"] = <
+                text = <"Repeated sequence">
+                description = <"The sequence of nucleotides that has been repeated.">
+                comment = <"For example: for a variant where the reference sequence \"CACGGCCT\" is changed to \"CACGGcggcggCT\", the repeated sequence is \"CGG\".">
+            >
+            ["at0007"] = <
+                text = <"Copy number">
+                description = <"The total number of times the \"Repeated sequence\" was repeated.">
+                comment = <"For example: for a variant where the reference sequence \"CACGGCCT\" is changed to \"CACGGcggcggCCT\", the copy number is 3.">
+            >
+            ["at0008"] = <
+                text = <"Reference sequence">
+                description = <"The sequence file used as a reference to describe this variant.">
+            >
+            ["at0009"] = <
+                text = <"Repeat unit">
+                description = <"A repeated unit consisting of a repeated sequence and a copy number.">
+                comment = <"This cluster is repeatable to allow for mixed repeats. For example: for a variant where the reference sequence is \"GGC[9]GGA[1]GGC[10]\", a mixed repeat could be \"GGC[10]GGA[1]GGC[9]GGA[1]GGC[10]\". The numbers in brackets in the example are the copy numbers.">
+            >
+            ["at0010"] = <
+                text = <"Repeat order">
+                description = <"The intended position of this repeat unit within the overall sequence of repeat units.">
+                comment = <"This element is only relevant for mixed repeats.
+
+For example: for a variant where the reference sequence is \"GGC[9]GGA[1]GGC[10]\" and the mixed repeat is \"GGC[10]GGA[1]GGC[9]GGA[2]GGC[11]\", the \"Repeat order\" for \"GGC[10]\" is 1, for \"GGA[1]\" 2, for \"GGC[9]\" 3, and so on.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Genetisk variant- repetert sekvens">
+                description = <"En genetisk variant hvor et segment med en eller flere nukleotider (den repeterte sekvensen) blir gjentatt flere ganger, sammenliknet med referansesekvensen. Engelsk: repeated sequence.">
+                comment = <"For eksempel: endring fra 'CACGGCCT' til 'CACGGcggcggCCT'">
+            >
+            ["at0001"] = <
+                text = <"Startposisjon">
+                description = <"Posisjonen til det første nukleotidet i det området som har blitt repetert/gjentatt, sammenliknet med referansesekvensen.">
+                comment = <"For eksempel: for en variant hvor en referansesekvens 'CACGGCCT' har blitt endret til 'CACGGcggcggCCT', er startposisjonen 3.">
+            >
+            ["at0003"] = <
+                text = <"Sluttposisjonen">
+                description = <"Posisjonen til det siste nukleotidet i det området som har blitt repetert/gjentatt, sammenliknet med referansesekvensen.">
+                comment = <"For eksempel: for en variant hvor en referansesekvens 'CACGGCCT' er blitt endret til 'CACGGcggcggCCT', er sluttposisjonen 5.">
+            >
+            ["at0005"] = <
+                text = <"Repetert sekvens">
+                description = <"Nukleotidesekvensen som har blitt repetert.">
+                comment = <"For eksempel: for en variant, hvor referansesekvensen 'CACGGCCT' er blitt endret til 'CACGGcggcggCT', vil den repeterte sekvensen være 'CGG'.">
+            >
+            ["at0007"] = <
+                text = <"Kopitall">
+                description = <"Det totale antallet ganger den \"repeterte sekvensen\" har blitt gjentatt/repetert.">
+                comment = <"For eksempel: for en variant, hvor referansesekvensen 'CACGGCCT' er blitt endret til 'CACGGCGGCGGCCT', vil kopitallet være 3.">
+            >
+            ["at0008"] = <
+                text = <"Referansesekvens">
+                description = <"Sekvensfilen som har blitt brukt som en referanse for å beskrive varianten.">
+            >
+            ["at0009"] = <
+                text = <"Repeterende sekvensenhet">
+                description = <"En repeterende sekvensenhet består av den repeterte sekvensen samt et kopitall.">
+                comment = <"Dette clusteret kan gjentas for å kunne rapportere flere tilfeller av ulike repeterende sekvenser. For eksempel: for en variant, der referansesekvensen er 'GGC[9]GGA[1]GGC[10]', kan de ulike repeterende sekvensenhetene skrives som 'GGC [10] GGA [1] GGC [9] GGA [1] GGC [10]'. Tallet i hakeparentesen representerer kopinummeret.">
+            >
+            ["at0010"] = <
+                text = <"Repeteringsrekkefølgen">
+                description = <"Hvilken posisjon dette repeterende sekvenselementet er ment å ha innenfor den totale sekvensen av repeterende sekvenselementer.">
+                comment = <"Dette elementet er bare relevant der man har flere ulike/forskjellige repeterende sekvenser.
+
+For eksempel: for en variant, der referansesekvensen er 'GGC[9]GGA[1]GGC[10]' og de forskjellige repeterte sekvenselementene er 'GGC[10]GGA[1]GGC[9]GGA[2]GGC[11]', vil repeteringsrekkefølgen for 'GGC[10]' være 1, for 'GGA[1]' være 2, for 'GGC[9]' være 3 og så videre.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Genomic repeated sequence variant">
+                description = <"A human genetic sequence change where, compared to a genomic reference sequence, a segment of one or more nucleotides (the repeat unit) is present several times, one after the other.">
+                comment = <"For example: changing 'CACGGCCT' to 'CACGGcggcggCCT'.">
+            >
+            ["at0001"] = <
+                text = <"Start position">
+                description = <"Position of the first nucleotide of the repeated range.">
+                comment = <"For example: for a variant where the reference sequence 'CACGGCCT' is changed to 'CACGGcggcggCCT', the start position is 3.">
+            >
+            ["at0003"] = <
+                text = <"End position">
+                description = <"Position of the last nucleotide of the repeated range.">
+                comment = <"For example: for a variant where the reference sequence 'CACGGCCT' is changed to 'CACGGcggcggCCT', the end position is 5.">
+            >
+            ["at0005"] = <
+                text = <"Repeated sequence">
+                description = <"The sequence of nucleotides that has been repeated.">
+                comment = <"For example: for a variant where the reference sequence 'CACGGCCT' is changed to 'CACGGcggcggCT', the repeated sequence is 'CGG'.">
+            >
+            ["at0007"] = <
+                text = <"Copy number">
+                description = <"The total number of times the 'Repeated sequence' was repeated.">
+                comment = <"For example: for a variant where the reference sequence 'CACGGCCT' is changed to 'CACGGcggcggCCT', the copy number is 3.">
+            >
+            ["at0008"] = <
+                text = <"Reference sequence">
+                description = <"The sequence file used as a reference to describe this variant.">
+            >
+            ["at0009"] = <
+                text = <"Repeat unit">
+                description = <"A repeated unit consisting of a repeated sequence and a copy number.">
+                comment = <"This cluster is repeatable to allow for mixed repeats. For example: for a variant where the reference sequence is 'GGC[9]GGA[1]GGC[10]', a mixed repeat could be 'GGC[10]GGA[1]GGC[9]GGA[1]GGC[10]'. The numbers in brackets in the example are the copy numbers.">
+            >
+            ["at0010"] = <
+                text = <"Repeat order">
+                description = <"The intended position of this repeat unit within the overall sequence of repeat units.">
+                comment = <"This element is only relevant for mixed repeats.
+
+For example: for a variant where the reference sequence is 'GGC[9]GGA[1]GGC[10]' and the mixed repeat is 'GGC[10]GGA[1]GGC[9]GGA[2]GGC[11]', the 'Repeat order' for 'GGC[10]' is 1, for 'GGA[1]' 2, for 'GGC[9]' 3, and so on.">
+            >
+        >
+    >

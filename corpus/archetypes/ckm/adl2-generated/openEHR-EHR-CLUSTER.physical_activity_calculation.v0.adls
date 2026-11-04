@@ -1,0 +1,96 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=5a91fb75-4a7f-48cb-9487-4c2b21cdbddb; build_uid=b4bb81bb-4841-43a6-8919-5c0031ffe27c)
+    openEHR-EHR-CLUSTER.physical_activity_calculation.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::sv]>
+    translations = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            author = <
+                ["name"] = <"Carrick Gillespie">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Annika Terner">
+        ["organisation"] = <"Region Uppsala, Sweden">
+        ["email"] = <"annika.terner@regionuppsala.se">
+        ["date"] = <"2018-04-09">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Carrick Gillespie", "Erik Sundvall", "Maryam Khavari">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"4306EFA78626D61426117F1B2F5DAB10">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Avsedd för notering av viktad poängberäkning av fysisk aktivitet per vecka.
+Avsedd för användningsfall där lagring eller överföring av det beräknade värdet uttryckligen krävs, exempelvis på grund av lokala eller nationella rapporterigskrav.
+">
+            keywords = <"fysisk aktivitet, levnadsvanor", ...>
+            use = <"Används till att notera den viktade poängen för en individs fysiska aktivitet under en vecka, exempelvis som en del i levnadsvanebedömning.
+Beräkningen av viktad poäng är: antal minuter me dmycket aktivitet multiplicerat med två, plus antal minuter med medelmåttig aktivitet.">
+            misuse = <"Bör ej användaas i system eller användningsfall där beräkningen kan automatiseras och genomföras vid behov istället för att beräknas och lagras i förväg.
+Bör ej användas för att notera andta sorters beräkningar av fysisk aktivitet.
+">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a weighted score of the individual's physical activity information within a single week.
+Primarily intended for use cases where storage or transfer of the calculated value is explicitly requested, e.g. by local or national reporting requirements.">
+            keywords = <"physical", "activity", "lifestyle">
+            use = <"Use to record the calculated score of an individual's physical activity information within a single week, for example as part of a lifestyle factors evaluation. 
+The calculation of the weighted score is: the number of minutes of vigorous exercice multiplied by two, plus the number of minutes of  moderate exercice.">
+            misuse = <"Not to be used in systems or use-cases  where the calculation can be automated upon request instead of being pre-calculated and explicitly stored.
+Not to be used to record results of other physical activity calculations.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Beräkning av fysisk aktivitet
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Viktad total fysisk aktivitet per vecka
+                value matches {
+                    DV_QUANTITY[at9000] matches {
+                        magnitude matches {|>=0.0|}
+                        units matches {"min/wk"}
+                        precision matches {|>=0|}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Beräkning av fysisk aktivitet">
+                description = <"Viktad poängberäkning av fysisk aktivitet per vecka.">
+            >
+            ["at0001"] = <
+                text = <"Viktad total fysisk aktivitet per vecka">
+                description = <"minuter fysisk träning  x 2 + minuter vardagsmotion">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Physical activity calculation">
+                description = <"Weighted score for weekly physical activity">
+            >
+            ["at0001"] = <
+                text = <"Weighted total physical activity minutes per week">
+                description = <"Minutes of vigorous exercice x 2 + minutes of moderate exercice">
+            >
+        >
+    >

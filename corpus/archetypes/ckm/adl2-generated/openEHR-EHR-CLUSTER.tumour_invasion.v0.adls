@@ -1,0 +1,165 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=75ab50d5-67b5-4523-b29f-025c234c0235; build_uid=9aaa9403-8a65-4ef8-a247-7cb72307c327)
+    openEHR-EHR-CLUSTER.tumour_invasion.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, Scotland">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"27/07/2009">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Sam Heard, Ocean Informatics, Australia (openEHR Editor)", "Sabine Leh, Haukeland University Hospital, Department of Pathology, Norway (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "David Rowed, VAMC Clinic, Australia (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"7B4CA1EA34BD7950890E5DF7C64A0478">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record detailed findings about invasion of local tissue by tumour as part of microscopic histopathological examination of tissue. ">
+            keywords = <"histopathology", "histology", "pathology", "lab", "cancer", "tumour", "malignancy">
+            use = <"To record detailed findings about invasion of local tissue by tumour as part of microscopic examination of tissue. 
+Use as a component archetype in the context of a suite of archetypes that make up a histopathology report ie OBSERVATION.lab_test.histopathology.">
+            misuse = <"Not designed to be used within any other archetype other than OBSERVATION.lab_test.histopathology.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Tumour - direct invasion
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Tissue name
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            allow_archetype CLUSTER[at0002] occurrences matches {0..1} matches {    -- Location
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location-precise\.v1\..*/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Direct invasion
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9000]}    -- Direct invasion (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Nature of involvement
+                value matches {
+                    DV_CODED_TEXT[at9004] matches {
+                        defining_code matches {[ac9001]}    -- Nature of involvement (synthesised)
+                    }
+                    DV_TEXT[at9005]
+                }
+            }
+            allow_archetype CLUSTER[at0011] occurrences matches {0..1} matches {    -- Resection margin
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.tumour_resection_margins\.v1\..*/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Tumour - direct invasion">
+                description = <"To records details of the direct invasion of local tissues or structures by tumour.">
+            >
+            ["at0001"] = <
+                text = <"Tissue name">
+                description = <"The name of the local tissue or structure being examined for evidence of local invasion by tumour.">
+            >
+            ["at0002"] = <
+                text = <"Location  ">
+                description = <"The location of the tissue being examined for evidence of direct invasion by tumour.">
+            >
+            ["at0003"] = <
+                text = <"Direct invasion">
+                description = <"Finding of direct invasion by tumour of local tissue.">
+            >
+            ["at0004"] = <
+                text = <"Present">
+                description = <"There is evidence of local invasion by tumour">
+            >
+            ["at0005"] = <
+                text = <"Absent">
+                description = <"There is no evidence of local invasion by tumour">
+            >
+            ["at0006"] = <
+                text = <"Indeterminate">
+                description = <"Evidence of local invasion by tumour has not been determined">
+            >
+            ["at0007"] = <
+                text = <"Nature of involvement">
+                description = <"The nature of involvement of tumour in local tissue.">
+            >
+            ["at0008"] = <
+                text = <"Focal">
+                description = <"Focal direct invasion of the tissue by tumour.">
+            >
+            ["at0009"] = <
+                text = <"Extensive">
+                description = <"Extensive direct invasion of the tissue by tumour.">
+            >
+            ["at0010"] = <
+                text = <"Indeterminate">
+                description = <"The nature of direct invasion by tumour has not been determined">
+            >
+            ["at0011"] = <
+                text = <"Resection margin  ">
+                description = <"Details of the local tissue surgical resection margin.">
+            >
+            ["at0012"] = <
+                text = <"Description">
+                description = <"A text description of direct tumour invasion of local tissue.">
+            >
+            ["at0013"] = <
+                text = <"Present - focal">
+                description = <"There is evidence of focal direct invasion of the tissue by tumour">
+            >
+            ["at0014"] = <
+                text = <"Present - diffuse/extensive">
+                description = <"There is evidence of diffuse or extensive direct invasion of the tissue by tumour">
+            >
+            ["at0015"] = <
+                text = <"Suspicious">
+                description = <"There is suspicion of direct invasion of the tissue by tumour">
+            >
+            ["ac9000"] = <
+                text = <"Direct invasion (synthesised)">
+                description = <"Finding of direct invasion by tumour of local tissue. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Nature of involvement (synthesised)">
+                description = <"The nature of involvement of tumour in local tissue. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0008", "at0009", "at0010">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0004", "at0005", "at0006", "at0013", "at0014", "at0015">
+        >
+    >

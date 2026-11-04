@@ -1,0 +1,502 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=87e2704b-955b-43bc-b569-755e06dbd3f5; build_uid=3321723b-2135-4156-9c39-39a0cea7e845)
+    openEHR-EHR-EVALUATION.clinical_synopsis.v1.0.5
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Nadim Anani, Darin Leonhardt">
+                ["organisation"] = <"Health Informatics Centre, Karolinska Institutet, Sweden, PLRI für medizinische Informatik/ Medizinische Hochschule">
+                ["email"] = <"leonhardt.darin@mh-hannover.de">
+            >
+            accreditation = <"fluent in both English and German, Medical Informatics 'MSc' degree from Heidelberg, 2 years professional experience in health informatics, some translation experience, openEHR knowledge.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Kirsi Poikela">
+                ["organisation"] = <"Tieto Sweden AB">
+                ["email"] = <"ext.kirsi.poikela@tieto.com">
+            >
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Dr. Leonardo Der Jachadurian">
+                ["organisation"] = <"Bitios.com">
+            >
+            accreditation = <"Medical Doctor (Internal Medicine Specialist)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Ingrid Heitmann">
+                ["organisation"] = <"NTNU and OUS, Registered nurse">
+                ["email"] = <"john.tore.valand@helse-bergen.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Emerson Urushibata">
+                ["organisation"] = <"Universidade de São Paulo">
+            >
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            author = <
+                ["name"] = <"Erasmia Partafylla">
+                ["organisation"] = <"Sigmasoft">
+                ["email"] = <"c.partafylla@sigmasoft.gr">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+        ["fa"] = <
+            language = <[ISO_639-1::fa]>
+            author = <
+                ["name"] = <"Shahla Foozonkhah">
+                ["organisation"] = <"Ocean Informatics">
+                ["email"] = <"shahla.foozonkhah@oceaninformatics.com">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Jonas Bucher">
+                ["organisation"] = <"Cistec AG">
+                ["email"] = <"jonas.bucher@cistec.com">
+            >
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+            author = <
+                ["name"] = <"MAY L">
+                ["organisation"] = <"CSDC">
+                ["email"] = <"hcn2020@126.com">
+            >
+            accreditation = <"What goes here?">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Clara Calleja Vega">
+                ["organisation"] = <"CatSalut. Servei Català de la Salut.">
+                ["email"] = <"ccalleja@catsalut.cat">
+            >
+            other_details = <
+                ["other_contributors"] = <"TRADCREA">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Clara Calleja Vega">
+                ["organisation"] = <"CatSalut. Servei Català de la Salut.">
+                ["email"] = <"ccalleja@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics, Australia">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2007-01-09">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Maria Beate Nupen, Oslo Universitetssykehus, Norway", "Lars Bitsch-Larsen, Haukeland University Hospital, Bergen, Norway", "Marco Borges, P2D, Brazil", "Rong Chen, Cambio Healthcare Systems, Sweden", "Bjørn Christensen, Helse Bergen HF, Norway", "Stephen Chu, Queensland Health, Australia", "Tamsin Cockayne, Australia", "Paul Donaldson, Nursing Informatics Australia, Australia", "Shahla Foozonkhah, Iran ministry of health and education, Iran", "Bente Gjelsvik, Helse Bergen, Norway", "Sam Heard, Ocean Informatics, Australia", "Kristian Heldal, Telemark Hospital Trust, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Eugene Igras, IRIS Systems, Inc., Canada", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Hanne Joensen, Helse Bergen HUS, Norway", "Shinji Kobayashi, Kyoto University, Japan", "Robert Legan, NEHTA, Australia", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Rikard Lovstrom, Swedish Medical Association, Sweden", "Arne Løberg Sæter, DIPS ASA, Norway", "Rohan Martin, Ambulance Victoria, Australia", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Jeroen Meintjens, Medisch Centrum Alkmaar, Netherlands", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Bjørn Næss, DIPS ASA, Norway", "Rune Pedersen, Universitetssykehuset i Nord Norge, Norway", "Tanja Riise, Nasjonal IKT HF, Norway", "Arturo Romero, SESCAM, Spain", "Thomas Schopf, University Hospital of North-Norway, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Clinical Synopsis (Data Specifications) Version 1.0 [Internet]. Sydney, Australia: National E-Health Transition Authority; 2007 Jun 29 [cited 2009 Oct 12]; Available at http://www.nehta.gov.au/DGL/Resources/Downloads/Clinical%20Synopsis%20v1.0.pdf">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"73009E1DDDC081E23EE2C74228EAE006">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur manuellen Verarbeitung und Aufzeichnung einer Zusammenfassung über einen Patienten aus der Sicht eines Gesundheitsdienstleisters.">
+            keywords = <"Zusammenfassung", "Schlussfolgerung", "Kurzdarstellung", "Abriss", "Abstract", "Beurteilung", "Synopsis", "Epikrise", "Anmerkung", "Bemerkung">
+            use = <"Zur Aufzeichnung einer beschreibenden, zusammenfassenden Sicht auf den Gesundheitszustand des Patienten. Diese unstrukturierte Zusammenfassung kann identifizierte Gesundheitsprobleme, die erbrachte Gesundheitsversorgung, die damit verbundene Interpretation, das Verständnis des Patienten und die Kommunikation über einige der weicheren, subjektiveren Aspekte der Erfahrung und des Weges des Patienten umfassen. In den meisten Fällen bezieht sich diese Zusammenfassung auf ein bestimmtes gesundheitliches Ereignis, wie z. B. eine bestimmte Konsultation oder eine Krankenhauseinweisung, kann aber auch dazu dienen, die gesundheitliche Erfahrung des Patienten über verschiedene Zeiträume zusammenzufassen. 
+In der Praxis ist die klinische Synopse eine Meta-Beobachtung, die den bestehenden strukturierten klinischen Datensatz ergänzt und den Ausdruck von subtilen, subjektiven oder interpretativen Informationen über den Patienten ermöglicht, die andernfalls durch strukturierte Daten allein nicht offensichtlich wären, dies soll eine balancierte, kontextspezifische elektronische Patientenakte unterstützen.
+So kann eine klinische Synopse beispielsweise eine knappe Zusammenfassung der Krankenhausaufnahme des Patienten als Bestandteil eines umfassenden und strukturierten Entlassungsberichts darstellen.">
+            misuse = <"Nicht für die Erfassung spezifischer und strukturierter Gesundheitsinformationen zu verwenden. Beispielsweise sollten detaillierte Informationen über Probleme, Diagnosen und Testergebnisse durch die entsprechend relevanten Archetypen EVALUATION.problem, EVALUATION.problem-diagnosis und OBSERVATION-Archetypen für Labpr- oder radiologische Ergebnisse aufgenommen werden. Die Clinical Synopsis darf manche kritische bzw. ausgewählte numerische Ergebnisse aus diesen strukturierten Details überbringen, wenn diese als wichtig für die Vollständigkeit der Synopsis beurteilt werden; sie ist jedoch NICHT die primäre Stelle zur Aufnahme solcher Informationen.
+Der Begriff \"Klinische Synopsis\" kann sich manchmal auf komplexe und umfangreiche Dokumente beziehen, z. B. eine Epikrise (Discharge Summary) oder ein Bericht (Report). In openEHR sollten diese Dokumente als Aggregationen eingeschränkter Archetypen dargestellt werden (sprich openEHR \"templates\"), d. h. eine Epikrise- oder Bericht-Vorlage, die aus mehreren einzelnen Archetypen besteht, wovon der Clinical Synopsis-Archetyp einer sein könnte.
+">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera en beskrivande sammanfattning om en patient, ur vårdgivarens perspektiv.">
+            keywords = <"sammanfattning", "slutsats", "sammandrag", "exakt", "abstrakt", "bedömning", "synopsis", "epikris", "kommentar", "anteckning">
+            use = <"Används för att sammanfatta patientens hälsotillstånd. Denna ostrukturerade sammanfattning kan innehålla identifierade hälsoproblem, vilken hälsovård som tillhandahållits, tolkning av sammanhanget, för patientens förståelse. Här kan några av de mjukare, mer subjektiva aspekterna av patientens upplevelse och resa kan beskrivas. Vanligtvis är den här sammanfattningen relaterad till en specifik hälsohändelse, exempelvis en specifik konsultation eller sjukhusvistelse, men den kan också användas för att sammanfatta patientens hälsohistorik under olika tidsperioder.
+
+I praktiken är klinisk synopsis en metaobservation som kompletterar det befintliga strukturerade kliniska registret. Den tillåter uttryck för subtil, subjektiv eller tolkande information om patienten som kanske inte annars är uppenbar genom enbart strukturerade data, vilket ger en balans och kontext till EHR-dokumentet. Exempelvis kan en klinisk sammanfattning återge en kortfattad sammanfattning av patientens sjukhusvistelse som en del i ett omfattande och strukturerat utskrivningsdokument.">
+            misuse = <"Ska inte användas för att beskriva specifika och strukturerade hälsouppgifter. Exempelvis vid detaljerad information om problem, diagnoser och testresultat ska den specifika relevanta arketypen EVALUATION.problem, EVALUATION.problem-diagnos samt laboratorie- eller radiologiresultat i OBSERVATIONER användas. 
+
+Den kliniska synopsisen kan återge några kritiska och numeriska resultat när de bedömts viktiga för synopsisens helhet, men det är INTE den primära registreringsplatsen för dem.
+Uttrycket \"klinisk synopsis\" kan ibland referera till komplexa och omfattande dokument, exempelvis som översikter över utskrivningar eller rapporter. I openEHR ska dessa dokument presenteras som samlingar av begränsade arketyper, dvs. som en mall för sammanfattning av utskrivning eller en rapportmall som innehåller ett antal separata arketyper, av vilka denna kliniska sammanfattnings-arketyp kan vara en.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Para sintetizar manualmente e gravar um sumário narrativo sobre um paciente, a partir da perspectiva de um profissional de saúde.">
+            keywords = <"sumário", "conclusão", "esboço", "resumo", "abstrato", "avaliação", "sinopse", "epícrise", "comentário", "anotações">
+            use = <"Usado para registrar uma narrativa, visão sumarizada da saúde do paciente. Esse sumário não estruturado pode incluir questões médicas identificadas; plano de saúde fornecido; interpretação associada; compreensão do paciente; e permite comunicação sobre alguns dos mais sutis, mais subjetivos aspectos da experiência do paciente e jornada. Mais comumente esse sumário aparenta estar relacionado para um evento médico específico como uma consulta específica ou admissão hospitalar, mas também pode ser usado para sumarizar a experiência médica do paciente em diferentes períodos de tempo. 
+Na prática, Sinopse Clínica é uma meta-observação que complementará o registro clínico estruturado existente, permitindo a expressão da sutil, subjetiva ou interpretativa informação sobre o paciente que de outra forma, através de um documento estruturado sozinho pode não ser óbvia , provendo balanceamento e contexto ao registro Eletrônico de Saúde. 
+Por exemplo, uma Sinopse Clínica pode comunicar um sumário sucinto da admissão hospitalar do paciente como um componente de um estruturado e compreensivo Documento de Sumário de Alta.">
+            misuse = <"*Not to be used to record specific and structured health information. For example, detailed information about Problems, Diagnoses, and Test Results should be recorded using the specific relevant archetypes EVALUATION.problem, EVALUATION.problem-diagnosis, and laboratory or radiology results in OBSERVATIONs. The Clinical Synopsis may convey some critical and selected numerical results from these structured details when judged important for completeness of the Synopsis but is NOT the primary recording site for them.
+The term “Clinical Synopsis” can sometimes refer to complex and comprehensive documents, such as a Discharge Summary or a Report. In openEHR these documents should be represented as aggregations of constrained archetypes, that is, a Discharge Summary template or a Report template, comprising a number of separate archetypes, of which this Clinical Synopsis archetype may be one.(en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            purpose = <"Να συνθέσει και να καταγράψει χειροκίνητα μια αφηγηματική περίληψη για έναν ασθενή, από την οπτική γωνία ενός παρόχου υγειονομικής περίθαλψης.">
+            keywords = <"περίληψη", "συμπέρασμα", "περιγραφή", "περίληψη", "αφηρημένος", "εκτίμηση", "σύνοψη", "Επικρίση", "σχόλιο", "σημείωση">
+            use = <"*Use to record a narrative, summary view of the patient's health.  This unstructured summary may include identified health issues; health care provided; associated interpretation; patient understanding; and enable communication about some of the softer, more subjective aspects of the patient’s experience and journey. Most commonly this summary is likely to be related to a specific health event such as a specific consultation or hospital admission, but may also be used to summarise the patient's health experience over varying time periods. 
+In practice, Clinical Synopsis is a meta observation that will complement the existing structured clinical record, allowing for expression of subtle, subjective or interpretive information about the patient that might not otherwise be obvious through structured data alone, providing balance and context to the EHR record.  
+For example, a Clinical Synopsis can communicate a succinct summary of the patient's hospital admission as one component of a comprehensive and structured Discharge Summary document.(en)">
+            misuse = <"*Not to be used to record specific and structured health information. For example, detailed information about Problems, Diagnoses, and Test Results should be recorded using the specific relevant archetypes EVALUATION.problem, EVALUATION.problem-diagnosis, and laboratory or radiology results in OBSERVATIONs. The Clinical Synopsis may convey some critical and selected numerical results from these structured details when judged important for completeness of the Synopsis but is NOT the primary recording site for them.
+The term “Clinical Synopsis” can sometimes refer to complex and comprehensive documents, such as a Discharge Summary or a Report. In openEHR these documents should be represented as aggregations of constrained archetypes, that is, a Discharge Summary template or a Report template, comprising a number of separate archetypes, of which this Clinical Synopsis archetype may be one.(en)">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل ملخص برواية تم توليفها يدويا عن مريض من وجهة نظر مقدم الرعاية الصحية ">
+            keywords = <"ملخص", "استنتاج", "إطار", "دقيق", "مستخلص", "تقييم", "مختصر", "نوبة إضافية", "تعليق", "ملحوظة">
+            use = <"لتسجيل رؤية ملخصة بتوليف رواية عن صحة المريض. هذا الملخص غير المركب قد يتضمن قضايا صحية مُعَرَّفة, تم تقديمها بواسطة مقدم الخدمة الصحية, مع إرفاق تفسير, و تفَهُّم المريض, و يُمَكِّن من توصيل بعض من الجوانب البسيطة غير موضوعية من خبرة و رحلة المريض.
+و غالبا ما يكون هذا الملخص ذي احتمال عالي أن يكون متعلقا بواقعة صحية, مثل استشارة معينة أو إدخال إلى المستشفى, و لكن قد يستخدم في تلخيص الخبرة الصحية للمريض خلال فترات زمنية متعددة.
+في الممارسة المعتادة, يعتبر المختصر السريري هو ملاحظة عامة تُكَمِّل السجل السريري المركب, و تسمح بالتعبير عن المعلومات الرقيقة غير الموضوعية التفسيرية عن المريض, و التي قد لا تكون واضحة إذا استخدم البيانات المركبة وحدها, بما يزوِّد اتزانا و سياقا للسجل الطبي الإلكتروني. 
+مثل, قد يقوم المختصر السريري بتوصيل ملخص موجز عن إدخال المريض إلى المستشفى كجزء من وثيقة شاملة و مركبة حول ملخص الخروج.">
+            misuse = <"لا يستخدم لتسجيل المعلومات الصحية المحددة و المركبة. مثلا, ينبغي تسجيل المعلومات التفصيلية حول المشكلات, التشخيصات, و نتائج الاختبارات باستخدام النماذج المخصصة ذات الصلة مثل (تقييم. مشكلة) و (تقييم. مشكلة - تشخيص) و نتائج اختبارات المعمل و التصوير الإشعاعي في نماذج الملاحظات.
+قد يوصل المختصر السريري بعض النتائج الرقمية من هذه التفاصيل إذا كان ذلك هاما لاكتمال المختصر, و لكن لا يعتبر الموضع الأولي لتسجيل هذه النتائج.
+
+قد يشير اللفظ (المختصر السريري) أحيانا إلى وثائق مركبة و شاملة, مثل ملخص الخروج أو تقرير ما.
+و ينبغي التعبير عن هذه الوثائق في نماذج مقيدة, و التي هي قالب ملخص الخروج و قالب التقرير, وسط مجموعة من النماذج يعتبر المختصر السريري واحدا منها.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To manually synthesise and record a narrative summary about a patient, from the perspective of a healthcare provider.">
+            keywords = <"summary", "conclusion", "outline", "precis", "abstract", "assessment", "synopsis", "epicrisis", "comment", "note">
+            use = <"Use to record a narrative, summary view of the patient's health.  This unstructured summary may include identified health issues; health care provided; associated interpretation; patient understanding; and enable communication about some of the softer, more subjective aspects of the patient’s experience and journey. Most commonly this summary is likely to be related to a specific health event such as a specific consultation or hospital admission, but may also be used to summarise the patient's health experience over varying time periods. 
+In practice, Clinical Synopsis is a meta observation that will complement the existing structured clinical record, allowing for expression of subtle, subjective or interpretive information about the patient that might not otherwise be obvious through structured data alone, providing balance and context to the EHR record.  
+For example, a Clinical Synopsis can communicate a succinct summary of the patient's hospital admission as one component of a comprehensive and structured Discharge Summary document.">
+            misuse = <"Not to be used to record specific and structured health information. For example, detailed information about Problems, Diagnoses, and Test Results should be recorded using the specific relevant archetypes EVALUATION.problem, EVALUATION.problem-diagnosis, and laboratory or radiology results in OBSERVATIONs. The Clinical Synopsis may convey some critical and selected numerical results from these structured details when judged important for completeness of the Synopsis but is NOT the primary recording site for them.
+The term “Clinical Synopsis” can sometimes refer to complex and comprehensive documents, such as a Discharge Summary or a Report. In openEHR these documents should be represented as aggregations of constrained archetypes, that is, a Discharge Summary template or a Report template, comprising a number of separate archetypes, of which this Clinical Synopsis archetype may be one.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Pour faire manuellement la synthèse d'un résumé narratif concernant un patient, du point de vue d'un professionnel de santé, et l'enregistrer.">
+            keywords = <"résumé", "conclusion", "aperçu", "condensé", "synopsis", "évaluation", "épicrise", "commentaire", "note">
+            use = <"À utiliser pour enregistrer une vue d’ensemble narrative de l’état de santé du patient. Ce résumé non structuré peut inclure des problèmes de santé identifiés; des soins prodigués; des interprétations associées; la compréhension du patient; permettre de communiquer sur certains aspects plus subtils et subjectifs de l’expérience et du parcours du patient. Le plus souvent, ce résumé est susceptible d’être lié à un événement de santé spécifique, tel qu’une consultation ou une admission à l’hôpital, mais il peut également servir à résumer l’expérience du patient en matière de santé sur des périodes variables. 
+Dans la pratique, la « Synthèse clinique » est une méta-observation qui viendra compléter le dossier clinique structuré existant, permettant d’exprimer des informations subtiles, subjectives ou interprétatives concernant le patient qui ne seraient pas forcément évidentes à partir des seules données structurées, apportant ainsi équilibre et contexte au dossier patient électronique.  
+Par exemple, une « Synthèse clinique » peut fournir un résumé concis de l’admission hospitalière du patient en tant que composante d’un document complet et structuré de « lettre de sortie ».">
+            misuse = <"À ne pas utiliser pour enregistrer des informations de santé spécifiques et structurées. Par exemple, les informations détaillées concernant les problèmes, les diagnostics et les résultats d’examens doivent être enregistrées à l’aide des archétypes EVALUATION.problem et EVALUATION.problem-diagnosis, ainsi que des archétypes de classe OBSERVATION pour les résultats de laboratoire ou de radiologie. La synthèse clinique peut reprendre certains résultats numériques sélectionnés issus de ces détails structurés, s'ils sont jugés importants pour l’exhaustivité de la synthèse, mais elle ne constitue pas le lieu d’enregistrement principal de ces informations.
+Le terme « synthèse clinique » peut parfois désigner des documents complexes et exhaustifs tels qu'un résumé de sortie ou un rapport. Dans openEHR, ces documents doivent être représentés comme des agrégats d’archétypes contraints, c’est-à-dire un « template » de lettre de sortie ou un « template » de rapport comprenant un certain nombre d’archétypes distincts, dont l’archétype « synthèse clinique » peut faire partie.">
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+            purpose = <"从医疗保健服务提供者的角度，手工综合并记录关于患者的叙述型摘要。">
+            keywords = <"摘要", "小结", "概要", "概况", "概略", "结论", "总结", "梗概", "大纲", "提要", "要点", "评估", "评价", "总览", "评论", "病案讨论", "病情分析", "备注", "注释", "记录", "笔记">
+            use = <"用于记录患者相关健康状况的叙述性摘要。这种非结构化摘要可以包括所确定的健康事项、所提供的医疗保健服务、相关联的解释和患者的理解，并且便于表达关于患者体验和经历的某些较为委婉和较为主观的方面。最为常见的情况就是，这种摘要很可能与特定的健康事件相关，如某次特定的会诊咨询或收治入院（住院），但也可以用于总结概括患者在不同时间段内的健康历程。临床摘要是一种元观察（meta observation，超级观察），将对已有的结构化临床记录起到补充作用，允许表达关于患者的微妙的、主观的或解释性的信息，而仅仅借助于结构化数据，此类信息可能并非显而易见，从而为EHR记录提供了平衡和背景。例如，临床摘要可以作为综合性、结构化的患者入院情况的简要概述，用于出院摘要（出院小结、出院记录）文档的一个组成部分。">
+            misuse = <"并非旨在用于记录具体的结构化健康信息。例如，对于有关问题、诊断和检验项目结果的详细信息，应当分别采用具体相关的原始型来加以记录，比如，分别采用评价类之中的问题（EVALUATION.problem）, 评价类之中的诊断（EVALUATION.problem-diagnosis）和观察类（OBSERVATION）之中实验室或放射医学结果。当判断认为此类结构化细节信息之中的某些至关重要的和精选的数值型结果对于当前提要的完整性具有重要作用的时候，临床提要可以传达此类结果，但这里并不是此类信息的原始记录位置。有时，“临床提要（Clinical Synopsis）”可能指的是复杂的综合性文档，如出院摘要（出院小结、出院记录）或报告。在openEHR之中，应当将此类文档表达为若干经过约束的原始型的聚合体，也就是说，出院摘要模板或报告模板是由许多不同的原始型构成，而临床提要原始型则可能只是后面所说的这些原始型之一。
+
+不用于记录特定和结构化的健康信息。例如，有关问题、诊断和测试结果的详细信息应使用特定的相关原型evaluation.problem、evaluation.problem-diagnosis和观察中的实验室或放射学结果进行记录。临床概要可以传达一些关键的和精选的数值型结果，从这些结构化的细节，当判断为概要的完整性重要，但不是他们的主要记录地点。
+
+“临床概要”一词有时可以指复杂和全面的文件，如出院总结或报告。在openehr中，这些文档应该表示为约束原型的集合，即出院总结模板或报告模板，包含多个独立的原型，其中临床概要原型可能是其中之一。">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Sintetizar y registrar manualmente un resumen narrativo sobre un paciente, desde la perspectiva de un profesional sanitario.">
+            keywords = <"resumen", "conclusión", "esquema", "precisión", "resumen", "evaluación", "sinopsis", "epicrisis", "comentario", "nota">
+            use = <"Se utiliza para registrar una visión narrativa y resumida de la salud del paciente. Este resumen no estructurado puede incluir los problemas de salud identificados; la atención sanitaria prestada; la interpretación asociada; la comprensión del paciente; y permitir la comunicación sobre algunos de los aspectos más suaves y subjetivos de la experiencia y el recorrido del paciente. Lo más habitual es que este resumen esté relacionado con un acontecimiento sanitario concreto, como una consulta específica o un ingreso hospitalario, pero también puede utilizarse para resumir la experiencia sanitaria del paciente a lo largo de distintos periodos de tiempo. 
+En la práctica, la sinopsis clínica es una metaobservación que complementará la historia clínica estructurada existente, permitiendo la expresión de información sutil, subjetiva o interpretativa sobre el paciente que, de otro modo, podría no resultar obvia a través de los datos estructurados por sí solos, proporcionando equilibrio y contexto a la historia clínica electrónica. 
+Por ejemplo, una Sinopsis Clínica puede comunicar un resumen sucinto del ingreso hospitalario del paciente como uno de los componentes de un documento de Resumen de Alta completo y estructurado.">
+            misuse = <"No debe utilizarse para registrar información sanitaria específica y estructurada. Por ejemplo, la información detallada sobre problemas, diagnósticos y resultados de pruebas debe registrarse utilizando los arquetipos específicos pertinentes EVALUATION.problema, EVALUATION.problem-diagnosis, y los resultados de laboratorio o radiología en OBSERVATIONs. La sinopsis clínica puede transmitir algunos resultados numéricos críticos y seleccionados de estos detalles estructurados cuando se considere importante para completar la sinopsis, pero NO es el lugar de registro principal para ellos.
+El término \"Sinopsis Clínica\" puede referirse a veces a documentos complejos y exhaustivos, como un Resumen de Alta o un Informe. En openEHR, estos documentos deben representarse como agregaciones de arquetipos restringidos, es decir, una plantilla de Resumen del alta o una plantilla de Informe, que comprenden una serie de arquetipos separados, de los cuales este arquetipo de Sinopsis Clínica puede ser uno.">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Para sintetizar manualmente y registrar en forma narrativa un sumario acerca de un paciente, desde la perspectiva de un profesional del cuidado de la salud.">
+            keywords = <"sumario", "conclusión", "visión global", "resumen", "extracto", "evaluación", "sinopsis", "epicrisis", "comentario", "nota">
+            use = <"Usado para registrar en forma narrativa, una vista resumida del estado de salud del paciente. Este sumario no estructurado, puede incluir problemas/condiciones de salud identificados, cuidados de la salud provistos, interpretaciones clínicas asociadas y el entendimiento del paciente acerca de su condición clínica. Esta síntesis puede permitir la comunicación acerca de aspectos más sutiles y subjetivos en relación con la experiencia del paciente. Mas comúnmente este sumario estará probablemente relacionado con eventos de salud específicos tales como consultas médicas concretas o internaciones, pero puede también ser usado para sumarizar la experiencia del paciente en relación con su salud, en diferentes periodos de tiempo. 
+En la práctica, la Sinopsis Clínica es una meta-observación que complementará el registro clínico estructurado existente, permitiendo la expresión de información sutil, subjetiva o interpretativa acerca del paciente, que podría no ser obvia a través de solamente analizar los datos estructurados, proveyendo de esta forma balance y contexto al registro clínico.
+Por ejemplo, una Sinopsis Clínica puede comunicar un sumario sucinto de una internación del paciente, como un componente dentro de un documento de Epicrisis completo y estructurado.">
+            misuse = <"No debe usarse para registrar información de salud estructurada y específica. Por ejemplo, información detallada relacionada con Problemas, Diagnósticos y Resultados de Estudios debería ser registrada usando los arquetipos específicos y relevantes EVALUATION.problem, EVALUATION.problem-diagnosis y resultados de laboratorio o imágenes en OBSERVATIONs. La Sinopsis Clínica puede expresar algunos resultados numéricos seleccionados críticos (presentes en secciones estructuradas específicas), cuando sean juzgados importantes para la completitud de la Sinopsis pero NO es el sitio primario de registro para esta información.
+El término “Sinopsis Clínica” puede referirse a veces a documentos complejos y detallados tales como Epicrisis o Reportes. En openEHR, estos documentos deberían ser representados como agregaciones de arquetipos restringidos. Por ejemplo, una plantilla de Epicrisis o de Reporte deberían estar compuestos por un grupo de arquetipos (entre los que se encontraría la Sinopsis Clínica).">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å sammenfatte og dokumentere et fritekstsammendrag om en pasient fra helsepersonellets perspektiv.">
+            keywords = <"sammendrag", "konklusjon", "disposisjon", "abstrakt", "vurdering", "beskrivelse", "epikrise", "notat">
+            use = <"Anvendes for å registrere en fritekstoppsummering av pasientens helse. Denne ustrukturerte oppsummeringen kan omfatte identifiserte helseproblemer; helsetjenester som er ytt, klinisk fortolkning, pasientens forståelse samt at den muliggjør kommunikasjon vedrørende mer subtile og subjektive aspekter rundt pasientens helseerfaringer. Vanligvis vil denne oppsummeringen bli brukt ved spesifikke hendelser, for eksempel ved en konsultasjon eller sykehusinnleggelse, men oppsummeringen kan også brukes til å sammenfatte pasientens egne erfaringer over varierende tidsperioder. 
+
+I praksis er Klinisk sammendrag en overordnet (meta) observasjon som vil fungere som et tillegg til eksisterende strukturert journal. Dette for å kunne fange og dokumentere pasientenes subtile, subjektive og/eller fortolkede informasjon som ellers alene ikke vil bli tydeliggjort godt nok ved hjelp av strukturerte data alene. Klinisk sammendrag vil således bidra til å gi kontekst og balanse i den elektroniske pasientjournalen. For eksempel kan Klinisk sammendrag gi en konkret oppsummering av pasientens sykehusinnleggelse som en del av en strukturert epikrise.">
+            misuse = <"Anvendes ikke for å registrere spesifikk strukturert helseinformasjon. For eksempel vil detaljer om problemer, diagnoser og prøveresultat registreres ved hjelp av arketyper som for eksempel EVALUATION.problem_diagnosis, og laboratorie- eller radiologi svar i passende OBSERVATION-arketyper. \"Klinisk sammendrag\" kan for helhetens skyld inkludere og referere enkelte viktige numeriske resultat fra de strukturerte data, men er ikke det primære stedet for registrering av dem.
+
+Begrepet \"Klinisk sammendrag\" kan i enkelte tilfeller henvise til sammensatte og omfattende dokumenter, som epikriser og ut-notater. I openEHR vil en epikrise eller ut-notat representeres med aggregert informasjon fra underliggende arketyper ved hjelp av templater. Klinisk Sammendrag vil da være kun én av flere arketyper som blir inkludert.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fa"] = <
+            language = <[ISO_639-1::fa]>
+            purpose = <"به صورت دستی ترکیب و ثبت توضیحی خلاصه در مورد یک بیمار ، از نظر ارائه دهنده خدمات درمانی">
+            keywords = <"خلاصه", "نتیجه", "رئوس مطالب", "خلاصه رئوس مطالب", "چکیده", "ارزیابی", "خلاصه", "خلاصه انتقادی یا تحلیلی", "توضیحات", "یادداشت">
+            use = <"برای ثبت توضیح ، نظری خلاصه در مورد سلامت بیمار استفاده می شود.این خلاصه ساختار بندی نشده ممکن است شامل شناسایی مسایل بهداشتی ، مراقبت های بهداشتی ارایه شده همراه با تفسیر ، درک بیمار ، توانایی ارتباط با بیمار در مورد برخی جنبه های ذهنی و... در مورد تجربیات وسفرهای بیمار .معمولا این خلاصه به رویدادهای خاص سلامت نظیر مشاوره های خاص یا پذیرش بیمارستانی مربوط می شود اما ممکن است همچنین برای خلاصه نمودن تجربیات بیمار در طی دوره های زمانی مختلف استفاده شود
+در عمل،خلاصه بالینی مشاهده .... است که متمم مدارک ساختارمند بالینی کنونی خواهد بود که بیان اطلاعات دقیق ، ذهنی یا تفسیر را امکان پذیر می کند در غیر اینصورت از طریق داده های ساختار یافته به تنهایی امکان پذیر نیست و تعادل و چهارجوچوبی برای ثبت پرونده الکترونیک سلامت ارایه می کنند
+برای مثال خلاصه  بالینی می تواند بین خلاصه کوتاه پذیرش بیمارستانی بیمار به عنوان یکی از اجزا جامع و برگه ساختار مند خلاصه ترخیص ارتباط برقرار کند            ">
+            misuse = <"برای ثبت اطلاعات سلامت خاص و ساختار مند استفاده نمی شود. برای مثال اطلاعات جزیی درباره مشکلات ، تشخیصها و نتایج تست باید با استفاده از الگو ساز خاص ومربوطه .....و نتایج آزمایشگاهی یا رادیولوژی در ....ثبت شود. خلاصه بالینی ممکن است شامل برخی نتایج عددی حیاتی و انتخاب شده  از  جزییات ساختار مند باشد زمانی که برای تکمیل خلاصه مهم باشدامااین الگو ساز محل اولیه ثبت این موارد نیست
+واژه \"خلاصه بالینی \"کاهی به اسناد پیچیده و جامع اشاره می کند نظیر خلاصه ترخیص یا گزارش. در ... اسناد باید به عنوان توده ای از الگوسازهای محدود شده ارایه شود ، الگوی خلاصه ترخیص یا  الگوی گزارش شامل تعدادی از الگوسازهای جداگانه می باشد که الگوساز خلاصه بالینی یکی از این الگوسازها می باشد    
+  ">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Sintetitzar manualment i registrar un resum narratiu sobre un pacient, des de la perspectiva d'un professional d’atenció sanitària.">
+            keywords = <"resum", "conclusió", "esbós", "precis", "resum", "avaluació", "sinopsi", "epicrisi", "comentari", "nota">
+            use = <"Utilitza per registrar una visió narrativa i resum de la salut del pacient. Aquest resum no estructurat pot incloure problemes de salut identificats; atenció sanitària proporcionada; interpretació associada; comprensió del pacient; i permetre la comunicació sobre alguns dels aspectes més suaus i subjectius de l'experiència i el viatge del pacient. El més habitual és que aquest resum estigui relacionat amb un esdeveniment de salut específic, com ara una consulta específica o l'ingrés hospitalari, però també es pot utilitzar per resumir l'experiència de salut del pacient en períodes de temps variables.
+A la pràctica, la Sinopsi Clínica és una metaobservació que complementarà l'historial clínic estructurat existent, permetent l'expressió d'informació subtil, subjectiva o interpretativa sobre el pacient que d'altra manera podria no ser òbvia a través de dades estructurades soles, proporcionant equilibri i context al registre EHR.
+Per exemple, una Sinopsi Clínica pot comunicar un resum de l'ingrés hospitalari del pacient com un component d'un document de resum de l'ingrés.">
+            misuse = <"No s'ha d'utilitzar per registrar informació específica i estructurada de salut; per exemple, la informació detallada sobre problemes, diagnòstics i resultats de proves s'ha de registrar utilitzant els arquetips específics rellevants EVALUATION.problem, EVALUATION.problem-diagnosis, i resultats de laboratori o radiologia en les OBSERVATIONs. La Sinopsi Clínica pot transmetre alguns resultats numèrics crítics i seleccionats d'aquests detalls estructurats quan es considera important per a la integritat de la Sinopsi, però no és el lloc de registre principal per a ells.
+El terme \"\"Sinopsi Clínica\"\" de vegades pot referir-se a documents complexos i complets, com un resum de l'aprovació de la gestió o un informe. A openEHR aquests documents s'han de representar com agregacions d'arquetips restringits, és a dir, una plantilla de resum de descàrrega o una plantilla d'informe, que comprèn una sèrie d'arquetips separats, dels quals aquest arquetip de sinopsi clínica pot ser un.">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Clinical synopsis
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {1..*} matches {
+                    ELEMENT[at0002] occurrences matches {1} matches {    -- Synopsis
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0003] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0004] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Klinische Synopsis">
+                description = <"Zusammenfassung oder Übersicht einer Patientengeschichte, speziell aus der Sicht eines Gesundheitsdienstleisters, evtl. mit dazugehörigen Interpretationen.">
+            >
+            ["at0002"] = <
+                text = <"Synopsis">
+                description = <"Die Zusammenfassung, Beurteilung, Aussagen or Auswertung des klinischen Befunds.">
+            >
+            ["at0004"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle / Formalismen.
+">
+                comment = <"Zum Beispiel: lokale Informationsanforderungen oder zusätzliche Metadaten zur Anpassung an FHIR oder CIMI-Äquivalente.">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Klinisk synopsis">
+                description = <"Beskrivande sammanfattning eller överblick av en patient, särskilt ur vårdgivarens perspektiv, med eller utan associerade tolkningar.">
+            >
+            ["at0002"] = <
+                text = <"Synopsis">
+                description = <"Sammanfattning, bedömning, slutsatser eller utvärderingar av de kliniska fynden.">
+            >
+            ["at0004"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Sinopse Clínica">
+                description = <"Resumo narrativo ou visão geral sobre um paciente, especificamente a partir da perspectiva de um profissional de saúde, e com ou sem interpretações associadas.">
+            >
+            ["at0002"] = <
+                text = <"Sinopse">
+                description = <"O sumário, a avaliação, conclusões ou avaliação dos achados clínicos.">
+            >
+            ["at0004"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+        >
+        ["el"] = <
+            ["at0000"] = <
+                text = <"Κλινική σύνοψη">
+                description = <"Αφηγηματική περίληψη ή επισκόπηση σχετικά με έναν ασθενή, ειδικά από την οπτική γωνία ενός παρόχου υγειονομικής περίθαλψης και με ή χωρίς σχετικές ερμηνείες.">
+            >
+            ["at0002"] = <
+                text = <"Σύνοψη">
+                description = <"Η περίληψη, η αξιολόγηση, τα συμπεράσματα ή η αξιολόγηση των κλινικών ευρημάτων.">
+            >
+            ["at0004"] = <
+                text = <"*Extension(en)">
+                description = <"Πρόσθετες πληροφορίες που απαιτούνται για την καταγραφή τοπικού περιεχομένου ή για την ευθυγράμμιση με άλλα μοντέλα αναφοράς/φορμαλισμούς.">
+                comment = <"Για παράδειγμα: απαιτήσεις τοπικών πληροφοριών ή πρόσθετα μεταδεδομένα για ευθυγράμμιση με ισοδύναμα FHIR ή CIMI.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Clinical synopsis">
+                description = <"Narrative summary or overview about a patient, specifically from the perspective of a healthcare provider, and with or without associated interpretations.">
+            >
+            ["at0002"] = <
+                text = <"Synopsis">
+                description = <"The summary, assessment, conclusions or evaluation of the clinical findings.">
+            >
+            ["at0004"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"المختصر السريري">
+                description = <"ملخص بالرواية أو نظرة عامة عن المريض, خاصة من وجهة نظر مقدم الخدمة الصحية, مع إرفاق أو عدم إرفاق تفسيرات ">
+            >
+            ["at0002"] = <
+                text = <"المختصر">
+                description = <"الملخص, التقييم, الاستنتاجات أو التقييم للموجودات السريرية">
+            >
+            ["at0004"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Synthèse clinique">
+                description = <"Résumé narratif ou aperçu concernant un patient, spécifiquement du point de vue d'un professionnel de santé, accompagné ou non d'interprétations associées.">
+            >
+            ["at0002"] = <
+                text = <"Synthèse">
+                description = <"Le résumé, l'appréciation, les conclusions ou l'évaluation des résultats cliniques.">
+            >
+            ["at0004"] = <
+                text = <"Extension">
+                description = <"Informations supplémentaires nécessaires pour représenter un contenu local ou pour assurer l’alignement avec d’autres modèles de référence ou formalismes.">
+                comment = <"Par exemple: exigences d’information locales ou métadonnées supplémentaires permettant l’alignement avec des équivalents FHIR ou CIMI.">
+            >
+        >
+        ["zh-cn"] = <
+            ["at0000"] = <
+                text = <"临床提要">
+                description = <"从医疗保健服务提供着的角度，手工综合并记录关于患者的叙述型摘要或概述，且带有或没有相关联的解释。">
+            >
+            ["at0002"] = <
+                text = <"提要">
+                description = <"对于临床所见（临床发现）进行的概括、评估、总结或评价。">
+            >
+            ["at0004"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Sinopsis clínica">
+                description = <"Resumen narrativo o visión general sobre un paciente, específicamente desde la perspectiva de un profesional sanitario, y con o sin interpretaciones asociadas.">
+            >
+            ["at0002"] = <
+                text = <"Sinopsis">
+                description = <"El resumen, la valoración, las conclusiones o la evaluación de los hallazgos clínicos.">
+            >
+            ["at0004"] = <
+                text = <"Extensión">
+                description = <"Información adicional necesaria para captar el contenido local o para alinearse con otros modelos/formalismos de referencia.">
+                comment = <"Por ejemplo: requisitos locales de información o metadatos adicionales para alinearse con los equivalentes de FHIR o CIMI.">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"Sinopsis Clínica">
+                description = <"Sumario narrativo o visión global acerca de un paciente, específicamente desde la perspectiva de un profesional del cuidado de la salud, con o sin interpretaciones asociadas.">
+            >
+            ["at0002"] = <
+                text = <"Sinopsis">
+                description = <"El sumario, la impresión diagnóstica y las conclusiones sobre los hallazgos clínicos.">
+            >
+            ["at0004"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Klinisk sammendrag">
+                description = <"Fritekstsammendrag eller oversikt om en pasient fra helsepersonellets perspektiv, med eller uten tilhørende fortolkninger.">
+            >
+            ["at0002"] = <
+                text = <"Sammendrag">
+                description = <"Oppsummering, vurdering, konklusjoner eller evaluering av de kliniske funnene.">
+            >
+            ["at0004"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+        >
+        ["fa"] = <
+            ["at0000"] = <
+                text = <"خلاصه بالینی">
+                description = <"خلاصه یا مروری تشریحی دربازه بیمار بویژه از نظز ارایه کننده مراقبت بهداشتی با یا بدون تفسیرهای مربوطه ">
+            >
+            ["at0002"] = <
+                text = <"خلاصه">
+                description = <"خلاصه ، ارزیابی ، نتیجه ، یا ارزشیابی یافته های بالینی">
+            >
+            ["at0004"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Sinopsi clínica">
+                description = <"Informe o resum narratiu sobre un pacient, específicament des de la perspectiva d'un professional d’atenció sanitària, i amb o sense interpretacions associades.">
+            >
+            ["at0002"] = <
+                text = <"Sinopsi">
+                description = <"El resum, l'avaluació, les conclusions o l'avaluació dels resultats clínics.">
+            >
+            ["at0004"] = <
+                text = <"Extensió">
+                description = <"Informació addicional necessària per a expandir el model amb el contingut local o per alinear-se amb altres models/formalismes de referència.">
+                comment = <"Per exemple: requisits locals d'informació o metadades addicionals per alinear-se amb equivalents de FHIR o CIMI.">
+            >
+        >
+    >

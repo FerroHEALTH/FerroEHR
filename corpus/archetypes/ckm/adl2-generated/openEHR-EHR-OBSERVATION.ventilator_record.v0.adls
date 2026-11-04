@@ -1,0 +1,413 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=109b5c6e-3e3b-4f2c-800e-42f0c952e489; build_uid=f839157a-88a6-437d-b518-b5fc0bd13b00)
+    openEHR-EHR-OBSERVATION.ventilator_record.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-10-06">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"5B64935057834D5C1364BE1914C32E22">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Ventilator record
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Respiration rate
+                                        value matches {
+                                            DV_QUANTITY[at9007] matches {
+                                                property matches {[at9000]}    -- Frequency
+                                                units matches {"/min"}
+                                            }
+                                        }
+                                        name matches {
+                                            DV_CODED_TEXT[at9008] matches {
+                                                defining_code matches {[ac9001]}    -- Respiration rate (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Respiration type
+                                        value matches {
+                                            DV_CODED_TEXT[at9009] matches {
+                                                defining_code matches {[ac9002]}    -- Respiration type (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Inspiration/expiration (I/E) ratio
+                                        value matches {
+                                            DV_PROPORTION[at9010] matches {
+                                                type matches {0}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0033] occurrences matches {0..1} matches {    -- Inspiration time
+                                        value matches {
+                                            DV_DURATION[at9011] matches {
+                                                value matches {PTS/|>=PT0S|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0034] occurrences matches {0..1} matches {    -- Expiration time
+                                        value matches {
+                                            DV_DURATION[at9012]
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Rapid shallow breathing index (RSBI)
+                                        value matches {
+                                            DV_QUANTITY[at9013] matches {
+                                                property matches {[at9000]}    -- Frequency
+                                                units matches {"/min/L"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Lung compliance
+                                        value matches {
+                                            DV_QUANTITY[at9014] matches {
+                                                property matches {[at9003]}    -- Acceleration
+                                                units matches {"mL/cm[H2O]"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- End tidal CO2
+                                        value matches {
+                                            DV_QUANTITY[at9015] matches {
+                                                property matches {[at9004]}    -- Pressure
+                                                units matches {"mm[Hg]"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Inspired CO2
+                                        value matches {
+                                            DV_QUANTITY[at9016] matches {
+                                                property matches {[at9004]}    -- Pressure
+                                                units matches {"mm[Hg]"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- End-Tidal N2O
+                                        value matches {
+                                            DV_PROPORTION[at9017] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Inspired N2O
+                                        value matches {
+                                            DV_PROPORTION[at9018] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- End-tidal O2
+                                        value matches {
+                                            DV_PROPORTION[at9019] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Positive end expiratory pressure (PEEP)
+                                        value matches {
+                                            DV_QUANTITY[at9020] matches {
+                                                property matches {[at9004]}    -- Pressure
+                                                units matches {"cm[H2O]"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Inspired O2
+                                        value matches {
+                                            DV_PROPORTION[at9021] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Negative inspiratory pressure (NIP)
+                                        value matches {
+                                            DV_QUANTITY[at9022] matches {
+                                                property matches {[at9004]}    -- Pressure
+                                                units matches {"cm[H2O]"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0037] occurrences matches {0..1} matches {    -- Plateau inspiratory pressure
+                                        value matches {
+                                            DV_QUANTITY[at9023]
+                                        }
+                                    }
+                                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Positive inspiratory pressure (PIP)
+                                        value matches {
+                                            DV_QUANTITY[at9024] matches {
+                                                property matches {[at9004]}    -- Pressure
+                                                units matches {"cm[H2O]"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Tidal volume
+                                        value matches {
+                                            DV_QUANTITY[at9025] matches {
+                                                property matches {[at9005]}    -- Volume
+                                                units matches {"L"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Peak inspiratory flow (PIF)
+                                        value matches {
+                                            DV_QUANTITY[at9026] matches {
+                                                property matches {[at9006]}    -- Flow rate, volume
+                                                units matches {"l/m"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Peak expiratory flow (PEF)
+                                        value matches {
+                                            DV_QUANTITY[at9027] matches {
+                                                property matches {[at9006]}    -- Flow rate, volume
+                                                units matches {"l/m"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Flow minute volume (MV)
+                                        value matches {
+                                            DV_QUANTITY[at9028] matches {
+                                                property matches {[at9006]}    -- Flow rate, volume
+                                                units matches {"l/m"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0032] occurrences matches {0..1} matches {    -- Tidal volume (TV)
+                                        value matches {
+                                            DV_QUANTITY[at9029] matches {
+                                                property matches {[at9005]}    -- Volume
+                                                units matches {"ml"}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0010] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0038] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Ventilator record">
+                description = <"Ventilator record">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Respiration rate">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Rapid shallow breathing index (RSBI)">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Lung compliance">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"End tidal CO2">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Inspired CO2">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"End-Tidal N2O">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Inspired N2O">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"End-tidal O2">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Inspired O2">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Positive end expiratory pressure (PEEP)">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Positive inspiratory pressure (PIP)">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Negative inspiratory pressure (NIP)">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Inspiration/expiration (I/E) ratio">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Tidal volume">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Peak inspiratory flow (PIF)">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Peak expiratory flow (PEF)">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Flow minute volume (MV)">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"CO₂ respiration rate">
+                description = <"Rate measured by end tidal CO₂ wave form">
+            >
+            ["at0026"] = <
+                text = <"Transthoracic respiration rate">
+                description = <"Rate measuring transthoracic impedance or muscle activity">
+            >
+            ["at0027"] = <
+                text = <"Respiration type">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Spontaneous">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Assisted">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Spontaneous respiration rate">
+                description = <"Generated by the patient">
+            >
+            ["at0032"] = <
+                text = <"Tidal volume (TV)">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Inspiration time">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Expiration time">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Total respiration rate">
+                description = <"Sum of spontaneous rate + ventilator rate">
+            >
+            ["at0036"] = <
+                text = <"Ventilator respiration rate">
+                description = <"Generated by the device">
+            >
+            ["at0037"] = <
+                text = <"Plateau inspiratory pressure">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at9000"] = <
+                text = <"Frequency">
+                description = <"Frequency">
+            >
+            ["at9003"] = <
+                text = <"Acceleration">
+                description = <"Acceleration">
+            >
+            ["at9004"] = <
+                text = <"Pressure">
+                description = <"Pressure">
+            >
+            ["at9005"] = <
+                text = <"Volume">
+                description = <"Volume">
+            >
+            ["at9006"] = <
+                text = <"Flow rate, volume">
+                description = <"Flow rate, volume">
+            >
+            ["ac9001"] = <
+                text = <"Respiration rate (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Respiration type (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/382>
+            ["at9003"] = <http://openehr.org/id/339>
+            ["at9004"] = <http://openehr.org/id/125>
+            ["at9005"] = <http://openehr.org/id/129>
+            ["at9006"] = <http://openehr.org/id/126>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0028", "at0029">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0025", "at0026", "at0030", "at0036", "at0035">
+        >
+    >

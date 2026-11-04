@@ -1,0 +1,432 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=55633e41-adbb-4197-9289-0072aca61cc1; build_uid=19dda250-beda-4100-85c2-321914059ff0)
+    openEHR-EHR-CLUSTER.oedema.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Emmanuel Eschmann">
+                ["organisation"] = <"CISTEC AG">
+                ["email"] = <"emmanuel.eschmann@cistec.com">
+            >
+            other_details = <
+                ["other_contributors"] = <"Jonas Bucher, CISTEC AG, Switzerland">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Nasjonal IKT HF">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2007-04-09">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Hildegard McNicoll, freshEHR Clinical Informatics Ltd., United Kingdom (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics Ltd., United Kingdom (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"EE5CE2A281CCAC188B77BE91AD31F26A">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Aufzeichnung einer narrativen Beschreibung und klinischen Interpretation der Befunde, die bei der körperlichen Untersuchung eines Ödems an einer spezifischen Körperstelle erhoben wurden.">
+            use = <"Diesen Archetypen verwenden, um die detaillierte Beschreibung und die klinische Interpretation der Befunde, die bei der körperlichen Untersuchung eines Ödems an einer spezifischen Körperstelle erhoben wurden, zu erfassen.
+
+Dieser Archetyp wurde speziell für die Verwendung im SLOT 'Untersuchungsdetails' von ENTRY- und CLUSTER-Archetypen entwickelt, die den Kontext für die untersuchte Struktur oder das untersuchte System liefern.
+
+Der Archetyp CLUSTER.exclusion_exam kann innerhalb des SLOT „Untersuchung nicht durchgeführt” verschachtelt werden, um optional explizite Details über die nicht durchgeführte Untersuchung aufzuzeichnen.
+
+Diesen Archetypen verwenden, um die narrativen Beschreibungen klinischer Befunde aus bestehenden oder älteren klinischen Systemen in ein archetypisiertes Format unter Verwendung des Datenelements „Klinische Beschreibung” zu integrieren.">
+            misuse = <"Nicht zur Aufzeichnung der klinischen Anamnese verwenden - verwenden Sie spezifische OBSERVATION- und CLUSTER-Archetypen, wie zum Beispiel OBSERVATION.story und CLUSTER.symptom_sign.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en fritekstbeskrivelse og klinisk tolkning av observerte funn ved fysisk undersøkelse av et organsystem eller anatomisk struktur.">
+            use = <"Brukes til å registrere en fritekstbeskrivelse og klinisk tolkning av observerte funn ved fysisk undersøkelse av et spesifisert organsystem eller anatomisk struktur. Denne arketypen består kun av kjerneelementene av mønsteret for undersøkelser, og kan utvides ved hjelp av andre CLUSTER-arketyper eller brukes som grunnlag for undersøkelsesarketyper for spesifikke kroppssystemer eller anatomiske strukturer. 
+
+Eksempler på detaljer som kan beskrives ved hjelp av dette CLUSTER er inspeksjon, palpasjon, auskultasjon, perkusjon og bevegelser i kroppssystemer eller anatomiske strukturer. Undersøkelsen kan støttes av enkle hjelpemidler som stetoskop, otoskop eller reflekshammer. Også funn ved mer avanserte undersøkelser kan registreres her, som ved endoskopi. I de tilfellene vil informasjon om hvilket hjelpemiddel eller utstyr brukt bli registrert i OBSERVATION.exam, elementet \"Detaljer om medisinsk utstyr\", i ACTION.procedure \"Prosedyredetaljer\" eller tilsvarende i egnet ENTRY- eller ACTION-arketype.
+
+Arketypen er laget spesifikt for å brukes i \"Undersøkelsesdetaljer\"-SLOTet i arketypen OBSERVATION.exam, men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende.
+
+Denne arketypen kan benyttes for alle typer undersøkelser, alt fra enkle undersøkelser som undersøkelse av et hudområde, inspeksjon av ører og til artroskopi av et kne.
+
+Kan for eksempel nøstes i SLOTet \"Undersøkelsesdetaljer\" i arketypen OBSERVATION.exam (Norsk Funn ved fysisk undersøkelse) for å registrere ytterligere strukturerte funn ved fysiske undersøkelser.
+
+Arketypen CLUSTER.exclusion_exam kan nøstes i SLOTet \"Undersøkelse ikke utført\" der en har behov for å registrere informasjon om at en undersøkelse ikke ble utført.
+
+Brukes for å videreføre fritekstbeskrivelser av kliniske funn fra tidligere systemer inn i et arketypeformat, ved å bruke elementet \"Klinisk beskrivelse\".">
+            misuse = <"Skal ikke brukes til å ta opp frittstående klinisk observasjoner eller testresultater - bruk spesifikke OBSERVATION arketyper, for eksempel OBSERVATION.head_circumference eller OBSERVATION.glasgow_coma_scale.
+
+Skal ikke brukes til å ta opp anamnese - bruk da spesifikke OBSERVATION og CLUSTER arketyper. For eksempel OBSERVATION.story og CLUSTER.symptom_sign.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a narrative description and clinical interpretation of the findings observed during the physical examination of an area of oedema at an identified body site.">
+            use = <"Use to record a narrative description and clinical interpretation of the findings observed during the physical examination of an area of oedema at an identified body site.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the CLUSTER.limb or CLUSTER.back archetypes which provide the context for the structure or system that is being examined. This archetype can also be used within other ENTRY or CLUSTER archetypes that provide relevant system or structure context, where clinically appropriate.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.">
+            misuse = <"Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Oedema
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Body site
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            allow_archetype CLUSTER[at0011] matches {    -- Structured body site
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_circle(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_relative\.v2\..*/}
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Clinical description
+                value matches {
+                    DV_TEXT[at9020]
+                }
+            }
+            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Severity
+                value matches {
+                    DV_CODED_TEXT[at9016] matches {
+                        defining_code matches {[ac9014]}    -- Severity (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0018] occurrences matches {0..1} matches {    -- Character
+                value matches {
+                    DV_CODED_TEXT[at9014] matches {
+                        defining_code matches {[ac9012]}    -- Character (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0021] occurrences matches {0..1} matches {    -- Extent
+                value matches {
+                    DV_TEXT[at9017]
+                }
+            }
+            allow_archetype CLUSTER[at0004] matches {    -- Examination findings
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype CLUSTER[at0005] matches {    -- Multimedia representation
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.media_file\.v1\..*/}
+            }
+            ELEMENT[at0006] matches {    -- Clinical interpretation
+                value matches {
+                    DV_TEXT[at9018]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9019]
+                }
+            }
+            allow_archetype CLUSTER[at0008] matches {    -- Examination not done
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Ödem">
+                description = <"Ein Übermaß an seröser Flüssigkeit, die sich in Hohlräumen oder Geweben des Körpers ansammelt.">
+            >
+            ["at0003"] = <
+                text = <"Klinische Beschreibung">
+                description = <"Beschreibung der bei der körperlichen Untersuchung festgestellten Ödembefunde.">
+            >
+            ["at0004"] = <
+                text = <"Untersuchungsbefunde">
+                description = <"Strukturierte Angaben zu den Befunden der körperlichen Untersuchung.">
+            >
+            ["at0005"] = <
+                text = <"Multimediale Repräsentation">
+                description = <"Digitales Bild, Video oder Diagramm, das die Befunde der körperlichen Untersuchung darstellt.">
+            >
+            ["at0006"] = <
+                text = <"Klinische Interpretation">
+                description = <"Einzelnes Wort, Ausdruck oder Kurzbeschreibung der klinischen Bedeutung und Aussagekraft der körperlichen Untersuchungsbefunde.">
+                comment = <"Eine Kodierung der 'Klinischen Interpretation' mit einer Terminologie wird, wenn möglich, bevorzugt.">
+            >
+            ["at0007"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Beschreibung der Befunde der körperlichen Untersuchung, die in den anderen Feldern nicht erfasst werden konnten.">
+            >
+            ["at0008"] = <
+                text = <"Untersuchung nicht durchgeführt">
+                description = <"Detailangaben, die ausdrücklich festhalten, dass diese Untersuchung nicht durchgeführt wurde.">
+            >
+            ["at0011"] = <
+                text = <"Strukturierte Körperstelle">
+                description = <"Eine strukturierte Beschreibung des untersuchten Körperbereichs.">
+                comment = <"Wenn die Körperstelle im Datenelement 'Untersuchtes System oder untersuchte Struktur' oder im Datenelement 'Körperstelle' vollständig identifiziert wurde, wird die Verwendung dieses SLOT überflüssig.">
+            >
+            ["at0012"] = <
+                text = <"Körperstelle">
+                description = <"Identifizierung des untersuchten Körperbereichs.">
+                comment = <"Wenn die Körperstelle im Datenelement \"Strukturierte Körperstelle\" vollständig identifiziert wurde, wird dieses Datenelement überflüssig.">
+            >
+            ["at0013"] = <
+                text = <"Schweregrad">
+                description = <"Einschätzung des Schweregrads des Ödems.">
+            >
+            ["at0014"] = <
+                text = <"Kein">
+                description = <"Es ist kein Ödem vorhanden.">
+            >
+            ["at0015"] = <
+                text = <"Leicht (+)">
+                description = <"Es ist ein leichtes Ödem vorhanden.">
+            >
+            ["at0016"] = <
+                text = <"Mässig (++)">
+                description = <"Das Ödem ist mässig ausgeprägt.">
+            >
+            ["at0017"] = <
+                text = <"Schwer (+++)">
+                description = <"Das Ödem ist stark ausgeprägt.">
+            >
+            ["at0018"] = <
+                text = <"Charakter">
+                description = <"Der Charakter des Ödems.">
+            >
+            ["at0019"] = <
+                text = <"Eindellung">
+                description = <"Eindellung der Haut bei Fingerdruck.">
+            >
+            ["at0020"] = <
+                text = <"Keine Eindellung">
+                description = <"Keine Eindellung der Haut bei Fingerdruck.">
+            >
+            ["at0021"] = <
+                text = <"Ausmaß">
+                description = <"Beschreibung des Ausmaßes des Ödems.">
+                comment = <"Zum Beispiel: bis zur Mitte der Wade; oder bis zur Höhe von L2.">
+            >
+            ["ac9014"] = <
+                text = <"Schweregrad (synthesised)">
+                description = <"Einschätzung des Schweregrads des Ödems. (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Charakter (synthesised)">
+                description = <"Der Charakter des Ödems. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"*Oedema (en)">
+                description = <"Funn ved fysisk undersøkelse av et organsystem eller anatomisk struktur.">
+            >
+            ["at0003"] = <
+                text = <"Klinisk beskrivelse">
+                description = <"*Narrative description of the oedema findings observed during the physical examination. (en)">
+            >
+            ["at0004"] = <
+                text = <"Spesifikke funn">
+                description = <"Ytterligere strukturerte detaljer om undersøkelsesfunnene.">
+            >
+            ["at0005"] = <
+                text = <"Multimediarepresentasjon">
+                description = <"Digitale bilder, video eller diagram som representerer undersøkelsesfunnene.">
+            >
+            ["at0006"] = <
+                text = <"Fortolkning">
+                description = <"Enkelt ord, setning, frase eller kort beskrivelse som representerer den kliniske betydning og viktigheten av funnene ved den kliniske undersøkelsen.">
+                comment = <"Koding med terminologi foretrekkes når mulig. For eksempel \"normal undersøkelse\" eller \"tympanisk membran perforasjon\".">
+            >
+            ["at0007"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om funn ved undersøkelsen, som ikke dekkes av andre elementer.">
+            >
+            ["at0008"] = <
+                text = <"Undersøkelse ikke utført">
+                description = <"Detaljer for å eksplisitt registrere at denne undersøkelsen ikke ble utført.">
+            >
+            ["at0011"] = <
+                text = <"Strukturert anatomisk lokalisasjon">
+                description = <"Angivelse av en strukturert anatomisk lokalisering av det undersøkte organsystemet eller anatomiske strukturen.">
+                comment = <"Hvis anatomisk lokalisasjon er entydig identifisert i elementet \"Undersøkt organsystem eller struktur\" er dette SLOTet ikke nødvendig å benytte.">
+            >
+            ["at0012"] = <
+                text = <"Anatomisk lokalisasjon">
+                description = <"Identifisering av et enkelt fysisk sted enten på eller i menneskekroppen.">
+                comment = <"*If the body site has been fully identified in the parent archetype in which this archetype is nested, this data element becomes redundant. (en)">
+            >
+            ["at0013"] = <
+                text = <"*Severity (en)">
+                description = <"*Estimation of the severity of oedema. (en)">
+            >
+            ["at0014"] = <
+                text = <"*None (en)">
+                description = <"*No oedema is present. (en)">
+            >
+            ["at0015"] = <
+                text = <"*Mild (+) (en)">
+                description = <"*The oedema is mild. (en)">
+            >
+            ["at0016"] = <
+                text = <"*Moderate (++) (en)">
+                description = <"*The oedema is moderate. (en)">
+            >
+            ["at0017"] = <
+                text = <"*Severe (+++) (en)">
+                description = <"*The oedema is severe. (en)">
+            >
+            ["at0018"] = <
+                text = <"*Character (en)">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"*Pitting (en)">
+                description = <"*Pitting of the skin on finger pressure. (en)">
+            >
+            ["at0020"] = <
+                text = <"*Non-pitting (en)">
+                description = <"*No pitting of the skin on finger pressure. (en)">
+            >
+            ["at0021"] = <
+                text = <"*Extent (en)">
+                description = <"*Description of the extent of the oedema. (en)">
+                comment = <"*For example: to mid calf; or to L2 level. (en)">
+            >
+            ["ac9014"] = <
+                text = <"*Severity (en) (synthesised)">
+                description = <"*Estimation of the severity of oedema. (en) (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"*Character (en) (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Oedema">
+                description = <"An excess of watery fluid collecting in the cavities or tissues of the body.">
+            >
+            ["at0003"] = <
+                text = <"Clinical description">
+                description = <"Narrative description of the oedema findings observed during the physical examination.">
+            >
+            ["at0004"] = <
+                text = <"Examination findings">
+                description = <"Structured details about the physical examination findings.">
+            >
+            ["at0005"] = <
+                text = <"Multimedia representation">
+                description = <"Digital image, video or diagram representing the physical examination findings.">
+            >
+            ["at0006"] = <
+                text = <"Clinical interpretation">
+                description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the physical examination findings.">
+                comment = <"Coding of the 'Clinical interpretation' with a terminology is preferred, where possible.">
+            >
+            ["at0007"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the physical examination findings, not captured in other fields.">
+            >
+            ["at0008"] = <
+                text = <"Examination not done">
+                description = <"Details to explicitly record that this examination was not performed.">
+            >
+            ["at0011"] = <
+                text = <"Structured body site">
+                description = <"A structured description of the area of the body under examination.">
+                comment = <"If the body site has been fully identified in the 'System or structure examined' or the 'Body site' data element, this SLOT becomes redundant.">
+            >
+            ["at0012"] = <
+                text = <"Body site">
+                description = <"Identification of the area of the body under examination.">
+                comment = <"If the body site has been fully identified in the parent archetype in which this archetype is nested, this data element becomes redundant.">
+            >
+            ["at0013"] = <
+                text = <"Severity">
+                description = <"Estimation of the severity of oedema.">
+            >
+            ["at0014"] = <
+                text = <"None">
+                description = <"No oedema is present.">
+            >
+            ["at0015"] = <
+                text = <"Mild (+)">
+                description = <"The oedema is mild.">
+            >
+            ["at0016"] = <
+                text = <"Moderate (++)">
+                description = <"The oedema is moderate.">
+            >
+            ["at0017"] = <
+                text = <"Severe (+++)">
+                description = <"The oedema is severe.">
+            >
+            ["at0018"] = <
+                text = <"Character">
+                description = <"The nature of the oedema.">
+            >
+            ["at0019"] = <
+                text = <"Pitting">
+                description = <"Pitting of the skin on finger pressure.">
+            >
+            ["at0020"] = <
+                text = <"Non-pitting">
+                description = <"No pitting of the skin on finger pressure.">
+            >
+            ["at0021"] = <
+                text = <"Extent">
+                description = <"Description of the extent of the oedema.">
+                comment = <"For example: to mid calf; or to L2 level.">
+            >
+            ["ac9014"] = <
+                text = <"Severity (synthesised)">
+                description = <"Estimation of the severity of oedema. (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Character (synthesised)">
+                description = <"The nature of the oedema. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0000"] = <http://snomed.info/id/267038008>
+        >
+    >
+    value_sets = <
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0019", "at0020">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0014", "at0015", "at0016", "at0017">
+        >
+    >

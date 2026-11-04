@@ -1,0 +1,635 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=203ab2c9-71e0-47fe-b921-c8f2c2cb1d48; build_uid=84a712f7-d970-4aa1-8dda-fa17973fb3df)
+    openEHR-EHR-OBSERVATION.boston_carpal_tunnel.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Alan Fish">
+        ["organisation"] = <"Apperta Foundation CIC">
+        ["email"] = <"alan.fish@apperta.org">
+        ["date"] = <"2019-07-03">
+    >
+    original_namespace = <"uk.org.clinicalmodels">
+    original_publisher = <"Apperta UK">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"uk.org.clinicalmodels">
+    custodian_organisation = <"Apperta UK">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Alan Fish, Apperta Foundation CIC.<alan.fish@apperta.org>">
+        ["MD5-CAM-1.0.1"] = <"44770860CFB55AA7D5F3D634FE0311E7">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Use to capture and report Boston Carpal Tunnel Questionnaire (BOSTON) score details.">
+            use = <"Use to capture and report Boston Carpal Tunnel Questionnaire Score.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this archetype may be copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners where a copyright exists. 
+
+">
+            misuse = <"Not to be used unless the terms of copyright have been observed (if a copyright exists).">
+            copyright = <"© Clinical Models UK, Apperta Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Boston Carpal Tunnel Questionnaire Score (BOSTON)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Point in time
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- 1 Severity at night
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0009]}],    -- I do not have hand or wrist pain at night
+                                                    [{2}, {[at0010]}],    -- Mild pain
+                                                    [{3}, {[at0011]}],    -- Moderate pain
+                                                    [{4}, {[at0012]}],    -- Severe pain
+                                                    [{5}, {[at0116]}]    -- Very severe pain
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0110] occurrences matches {0..1} matches {    -- 2 Frequency waking due to pain
+                                        value matches {
+                                            DV_ORDINAL[at9012] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0112]}],    -- Never
+                                                    [{2}, {[at0113]}],    -- Once
+                                                    [{3}, {[at0114]}],    -- Two or three times
+                                                    [{4}, {[at0115]}],    -- Four or five times
+                                                    [{5}, {[at0124]}]    -- More than five times
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0118] occurrences matches {0..1} matches {    -- 3 Daytime pain
+                                        value matches {
+                                            DV_ORDINAL[at9013] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0119]}],    -- I never have pain during the day
+                                                    [{2}, {[at0120]}],    -- I have mild pain during the day
+                                                    [{3}, {[at0121]}],    -- I have moderate pain during the day
+                                                    [{4}, {[at0122]}],    -- I have severe pain during the day
+                                                    [{5}, {[at0123]}]    -- I have very severe pain during the day
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0125] occurrences matches {0..1} matches {    -- 4 Frequency of daytime pain
+                                        value matches {
+                                            DV_ORDINAL[at9014] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0126]}],    -- Never
+                                                    [{2}, {[at0127]}],    -- Once or twice a day
+                                                    [{3}, {[at0128]}],    -- Three to five times a day
+                                                    [{4}, {[at0129]}],    -- More than five times a day
+                                                    [{5}, {[at0130]}]    -- The pain is constant
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0131] occurrences matches {0..1} matches {    -- 5 Duration of daytime pain
+                                        value matches {
+                                            DV_ORDINAL[at9015] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0132]}],    -- I never get pain during the day
+                                                    [{2}, {[at0133]}],    -- Less than 10 minutes
+                                                    [{3}, {[at0134]}],    -- 10 to 60 minutes
+                                                    [{4}, {[at0135]}],    -- Greater than 60 minutes
+                                                    [{5}, {[at0136]}]    -- The pain is constant throughout the day
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0137] occurrences matches {0..1} matches {    -- 6 Numbness
+                                        value matches {
+                                            DV_ORDINAL[at9016] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0138]}],    -- No
+                                                    [{2}, {[at0139]}],    -- I have mild numbness
+                                                    [{3}, {[at0140]}],    -- I have moderate numbness
+                                                    [{4}, {[at0141]}],    -- I have severe numbness
+                                                    [{5}, {[at0142]}]    -- I have very severe numbness
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0143] occurrences matches {0..1} matches {    -- 7 Weakness
+                                        value matches {
+                                            DV_ORDINAL[at9017] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0144]}],    -- No weakness
+                                                    [{2}, {[at0145]}],    -- Mild weakness
+                                                    [{3}, {[at0146]}],    -- Moderate weakness
+                                                    [{4}, {[at0147]}],    -- Severe weakness
+                                                    [{5}, {[at0148]}]    -- Very severe weakness
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0149] occurrences matches {0..1} matches {    -- 8 Tingling
+                                        value matches {
+                                            DV_ORDINAL[at9018] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0150]}],    -- No tingling
+                                                    [{2}, {[at0151]}],    -- Mild tingling
+                                                    [{3}, {[at0152]}],    -- Moderate tingling
+                                                    [{4}, {[at0153]}],    -- Severe tingling
+                                                    [{5}, {[at0154]}]    -- Very severe tingling
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0155] occurrences matches {0..1} matches {    -- 9 Numbness or Tingling at night
+                                        value matches {
+                                            DV_ORDINAL[at9019] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0156]}],    -- I have no numbness or tingling at night
+                                                    [{2}, {[at0157]}],    -- Mild
+                                                    [{3}, {[at0158]}],    -- Moderate
+                                                    [{4}, {[at0159]}],    -- Severe
+                                                    [{5}, {[at0160]}]    -- Very severe
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0161] occurrences matches {0..1} matches {    -- 10 Frequency waking due to numbness
+                                        value matches {
+                                            DV_ORDINAL[at9020] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0162]}],    -- Never
+                                                    [{2}, {[at0163]}],    -- Once
+                                                    [{3}, {[at0164]}],    -- Two or three times
+                                                    [{4}, {[at0165]}],    -- Four or five times
+                                                    [{5}, {[at0166]}]    -- More than five times
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0167] occurrences matches {0..1} matches {    -- 11 Difficulty grasping
+                                        value matches {
+                                            DV_ORDINAL[at9021] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0168]}],    -- No difficulty
+                                                    [{2}, {[at0169]}],    -- Mild difficulty
+                                                    [{3}, {[at0170]}],    -- Moderate difficulty
+                                                    [{4}, {[at0171]}],    -- Severe difficulty
+                                                    [{5}, {[at0172]}]    -- Very severe difficulty
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0104] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9022] matches {
+                                                magnitude matches {|0..55|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0105] occurrences matches {0..1} matches {    -- Average score
+                                        value matches {
+                                            DV_COUNT[at9023] matches {
+                                                magnitude matches {|0..100|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0005] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0006] occurrences matches {0..1} matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Boston Carpal Tunnel Questionnaire Score (BOSTON)">
+                description = <"Boston Carpal Tunnel Questionnaire Score.">
+            >
+            ["at0002"] = <
+                text = <"Point in time">
+                description = <"A specific date and/or time which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0006"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"e.g. Local hospital departmental infomation or additional metadata to align with HL7 or CDISC equivalents.">
+            >
+            ["at0008"] = <
+                text = <"1 Severity at night">
+                description = <"Patient-reported extent of hand or wrist pain at night.">
+                comment = <"Questionnaire wording: 
+
+1.	How severe is the hand or wrist pain that you have at night?">
+            >
+            ["at0009"] = <
+                text = <"I do not have hand or wrist pain at night">
+                description = <"The patient does not have hand or wrist pain at night.">
+            >
+            ["at0010"] = <
+                text = <"Mild pain">
+                description = <"The patient has mild hand or wrist pain at night.">
+            >
+            ["at0011"] = <
+                text = <"Moderate pain">
+                description = <"The patient has moderate hand or wrist pain at night.">
+            >
+            ["at0012"] = <
+                text = <"Severe pain">
+                description = <"The patient has severe hand or wrist pain at night.">
+            >
+            ["at0104"] = <
+                text = <"Total score">
+                description = <"Total score from Questions 1 to 11.">
+            >
+            ["at0105"] = <
+                text = <"Average score">
+                description = <"Average score from Questions 1-11.">
+            >
+            ["at0110"] = <
+                text = <"2 Frequency waking due to pain">
+                description = <"Patient-reported extent of hand or wrist pain at waking them at night.">
+                comment = <"Questionnaire wording: 
+
+2.	How often did hand or wrist pain wake you up during a typical night in the past two weeks?">
+            >
+            ["at0112"] = <
+                text = <"Never">
+                description = <"The patient did not wake because of hand or wrist pain at night in the past two weeks.">
+            >
+            ["at0113"] = <
+                text = <"Once">
+                description = <"The patient woke once because of hand or wrist pain at night in the past two weeks.">
+            >
+            ["at0114"] = <
+                text = <"Two or three times">
+                description = <"The patient woke two or three times because of hand or wrist pain at night in the past two weeks.">
+            >
+            ["at0115"] = <
+                text = <"Four or five times">
+                description = <"The patient woke four or five times of hand or wrist pain at night in the past two weeks.">
+            >
+            ["at0116"] = <
+                text = <"Very severe pain">
+                description = <"The patient has very severe hand or wrist pain at night.">
+            >
+            ["at0118"] = <
+                text = <"3 Daytime pain">
+                description = <"Patient-reported extent of hand or wrist pain at during the daytime.">
+                comment = <"Questionnaire wording: 
+
+3.	Do you typically have pain in your hand or wrist during the daytime?">
+            >
+            ["at0119"] = <
+                text = <"I never have pain during the day">
+                description = <"The patient does not have hand or wrist pain during the day.">
+            >
+            ["at0120"] = <
+                text = <"I have mild pain during the day">
+                description = <"The patient has mild hand or wrist pain during the day.">
+            >
+            ["at0121"] = <
+                text = <"I have moderate pain during the day">
+                description = <"The patient has moderate hand or wrist pain during the day.">
+            >
+            ["at0122"] = <
+                text = <"I have severe pain during the day">
+                description = <"The patient has severe hand or wrist pain during the day.">
+            >
+            ["at0123"] = <
+                text = <"I have very severe pain during the day">
+                description = <"The patient has very severe hand or wrist pain during the day.">
+            >
+            ["at0124"] = <
+                text = <"More than five times">
+                description = <"The patient woke more than five times of hand or wrist pain at night in the past two weeks.">
+            >
+            ["at0125"] = <
+                text = <"4 Frequency of daytime pain">
+                description = <"Patient-reported extent frequency of hand or wrist pain at during the daytime.">
+                comment = <"Questionnaire wording: 
+
+4.	How often do you have hand or wrist pain during the daytime?">
+            >
+            ["at0126"] = <
+                text = <"Never">
+                description = <"The patient does not have hand or wrist pain during the day.">
+            >
+            ["at0127"] = <
+                text = <"Once or twice a day">
+                description = <"The patient has hand or wrist pain once or twice a day.">
+            >
+            ["at0128"] = <
+                text = <"Three to five times a day">
+                description = <"The patient has hand or wrist pain three to five times a day.">
+            >
+            ["at0129"] = <
+                text = <"More than five times a day">
+                description = <"The patient has hand or wrist pain more than five times a day.">
+            >
+            ["at0130"] = <
+                text = <"The pain is constant">
+                description = <"The patient has constant hand or wrist pain during the day.">
+            >
+            ["at0131"] = <
+                text = <"5 Duration of daytime pain">
+                description = <"Patient-reported extent duration of hand or wrist pain at during the daytime.">
+                comment = <"Questionnaire wording: 
+
+5.	How long on average does an episode of pain last during the daytime?">
+            >
+            ["at0132"] = <
+                text = <"I never get pain during the day">
+                description = <"The patient does not have hand or wrist pain during the day.">
+            >
+            ["at0133"] = <
+                text = <"Less than 10 minutes">
+                description = <"The patient has experiences an episode of hand or wrist pain for less than 10 minutes during the day.">
+            >
+            ["at0134"] = <
+                text = <"10 to 60 minutes">
+                description = <"The patient has experiences an episode of hand or wrist pain for 10 to 60 minutes during the day.">
+            >
+            ["at0135"] = <
+                text = <"Greater than 60 minutes">
+                description = <"The patient has experiences an episode of hand or wrist pain for greater than 60 minutes during the day.">
+            >
+            ["at0136"] = <
+                text = <"The pain is constant throughout the day">
+                description = <"The patient has experiences constant episodes of hand or wrist pain during the day.">
+            >
+            ["at0137"] = <
+                text = <"6 Numbness">
+                description = <"Patient-reported extent of numbness (loss of sensation) in hand.">
+                comment = <"Questionnaire wording: 
+
+6.	Do you have numbness (loss of sensation) in your hand?">
+            >
+            ["at0138"] = <
+                text = <"No">
+                description = <"The patient does not have numbness in hand.">
+            >
+            ["at0139"] = <
+                text = <"I have mild numbness">
+                description = <"The patient has mild numbness in hand.">
+            >
+            ["at0140"] = <
+                text = <"I have moderate numbness">
+                description = <"The patient has moderate numbness in hand.">
+            >
+            ["at0141"] = <
+                text = <"I have severe numbness">
+                description = <"The patient has severe numbness in hand.">
+            >
+            ["at0142"] = <
+                text = <"I have very severe numbness">
+                description = <"The patient has very severe numbness in hand.">
+            >
+            ["at0143"] = <
+                text = <"7 Weakness">
+                description = <"Patient-reported extent of weakness in hand or wrist.">
+                comment = <"Questionnaire wording: 
+
+7.	Do you have weakness in your hand or wrist?">
+            >
+            ["at0144"] = <
+                text = <"No weakness">
+                description = <"The patient does not have weakness in hand or wrist.">
+            >
+            ["at0145"] = <
+                text = <"Mild weakness">
+                description = <"The patient has mild weakness in hand or wrist.">
+            >
+            ["at0146"] = <
+                text = <"Moderate weakness">
+                description = <"The patient has moderate weakness in hand or wrist.">
+            >
+            ["at0147"] = <
+                text = <"Severe weakness">
+                description = <"The patient has severe weakness in hand or wrist.">
+            >
+            ["at0148"] = <
+                text = <"Very severe weakness">
+                description = <"The patient has very severe weakness in hand or wrist.">
+            >
+            ["at0149"] = <
+                text = <"8 Tingling">
+                description = <"Patient-reported extent of tingling in hand or wrist.">
+                comment = <"Questionnaire wording: 
+
+7.	Do you have weakness in your hand or wrist?">
+            >
+            ["at0150"] = <
+                text = <"No tingling">
+                description = <"The patient does not have tingling in hand or wrist.">
+            >
+            ["at0151"] = <
+                text = <"Mild tingling">
+                description = <"The patient has mild tingling in hand or wrist.">
+            >
+            ["at0152"] = <
+                text = <"Moderate tingling">
+                description = <"The patient has moderate tingling in hand or wrist.">
+            >
+            ["at0153"] = <
+                text = <"Severe tingling">
+                description = <"The patient has severe tingling in hand or wrist.">
+            >
+            ["at0154"] = <
+                text = <"Very severe tingling">
+                description = <"The patient has very severe tingling in hand or wrist.">
+            >
+            ["at0155"] = <
+                text = <"9 Numbness or Tingling at night">
+                description = <"Patient-reported extent of numbness (loss of sensation) or tingling in hand or wrist at night.">
+                comment = <"Questionnaire wording: 
+
+9.	How severe is the numbness (loss of sensation) or tingling at night?">
+            >
+            ["at0156"] = <
+                text = <"I have no numbness or tingling at night">
+                description = <"The patient does not have numbness or tingling in hand or wrist at night.">
+            >
+            ["at0157"] = <
+                text = <"Mild">
+                description = <"The patient has mild numbness or tingling in hand or wrist at night.">
+            >
+            ["at0158"] = <
+                text = <"Moderate">
+                description = <"The patient has moderate numbness or tingling in hand or wrist at night.">
+            >
+            ["at0159"] = <
+                text = <"Severe">
+                description = <"The patient has severe numbness or tingling in hand or wrist at night.">
+            >
+            ["at0160"] = <
+                text = <"Very severe">
+                description = <"The patient has very severe numbness or tingling in hand or wrist at night.">
+            >
+            ["at0161"] = <
+                text = <"10 Frequency waking due to numbness">
+                description = <"Patient-reported frequency waking due to numbness (loss of sensation) or tingling in hand or wrist at night.">
+                comment = <"Questionnaire wording: 
+
+10.	How often did hand numbness or tingling wake you up during a typical night during the past two weeks?">
+            >
+            ["at0162"] = <
+                text = <"Never">
+                description = <"The patient was not woken due to numbness or tingling in hand or wrist at night during the past two weeks.">
+            >
+            ["at0163"] = <
+                text = <"Once">
+                description = <"The patient was woken once due to numbness or tingling in hand or wrist at night during the past two weeks.">
+            >
+            ["at0164"] = <
+                text = <"Two or three times">
+                description = <"The patient was woken two or three times due to numbness or tingling in hand or wrist at night during the past two weeks.">
+            >
+            ["at0165"] = <
+                text = <"Four or five times">
+                description = <"The patient was woken four or five times due to numbness or tingling in hand or wrist at night during the past two weeks.">
+            >
+            ["at0166"] = <
+                text = <"More than five times">
+                description = <"The patient was woken more than five times due to numbness or tingling in hand or wrist at night during the past two weeks.">
+            >
+            ["at0167"] = <
+                text = <"11 Difficulty grasping">
+                description = <"Patient-reported level of difficulty grasping and using small objects such as keys or pencils.">
+                comment = <"Questionnaire wording: 
+
+11.	Do you have difficulty with grasping and use of small objects such as keys or pencils?">
+            >
+            ["at0168"] = <
+                text = <"No difficulty">
+                description = <"The patient has no difficulty grasping and using small objects such as keys or pencils.">
+            >
+            ["at0169"] = <
+                text = <"Mild difficulty">
+                description = <"The patient has mild difficulty grasping and using small objects such as keys or pencils.">
+            >
+            ["at0170"] = <
+                text = <"Moderate difficulty">
+                description = <"The patient has moderate difficulty grasping and using small objects such as keys or pencils.">
+            >
+            ["at0171"] = <
+                text = <"Severe difficulty">
+                description = <"The patient has severe difficulty grasping and using small objects such as keys or pencils.">
+            >
+            ["at0172"] = <
+                text = <"Very severe difficulty">
+                description = <"The patient has very severe difficulty grasping and using small objects such as keys or pencils.">
+            >
+            ["ac9023"] = <
+                text = <"1 Severity at night (synthesised)">
+                description = <"Patient-reported extent of hand or wrist pain at night. (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"2 Frequency waking due to pain (synthesised)">
+                description = <"Patient-reported extent of hand or wrist pain at waking them at night. (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"3 Daytime pain (synthesised)">
+                description = <"Patient-reported extent of hand or wrist pain at during the daytime. (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"4 Frequency of daytime pain (synthesised)">
+                description = <"Patient-reported extent frequency of hand or wrist pain at during the daytime. (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"5 Duration of daytime pain (synthesised)">
+                description = <"Patient-reported extent duration of hand or wrist pain at during the daytime. (synthesised)">
+            >
+            ["ac9028"] = <
+                text = <"6 Numbness (synthesised)">
+                description = <"Patient-reported extent of numbness (loss of sensation) in hand. (synthesised)">
+            >
+            ["ac9029"] = <
+                text = <"7 Weakness (synthesised)">
+                description = <"Patient-reported extent of weakness in hand or wrist. (synthesised)">
+            >
+            ["ac9030"] = <
+                text = <"8 Tingling (synthesised)">
+                description = <"Patient-reported extent of tingling in hand or wrist. (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"9 Numbness or Tingling at night (synthesised)">
+                description = <"Patient-reported extent of numbness (loss of sensation) or tingling in hand or wrist at night. (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"10 Frequency waking due to numbness (synthesised)">
+                description = <"Patient-reported frequency waking due to numbness (loss of sensation) or tingling in hand or wrist at night. (synthesised)">
+            >
+            ["ac9033"] = <
+                text = <"11 Difficulty grasping (synthesised)">
+                description = <"Patient-reported level of difficulty grasping and using small objects such as keys or pencils. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9031"] = <
+            id = <"ac9031">
+            members = <"at0156", "at0157", "at0158", "at0159", "at0160">
+        >
+        ["ac9030"] = <
+            id = <"ac9030">
+            members = <"at0150", "at0151", "at0152", "at0153", "at0154">
+        >
+        ["ac9033"] = <
+            id = <"ac9033">
+            members = <"at0168", "at0169", "at0170", "at0171", "at0172">
+        >
+        ["ac9032"] = <
+            id = <"ac9032">
+            members = <"at0162", "at0163", "at0164", "at0165", "at0166">
+        >
+        ["ac9029"] = <
+            id = <"ac9029">
+            members = <"at0144", "at0145", "at0146", "at0147", "at0148">
+        >
+        ["ac9024"] = <
+            id = <"ac9024">
+            members = <"at0112", "at0113", "at0114", "at0115", "at0124">
+        >
+        ["ac9023"] = <
+            id = <"ac9023">
+            members = <"at0009", "at0010", "at0011", "at0012", "at0116">
+        >
+        ["ac9028"] = <
+            id = <"ac9028">
+            members = <"at0138", "at0139", "at0140", "at0141", "at0142">
+        >
+        ["ac9027"] = <
+            id = <"ac9027">
+            members = <"at0132", "at0133", "at0134", "at0135", "at0136">
+        >
+        ["ac9026"] = <
+            id = <"ac9026">
+            members = <"at0126", "at0127", "at0128", "at0129", "at0130">
+        >
+        ["ac9025"] = <
+            id = <"ac9025">
+            members = <"at0119", "at0120", "at0121", "at0122", "at0123">
+        >
+    >

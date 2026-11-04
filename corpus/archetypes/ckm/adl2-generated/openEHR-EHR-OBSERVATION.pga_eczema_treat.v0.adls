@@ -1,0 +1,135 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1a7803e5-9bd0-4ca9-a0bc-6d52305f06d5; build_uid=398e6531-69e4-4a65-8352-fd897eb7d56b)
+    openEHR-EHR-OBSERVATION.pga_eczema_treat.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Dmitri Wall">
+        ["organisation"] = <"Irish Skin Foundation">
+        ["email"] = <"dmitri.wall@gmail.com">
+        ["date"] = <"2015-02-05">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Ian McNicoll, freshEHR Clinical Informatics, UK", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"The treatment of severe atopic eczema trial (TREAT) trial. Available from: http://www.isrctn.com/ISRCTN15837754">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"C2F5B4EAEFFE61CF1BA1ADA368E4A059">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To be used by a patient to estimate the severity of their atopic dermatitis. This PGA is being utilised by the TREAT eczema group.">
+            keywords = <"Atopic Dermatitis", "Dermatology", "Disease severity score", "Effectiveness outcome parameter", "Severity scale">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- PGA eczema (TREAT)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Assessment
+                                        value matches {
+                                            DV_ORDINAL[at9001] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- Clear
+                                                    [{1}, {[at0006]}],    -- Almost clear
+                                                    [{2}, {[at0007]}],    -- Mild disease
+                                                    [{3}, {[at0008]}],    -- Moderate disease
+                                                    [{4}, {[at0009]}],    -- Severe disease
+                                                    [{5}, {[at0010]}]    -- Very severe disease
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0011] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0012] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"PGA eczema (TREAT)">
+                description = <"Patient global assessment (PGA) to describe the severity of their eczema for the treatment of severe atopic eczema trial (TREAT).">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Assessment">
+                description = <"The patient's assessment of their eczema.">
+            >
+            ["at0005"] = <
+                text = <"Clear">
+                description = <"Clear.">
+            >
+            ["at0006"] = <
+                text = <"Almost clear">
+                description = <"Almost clear.">
+            >
+            ["at0007"] = <
+                text = <"Mild disease">
+                description = <"Mild disease.">
+            >
+            ["at0008"] = <
+                text = <"Moderate disease">
+                description = <"Moderate disease.">
+            >
+            ["at0009"] = <
+                text = <"Severe disease">
+                description = <"Severe disease.">
+            >
+            ["at0010"] = <
+                text = <"Very severe disease">
+                description = <"Very severe disease.">
+            >
+            ["at0012"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9001"] = <
+                text = <"Assessment (synthesised)">
+                description = <"The patient's assessment of their eczema. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009", "at0010">
+        >
+    >

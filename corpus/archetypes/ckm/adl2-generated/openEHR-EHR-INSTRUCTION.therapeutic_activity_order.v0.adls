@@ -1,0 +1,711 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c31fafb6-eaf1-4171-8be9-0212093b127f; build_uid=175d6541-58bb-4ea9-83cf-1bfbedd06ffd)
+    openEHR-EHR-INSTRUCTION.therapeutic_activity_order.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Nasjonal IKT HF, Norway">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            author = <
+                ["name"] = <"Francesca Frexia">
+                ["organisation"] = <"CRS4 - Center for advanced studies, research and development in Sardinia, Pula (Cagliari), Italy">
+                ["email"] = <"francesca.frexia@crs4.it">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Dr Heather Leslie">
+        ["organisation"] = <"Atomica Informatics, Australia">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-03-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Fatima Almeida, Critical SW, Portugal", "Tomas Alme, DIPS ASA, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Anita Bjørnnes, Helse Bergen, Norway", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Einar Fosse, UNN HF, Norwegian Centre for Integrated Care and Telemedicine, Norway", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom", "Heather Grain, Llewelyn Grain Informatics, Australia", "Knut Harboe, Stavanger Universitetssjukehus, Norway", "Sam Heard, Ocean Informatics, Australia", "Ingrid Heitmann, Oslo universitetssykehus HF, Norway", "Andreas Hering, Helse Bergen HF, Haukeland universitetssjukehus, Norway", "Anca Heyd, DIPS ASA, Norway", "Hilde Hollås, DIPS AS, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Shinji Kobayashi, Kyoto University, Japan", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hallvard Lærum, Direktoratet for e-helse, Norway", "Rose Mari Eikås, Helse Bergen, Norway", "Ole Martin Sand, DIPS ASA, Norway", "Hildegard McNicoll, freshEHR Clinical Informatics Ltd., United Kingdom", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Anne Pauline Anderssen, Helse Nord RHF, Norway", "Pablo Pazos, CaboLabs.com Health Informatics, Uruguay", "Rune Pedersen, Universitetssykehuset i Nord Norge, Norway", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Line Sæle, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Richard Townley-O'Neill, Australian Digital Health Agency, Australia", "Gro-Hilde Ulriksen, Norwegian center for ehealthresearch, Norway">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"F73BABA6192202A6981F3A0E77AAEB92">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"Generisk forespørsel om utførelse av en helsetjeneste, til annet helsepersonell eller andre organisasjoner.">
+            keywords = <"rekvisisjon", "bestilling", "foreskriving", "tjeneste", "tjenesteyter", "rekvirere", "bestille", "anmodning", "forespørre", "forespørsel", "anmode", "tilsyn">
+            use = <"Brukes til å registrere en forespørsel om en helserelatert tjeneste eller aktivitet som skal utføres av en kliniker, organisasjon eller virksomhet.
+
+Arketypen er designer som et rammeverk som kan brukes som grunnlag for:
+- En forespørsel om en helserelatert tjeneste, fra en kliniker eller organisasjon til en annen kliniker eller organisasjon. For eksempel: En henvisning til en spesialist for behandling eller second opinion, ansvarsoverføring til akuttmottaket, monitorering av vitale tegn hver 4. time, eller hjemmesykepleie fra kommunen.
+- En forespørsel om oppfølging fra samme kliniker eller organisasjon, for eksempel kontroll på poliklinikk om 6 uker.
+
+Kliniske brukseksempler:
+- Dersom en kliniker setter opp en kontrolltime om 6 uker: \"Tjenestenavn\" settes til \"Kontroll\". Dersom klinikeren skriver inn \"6 uker\" som tid for kontrolltime i brukergrensesnittet, vil det kliniske systemet registrere datoen 6 uker etter registreringsdatoen i elementet \"Dato/tid forfall\".
+- Dersom en kliniker setter opp en pasient til \"undervisning om diabetes\" i \"Tjenestenavn\". Verdiene for \"Årsak for forespørsel\" kan være \"Ny diagnose\" og \"Forebygging av ketoacidose\". \"Klinisk indikasjon\" kan være \"Diabetes type 1\", som kan lenkes til en Problem/diagnose og/eller et Laboratorieprøveresultat. Dersom det er nødvendig med et kurs på 4 uker, med 4 ukentlige undervisningsøkter, må en bruke arketypene CLUSTER.service_direction og CLUSTER.timing_nondaily for å registrere kompleks timinginformasjon.
+- Dersom en kliniker ordinerer en gjentagende blodprøve, som for eksempel INR: Den komplekse timingen for dette krever bruk av arketypene CLUSTER.service_direction og CLUSTER.timing_nondaily for å definere hver timing i en sekvens, for eksempel \"daglig i en uke, ukentlig i 4 uker, månedlig i 6 måneder\".
+
+En grunnleggende antagelse for denne arketypen er at den er en forespørsel for én enkelt helsetjeneste. Dersom man trenger en gjentagende tjeneste, kan dette spesifiseres ved å bruke arketypen CLUSTER.service_direction i SLOTet \"Kompleks timing\".
+
+I mange situasjoner vil det være mulig å registrere stegene som gjennomgås i utførelsen av forespørselen ved hjelp av den generiske arketypen ACTION.service. Imidlertid vil det være mange tilfeller der det vil være behov for en spesifikk ACTION-arketype, for å kunne oppfylle behov om spesifikke dataelementer, registreringsmønstre eller prosesstrinn. Eksempler på dette er ACTION.screening og ACTION.health_education.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation, Nasjonal IKT HF, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Generic request framework for an order for a health-related therapy or activity to be carried out.">
+            keywords = <"request", "order", "therapy", "provide", "referral">
+            use = <"Use to record an order or instruction for a health-related therapy or activity to be carried out.
+
+This archetype has been designed as a framework that can be used as the basis for an order for a health-related therapy or activity within the same department, organisation or agency, or self-care by the individual. For example: four hourly vital signs monitoring; bed rest; daily dressings.
+
+The default assumption for this archetype is that it is a request for a single therapeutic activity. If a series of activities are required, use the CLUSTER.service_direction or CLUSTER.therapeutic_direction archetype within the 'Complex timing' SLOT.
+
+In many situations it will be possible to record the steps that occur as part of this request being carried out using the corresponding generic ACTION.service. However, there will be many occasions where the required ACTION archetype will be very specific for purpose, as the data requirements for recording provision of many health-related services will need quite unique data elements, recording patterns or pathway steps. For example: ACTION.screening or ACTION.health_education.">
+            misuse = <"Not to be used for a medication order. Use INSTRUCTION.medication_order for this purpose.">
+            copyright = <"© openEHR Foundation, Nasjonal IKT HF, openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"Quadro generico di richiesta per un servizio o un'attività sanitaria che deve essere fornita da un medico, da un'organizzazione o da un'agenzia.">
+            keywords = <"richiesta, ordine, servizio, fornire, indirizzamento", ...>
+            use = <"Usato per registrare la richiesta di un servizio o di un'attività sanitaria da parte di un clinico, di un'organizzazione o di un'agenzia.
+
+Questo archetipo è stato progettato come una cornice che possa essere utilizzata come base per:
+- una richiesta da un clinico, organizzazione o agenzia ad un altro clinico, organizzazione o agenzia per un servizio sanitario. Per esempio: la richiesta di un medico specialista per un trattamento o un secondo parere clinico; il trasferimento delle cure a un reparto di emergenza; il monitoraggio dei segni vitali ogni quattro ore; e la fornitura di servizi a domicilio da parte di un consiglio comunale; oppure
+- una richiesta di un servizio di follow-up da programmare per lo stesso clinico, organizzazione o agenzia. Ad esempio: un appuntamento di controllo in ambulatorio in 6 settimane. 
+
+Casi d'uso clinico:
+- si prenda in considerazione l'idea di un clinico che ordini un appuntamento di follow-up tra 6 settimane. L'\"Appuntamento di follow-up\" sarà il \"Nome del servizio\". Se si inseriscono '6 settimane' come tempistica proposta per l'appuntamento nell'interfaccia utente, il sistema clinico registrerà la data a sei settimane da oggi nell'elemento \"Tempistica per la fornitura del servizio\".
+- si consideri un clinico che ordina l'educazione al diabete come 'Nome del servizio'. I valori per 'Motivo della richiesta' possono essere 'Nuova diagnosi' e 'Prevenzione della chetoacidosi'. L'\"Indicazione clinica\" sarà \"Diabete di tipo 1\", che può essere collegato all'archetipo Problem Diagnosis e/o a Laboratory test results. Se è richiesto un corso di 4 settimane, con sessioni organizzate a intervalli settimanali in 4 occasioni separate, allora la complessa tempistica richiede l'uso dell'archetipo CLUSTER.service_direction e dell'associato CLUSTER.timing_nondaily.
+- si prenda in considerazione un medico che ordina un esame del sangue ricorrente, come ad esempio un INR. La complessa tempistica per questo richiede l'uso del CLUSTER.service_direction e dell'archetipo CLUSTER.timing_nondaily associato per definire ogni tempistica in una sequenza di test, come ad esempio \"giornalmente per una settimana, settimanalmente per 4 settimane, mensilmente per 6 mesi\".
+
+Il presupposto di default per questo archetipo è che si tratti di una richiesta per un singolo servizio. Se è richiesta una serie di servizi, utilizzare l'archetipo CLUSTER.service_direction all'interno dello SLOT 'Tempistica Complessa'.
+
+In molte situazioni sarà possibile registrare i passaggi che si verificano nell'ambito di questa richiesta che viene effettuata utilizzando il corrispondente generico ACTION.service. Tuttavia, ci saranno molte occasioni in cui l'archetipo di ACTION richiesto sarà molto specifico per lo scopo, in quanto i requisiti di dati per la registrazione della fornitura di molti servizi sanitari avranno bisogno di elementi, pattern di registrazione o fasi di percorso piuttosto unici. Ad esempio: ACTION.screening o ACTION. health_education.
+
+
+
+">
+            misuse = <"">
+            copyright = <"© openEHR Foundation, Nasjonal IKT HF, openEHR Foundation">
+        >
+    >
+
+definition
+    INSTRUCTION[at0000] matches {    -- Therapeutic activity
+        activities cardinality matches {0..*; unordered} matches {
+            ACTIVITY[at0001] occurrences matches {1..*} matches {    -- Current Activity
+                description matches {
+                    ITEM_TREE[at0009] matches {
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0121] occurrences matches {1} matches {    -- Activity name
+                                value matches {
+                                    DV_TEXT[at9001]
+                                }
+                            }
+                            ELEMENT[at0148] occurrences matches {0..1} matches {    -- Activity type
+                                value matches {
+                                    DV_TEXT[at9002]
+                                }
+                            }
+                            ELEMENT[at0135] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9003]
+                                }
+                            }
+                            ELEMENT[at0062] matches {    -- Reason for order
+                                value matches {
+                                    DV_TEXT[at9004]
+                                }
+                            }
+                            ELEMENT[at0064] occurrences matches {0..1} matches {    -- Reason description
+                                value matches {
+                                    DV_TEXT[at9005]
+                                }
+                            }
+                            ELEMENT[at0152] matches {    -- Clinical indication
+                                value matches {
+                                    DV_TEXT[at9006]
+                                }
+                            }
+                            ELEMENT[at0065] matches {    -- Intent
+                                value matches {
+                                    DV_TEXT[at9007]
+                                }
+                            }
+                            ELEMENT[at0068] occurrences matches {0..1} matches {    -- Urgency
+                                value matches {
+                                    DV_CODED_TEXT[at9008] matches {
+                                        defining_code matches {[ac9000]}    -- Urgency (synthesised)
+                                    }
+                                    DV_TEXT[at9009]
+                                }
+                            }
+                            ELEMENT[at0040] occurrences matches {0..1} matches {    -- Activityy due
+                                value matches {
+                                    DV_DATE_TIME[at9010]
+                                    DV_INTERVAL<DV_DATE_TIME>[at9011] matches {
+                                        upper matches {
+                                            DV_DATE_TIME[at9012]
+                                        }
+                                        lower matches {
+                                            DV_DATE_TIME[at9013]
+                                        }
+                                    }
+                                    DV_TEXT[at9014]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0151] matches {    -- Complex timing
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.service_direction(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.therapeutic_direction\.v1\..*/}
+                            }
+                            ELEMENT[at0145] occurrences matches {0..1} matches {    -- Activity period start
+                                value matches {
+                                    DV_DATE_TIME[at9015]
+                                }
+                            }
+                            ELEMENT[at0144] occurrences matches {0..1} matches {    -- Activity period expiry
+                                value matches {
+                                    DV_DATE_TIME[at9016]
+                                }
+                            }
+                            ELEMENT[at0147] occurrences matches {0..1} matches {    -- Indefinite?
+                                value matches {
+                                    DV_BOOLEAN[at9017] matches {
+                                        value matches {True}
+                                    }
+                                }
+                            }
+                            allow_archetype CLUSTER[at0132] matches {    -- Specific details
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                            allow_archetype CLUSTER[at0149] matches {    -- Supporting information
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                            }
+                            ELEMENT[at0076] occurrences matches {0..1} matches {    -- Supplementary information
+                                value matches {
+                                    DV_BOOLEAN[at9018] matches {
+                                        value matches {True}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0078] occurrences matches {0..1} matches {    -- Information description
+                                value matches {
+                                    DV_TEXT[at9019]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0116] matches {    -- Patient requirements
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                            ELEMENT[at0150] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_TEXT[at9020]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0008] matches {
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Requester order identifier
+                        value matches {
+                            DV_TEXT[at9021]
+                            DV_IDENTIFIER[at9022]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0141] occurrences matches {0..1} matches {    -- Requester
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Receiver order identifier
+                        value matches {
+                            DV_TEXT[at9023]
+                            DV_IDENTIFIER[at9024]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0142] occurrences matches {0..1} matches {    -- Receiver
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0127] occurrences matches {0..1} matches {    -- Order status
+                        value matches {
+                            DV_TEXT[at9025]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0128] matches {    -- Distribution list
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.distribution\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0112] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"*Therapeutic activity (en)">
+                description = <"Forespørsel om utførelse av en helsetjeneste, til annet helsepersonell eller andre organisasjoner.">
+            >
+            ["at0001"] = <
+                text = <"Forespørsel">
+                description = <"Beskrivelse av tjenesten som forespørres.">
+            >
+            ["at0010"] = <
+                text = <"Rekvisisjonsidentifikator">
+                description = <"Den lokale identifikatoren tilordnet av systemet til den som forespør tjenesten.">
+                comment = <"Som regel tilsvarende HL7 Placer Order Identifier.">
+            >
+            ["at0011"] = <
+                text = <"Mottakers rekvisisjonsidentifikator">
+                description = <"Rekvisisjonens identifikator, tilordnet av den som mottar forespørselen.">
+                comment = <"Som regel tilsvarende HL7 Filler Order Identifier.">
+            >
+            ["at0040"] = <
+                text = <"*Activityy due (en)">
+                description = <"*Dato/tid, eller akseptabelt intervall av dato/tid, da tjenesten skal utføres.">
+                comment = <"Dette dataelementet tillater registrering av timing for én tjeneste, enten som dato/tid, intervall av dato/tid, eller som en tekstbeskrivelsen som kan understøtte \"neste tilgjengelige\". I praksis vil klinikere ofte tenke i omtrentlig timing, for eksempel \"revurdering om 3 måneder, 6 måneder eller 12 måneder. Siden kliniske systemer trenger mer eksakte tidsangivelser, vil \"3 måneder\" som regel konverteres til en eksakt dato 3 måneder fra registreringsdatoen, og lagres i dette dataelementet. Dersom det er behov for kompleks timing eller sekvenser av timing, bruk arketypen CLUSTER.service_direction i SLOTet \"Kompleks timing\". I disse tilfellene blir dette dataelementet redundant.">
+            >
+            ["at0062"] = <
+                text = <"*Reason for order (en)">
+                description = <"*A short phrase describing the reason for the order. (en)">
+                comment = <"*Coding of the 'Reason for order' with a coding system is desirable, if available. This data element allows multiple occurrences to enable the user to record a multiple responses, if required. (en)">
+            >
+            ["at0064"] = <
+                text = <"Årsaksbeskrivelse">
+                description = <"Fritekstbeskrivelse av årsaken til forespørselen.">
+            >
+            ["at0065"] = <
+                text = <"Hensikt">
+                description = <"*Description of the intent for the order. (en)">
+                comment = <"*Coding of the 'Intent' with a coding system is desirable, if available. This data element allows multiple occurrences to enable the user to record a multiple responses, if required. (en)">
+            >
+            ["at0068"] = <
+                text = <"Hastegrad">
+                description = <"*Urgency of the order. (en)">
+                comment = <"*Specific definitions of emergency and urgent will vary between clinical contexts, clinical systems and the nature of the request itself, so have not been defined in this archetype. If explicit timing is required then the Activity period should be clearly stated. (en)">
+            >
+            ["at0076"] = <
+                text = <"Supplerende informasjon">
+                description = <"*Supplementary information will be following the order. (en)">
+                comment = <"Registrer som SANN dersom ytterligere informasjon er identifisert, og vil bli ettersendt når den er tilgjengelig. For eksempel: ufullstendige prøvesvar.">
+            >
+            ["at0078"] = <
+                text = <"Informasjonsbeskrivelse">
+                description = <"Beskrivelse av den supplerende informasjonen.">
+            >
+            ["at0112"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0116"] = <
+                text = <"Pasientens behov">
+                description = <"*Language, transport or other personal requirements to support the patient's attendance or participation in carrying out the activity. (en)">
+            >
+            ["at0121"] = <
+                text = <"*Activity name (en)">
+                description = <"Navn på forespurt tjeneste.">
+                comment = <"*Coding of the 'Activity name' with a coding system is desirable, if available. For example: 'recommendation to rest in bed'; 'apply ice for 20 minutes every 2 hours'. (en)">
+            >
+            ["at0127"] = <
+                text = <"*Order status (en)">
+                description = <"*The status of the order for the activity as indicated by the requester. (en)">
+                comment = <"Status brukes for å vise om dette er den primære forespørselen, en endring eller supplerende informasjon. Koding med en terminologi foretrekkes, der det er mulig.">
+            >
+            ["at0128"] = <
+                text = <"Svarmottakere">
+                description = <"En liste over personer eller organisasjoner som bør motta svar på forespørselen.">
+            >
+            ["at0132"] = <
+                text = <"Spesifikke detaljer">
+                description = <"*Additional detail about the activity ordered. (en)">
+            >
+            ["at0135"] = <
+                text = <"Beskrivelse">
+                description = <"*Narrative description about the activity ordered. (en)">
+                comment = <"*This data point should be used to describe the named activity in more detail, including how it should be delivered, individual concerns and issues that might be encountered in carrying out the activity. (en)">
+            >
+            ["at0136"] = <
+                text = <"Akutt">
+                description = <"Forespørselen krever øyeblikkelig oppmerksomhet.">
+            >
+            ["at0137"] = <
+                text = <"Haster">
+                description = <"Forespørselen krever prioritert oppmerksomhet.">
+            >
+            ["at0138"] = <
+                text = <"Rutine">
+                description = <"Forespørslene krever ikke prioritert oppmerksomhet.">
+            >
+            ["at0141"] = <
+                text = <"Rekvirent">
+                description = <"Detaljer om helsepersonellet eller organisasjonen som har forespurt tjenesten.">
+            >
+            ["at0142"] = <
+                text = <"Mottaker">
+                description = <"Detaljer om helsepersonellet eller organisasjonen som mottar tjenesteforespørselen.">
+            >
+            ["at0144"] = <
+                text = <"*Activity period expiry (en)">
+                description = <"*The date/time that marks the conclusion of the clinically valid period of time for carrying out this activity. (en)">
+                comment = <"*This date/time is the equivalent to the latest possible date for carrying out the activity or to the date of expiry for this order. For example: an activity may be required to be completed before another event, such as scheduled surgery. (en)">
+            >
+            ["at0145"] = <
+                text = <"*Activity period start (en)">
+                description = <"*The date/time that marks the beginning of the valid period of time for delivery of this activity. (en)">
+                comment = <"*This date/time is the equivalent to the earliest possible date for carrying out the activity. For example: sometimes a certain amount of time must pass before an activity can be carried out. For example: 'start mobilisation 2 days post surgery'. (en)">
+            >
+            ["at0147"] = <
+                text = <"Uavgrenset?">
+                description = <"*The valid period for this order is open ended and has no date of expiry. (en)">
+                comment = <"*Record as TRUE to record explicity that the order has no expiry date. For example: required for a lifelong activity. (en)">
+            >
+            ["at0148"] = <
+                text = <"*Activity type (en)">
+                description = <"*Category of therapy or activity ordered. (en)">
+                comment = <"*Coding of the 'Activity type' with a coding system is desirable, if available. If the 'Therapy name' was coded, it is possible for this data point to be derived from the code. For example: 'Self-care intervention'. (en)">
+            >
+            ["at0149"] = <
+                text = <"Understøttende informasjon">
+                description = <"*Digital document, image, video or diagram supplied as additional information to support or inform the order. (en)">
+            >
+            ["at0150"] = <
+                text = <"Kommentar">
+                description = <"*Additional narrative about the activity order not captured in other fields. (en)">
+            >
+            ["at0151"] = <
+                text = <"Kompeks timing">
+                description = <"*Details about a complex order requiring a sequence of timings. (en)">
+            >
+            ["at0152"] = <
+                text = <"Klinisk indikasjon">
+                description = <"Den kliniske årsaken for den forespurte tjenesten.">
+                comment = <"*Coding of the clinical indication with a terminology is preferred, where possible. This data element allows multiple occurrences. For example: 'Sprained ankle' or 'Type 1 Diabetes mellitus'. (en)">
+            >
+            ["ac9000"] = <
+                text = <"Hastegrad (synthesised)">
+                description = <"*Urgency of the order. (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Therapeutic activity">
+                description = <"An order or instruction for a health-related therapy or activity to be carried out.">
+            >
+            ["at0001"] = <
+                text = <"Current Activity">
+                description = <"Current Activity.">
+            >
+            ["at0010"] = <
+                text = <"Requester order identifier">
+                description = <"The local identifier assigned by the requesting clinical system.">
+                comment = <"Usually equivalent to the HL7 Placer Order Identifier.">
+            >
+            ["at0011"] = <
+                text = <"Receiver order identifier">
+                description = <"The local identifier assigned to the request by the clinician or organisation receiving the request for therapy.">
+                comment = <"Usually equivalent to the HL7 Filler Order Identifier.">
+            >
+            ["at0040"] = <
+                text = <"Activityy due">
+                description = <"The date/time, or acceptable interval of date/time, for provision of the therapy.">
+                comment = <"This data element allows for recording of the timing for a single therapy, either as a date and time, a date ranges or a text descriptor which can allow for 'next available. In practice, clinicians will often think in terms of ordering therapys as approximate timing, for example: review in 3 months, 6 months or 12 months. As clinical systems need more exact parameters to operate on, this '3 months' will usually be converted to an exact date 3 months from the date of recording and stored using this data element. If complex timing or sequences of timings are required, use the CLUSTER.service_direction archetype within the 'Complex timing' SLOT and this data element becomes redundant.">
+            >
+            ["at0062"] = <
+                text = <"Reason for order">
+                description = <"A short phrase describing the reason for the order.">
+                comment = <"Coding of the 'Reason for order' with a coding system is desirable, if available. This data element allows multiple occurrences to enable the user to record a multiple responses, if required.">
+            >
+            ["at0064"] = <
+                text = <"Reason description">
+                description = <"Narrative description about the reason for request.">
+            >
+            ["at0065"] = <
+                text = <"Intent">
+                description = <"Description of the intent for the order.">
+                comment = <"Coding of the 'Intent' with a coding system is desirable, if available. This data element allows multiple occurrences to enable the user to record a multiple responses, if required.">
+            >
+            ["at0068"] = <
+                text = <"Urgency">
+                description = <"Urgency of the order.">
+                comment = <"Specific definitions of emergency and urgent will vary between clinical contexts, clinical systems and the nature of the request itself, so have not been defined in this archetype. If explicit timing is required then the Activity period should be clearly stated.">
+            >
+            ["at0076"] = <
+                text = <"Supplementary information">
+                description = <"Supplementary information will be following the order.">
+                comment = <"Record as TRUE if additional information has been identified and will be forwarded when available. For example: pending test results.">
+            >
+            ["at0078"] = <
+                text = <"Information description">
+                description = <"Description of the supplementary information.">
+            >
+            ["at0112"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0116"] = <
+                text = <"Patient requirements">
+                description = <"Language, transport or other personal requirements to support the patient's attendance or participation in carrying out the activity.">
+            >
+            ["at0121"] = <
+                text = <"Activity name">
+                description = <"The name of the single therapy or activity requested.">
+                comment = <"Coding of the 'Activity name' with a coding system is desirable, if available. For example: 'recommendation to rest in bed'; 'apply ice for 20 minutes every 2 hours'.">
+            >
+            ["at0127"] = <
+                text = <"Order status">
+                description = <"The status of the order for the activity as indicated by the requester.">
+                comment = <"Status is used to denote whether this is the initial request, or a follow-up request to change or provide supplementary information. Coding with a terminology is preferred, where possible.">
+            >
+            ["at0128"] = <
+                text = <"Distribution list">
+                description = <"Details of additional clinicians, organisations or agencies who require copies of any communication.">
+            >
+            ["at0132"] = <
+                text = <"Specific details">
+                description = <"Additional detail about the activity ordered.">
+            >
+            ["at0135"] = <
+                text = <"Description">
+                description = <"Narrative description about the activity ordered.">
+                comment = <"This data point should be used to describe the named activity in more detail, including how it should be delivered, individual concerns and issues that might be encountered in carrying out the activity.">
+            >
+            ["at0136"] = <
+                text = <"Emergency">
+                description = <"The request requires immediate attention.">
+            >
+            ["at0137"] = <
+                text = <"Urgent">
+                description = <"The request requires prioritised attention.">
+            >
+            ["at0138"] = <
+                text = <"Routine">
+                description = <"The request does not require prioritised scheduling.">
+            >
+            ["at0141"] = <
+                text = <"Requester">
+                description = <"Details about the clinician or organisation requesting the therapy.">
+            >
+            ["at0142"] = <
+                text = <"Receiver">
+                description = <"Details about the clinician or organisation receiving the request for therapy.">
+            >
+            ["at0144"] = <
+                text = <"Activity period expiry">
+                description = <"The date/time that marks the conclusion of the clinically valid period of time for carrying out this activity.">
+                comment = <"This date/time is the equivalent to the latest possible date for carrying out the activity or to the date of expiry for this order. For example: an activity may be required to be completed before another event, such as scheduled surgery.">
+            >
+            ["at0145"] = <
+                text = <"Activity period start">
+                description = <"The date/time that marks the beginning of the valid period of time for delivery of this activity.">
+                comment = <"This date/time is the equivalent to the earliest possible date for carrying out the activity. For example: sometimes a certain amount of time must pass before an activity can be carried out. For example: 'start mobilisation 2 days post surgery'.">
+            >
+            ["at0147"] = <
+                text = <"Indefinite?">
+                description = <"The valid period for this order is open ended and has no date of expiry.">
+                comment = <"Record as TRUE to record explicity that the order has no expiry date. For example: required for a lifelong activity.">
+            >
+            ["at0148"] = <
+                text = <"Activity type">
+                description = <"Category of therapy or activity ordered.">
+                comment = <"Coding of the 'Activity type' with a coding system is desirable, if available. If the 'Therapy name' was coded, it is possible for this data point to be derived from the code. For example: 'Self-care intervention'.">
+            >
+            ["at0149"] = <
+                text = <"Supporting information">
+                description = <"Digital document, image, video or diagram supplied as additional information to support or inform the order.">
+            >
+            ["at0150"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the activity order not captured in other fields.">
+            >
+            ["at0151"] = <
+                text = <"Complex timing">
+                description = <"Details about a complex order requiring a sequence of timings.">
+            >
+            ["at0152"] = <
+                text = <"Clinical indication">
+                description = <"The clinical reason for the ordered therapy.">
+                comment = <"Coding of the clinical indication with a terminology is preferred, where possible. This data element allows multiple occurrences. For example: 'Sprained ankle' or 'Type 1 Diabetes mellitus'.">
+            >
+            ["ac9000"] = <
+                text = <"Urgency (synthesised)">
+                description = <"Urgency of the order. (synthesised)">
+            >
+        >
+        ["it"] = <
+            ["at0000"] = <
+                text = <"*Therapeutic activity (en)">
+                description = <"Richiesta di un servizio o di un'attività sanitaria da parte di un clinico, di un'organizzazione o di un'agenzia.">
+            >
+            ["at0001"] = <
+                text = <"Attività corrente">
+                description = <"Attività corrente.">
+            >
+            ["at0010"] = <
+                text = <"Identificativo dell'ordine per il richiedente">
+                description = <"L'identificativo locale assegnato dal sistema clinico richiedente.">
+                comment = <"Di solito equivalente a HL7 Placer Order Identifier.">
+            >
+            ["at0011"] = <
+                text = <"Identificativo dell'ordine per il ricevente">
+                description = <"L'identificativo locale assegnato alla richiesta dal clinico o dall'organizzazione che riceve la richiesta per il servizio.">
+                comment = <"Di solito equivalente a  HL7 Filler Order Identifier.">
+            >
+            ["at0040"] = <
+                text = <"*Activityy due (en)">
+                description = <"*La data/ora, o intervallo accettabile di data/ora, per la fornitura del servizio.">
+                comment = <"Questo dato permette di registrare la tempistica di un singolo servizio, sia come data e ora, sia come intervallo di date o come descrittore testuale che possa consentire l'immediata disponibilità. In pratica, i medici penseranno spesso in termini di ordini di servizi come tempistiche approssimative, ad esempio: revisione in 3 mesi, 6 mesi o 12 mesi. Poiché i sistemi clinici hanno bisogno di parametri più precisi per funzionare, questi \"3 mesi\" saranno di solito convertiti in una data esatta a 3 mesi dalla data di registrazione e memorizzati utilizzando questo dato. Se sono necessari tempi complessi o sequenze di temporizzazioni complesse, utilizzare l'archetipo CLUSTER.service_direction all'interno dello SLOT 'Tempistica Complessa' e questo dato diventa ridondante.">
+            >
+            ["at0062"] = <
+                text = <"*Reason for order (en)">
+                description = <"*A short phrase describing the reason for the order. (en)">
+                comment = <"*Coding of the 'Reason for order' with a coding system is desirable, if available. This data element allows multiple occurrences to enable the user to record a multiple responses, if required. (en)">
+            >
+            ["at0064"] = <
+                text = <"Descrizione del motivo">
+                description = <"Descrizione narrativa del motivo della richiesta.">
+            >
+            ["at0065"] = <
+                text = <"Intento">
+                description = <"*Description of the intent for the order. (en)">
+                comment = <"*Coding of the 'Intent' with a coding system is desirable, if available. This data element allows multiple occurrences to enable the user to record a multiple responses, if required. (en)">
+            >
+            ["at0068"] = <
+                text = <"Urgenza">
+                description = <"*Urgency of the order. (en)">
+                comment = <"*Specific definitions of emergency and urgent will vary between clinical contexts, clinical systems and the nature of the request itself, so have not been defined in this archetype. If explicit timing is required then the Activity period should be clearly stated. (en)">
+            >
+            ["at0076"] = <
+                text = <"Informazioni supplementari">
+                description = <"*Supplementary information will be following the order. (en)">
+                comment = <"Registrare come VERO se sono state identificate informazioni aggiuntive che saranno trasmesse quando disponibili. Ad esempio: in attesa dei risultati del test.">
+            >
+            ["at0078"] = <
+                text = <"Descrizione delle informazioni">
+                description = <"Descrizione delle informazioni supplementari.">
+            >
+            ["at0112"] = <
+                text = <"Estensione">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0116"] = <
+                text = <"Requisiti per il paziente">
+                description = <"*Language, transport or other personal requirements to support the patient's attendance or participation in carrying out the activity. (en)">
+            >
+            ["at0121"] = <
+                text = <"*Activity name (en)">
+                description = <"Il nome del singolo servizio o attività richiesti.">
+                comment = <"*Coding of the 'Activity name' with a coding system is desirable, if available. For example: 'recommendation to rest in bed'; 'apply ice for 20 minutes every 2 hours'. (en)">
+            >
+            ["at0127"] = <
+                text = <"*Order status (en)">
+                description = <"*The status of the order for the activity as indicated by the requester. (en)">
+                comment = <"Lo stato è usato per indicare se questa è la richiesta iniziale, o una richiesta successiva per cambiare o fornire informazioni supplementari. La codifica con una terminologia è preferibile, ove possibile.">
+            >
+            ["at0128"] = <
+                text = <"Lista di distribuzione">
+                description = <"Dettagli di altri medici, organizzazioni o agenzie che richiedono copie di qualsiasi comunicazione.">
+            >
+            ["at0132"] = <
+                text = <"Dettagli specifici">
+                description = <"*Additional detail about the activity ordered. (en)">
+            >
+            ["at0135"] = <
+                text = <"Descrizione">
+                description = <"*Narrative description about the activity ordered. (en)">
+                comment = <"*This data point should be used to describe the named activity in more detail, including how it should be delivered, individual concerns and issues that might be encountered in carrying out the activity. (en)">
+            >
+            ["at0136"] = <
+                text = <"Emergenza">
+                description = <"La richiesta richiede un'attenzione immediata.">
+            >
+            ["at0137"] = <
+                text = <"Urgente">
+                description = <"La richiesta richiede un'attenzione prioritaria. ">
+            >
+            ["at0138"] = <
+                text = <"Routine">
+                description = <"La richiesta non richiede una programmazione con priorità.">
+            >
+            ["at0141"] = <
+                text = <"Richiedente">
+                description = <"Dettagli sul clinico o sull'organizzazione che richiede il servizio.">
+            >
+            ["at0142"] = <
+                text = <"Ricevente">
+                description = <"Dettagli sul clinico o sull'organizzazione che riceve la richiesta di servizio.">
+            >
+            ["at0144"] = <
+                text = <"*Activity period expiry (en)">
+                description = <"*The date/time that marks the conclusion of the clinically valid period of time for carrying out this activity. (en)">
+                comment = <"*This date/time is the equivalent to the latest possible date for carrying out the activity or to the date of expiry for this order. For example: an activity may be required to be completed before another event, such as scheduled surgery. (en)">
+            >
+            ["at0145"] = <
+                text = <"*Activity period start (en)">
+                description = <"*The date/time that marks the beginning of the valid period of time for delivery of this activity. (en)">
+                comment = <"*This date/time is the equivalent to the earliest possible date for carrying out the activity. For example: sometimes a certain amount of time must pass before an activity can be carried out. For example: 'start mobilisation 2 days post surgery'. (en)">
+            >
+            ["at0147"] = <
+                text = <"Indefinito?">
+                description = <"*The valid period for this order is open ended and has no date of expiry. (en)">
+                comment = <"*Record as TRUE to record explicity that the order has no expiry date. For example: required for a lifelong activity. (en)">
+            >
+            ["at0148"] = <
+                text = <"*Activity type (en)">
+                description = <"*Category of therapy or activity ordered. (en)">
+                comment = <"*Coding of the 'Activity type' with a coding system is desirable, if available. If the 'Therapy name' was coded, it is possible for this data point to be derived from the code. For example: 'Self-care intervention'. (en)">
+            >
+            ["at0149"] = <
+                text = <"Informazione di supporto">
+                description = <"*Digital document, image, video or diagram supplied as additional information to support or inform the order. (en)">
+            >
+            ["at0150"] = <
+                text = <"Commento">
+                description = <"*Additional narrative about the activity order not captured in other fields. (en)">
+            >
+            ["at0151"] = <
+                text = <"Tempistica complessa">
+                description = <"*Details about a complex order requiring a sequence of timings. (en)">
+            >
+            ["at0152"] = <
+                text = <"Indicazione clinica">
+                description = <"La motivazione clinica del servizio ordinato.">
+                comment = <"*Coding of the clinical indication with a terminology is preferred, where possible. This data element allows multiple occurrences. For example: 'Sprained ankle' or 'Type 1 Diabetes mellitus'. (en)">
+            >
+            ["ac9000"] = <
+                text = <"Urgenza (synthesised)">
+                description = <"*Urgency of the order. (en) (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0136", "at0137", "at0138">
+        >
+    >

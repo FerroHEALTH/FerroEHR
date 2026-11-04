@@ -1,0 +1,1358 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3bba47ec-ca74-434f-b0db-1257dbf945b8; build_uid=b82835ec-7181-4c0b-aa6a-89399d1a6e5f)
+    openEHR-EHR-OBSERVATION.charlson_comorbidity_index.v2.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Liv Laugen">
+                ["organisation"] = <"Oslo universitetssykehus, ​Oslo University Hospital, Norway">
+                ["email"] = <"liv.laugen@ous-hf.no">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Santiago Frid">
+                ["organisation"] = <"Hospital Clínic de Barcelona">
+                ["email"] = <"frid@clinic.cat">
+            >
+            accreditation = <"Santiago Frid, Spain, frid@clinic.cat">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Liv Laugen">
+        ["organisation"] = <"Oslo universitetssykehus">
+        ["email"] = <"liv.laugen@ous-hf.no">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Stein Arne Rimehaug, Sunnaas sykehus, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Hugo Claudio Briceño García, Catsalut, Spain", "Ian Bull, ACT Health, Australia", "Stefan Dubois, Dep't of Pathology and Genetics, University Hospitals of Lund and Malmö, Sweden", "Heather Grain, Llewelyn Grain Informatics, Australia", "Mikkel Johan Gaup Grønmo, Helse Nord IKT, Norway (openEHR Editor)", "Elin Hallan Naderi, OUS, Norway", "Amanda Herbrand, University Hospital Basel, Switzerland", "Evelyn Hovenga, EJSH Consulting, Australia", "Anjali Kulkarni, Karkinos, India", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Darin Leonhardt, PLRI, Germany", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Michael Lutz, BITsoft, Germany", "Terje Nordberg, Helse Bergen, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Helge Pettersen, Helse Bergen, Norway", "Ragnhild Schultz, OUS, Norway", "Benjamin Senst, Germany", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Olav Thorsen, Stavanger University Hospital, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Henriette Krogh, Helsedirektoratet, Norway", "Hanne Marte Bårholm, Helse Vest IKT, Norway (Nasjonal IKT redaktør)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Charlson ME, Pompei P, Ales KL, MacKenzie CR. A new method of classifying prognostic comorbidity in longitudinal studies: development and validation. J Chronic Dis. 1987;40(5):373-83. doi: 10.1016/0021-9681(87)90171-8. PubMed PMID: 3558716. Available from: https://www.sciencedirect.com/science/article/pii/0021968187901718?via%3Dihub.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"2BE8724AC5D59132F1D82C66EF12D370">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere resultatet for hver komponentparameter i Charlson Comorbidity Index (CCI) og dens totale sum, og for å beregne estimert overlevelsesrate etter 10 år.">
+            keywords = <"CCI", "komorbiditet", "samtidige tilstander", "estimert overlevelse", "dødelighet", "multimorbiditet", "risiko", "prognose", "risikovurdering">
+            use = <"Brukes for å registrere resultatet for hver komponentparameter i Charlson Comorbidity Index (CCI) og dens totale sum, og for å beregne estimert overlevelsesrate etter 10 år.
+
+Datasettet og tilhørende verdier er fra den opprinnelige Charlson-studien i 1987.
+
+I den originale artikkelen var det listet opp 19 tilstander, hvor flere hadde separate representasjoner av samme tilstand, men med ulik alvorlighetsgrad. I denne arketypen har disse tilstandene blitt gruppert sammen - for eksempel er de to tilstandene \"Mild leversykdom\" og \"Moderat til alvorlig leversykdom\" verdier gruppert under tilstanden \"Leversykdom\". Som et resultat er bare 16 tilstander representert i denne arketypen
+
+Notat: Per dags dato finnes det ingen validert norsk oversettelse av verktøyet. Denne oversettelsen av arketypen er basert på ordlyden i diverse skjema på norsk og ved bruk av medisinske ordbøker og tilbakemeldinger fra den norske høringen av arketypen.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the result for each component parameter of the Charlson Comorbidity Index (CCI) and its total sum, and to calculate the 10 year estimated survival.">
+            keywords = <"CCI", "comorbidity", "concurrent conditions", "estimated survival", "mortality", "prognosis", "assessment", "risk">
+            use = <"To record the result for each component parameter of the Charlson Comorbidity Index (CCI) and its total sum, and to calculate the 10 year estimated survival.
+
+This data and value set is from the original Charlson et al study in 1987.
+In the original paper, 19 'conditions' were represented, including a number that had separate representations of the same condition, but with different severity. In this archetype, these conditions have been grouped together - for example, 'Mild liver disease' and 'Moderate to severe liver disease' are values under the condition 'Liver disease'. As a result, there are only 16 conditions represented in this archetype.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar el resultado para cada parámetro componente del Índice de Comorbilidad de Charlson (CCI) y su suma total, y calcular la supervivencia estimada a 10 años.">
+            keywords = <"CCI", "comorbilidad", "condiciones concurrentes", "supervivencia estimada", "mortalidad", "pronóstico", "evaluación", "riesgo">
+            use = <"Registrar el resultado para cada parámetro componente del Índice de Comorbilidad de Charlson (CCI) y su suma total, y calcular la supervivencia estimada a 10 años.
+
+Estos datos y el conjunto de valores provienen del estudio original de Charlson y colaboradores en 1987.
+En el artículo original, se representaron 19 'enfermedades', incluyendo varias que tenían representaciones separadas de la misma condición, pero con diferente gravedad. En este arquetipo, estas condiciones se han agrupado juntas, por ejemplo, 'Enfermedad hepática leve' y 'Enfermedad hepática moderada a grave' son valores bajo la condición 'Enfermedad hepática'. Como resultado, este arquetipo representa solo 16 condiciones.">
+            misuse = <"">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Charlson Comorbidity Index (CCI)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0061] occurrences matches {0..1} matches {    -- Age group
+                                        value matches {
+                                            DV_ORDINAL[at9018] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0062]}],    -- <50 years
+                                                    [{1}, {[at0063]}],    -- 50–59 years
+                                                    [{2}, {[at0064]}],    -- 60-69 years
+                                                    [{3}, {[at0065]}],    -- 70–79 years
+                                                    [{4}, {[at0066]}]    -- ≥80 years
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Myocardial infarction
+                                        value matches {
+                                            DV_ORDINAL[at9019] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0013]}],    -- No
+                                                    [{1}, {[at0014]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Congestive heart failure
+                                        value matches {
+                                            DV_ORDINAL[at9020] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0010]}],    -- No
+                                                    [{1}, {[at0011]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Peripheral vascular disease
+                                        value matches {
+                                            DV_ORDINAL[at9021] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0007]}],    -- No
+                                                    [{1}, {[at0008]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Cerebrovascular disease
+                                        value matches {
+                                            DV_ORDINAL[at9022] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0016]}],    -- No
+                                                    [{1}, {[at0017]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Dementia
+                                        value matches {
+                                            DV_ORDINAL[at9023] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0019]}],    -- No
+                                                    [{1}, {[at0020]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Chronic pulmonary disease
+                                        value matches {
+                                            DV_ORDINAL[at9024] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0022]}],    -- No
+                                                    [{1}, {[at0023]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Ulcer disease
+                                        value matches {
+                                            DV_ORDINAL[at9025] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0025]}],    -- No
+                                                    [{1}, {[at0026]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Liver disease
+                                        value matches {
+                                            DV_ORDINAL[at9026] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0028]}],    -- None
+                                                    [{1}, {[at0029]}],    -- Mild
+                                                    [{3}, {[at0067]}]    -- Moderate to severe
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- Connective tissue disease
+                                        value matches {
+                                            DV_ORDINAL[at9027] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0031]}],    -- No
+                                                    [{1}, {[at0032]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0033] occurrences matches {0..1} matches {    -- Diabetes mellitus
+                                        value matches {
+                                            DV_ORDINAL[at9028] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0034]}],    -- None or diet-controlled
+                                                    [{1}, {[at0035]}],    -- Uncomplicated
+                                                    [{2}, {[at0068]}]    -- End-organ damage
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0036] occurrences matches {0..1} matches {    -- Hemiplegia
+                                        value matches {
+                                            DV_ORDINAL[at9029] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0037]}],    -- No
+                                                    [{2}, {[at0038]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0039] occurrences matches {0..1} matches {    -- Moderate or severe renal disease
+                                        value matches {
+                                            DV_ORDINAL[at9030] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0040]}],    -- No
+                                                    [{2}, {[at0041]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0045] occurrences matches {0..1} matches {    -- Solid tumor
+                                        value matches {
+                                            DV_ORDINAL[at9031] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0046]}],    -- None
+                                                    [{2}, {[at0048]}],    -- Localized
+                                                    [{6}, {[at0069]}]    -- Metastatic
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0047] occurrences matches {0..1} matches {    -- Leukemia
+                                        value matches {
+                                            DV_ORDINAL[at9032] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0049]}],    -- No
+                                                    [{2}, {[at0051]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0050] occurrences matches {0..1} matches {    -- Lymphoma
+                                        value matches {
+                                            DV_ORDINAL[at9033] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0052]}],    -- No
+                                                    [{2}, {[at0053]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0060] occurrences matches {0..1} matches {    -- AIDS
+                                        value matches {
+                                            DV_ORDINAL[at9034] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0070]}],    -- No
+                                                    [{6}, {[at0071]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0072] occurrences matches {0..1} matches {    -- CCI total score
+                                        value matches {
+                                            DV_COUNT[at9035]
+                                        }
+                                    }
+                                    ELEMENT[at0073] occurrences matches {0..1} matches {    -- Estimated 10-year survival
+                                        value matches {
+                                            DV_QUANTITY[at9036] matches {
+                                                property matches {[at9017]}    -- Qualified real
+                                                units matches {"%"}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0004] matches {    -- ITEM_TREE
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0074] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Charlson Comorbidity Index (CCI)">
+                description = <"Et verktøy som brukes til å forutsi risikoen for død som følge av komorbide faktorer.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard uspesifisert tidspunkt- eller intervallhendelse som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0006"] = <
+                text = <"Perifere vaskulære sykdommer">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Ja">
+                description = <"Claudicatio intermittens, tidligere bypass på grunn av arteriell insuffisiens, tidligere gangren eller akutt arteriell insuffisiens, ubehandlet thorakalt og/eller abdominalt aneurisme (≥6 cm).">
+            >
+            ["at0009"] = <
+                text = <"Kronisk hjertesvikt">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Ja">
+                description = <"Anstrengelsesdyspné eller paroksysmal nattlig dyspné og har respondert symptomatisk (eller ved fysisk undersøkelse) på digitalis, diuretika eller midler som reduserer afterload.">
+            >
+            ["at0012"] = <
+                text = <"Myokardinfarkt">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Ja">
+                description = <"Tidligere diagnostisert eller sannsynlig hjerteinfarkt (EKG-forandringer og/eller enzymforandringer).">
+            >
+            ["at0015"] = <
+                text = <"Cerebrovaskulær hendelse">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Ja">
+                description = <"Cerebrovaskulær hendelse (CVA) eller transitorisk iskemisk anfall (TIA).">
+            >
+            ["at0018"] = <
+                text = <"Demens">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Ja">
+                description = <"Demens eller kronisk kognitiv svikt.">
+            >
+            ["at0021"] = <
+                text = <"Kronisk lungesykdom">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Ja">
+                description = <"Mild, moderat eller alvorlig kronisk lungesykdom.">
+            >
+            ["at0024"] = <
+                text = <"Ulcussykdom">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Ja">
+                description = <"Enhver behandling av magesårsykdom, blødende magesår,  eller tidligere transfusjonskrevende behandling av gastrointestinal blødning.">
+            >
+            ["at0027"] = <
+                text = <"Leversykdom">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Ingen">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Mild">
+                description = <"Cirrhose uten portal hypertensjon eller kronisk hepatitt.">
+            >
+            ["at0030"] = <
+                text = <"Bindevevssykdom">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Diabetes">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Ingen eller diettkontrollert">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Ukompliser">
+                description = <"Diabetes behandlet med insulin eller orale hypoglykemiske midler, men ikke diett alene.">
+            >
+            ["at0036"] = <
+                text = <"Hemiplegi">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Moderat til alvorlig nyresykdom">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Ja">
+                description = <"Moderat: kreatinin >3 mg/dL (0,27 mmol/L). Alvorlig: i dialyse, er transplantert, har uremi.">
+            >
+            ["at0045"] = <
+                text = <"Solid svulst">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Ingen">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Leukemi">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Lokalisert">
+                description = <"Solid tumor uten dokumenterte metastaser.">
+            >
+            ["at0049"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Lymfom">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"AIDS">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Aldersgruppe">
+                description = <"Alderskategorien til pasienten.">
+            >
+            ["at0062"] = <
+                text = <"<50 år">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"50-59 år">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"60-69 år">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"70-79 år">
+                description = <"">
+            >
+            ["at0066"] = <
+                text = <"≥80 år">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"Moderat til alvorlig">
+                description = <"Moderat: Cirrhose med portal hypertensjon, men uten blødning. Alvorlig: Cirrhose med portal hypertensjon og variceblødning.">
+            >
+            ["at0068"] = <
+                text = <"Organskade">
+                description = <"Diabetes med endeorganskade.">
+            >
+            ["at0069"] = <
+                text = <"Metastatisk">
+                description = <"Metastatisk solid tumor.">
+            >
+            ["at0070"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0071"] = <
+                text = <"Ja">
+                description = <"Bekreftet AIDS eller sannsynlig AIDS ved for eksempel påvist AIDS-relatert tilstand.">
+            >
+            ["at0072"] = <
+                text = <"CCI totalskår">
+                description = <"Summen av poeng for hver enkelt parameter i Charlson Comorbidity Index.">
+            >
+            ["at0073"] = <
+                text = <"Estimert overlevelse etter 10 år">
+                description = <"Den estimerte overlevelsesraten etter 10 år.">
+            >
+            ["at0074"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0004"] = <
+                text = <"ITEM_TREE">
+                description = <"">
+            >
+            ["at9017"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9037"] = <
+                text = <"Aldersgruppe (synthesised)">
+                description = <"Alderskategorien til pasienten. (synthesised)">
+            >
+            ["ac9038"] = <
+                text = <"Myokardinfarkt (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9039"] = <
+                text = <"Kronisk hjertesvikt (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9040"] = <
+                text = <"Perifere vaskulære sykdommer (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9041"] = <
+                text = <"Cerebrovaskulær hendelse (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9042"] = <
+                text = <"Demens (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9043"] = <
+                text = <"Kronisk lungesykdom (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9044"] = <
+                text = <"Ulcussykdom (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9045"] = <
+                text = <"Leversykdom (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9046"] = <
+                text = <"Bindevevssykdom (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9047"] = <
+                text = <"Diabetes (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9048"] = <
+                text = <"Hemiplegi (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9049"] = <
+                text = <"Moderat til alvorlig nyresykdom (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9050"] = <
+                text = <"Solid svulst (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9051"] = <
+                text = <"Leukemi (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9052"] = <
+                text = <"Lymfom (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9053"] = <
+                text = <"AIDS (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Charlson Comorbidity Index (CCI)">
+                description = <"An assessment tool used to predict the risk of death from comorbid disease.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0006"] = <
+                text = <"Peripheral vascular disease">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Yes">
+                description = <"Intermittent claudication or past bypass for chronic arterial insufficiency, history of gangrene or acute arterial insufficiency, or untreated thoracic or abdominal aneurysm (≥6 cm).">
+            >
+            ["at0009"] = <
+                text = <"Congestive heart failure">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Yes">
+                description = <"Exertional or paroxysmal nocturnal dyspnea and has responded to symptomatically (or on physical examination) to digitalis, diuretics, or afterload reducing agents.">
+            >
+            ["at0012"] = <
+                text = <"Myocardial infarction">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Yes">
+                description = <"History of definite or probable Myocardial infarction (EKG changes and/or enzyme changes).">
+            >
+            ["at0015"] = <
+                text = <"Cerebrovascular disease">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Yes">
+                description = <"History of a cerebrovascular accident (CVA) with minor or no residua and transient ischemic attacks (TIA).">
+            >
+            ["at0018"] = <
+                text = <"Dementia">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Yes">
+                description = <"Dementia or chronic cognitive deficit.">
+            >
+            ["at0021"] = <
+                text = <"Chronic pulmonary disease">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Yes">
+                description = <"Mild or moderat or severe chronic pulmonary disease.">
+            >
+            ["at0024"] = <
+                text = <"Ulcer disease">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Yes">
+                description = <"Any history of treatment for ulcer disease or history of ulcer bleeding, or history of gastrointestinal bleeding requiring transfusions from causes other than ulcer disease.">
+            >
+            ["at0027"] = <
+                text = <"Liver disease">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Mild">
+                description = <"Cirrhosis without portal hypertension or chronic hepatitis.">
+            >
+            ["at0030"] = <
+                text = <"Connective tissue disease">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Diabetes mellitus">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"None or diet-controlled">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Uncomplicated">
+                description = <"Diabetes treated with insulin or oral hypoglycemics, but not diet alone.">
+            >
+            ["at0036"] = <
+                text = <"Hemiplegia">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Moderate or severe renal disease">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Yes">
+                description = <"Moderate: creatinine >3 mg/dL (0.27 mmol/L). Severe: on dialysis, status post kidney transplant, uremia.">
+            >
+            ["at0045"] = <
+                text = <"Solid tumor">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Leukemia">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Localized">
+                description = <"Solid tumor without documented metastases.">
+            >
+            ["at0049"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Lymphoma">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"AIDS">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Age group">
+                description = <"The age category of the patient.">
+            >
+            ["at0062"] = <
+                text = <"<50 years">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"50–59 years">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"60-69 years">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"70–79 years">
+                description = <"">
+            >
+            ["at0066"] = <
+                text = <"≥80 years">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"Moderate to severe">
+                description = <"Moderate: cirrhosis with portal hypertension, but without bleeding. Severe: cirrhosis with portal hypertension and a history of variceal bleeding.">
+            >
+            ["at0068"] = <
+                text = <"End-organ damage">
+                description = <"Diabetes with end organ damage.">
+            >
+            ["at0069"] = <
+                text = <"Metastatic">
+                description = <"Metastatic solid tumor.">
+            >
+            ["at0070"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0071"] = <
+                text = <"Yes">
+                description = <"Patients with define or probable AIDS, i.e. AIDS related complex.">
+            >
+            ["at0072"] = <
+                text = <"CCI total score">
+                description = <"The total sum of each component variable for the Charlson Comorbidity Index.">
+            >
+            ["at0073"] = <
+                text = <"Estimated 10-year survival">
+                description = <"The predicted 10-year survival rate.">
+            >
+            ["at0074"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0004"] = <
+                text = <"ITEM_TREE">
+                description = <"">
+            >
+            ["at9017"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+            ["ac9037"] = <
+                text = <"Age group (synthesised)">
+                description = <"The age category of the patient. (synthesised)">
+            >
+            ["ac9038"] = <
+                text = <"Myocardial infarction (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9039"] = <
+                text = <"Congestive heart failure (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9040"] = <
+                text = <"Peripheral vascular disease (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9041"] = <
+                text = <"Cerebrovascular disease (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9042"] = <
+                text = <"Dementia (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9043"] = <
+                text = <"Chronic pulmonary disease (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9044"] = <
+                text = <"Ulcer disease (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9045"] = <
+                text = <"Liver disease (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9046"] = <
+                text = <"Connective tissue disease (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9047"] = <
+                text = <"Diabetes mellitus (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9048"] = <
+                text = <"Hemiplegia (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9049"] = <
+                text = <"Moderate or severe renal disease (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9050"] = <
+                text = <"Solid tumor (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9051"] = <
+                text = <"Leukemia (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9052"] = <
+                text = <"Lymphoma (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9053"] = <
+                text = <"AIDS (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Índice de Comorbilidad de Charlson (CCI)">
+                description = <"Una herramienta de evaluación utilizada para predecir el riesgo de muerte por enfermedades comórbidas.">
+            >
+            ["at0002"] = <
+                text = <"Cualquier evento">
+                description = <"Por defecto, punto en el tiempo no especificado o evento de intervalo que puede ser definido explícitamente en una plantilla o durante la ejecución.">
+            >
+            ["at0006"] = <
+                text = <"Enfermedad vascular periférica">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Sí">
+                description = <"Claudicación intermitente o bypass previo por insuficiencia arterial crónica, antecedentes de gangrena o insuficiencia arterial aguda, o aneurisma torácico o abdominal no tratado (≥6 cm).">
+            >
+            ["at0009"] = <
+                text = <"Insuficiencia cardíaca congestiva">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Sí">
+                description = <"Disnea de esfuerzo o nocturna paroxística que ha respondido sintomáticamente (o en el examen físico) a digitálicos, diuréticos o agentes reductores de la poscarga.">
+            >
+            ["at0012"] = <
+                text = <"Infarto de miocardio">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Sí">
+                description = <"Antecedentes de infarto de miocardio confirmado o probable (cambios en el ECG y/o cambios enzimáticos).">
+            >
+            ["at0015"] = <
+                text = <"Enfermedad cerebrovascular">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Sí">
+                description = <"Antecedentes de accidente cerebrovascular (ACV) con secuelas menores o inexistentes y ataques isquémicos transitorios (AIT).">
+            >
+            ["at0018"] = <
+                text = <"Demencia">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Sí">
+                description = <"Demencia o déficit cognitivo crónico">
+            >
+            ["at0021"] = <
+                text = <"Enfermedad pulmonar crónica">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Sí">
+                description = <"Enfermedad pulmonar crónica leve, moderada o severa.">
+            >
+            ["at0024"] = <
+                text = <"Enfermedad ulcerosa">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Sí">
+                description = <"Antecedentes de tratamiento para enfermedad ulcerosa o de sangrado por úlcera, o antecedente de sangrado gastrointestinal que requirió transfusiones debido a causas distintas a la enfermedad ulcerosa.">
+            >
+            ["at0027"] = <
+                text = <"Enfermedad hepática">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Ninguna">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Leve">
+                description = <"Cirrosis sin hipertensión portal ni hepatitis crónica">
+            >
+            ["at0030"] = <
+                text = <"Enfermedad del tejido conectivo">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Sí">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Diabetes mellitus">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Ausente o controlada con dieta">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"No complicada">
+                description = <"Diabetes mellitus tratada con insulina o hipoglucemiantes orales, pero no solo con dieta.">
+            >
+            ["at0036"] = <
+                text = <"Hemiplejía">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Sí">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Enfermedad renal moderada o severa">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Sí">
+                description = <"Moderada: creatinina >3 mg/dL (0,27 mmol/L). Severa: en diálisis, trasplante renal previo, uremia.">
+            >
+            ["at0045"] = <
+                text = <"Tumor sólido">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Ninguno">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Leucemia">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Localizado">
+                description = <"Tumor sólido sin metástasis documentadas.">
+            >
+            ["at0049"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Linfoma">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Sí">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Sí">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"SIDA">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Grupo etario">
+                description = <"La categoría de edad del paciente.">
+            >
+            ["at0062"] = <
+                text = <"< 50 años">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"50-59 años">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"60-69 años">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"70-79 años">
+                description = <"">
+            >
+            ["at0066"] = <
+                text = <"≥ años">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"Moderada a severa">
+                description = <"Moderada: cirrosis con hipertensión portal, pero sin sangrado. Severa: cirrosis con hipertensión portal y antecedentes de sangrado variceal.">
+            >
+            ["at0068"] = <
+                text = <"Daño en órganos diana">
+                description = <"Diabetes con daño en órganos diana">
+            >
+            ["at0069"] = <
+                text = <"Metastásico">
+                description = <"Tumor sólido metastásico.">
+            >
+            ["at0070"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0071"] = <
+                text = <"Sí">
+                description = <"Pacientes con SIDA confirmado o probable, es decir, complejo relacionado con el SIDA.">
+            >
+            ["at0072"] = <
+                text = <"Puntuación CCI total">
+                description = <"La suma total de cada variable componente para el Índice de Comorbilidad de Charlson.">
+            >
+            ["at0073"] = <
+                text = <"Supervivencia estimada a 10 años">
+                description = <"La tasa de supervivencia estimada a 10 años.">
+            >
+            ["at0074"] = <
+                text = <"Extensión">
+                description = <"Información adicional requerida para ampliar el modelo con contenido local o alinear con otros modelos de referencia o formalismos.">
+                comment = <"Por ejemplo: requisitos de información local; o metadatos adicionales para alinearse con FHIR.">
+            >
+            ["at0004"] = <
+                text = <"ITEM_TREE">
+                description = <"">
+            >
+            ["at9017"] = <
+                text = <"Real calificado">
+                description = <"Real calificado">
+            >
+            ["ac9037"] = <
+                text = <"Grupo etario (synthesised)">
+                description = <"La categoría de edad del paciente. (synthesised)">
+            >
+            ["ac9038"] = <
+                text = <"Infarto de miocardio (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9039"] = <
+                text = <"Insuficiencia cardíaca congestiva (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9040"] = <
+                text = <"Enfermedad vascular periférica (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9041"] = <
+                text = <"Enfermedad cerebrovascular (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9042"] = <
+                text = <"Demencia (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9043"] = <
+                text = <"Enfermedad pulmonar crónica (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9044"] = <
+                text = <"Enfermedad ulcerosa (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9045"] = <
+                text = <"Enfermedad hepática (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9046"] = <
+                text = <"Enfermedad del tejido conectivo (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9047"] = <
+                text = <"Diabetes mellitus (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9048"] = <
+                text = <"Hemiplejía (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9049"] = <
+                text = <"Enfermedad renal moderada o severa (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9050"] = <
+                text = <"Tumor sólido (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9051"] = <
+                text = <"Leucemia (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9052"] = <
+                text = <"Linfoma (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9053"] = <
+                text = <"SIDA (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9017"] = <http://openehr.org/id/380>
+        >
+    >
+    value_sets = <
+        ["ac9053"] = <
+            id = <"ac9053">
+            members = <"at0070", "at0071">
+        >
+        ["ac9052"] = <
+            id = <"ac9052">
+            members = <"at0052", "at0053">
+        >
+        ["ac9051"] = <
+            id = <"ac9051">
+            members = <"at0049", "at0051">
+        >
+        ["ac9050"] = <
+            id = <"ac9050">
+            members = <"at0046", "at0048", "at0069">
+        >
+        ["ac9039"] = <
+            id = <"ac9039">
+            members = <"at0010", "at0011">
+        >
+        ["ac9038"] = <
+            id = <"ac9038">
+            members = <"at0013", "at0014">
+        >
+        ["ac9037"] = <
+            id = <"ac9037">
+            members = <"at0062", "at0063", "at0064", "at0065", "at0066">
+        >
+        ["ac9042"] = <
+            id = <"ac9042">
+            members = <"at0019", "at0020">
+        >
+        ["ac9041"] = <
+            id = <"ac9041">
+            members = <"at0016", "at0017">
+        >
+        ["ac9040"] = <
+            id = <"ac9040">
+            members = <"at0007", "at0008">
+        >
+        ["ac9046"] = <
+            id = <"ac9046">
+            members = <"at0031", "at0032">
+        >
+        ["ac9045"] = <
+            id = <"ac9045">
+            members = <"at0028", "at0029", "at0067">
+        >
+        ["ac9044"] = <
+            id = <"ac9044">
+            members = <"at0025", "at0026">
+        >
+        ["ac9043"] = <
+            id = <"ac9043">
+            members = <"at0022", "at0023">
+        >
+        ["ac9049"] = <
+            id = <"ac9049">
+            members = <"at0040", "at0041">
+        >
+        ["ac9048"] = <
+            id = <"ac9048">
+            members = <"at0037", "at0038">
+        >
+        ["ac9047"] = <
+            id = <"ac9047">
+            members = <"at0034", "at0035", "at0068">
+        >
+    >

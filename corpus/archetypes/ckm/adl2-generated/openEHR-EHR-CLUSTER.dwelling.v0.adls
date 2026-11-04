@@ -1,0 +1,1110 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=bf2195c5-2f4e-49b8-bfd8-aa6e05e84bb7; build_uid=b1085464-1851-4f11-b52a-70154205dd52)
+    openEHR-EHR-CLUSTER.dwelling.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen">
+                ["organisation"] = <"Oslo University Hospital">
+                ["email"] = <"varntzen@ous-hf.no">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            author = <
+                ["name"] = <"Paolo Anedda">
+                ["organisation"] = <"Inpeco">
+                ["email"] = <"paolo.anedda@inpeco.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2018-05-29">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Marcos Barreto, Universidade Federal da Bahia (UFBA), Brazil", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Ady Angelica Castro Acosta, CIBERES-Hospital 12 de Octubre, Spain", "Evelyn Hovenga, EJSH Consulting, Australia", "Heidi Koikkalainen, United Kingdom (openEHR Editor)", "Ronald Krawec, Alberta Health Services, Canada", "Tomi Laptoš, Marand, Slovenia", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Paul Miller, SCIMP NHS Scotland, United Kingdom", "Andrej Orel, Marand d.o.o., Slovenia", "Anoop Shah, University College London, United Kingdom", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Vinicius Tohoru Yoshiura, University of Sao Paulo, Brazil">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Home Modification Assessment & Planning Tool [Internet]. Australia: SCOPE Access Home Modifications; 2015 [cited 2019 Dec 19]. Available from: http://scopehomeaccess.com.au/wp-content/uploads/2015/07/AWTS.pdf.">
+        ["2"] = <"Opoko A, Ibem E & Adeyemi E. Housing aspiration in an informal urban settlement: A case study [Internet]. 2015; Urbani Izziv. 26. 10.5379/urbani-izziv-en-2015-26-02-003; [cited 2019 Dec 19] . Available at: https://www.researchgate.net/publication/307851190_Housing_aspiration_in_an_informal_urban_settlement_A_case_study.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"1C1B56A17810AD34CFD1B58C1E6CF354">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en oversikt og beskrivelse om egenskapene til en bolig der et individ bor.">
+            keywords = <"trapper", "soverom", "bad", "tilgjengelighet", "enebolig", "leilighet", "campingvogn", "hytte", "etasje", "rullestol", "areal", "universell utforming", "UU">
+            use = <"Brukes for å registrere detaljer om egenskapene til en bolig der et individ bor, spesielt ting som kan ha betydning for individets helse og sikkerhet, eller ha innvirkning på ytelse av helsetjenester.
+
+Denne arketypen er utformet for å registrere attributter til et individs hjem, og vil kunne brukes til:
+- å identifisere hjelpemidler som kan være nyttig i boligen
+- registrere modifikasjoner og forbedringer for å støtte universell utforming (UU), eller
+- bidra til offentlige undersøkelser knyttet til sykdomsutbrudd.
+
+Denne arketypen er utformet for å brukes i EVALUATION.housing_summary (Boligsammendrag) eller CLUSTER.housing_record (Bolig), men kan også bli brukt i hvilken som helst annen passende ENTRY- eller CLUSTER-arketype.
+
+Dersom det er nødvendig med spesifikke detaljer, kan arketyper legges til i elementet \"Ytterligere detaljer\". 
+
+Grad av overensstemmelse med designprinsipper for universell utforming (UU) bør registreres i en egen arketype, som kan legges til i SLOT'et \"Ytterligere detaljer\".">
+            misuse = <"Skal ikke brukes til å registrere detaljer om de sosiale forholdene individet bor under, bruk CLUSTER.living_arrangement til dette.
+
+Skal ikke brukes til å registrere den fysiske adressen der et individ bor, bruk demografiske arketyper for dette, eller CLUSTER.address (Adresse) dersom det er nødvendig å registrere adressen i den medisinske journalen.
+
+Skal ikke brukes til å registrere informasjon om boligen som ikke har noe betydning for helse, eller behov for helsetjenester til et individ. For eksempel bør ikke informasjon om dørlåsens kode til bruk for hjemmesykepleietjenesten registreres i denne arketypen.
+
+Skal ikke brukes for å registrere grad av overenstemmelse med prinsipper for universell utforming.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record an overview and description about aspects about the dwelling where an individual lives.">
+            keywords = <"stairs", "bedroom", "bathroom", "access", "heating", "cooling">
+            use = <"Use to record details about the dwelling where an individual lives, particularly where this may have an impact on their health and safety or delivery of healthcare services.
+
+This archetype has been designed to be used to record attributes of an individual's home that might be used to:
+- contribute to identification of aids/supports that might be useful in the home; 
+- record modifications or enhancements to support universal access; or
+- inform investigations about public health outbreaks.
+
+This archetype has been designed to be used within the EVALUATION.housing_summary or CLUSTER.housing_record archetypes, but may be used within any other appropriate ENTRY or CLUSTER archetype. 
+
+In additon to the specific examples for each room specific element, the following examples are universally appliccable: Access; circulation space; trip hazards; floor coverings; windows; lighting; heating; or cooling.
+
+If specific measurements or specific details are required, additional archetypes can be nested within the 'Additional details' SLOT.
+
+Compliance with Universal design principles should be recorded in a separate archetype, which may be nested within the 'Additional details' SLOT.">
+            misuse = <"Not to be used to record details about the social circumstances in which the individual lives - use CLUSTER.living_arrangement for this purpose.
+
+Not to be used to record the physical address where an individual lives - use demographic archetypes for this purpose, or CLUSTER.address if the individual's address needs to be recorded within the health record.
+
+Not to be used to record information about the dwelling that does not impact on the health or health care needs of an individual. For example, the security access code for a home nurse visit should not be recorded using this archetype.
+
+Not to be used to record compliance with Universal design principles.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"Registrare una panoramica e una descrizione degli aspetti dell'abitazione in cui vive un individuo.">
+            keywords = <"scale", "camera da letto", "bagno", "accesso">
+            use = <"Utilizzare per registrare i dettagli dell'abitazione in cui vive un individuo, in particolare quando ciò può avere un impatto sulla sua salute e sicurezza o sulla fornitura di servizi sanitari.
+
+Questo archetipo è stato progettato per essere utilizzato per registrare gli attributi dell'abitazione di un individuo che potrebbero essere utilizzati:
+- contribuire all'identificazione di aiuti/supporti che potrebbero essere utili nella casa; 
+- registrare modifiche o miglioramenti a sostegno dell'accesso universale; oppure
+- informare le indagini sulle epidemie di salute pubblica.
+
+Questo archetipo è stato progettato per essere utilizzato all'interno degli archetipi EVALUATION.housing_summary o CLUSTER.housing_record, ma può essere utilizzato all'interno di qualsiasi altro archetipo ENTRY o CLUSTER appropriato. 
+
+Se sono richieste misurazioni specifiche o dettagli specifici, archetipi aggiuntivi possono essere annidati all'interno dello SLOT \"Dettagli aggiuntivi\".
+
+La conformità ai principi di progettazione universali deve essere registrata in un archetipo separato, che può essere annidato nello SLOT \"Dettagli aggiuntivi\".">
+            misuse = <"Da non utilizzare per registrare i dettagli sulle circostanze sociali in cui vive l'individuo - utilizzare a tal fine CLUSTER.living_arrangement.
+
+Da non utilizzare per registrare l'indirizzo fisico in cui vive l'individuo - utilizzare gli archetipi demografici per questo scopo, o CLUSTER.address se l'indirizzo dell'individuo deve essere registrato all'interno della cartella clinica.
+
+Non deve essere utilizzato per registrare informazioni sull'abitazione che non hanno un impatto sulla salute o sulle esigenze sanitarie di un individuo. Ad esempio, il codice di accesso di sicurezza per la visita di un'infermiera a domicilio non deve essere registrato utilizzando questo archetipo.
+
+Non deve essere usato per registrare la conformità ai principi di progettazione universale.">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Dwelling
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Type
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Overall description
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0054] occurrences matches {0..1} matches {    -- Number of rooms
+                value matches {
+                    DV_COUNT[at9041] matches {
+                        magnitude matches {|>=0|}
+                    }
+                }
+            }
+            ELEMENT[at0055] occurrences matches {0..1} matches {    -- Number of people
+                value matches {
+                    DV_COUNT[at9042] matches {
+                        magnitude matches {|>=0|}
+                    }
+                }
+            }
+            ELEMENT[at0036] occurrences matches {0..1} matches {    -- Condition
+                value matches {
+                    DV_TEXT[at9031]
+                }
+            }
+            ELEMENT[at0005] matches {    -- Access/egress
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0006] matches {    -- Entrance
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0008] matches {    -- Hallway
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+            ELEMENT[at0041] occurrences matches {0..1} matches {    -- Number of floors
+                value matches {
+                    DV_COUNT[at9032]
+                }
+            }
+            ELEMENT[at0009] matches {    -- Internal stairs/lifts
+                value matches {
+                    DV_TEXT[at9007]
+                }
+            }
+            ELEMENT[at0010] matches {    -- Living room
+                value matches {
+                    DV_TEXT[at9008]
+                }
+            }
+            ELEMENT[at0011] matches {    -- Kitchen
+                value matches {
+                    DV_TEXT[at9009]
+                }
+            }
+            ELEMENT[at0012] matches {    -- Bedroom
+                value matches {
+                    DV_TEXT[at9010]
+                }
+            }
+            ELEMENT[at0028] occurrences matches {0..1} matches {    -- Number of bedrooms
+                value matches {
+                    DV_COUNT[at9028]
+                }
+            }
+            ELEMENT[at0057] matches {    -- Persons per bedroom
+                value matches {
+                    DV_COUNT[at9047] matches {
+                        magnitude matches {|>=0|}
+                    }
+                }
+            }
+            ELEMENT[at0013] matches {    -- Toilet accessibility
+                value matches {
+                    DV_TEXT[at9011]
+                }
+            }
+            ELEMENT[at0026] matches {    -- Toilet type
+                value matches {
+                    DV_TEXT[at9024]
+                }
+            }
+            ELEMENT[at0035] occurrences matches {0..1} matches {    -- Number of toilets
+                value matches {
+                    DV_COUNT[at9033]
+                }
+            }
+            ELEMENT[at0014] matches {    -- Bathroom
+                value matches {
+                    DV_TEXT[at9012]
+                }
+            }
+            ELEMENT[at0029] occurrences matches {0..1} matches {    -- Number of bathrooms
+                value matches {
+                    DV_COUNT[at9027]
+                }
+            }
+            ELEMENT[at0015] matches {    -- Laundry facilities
+                value matches {
+                    DV_TEXT[at9013]
+                }
+            }
+            ELEMENT[at0016] matches {    -- Outdoor space
+                value matches {
+                    DV_TEXT[at9014]
+                }
+            }
+            ELEMENT[at0007] matches {    -- Parking
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            ELEMENT[at0037] occurrences matches {0..1} matches {    -- Heating
+                value matches {
+                    DV_TEXT[at9034]
+                }
+            }
+            ELEMENT[at0046] occurrences matches {0..1} matches {    -- Cooling
+                value matches {
+                    DV_TEXT[at9043]
+                }
+            }
+            ELEMENT[at0038] matches {    -- Energy supply
+                value matches {
+                    DV_TEXT[at9035]
+                }
+            }
+            ELEMENT[at0017] matches {    -- Emergency communication access
+                value matches {
+                    DV_TEXT[at9015]
+                }
+            }
+            ELEMENT[at0040] matches {    -- Connectivity
+                value matches {
+                    DV_TEXT[at9036]
+                }
+            }
+            ELEMENT[at0018] matches {    -- Fire protection
+                value matches {
+                    DV_TEXT[at9016]
+                }
+            }
+            ELEMENT[at0039] matches {    -- Security and safety
+                value matches {
+                    DV_TEXT[at9037]
+                }
+            }
+            ELEMENT[at0020] matches {    -- Doorbell
+                value matches {
+                    DV_TEXT[at9017]
+                }
+            }
+            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Mail
+                value matches {
+                    DV_TEXT[at9021]
+                }
+            }
+            ELEMENT[at0021] matches {    -- Rubbish collection
+                value matches {
+                    DV_TEXT[at9019]
+                }
+            }
+            ELEMENT[at0034] matches {    -- Sewage disposal
+                value matches {
+                    DV_TEXT[at9030]
+                }
+            }
+            ELEMENT[at0033] matches {    -- Water source
+                value matches {
+                    DV_TEXT[at9029]
+                }
+            }
+            ELEMENT[at0023] matches {    -- Water supply
+                value matches {
+                    DV_TEXT[at9022]
+                }
+            }
+            ELEMENT[at0025] matches {    -- Water storage
+                value matches {
+                    DV_TEXT[at9023]
+                }
+            }
+            ELEMENT[at0056] occurrences matches {0..1} matches {    -- Ventilation
+                value matches {
+                    DV_TEXT[at9044]
+                }
+            }
+            ELEMENT[at0058] occurrences matches {0..1} matches {    -- Cleanliness
+                value matches {
+                    DV_TEXT[at9048]
+                }
+            }
+            CLUSTER[at0048] occurrences matches {0..1} matches {    -- Critical features
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0049] occurrences matches {0..1} matches {    -- Feature name
+                        value matches {
+                            DV_TEXT[at9045]
+                        }
+                    }
+                    ELEMENT[at0050] occurrences matches {0..1} matches {    -- Presence
+                        value matches {
+                            DV_CODED_TEXT[at9046] matches {
+                                defining_code matches {[ac9040]}    -- Presence (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0043] matches {    -- Appliance
+                value matches {
+                    DV_TEXT[at9040]
+                }
+            }
+            allow_archetype CLUSTER[at0003] matches {    -- Additional details
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.multimedia\.v0\..*|openEHR-EHR-CLUSTER\.multimedia\.v1\..*/}
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Boligegenskaper">
+                description = <"En oversikt over egenskaper til en bygning, eller en separat del av en bygning og tilhørende arealer, der ett eller flere mennesker bor.">
+                comment = <"Rammen for arketypen inkluderer, men er ikke begrenset til, en bygning, del av en bygning, hus, leilighet, fengsel, husbåt, campingvogn, bobil. Den kan også inkludere opplysninger om tilhørende arealer, som fellesarealer i et borettslag eller sameie, kjeller og hage.">
+            >
+            ["at0001"] = <
+                text = <"Overordnet beskrivelse">
+                description = <"Fritekstlig beskrivelse om alle egenskaper til en bolig.">
+                comment = <"For eksempel om alle basale rom og fasiliteter er i samme etasje.">
+            >
+            ["at0002"] = <
+                text = <"Type bolig">
+                description = <"Typen bolig individet bor i.">
+                comment = <"Dersom det er mulig, bør type bolig kodes med en terminologi. Verdisettet for dette elementet vil sannsynligvis variere mellom myndighetsområder, og det er antatt at verdisettet vil bli gitt i et brukerspesifikt templat. For eksempel verdisettet i OID-8709, eller det som måtte passe med brukssituasjonen.">
+            >
+            ["at0003"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere strukturerte detaljer om boligen.">
+                comment = <"Dette SLOT'et kan brukes til å nøste arketyper som beskriver tilleggsdetaljer om boligen og som kan være aktuelle for det gjeldende myndighetsområdet.">
+            >
+            ["at0004"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om boligen som ikke fanges opp i andre felt.">
+            >
+            ["at0005"] = <
+                text = <"Adkomst">
+                description = <"*Description about physical access to, and egress from, the dwellling. (en)">
+                comment = <"*Multiple occurrences will allow details for each access to be recorded. For example: driveway; path; fencing and gates; external stairs or lifts; doorsteps; electric door opener; rails; front access; rear access; or ramps for wheelchairs. For example: floor level of the entrance to the dwelling. (en)">
+            >
+            ["at0006"] = <
+                text = <"Inngang">
+                description = <"Beskrivelse om en inngang til en bolig.">
+                comment = <"Multiple forekomster gjør det mulig å registrere detaljer for hver inngang, for eksempel type og vekt på dør, dørhåndtak, type åpne-/lukkemekanisme eller dørstokk.">
+            >
+            ["at0007"] = <
+                text = <"Parkering">
+                description = <"Beskrivelse av parkering i, eller nær boligen.">
+                comment = <"Multiple forekomster gjør det mulig å registrere detaljer for flere parkeringsområder. Den tiltenkte bruken av dette elementet inkluderer, men er ikke begrenset til: bil, scooter, elektrisk rullestol eller andre kjøretøy som trenger dedikert område eller lagring utendørs. For eksempel: Enkel eller dobbel bilparkering, HC-plass, inn- og utlastingsplass, overbygd eller ikke, takhøyde eller detaljer om garasjedør.">
+            >
+            ["at0008"] = <
+                text = <"Entré/Gang">
+                description = <"Beskrivelse av en entré eller gang i boligen.">
+                comment = <"*Multiple occurrences will allow details for each hallway to be recorded. For example: width. (en)">
+            >
+            ["at0009"] = <
+                text = <"Innvendige trapper/heis.">
+                description = <"Beskrivelse av innvendig trapp og heis i boligen.">
+                comment = <"*Multiple occurrences will allow details for each set of internal stairs or lifts to be recorded. For example: number of steps; condition; banister; or open/closed risers. (en)">
+            >
+            ["at0010"] = <
+                text = <"Stue">
+                description = <"Fritekstbeskrivelse av en stue eller oppholdsrom i boligen.">
+                comment = <"*Multiple occurrences will allow details for each living room to be recorded. For example: chair height. (en)">
+            >
+            ["at0011"] = <
+                text = <"Kjøkken">
+                description = <"Beskrivelse om et kjøkken i boligen.">
+                comment = <"*Multiple occurrences will allow details for each kitchen to be recorded. For example: storage space; bench heights; or appliances. (en)">
+            >
+            ["at0012"] = <
+                text = <"Soverom">
+                description = <"Beskrivelse av et soverom i boligen.">
+                comment = <"*Multiple occurrences will allow details for each bedroom to be recorded. For example: bed size and type; bed height; bedside light; or telephone. (en)">
+            >
+            ["at0013"] = <
+                text = <"*Toilet accessibility (en)">
+                description = <"*Description about accsessibility to a toilet. (en)">
+                comment = <"*Multiple occurrences will allow details for each toilet  to be recorded. The toilet could be located within a separate toilet room, within a bathroom or within another space in the dwelling or property. For example: location; emergency access; height of seat pan and distance from walls; or grab rails. (en)">
+            >
+            ["at0014"] = <
+                text = <"Bad">
+                description = <"Beskrivelse av et bad i boligen.">
+                comment = <"*Multiple occurrences will allow details for each bathroom to be recorded. For example: location; type of bathing facility - shower/bath/shower over bath; bath height; recess size; screen; taps; or grab rails. (en)">
+            >
+            ["at0015"] = <
+                text = <"Klesvask">
+                description = <"Beskrivelse av fasiliteter for klesvask i eller i tilknytning til boligen.">
+                comment = <"*Multiple occurrences will allow details for each space with laundry facilities to be recorded. The laundry facilities could be located within a separate laundry room or within another space in the dwelling or property. For example: clothes line location and height. (en)">
+            >
+            ["at0016"] = <
+                text = <"Uteområde">
+                description = <"Beskrivelse av uteområde i tilknytning til boligen.">
+                comment = <"*Multiple occurrences will allow details for each outdoor space to be recorded. The intended scope of an outdoor space includes, but is not limited to: a yard; rooftop terrace; balcony; porch; garage; or shed. For example: current condition; size; slope; surface; stairs; or maintenance needs. (en)">
+            >
+            ["at0017"] = <
+                text = <"*Emergency communication access (en)">
+                description = <"*Description about the emergency communication access.
+
+ (en)">
+                comment = <"*Multiple occurrences will allow details for each emergency communication device to be recorded. For example: physical location of fixed phone or base stations; or presence of mobile handsets; personal safety alarms. (en)">
+            >
+            ["at0018"] = <
+                text = <"Brannsikring">
+                description = <"Beskrivelse av brannsikring i boligen.">
+                comment = <"Multiple forekomster gjør det mulig å registrere detaljer om flere brannsikringstiltak. Den tiltenkte bruken av arketypen inkluderer, men er ikke begrenset til: Røyk- eller CO2-varsler, brannslukningsapparat og sprinkeranlegg. For eksempel: Plassering, funksjonell/ikke funksjonell, vedlikeholdsbehov, seriekoblet, eller koblet til sentral.">
+            >
+            ["at0020"] = <
+                text = <"Ringeklokke">
+                description = <"Beskrivelse av ringeklokke eller varslingssystem i boligen.">
+                comment = <"Multiple forekomster gjør det mulig å registrere detaljer for flere ringeklokker eller varslingssystemer. For eksempel: Vibrarsjons-, lys- eller lydvarsling, eller lydvolum.">
+            >
+            ["at0021"] = <
+                text = <"Søppeloppsamling">
+                description = <"Beskrivelse av søppelcontainere og annen oppsamling av avfall i boligen.">
+                comment = <"Multiple forekomster gjør det mulig å registrere detaljer om hver enkel metode for oppsamling av søppel. For eksempel: Plassering av søppelcontainere eller avfallssug, eller type søppelcontainer.">
+            >
+            ["at0022"] = <
+                text = <"Post">
+                description = <"Beskrivelse om levering og henting av post til boligen.">
+            >
+            ["at0023"] = <
+                text = <"Vanntilførsel">
+                description = <"Beskrivelse av hvordan vann blir tilført boligen.">
+                comment = <"Multiple forekomster gjør det mulig å registrere detaljer om flere typer vanntilførsel. For eksempel: Innlagt vann, felles/privat utendørs pumpe eller kran.">
+            >
+            ["at0025"] = <
+                text = <"Lagring av vann">
+                description = <"Beskrivelse av hvorvidt, og i så fall hvordan vann lagres i boligen.">
+                comment = <"Multiple forekomster gjør det mulig å registrere detaljer om flere vannlagringsmetoder. For eksempel: Ingen, vanntank eller tønne.">
+            >
+            ["at0026"] = <
+                text = <"Type toalett">
+                description = <"Beskrivelse av typen avtrede i eller i tilknytning til boligen.">
+                comment = <"Multiple forekomster vil gjøre det mulig å registrere detaljer for hver enkelt type avtrede. For eksempel vannklosett, utedo eller latrine.">
+            >
+            ["at0028"] = <
+                text = <"Antall soverom">
+                description = <"Antall soverom i boligen.">
+            >
+            ["at0029"] = <
+                text = <"Antall baderom">
+                description = <"Antall baderom i boligen.">
+            >
+            ["at0033"] = <
+                text = <"Vannkilde">
+                description = <"Beskrivelse av en vannkilde til boligen.">
+                comment = <"Multiple forekomster gjør det mulig å registrere detaljer om flere typer vannkilder. Dette elementet kan brukes til å skille mellom offentlig og privat vannforsyning i tillegg til typen kilde. For eksempel: Offentlig vannforsyning, privat brønn, borrehull, innsjø eller elv, regnvann eller kjøpevann.">
+            >
+            ["at0034"] = <
+                text = <"Kloakksystem">
+                description = <"Beskrivelse av hvilket kloakksystem det er i boligen.">
+                comment = <"Multiple forekomster gjør det mulig å registrere detaljer om flere typer kloakksystem. For eksempel: Septiktank, latrinehull eller offentlig kloakksystem.">
+            >
+            ["at0035"] = <
+                text = <"Antall toalett">
+                description = <"Antall toalett, i betydning selve toalettmøbelet, i boligen.">
+                comment = <"Toalettmøbelet kan være plassert i et eget rom, et baderom eller lignende. Eksempler: vegghengt toalett, urinal eller latrine.">
+            >
+            ["at0036"] = <
+                text = <"Tilstand">
+                description = <"Fritekstlig beskrivelse om boligens fysiske tilstand.">
+                comment = <"For eksempel: Taklekkasje, fuktig kjeller, muggsopp på baderom, dårlig isolasjon, sprukne gulvfliser, hull i veggen.">
+            >
+            ["at0037"] = <
+                text = <"*Heating (en)">
+                description = <"*Description about how the dwelling is heated. (en)">
+                comment = <"*Multiple occurrences will allow details for each heating source to be recorded. For example: central heating; open fire. (en)">
+            >
+            ["at0038"] = <
+                text = <"Energiforsyning">
+                description = <"Beskrivelse av energikilder til boligen.">
+                comment = <"Multiple forekomster gjør det mulig å registrere detaljer for flere energiforsyningskilder. For eksempel: Strømnett, solenergi, gass, generator eller vedfyring.">
+            >
+            ["at0039"] = <
+                text = <"Trygghetstiltak">
+                description = <"Beskrivelse av trygghetstiltak i boligen.">
+                comment = <"Multiple forekomster gjør det mulig å registrere flere trygghetstiltak.">
+            >
+            ["at0040"] = <
+                text = <"Oppkobling">
+                description = <"*Description about the internet and other forms of connectivity and communication. For example for home monitoring or other medical devices.  (en)">
+                comment = <"*Multiple occurrences will allow details for each form of connectivity to be recorded. For example: internet access; cable; or PSTN line; mobile coverage.
+ (en)">
+            >
+            ["at0041"] = <
+                text = <"Antall etasjer">
+                description = <"Hvor mange etasjer boligenheten består av. OBS: Ikke hvilken etasje boenheten er i.">
+            >
+            ["at0043"] = <
+                text = <"Apparat">
+                description = <"Beskrivelse av apparat eller hvitevare i boligen.">
+                comment = <"Multiple forekomster gjør det mulig å registrere detaljer om flere apparater. For eksempel: Kjøleskap, fryser, vannkoker, vaskemaskin, tørketrommel eller oppvaskmaskin.">
+            >
+            ["at0046"] = <
+                text = <"*Cooling (en)">
+                description = <"*Description about how the dwelling is cooled. (en)">
+                comment = <"*Multiple occurrences will allow details for cooling source to be recorded. For example: air conditioning; fan. (en)">
+            >
+            ["at0048"] = <
+                text = <"*Critical features (en)">
+                description = <"*Availability of critical appliances or services at the dwelling, which may support use of clinical decision support. (en)">
+                comment = <"*For example: hot water for hygiene; a refrigerator for food hygiene and safe medication storage. (en)">
+            >
+            ["at0049"] = <
+                text = <"*Feature name (en)">
+                description = <"*The name of the feature. (en)">
+                comment = <"*Coding with a terminology is desirable, where possible. For example: refrigerator; hot running water; backup generator; food cooking facilities;  (en)">
+            >
+            ["at0050"] = <
+                text = <"*Presence (en)">
+                description = <"*Presence of any relevant feature. (en)">
+            >
+            ["at0051"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"*Unknown (en)">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"*Number of rooms (en)">
+                description = <"*The number of rooms within the dwelling. (en)">
+            >
+            ["at0055"] = <
+                text = <"*Number of people (en)">
+                description = <"*The total number of people living in the dwelling. (en)">
+                comment = <"*The number of people in the household will be a subset of the people living in a shared dwelling. (en)">
+            >
+            ["at0056"] = <
+                text = <"*Ventilation (en)">
+                description = <"*Description about the ventilation within the dwelling. (en)">
+            >
+            ["at0057"] = <
+                text = <"Persons per bedroom">
+                description = <"*Number of household members sharing bedroom. (en)">
+                comment = <"While this data element will usually record the number of people sleeping in the room where the index patient sleeps, this data element has multiple occurrences to allow for more than one bedroom to be recorded, if necessary.">
+            >
+            ["at0058"] = <
+                text = <"*Cleanliness (en)">
+                description = <"*Description about the level of cleanliness of the dwelling. (en)">
+                comment = <"*For example: Adequate or Inadequate.
+ (en)">
+            >
+            ["ac9040"] = <
+                text = <"*Presence (en) (synthesised)">
+                description = <"*Presence of any relevant feature. (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Dwelling">
+                description = <"An overview about the properties of a single structure, or a discrete space within a structure, and associated spaces in which an individual lives.">
+                comment = <"The intended scope of dwelling includes, but is not limited to: a building; part of a building; house; apartment; prison; houseboat; mobile home; or vehicle. It can also include the spaces associated with a structure or property, including the basement or yard.">
+            >
+            ["at0001"] = <
+                text = <"Overall description">
+                description = <"Narrative description about all aspects of the dwelling.">
+                comment = <"For example: if basic living facilities are located on the same level.">
+            >
+            ["at0002"] = <
+                text = <"Type">
+                description = <"The type of dwelling in which an individual lives.">
+                comment = <"Coding of the dwelling type with a terminology is preferred, where possible. The value sets for this data element are likely to vary between jurisdictions - it is anticipated that they will usually be set within a use-case specific template. For example: 'separate house'; 'flat, unit or apartment'; 'caravan or tent'; or 'house or flat attached to a shop or office'.">
+            >
+            ["at0003"] = <
+                text = <"Additional details">
+                description = <"Further structured details about the dwelling.">
+                comment = <"This SLOT may be used to nest additional archetypes describing additional details about the dwelling that may be local to a jurisdiction.">
+            >
+            ["at0004"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the dwelling, not captured in other fields.">
+            >
+            ["at0005"] = <
+                text = <"Access/egress">
+                description = <"Description about physical access to, and egress from, the dwellling.">
+                comment = <"Multiple occurrences will allow details for each access to be recorded. For example: driveway; path; fencing and gates; external stairs or lifts; doorsteps; electric door opener; rails; front access; rear access; or ramps for wheelchairs. For example: floor level of the entrance to the dwelling.">
+            >
+            ["at0006"] = <
+                text = <"Entrance">
+                description = <"Description about an entrance to the dwelling.">
+                comment = <"Multiple occurrences will allow details for each entrance to be recorded. For example: weight and type of door; door handle; lock mechanism; or threshold step.">
+            >
+            ["at0007"] = <
+                text = <"Parking">
+                description = <"Description about vehicle parking at or near the dwelling.">
+                comment = <"Multiple occurrences will allow details for each parking area to be recorded. The scope for this data element includes cars, motor scooters and other vehicles that require dedicated space or storage outside the home. For example: single/double car park; space to transfer in/out of car; protection from weather; overhead clearance; or garage door details.">
+            >
+            ["at0008"] = <
+                text = <"Hallway">
+                description = <"Description about the hallway within the dwelling.">
+                comment = <"Multiple occurrences will allow details for each hallway to be recorded. For example: width.">
+            >
+            ["at0009"] = <
+                text = <"Internal stairs/lifts">
+                description = <"Description about internal steps and lifts within the dwelling.">
+                comment = <"Multiple occurrences will allow details for each set of internal stairs or lifts to be recorded. For example: number of steps; condition; banister; or open/closed risers.">
+            >
+            ["at0010"] = <
+                text = <"Living room">
+                description = <"Description about a living room within the dwelling.">
+                comment = <"Multiple occurrences will allow details for each living room to be recorded. For example: chair height.">
+            >
+            ["at0011"] = <
+                text = <"Kitchen">
+                description = <"Description about a kitchen within the dwelling.">
+                comment = <"Multiple occurrences will allow details for each kitchen to be recorded. For example: storage space; bench heights; or appliances.">
+            >
+            ["at0012"] = <
+                text = <"Bedroom">
+                description = <"Description about a bedroom within the dwelling.">
+                comment = <"Multiple occurrences will allow details for each bedroom to be recorded. For example: bed size and type; bed height; bedside light; or telephone.">
+            >
+            ["at0013"] = <
+                text = <"Toilet accessibility">
+                description = <"Description about accsessibility to a toilet.">
+                comment = <"Multiple occurrences will allow details for each toilet  to be recorded. The toilet could be located within a separate toilet room, within a bathroom or within another space in the dwelling or property. For example: location; emergency access; height of seat pan and distance from walls; or grab rails.">
+            >
+            ["at0014"] = <
+                text = <"Bathroom">
+                description = <"Description about a bathroom within the dwelling.">
+                comment = <"Multiple occurrences will allow details for each bathroom to be recorded. For example: location; type of bathing facility - shower/bath/shower over bath; bath height; recess size; screen; taps; or grab rails.">
+            >
+            ["at0015"] = <
+                text = <"Laundry facilities">
+                description = <"Description about a laundry facility within, or associated with, the dwelling.">
+                comment = <"Multiple occurrences will allow details for each space with laundry facilities to be recorded. The laundry facilities could be located within a separate laundry room or within another space in the dwelling or property. For example: clothes line location and height.">
+            >
+            ["at0016"] = <
+                text = <"Outdoor space">
+                description = <"Description about an outdoor space associated with the the dwelling.">
+                comment = <"Multiple occurrences will allow details for each outdoor space to be recorded. The intended scope of an outdoor space includes, but is not limited to: a yard; rooftop terrace; balcony; porch; garage; or shed. For example: current condition; size; slope; surface; stairs; or maintenance needs.">
+            >
+            ["at0017"] = <
+                text = <"Emergency communication access">
+                description = <"Description about the emergency communication access.">
+                comment = <"Multiple occurrences will allow details for each emergency communication device to be recorded. For example: physical location of fixed phone or base stations; or presence of mobile handsets; personal safety alarms.">
+            >
+            ["at0018"] = <
+                text = <"Fire protection">
+                description = <"Description about fire protection within the dwelling.">
+                comment = <"Multiple occurrences will allow details for each fire protection system to be recorded. The intended scope for a fire protection system includes, but is not limited to: smoke and carbon monoxide detectors; fire extinguishers; or sprinklers. For example: location; in working order; maintenance needs; central monitoring; or serial connections.">
+            >
+            ["at0020"] = <
+                text = <"Doorbell">
+                description = <"Description about a doorbell or alert system within the dwelling.">
+                comment = <"Multiple occurrences will allow details for each doorbell to be recorded. For example: vibrating, flashing or audible; pitch; or volume.">
+            >
+            ["at0021"] = <
+                text = <"Rubbish collection">
+                description = <"Description about rubbish bins and waste collection at the dwelling.">
+                comment = <"Multiple occurrences will allow details for each type of rubbish collection to be recorded. For example: location of rubbish bins or chute; or type of bins.">
+            >
+            ["at0022"] = <
+                text = <"Mail">
+                description = <"Description about mail delivery and collection at the dwelling.">
+            >
+            ["at0023"] = <
+                text = <"Water supply">
+                description = <"Description about how water is delivered into the dwelling.">
+                comment = <"Multiple occurrences will allow details for each water supply to be recorded. For example: piped water (in house); stand pipe; or yard pipe.">
+            >
+            ["at0025"] = <
+                text = <"Water storage">
+                description = <"Description about the storage of potable water at the dwelling.">
+                comment = <"Multiple occurrences will allow details for each water storage to be recorded. For example: none; tank; or drum.">
+            >
+            ["at0026"] = <
+                text = <"Toilet type">
+                description = <"Description about the type of toilet fixture at the dwelling.">
+                comment = <"Multiple occurrences will allow details for each toilet fixture to be recorded. For example: flush toilet; or pit latrine.">
+            >
+            ["at0028"] = <
+                text = <"Number of bedrooms">
+                description = <"The number of bedrooms in the dwelling.">
+            >
+            ["at0029"] = <
+                text = <"Number of bathrooms">
+                description = <"The number of bathrooms in the dwelling.">
+            >
+            ["at0033"] = <
+                text = <"Water source">
+                description = <"Description about the source of water used at the dwelling.">
+                comment = <"Multiple occurrences will allow details for each water source to be recorded. This data element may be used to differentiate between public and private sources as well as the type of source. For example: public; lake; private well; borehole; rain; or water vendors.">
+            >
+            ["at0034"] = <
+                text = <"Sewage disposal">
+                description = <"Description about the disposal of sewage from the dwelling.">
+                comment = <"Multiple occurrences will allow details for each type of sewage disposal to be recorded. For example: septic tank or cesspit; or public sewage system.">
+            >
+            ["at0035"] = <
+                text = <"Number of toilets">
+                description = <"The number of toilet fixtures in the dwelling.">
+                comment = <"The toilet fixture could be located within a bathroom or similar space, or a separate toilet room. For example: toilet suite; urinal, pit latrine.">
+            >
+            ["at0036"] = <
+                text = <"Condition">
+                description = <"Narrative description about the overall condition of the dwelling.">
+                comment = <"For example: leaking roof; rising damp; mould in the bathroom; broken floorboards; or holes in the walls.">
+            >
+            ["at0037"] = <
+                text = <"Heating">
+                description = <"Description about how the dwelling is heated.">
+                comment = <"Multiple occurrences will allow details for each heating source to be recorded. For example: central heating; open fire.">
+            >
+            ["at0038"] = <
+                text = <"Energy supply">
+                description = <"Description about sources of power to the dwelling.">
+                comment = <"Multiple occurrences will allow details for each energy supply to be recorded. For example: mains electricity; solar power; bottle gas; home generator; or fire wood.">
+            >
+            ["at0039"] = <
+                text = <"Security and safety">
+                description = <"Description about security and safety measures within the dwelling.">
+                comment = <"Multiple occurrences will allow details for each security and safety measure to be recorded.">
+            >
+            ["at0040"] = <
+                text = <"Connectivity">
+                description = <"Description about the internet and other forms of connectivity and communication. For example for home monitoring or other medical devices.">
+                comment = <"Multiple occurrences will allow details for each form of connectivity to be recorded. For example: internet access; cable; or PSTN line; mobile coverage.
+">
+            >
+            ["at0041"] = <
+                text = <"Number of floors">
+                description = <"The number of floors within the dwelling.">
+            >
+            ["at0043"] = <
+                text = <"Appliance">
+                description = <"Description about an appliance at the dwelling.">
+                comment = <"Multiple occurrences will allow details for each appliance to be recorded. For example: refrigerator; hot water boiler; clothes washer/dryer or dishwasher.">
+            >
+            ["at0046"] = <
+                text = <"Cooling">
+                description = <"Description about how the dwelling is cooled.">
+                comment = <"Multiple occurrences will allow details for cooling source to be recorded. For example: air conditioning; fan.">
+            >
+            ["at0048"] = <
+                text = <"Critical features">
+                description = <"Availability of critical appliances or services at the dwelling, which may support use of clinical decision support.">
+                comment = <"For example: hot water for hygiene; a refrigerator for food hygiene and safe medication storage.">
+            >
+            ["at0049"] = <
+                text = <"Feature name">
+                description = <"The name of the feature.">
+                comment = <"Coding with a terminology is desirable, where possible. For example: refrigerator; hot running water; backup generator; food cooking facilities; ">
+            >
+            ["at0050"] = <
+                text = <"Presence">
+                description = <"Presence of any relevant feature.">
+            >
+            ["at0051"] = <
+                text = <"Present">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Absent">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Number of rooms">
+                description = <"The number of rooms within the dwelling.">
+            >
+            ["at0055"] = <
+                text = <"Number of people">
+                description = <"The total number of people living in the dwelling.">
+                comment = <"The number of people in the household will be a subset of the people living in a shared dwelling.">
+            >
+            ["at0056"] = <
+                text = <"Ventilation">
+                description = <"Description about the ventilation within the dwelling.">
+            >
+            ["at0057"] = <
+                text = <"Persons per bedroom">
+                description = <"Number of household members sharing bedroom.">
+                comment = <"While this data element will usually record the number of people sleeping in the room where the index patient sleeps, this data element has multiple occurrences to allow for more than one bedroom to be recorded, if necessary.">
+            >
+            ["at0058"] = <
+                text = <"Cleanliness">
+                description = <"Description about the level of cleanliness of the dwelling.">
+                comment = <"For example: Adequate or Inadequate.
+">
+            >
+            ["ac9040"] = <
+                text = <"Presence (synthesised)">
+                description = <"Presence of any relevant feature. (synthesised)">
+            >
+        >
+        ["it"] = <
+            ["at0000"] = <
+                text = <"Abitazione">
+                description = <"Una panoramica sulle proprietà di una singola struttura, o di uno spazio discreto all'interno di una struttura, e gli spazi associati in cui vive un individuo.">
+                comment = <"L'estensione dell'abitazione prevista comprende, ma non si limita a: un edificio; una parte di edificio; una casa; un appartamento; una prigione; una casa galleggiante; una casa mobile o un veicolo. Può anche includere gli spazi associati a una struttura o a una proprietà, compreso il seminterrato o il cortile.">
+            >
+            ["at0001"] = <
+                text = <"Descrizione generale">
+                description = <"Descrizione narrativa di tutti gli aspetti dell'abitazione. ">
+                comment = <"Per esempio: se le strutture abitative di base si trovano allo stesso livello.">
+            >
+            ["at0002"] = <
+                text = <"Tipo">
+                description = <"Il tipo di abitazione in cui vive un individuo. ">
+                comment = <"Si preferisce, ove possibile, la codifica del tipo di abitazione con una terminologia. I set di valori per questo elemento di dati possono variare da una giurisdizione all'altra - si prevede che saranno di solito impostati all'interno di un modello specifico per il caso d'uso. Ad esempio: \"casa separata\"; \"appartamento, unità o appartamento\"; \"roulotte o tenda\"; o \"casa o appartamento annesso a un negozio o a un ufficio\"">
+            >
+            ["at0003"] = <
+                text = <"Dettagli aggiuntivi">
+                description = <"Più dettagli strutturati sull'abitazione.">
+                comment = <"Questo SLOT può essere utilizzato per annidare ulteriori archetipi che descrivono ulteriori dettagli sull'abitazione che può essere locale in una giurisdizione. ">
+            >
+            ["at0004"] = <
+                text = <"Commento">
+                description = <"Narrativa aggiuntiva sull'abitazione, non catturata in altri campi.">
+            >
+            ["at0005"] = <
+                text = <"Accesso/uscita">
+                description = <"Descrizione dell'accesso e dell'uscita dall'abitazione. ">
+                comment = <"*Multiple occurrences will allow details for each access to be recorded. For example: driveway; path; fencing and gates; external stairs or lifts; doorsteps; electric door opener; rails; front access; rear access; or ramps for wheelchairs. For example: floor level of the entrance to the dwelling. (en)">
+            >
+            ["at0006"] = <
+                text = <"Entrata">
+                description = <"Descrizione di un ingresso all'abitazione.">
+                comment = <"Multiple occorrenze permetteranno di registrare i dettagli di ogni ingresso. Ad esempio: peso e tipo di porta; maniglia della porta; meccanismo di chiusura; o gradino di soglia.">
+            >
+            ["at0007"] = <
+                text = <"Parcheggio">
+                description = <"Descrizione del parcheggio dei veicoli presso l'abitazione o nelle sue vicinanze.">
+                comment = <"Multiple occorrenze permetteranno di registrare i dettagli per ogni area di parcheggio. Il campo di applicazione di questo elemento di dati include auto, scooter a motore e altri veicoli che richiedono uno spazio dedicato o un deposito fuori casa. Ad esempio: parcheggio singolo/doppio; spazio per il trasferimento all'interno/all'esterno dell'auto; protezione dalle intemperie; spazio sopraelevato; o dettagli sulla porta del garage.">
+            >
+            ["at0008"] = <
+                text = <"Corridoio">
+                description = <"Descrizione del corridoio all'interno dell'abitazione.">
+                comment = <"*Multiple occurrences will allow details for each hallway to be recorded. For example: width. (en)">
+            >
+            ["at0009"] = <
+                text = <"Scale interne/ascensori">
+                description = <"Descrizione dei gradini interni e degli ascensori all'interno dell'abitazione.">
+                comment = <"*Multiple occurrences will allow details for each set of internal stairs or lifts to be recorded. For example: number of steps; condition; banister; or open/closed risers. (en)">
+            >
+            ["at0010"] = <
+                text = <"Soggiorno">
+                description = <"Descrizione di un soggiorno all'interno dell'abitazione.">
+                comment = <"*Multiple occurrences will allow details for each living room to be recorded. For example: chair height. (en)">
+            >
+            ["at0011"] = <
+                text = <"Cucina">
+                description = <"Descrizione di una cucina all'interno dell'abitazione. ">
+                comment = <"*Multiple occurrences will allow details for each kitchen to be recorded. For example: storage space; bench heights; or appliances. (en)">
+            >
+            ["at0012"] = <
+                text = <"Camera da letto">
+                description = <"Descrizione di una camera da letto all'interno dell'abitazione.">
+                comment = <"*Multiple occurrences will allow details for each bedroom to be recorded. For example: bed size and type; bed height; bedside light; or telephone. (en)">
+            >
+            ["at0013"] = <
+                text = <"*Toilet accessibility (en)">
+                description = <"*Description about accsessibility to a toilet. (en)">
+                comment = <"*Multiple occurrences will allow details for each toilet  to be recorded. The toilet could be located within a separate toilet room, within a bathroom or within another space in the dwelling or property. For example: location; emergency access; height of seat pan and distance from walls; or grab rails. (en)">
+            >
+            ["at0014"] = <
+                text = <"Bagno">
+                description = <"Descrizione di un bagno all'interno dell'abitazione.">
+                comment = <"*Multiple occurrences will allow details for each bathroom to be recorded. For example: location; type of bathing facility - shower/bath/shower over bath; bath height; recess size; screen; taps; or grab rails. (en)">
+            >
+            ["at0015"] = <
+                text = <"Lavanderia">
+                description = <"Descrizione di una lavanderia all'interno dell'abitazione o associata ad essa.">
+                comment = <"*Multiple occurrences will allow details for each space with laundry facilities to be recorded. The laundry facilities could be located within a separate laundry room or within another space in the dwelling or property. For example: clothes line location and height. (en)">
+            >
+            ["at0016"] = <
+                text = <"Spazio esterno">
+                description = <"Descrizione di uno spazio esterno associato all'abitazione.">
+                comment = <"*Multiple occurrences will allow details for each outdoor space to be recorded. The intended scope of an outdoor space includes, but is not limited to: a yard; rooftop terrace; balcony; porch; garage; or shed. For example: current condition; size; slope; surface; stairs; or maintenance needs. (en)">
+            >
+            ["at0017"] = <
+                text = <"*Emergency communication access (en)">
+                description = <"*Description about the emergency communication access.
+
+ (en)">
+                comment = <"*Multiple occurrences will allow details for each emergency communication device to be recorded. For example: physical location of fixed phone or base stations; or presence of mobile handsets; personal safety alarms. (en)">
+            >
+            ["at0018"] = <
+                text = <"Protezione antincendio">
+                description = <"Descrizione della protezione antincendio all'interno dell'abitazione.">
+                comment = <"Multiple occorrenze permetteranno di registrare i dettagli di ogni sistema di protezione antincendio. Il campo di applicazione previsto per un sistema di protezione antincendio comprende, ma non si limita a: rilevatori di fumo e di monossido di carbonio, estintori o sprinkler. Per esempio: ubicazione; in ordine di funzionamento; necessità di manutenzione; monitoraggio centrale; o collegamenti seriali.">
+            >
+            ["at0020"] = <
+                text = <"Campanello">
+                description = <"Descrizione di un campanello o di un sistema di allarme all'interno dell'abitazione.">
+                comment = <"Multiple occorrenze permetteranno di registrare i dettagli di ogni campanello. Per esempio: vibrazione, lampeggiamento o udibile; tonalità; o volume.">
+            >
+            ["at0021"] = <
+                text = <"Raccolta spazzatura">
+                description = <"Descrizione dei bidoni della spazzatura e della raccolta dei rifiuti presso l'abitazione.">
+                comment = <"Multiple occorrenze permetteranno di registrare i dettagli per ogni tipo di raccolta dei rifiuti. Ad esempio: posizione dei bidoni o dello scivolo per la spazzatura; o tipo di bidoni.">
+            >
+            ["at0022"] = <
+                text = <"Posta">
+                description = <"Descrizione della consegna e del ritiro della posta presso l'abitazione.">
+            >
+            ["at0023"] = <
+                text = <"Fornitura dell'acqua">
+                description = <"Descrizione di come l'acqua viene consegnata all'interno dell'abitazione.">
+                comment = <"Multiple occorrenze permetteranno di registrare i dettagli per ogni fornitura d'acqua. Per esempio: acqua in tubazione (in casa); tubo di stazionamento; o tubo di cantiere.">
+            >
+            ["at0025"] = <
+                text = <"Stoccaggio dell'acqua">
+                description = <"Descrizione sulla conservazione dell'acqua potabile nell'abitazione.">
+                comment = <"Multiple occorrenze permetteranno di registrare i dettagli per ogni deposito d'acqua. Per esempio: nessuna; serbatoio; o tamburo. ">
+            >
+            ["at0026"] = <
+                text = <"Tipo di bagno">
+                description = <"Descrizione del tipo di toilette dell'abitazione.">
+                comment = <"Multiple occorrenze permetteranno di registrare i dettagli per ogni apparecchio da toilette. Ad esempio: toilette a filo pavimento; o latrina a fossa.">
+            >
+            ["at0028"] = <
+                text = <"Numero di camere da letto">
+                description = <"Il numero di camere da letto nell'abitazione.">
+            >
+            ["at0029"] = <
+                text = <"Numero di bagni">
+                description = <"Il numero di bagni dell'abitazione.">
+            >
+            ["at0033"] = <
+                text = <"Sorgente d'acqua">
+                description = <"Descrizione della fonte d'acqua utilizzata presso l'abitazione.">
+                comment = <"Multiple occorrenze permetteranno di registrare i dettagli per ogni fonte d'acqua. Questo elemento di dati può essere utilizzato per differenziare tra fonti pubbliche e private, nonché il tipo di fonte. Per esempio: pubblica; lago; pozzo privato; pozzo privato; trivellazione; pioggia; o fornitori di acqua.">
+            >
+            ["at0034"] = <
+                text = <"Smaltimento delle acque di scarico">
+                description = <"Descrizione sullo smaltimento delle acque di scarico dell'abitazione.">
+                comment = <"Multipli eventi consentiranno di registrare i dettagli per ogni tipo di smaltimento delle acque di scarico. Ad esempio: fossa settica o fogna; o sistema fognario pubblico.">
+            >
+            ["at0035"] = <
+                text = <"Numero di servizi igienici">
+                description = <"Il numero di servizi igienici nell'abitazione.">
+                comment = <"La toilette potrebbe essere situata all'interno di un bagno o di uno spazio simile, o in una stanza di toilette separata. Per esempio: suite di servizi igienici; orinatoio, latrina a fossa.">
+            >
+            ["at0036"] = <
+                text = <"Condizione">
+                description = <"Descrizione narrativa sulle condizioni generali dell'abitazione.">
+                comment = <"Per esempio: tetto che perde, umidità che sale, muffa in bagno, assi del pavimento rotte o fori nei muri.">
+            >
+            ["at0037"] = <
+                text = <"*Heating (en)">
+                description = <"*Description about how the dwelling is heated. (en)">
+                comment = <"*Multiple occurrences will allow details for each heating source to be recorded. For example: central heating; open fire. (en)">
+            >
+            ["at0038"] = <
+                text = <"Fornitura di energia">
+                description = <"Descrizione delle fonti di energia per l'abitazione.">
+                comment = <"Multiple occorrenze permetteranno di registrare i dettagli per ogni fornitura di energia. Per esempio: elettricità di rete; energia solare; gas in bombole; generatore domestico; o legna da ardere.">
+            >
+            ["at0039"] = <
+                text = <"Sicurezza e protezione">
+                description = <"Descrizione delle misure di sicurezza e di protezione all'interno dell'abitazione.">
+                comment = <"Multiple occorrenze permetteranno di registrare i dettagli per ogni misura di sicurezza e di protezione.">
+            >
+            ["at0040"] = <
+                text = <"Connettività">
+                description = <"*Description about the internet and other forms of connectivity and communication. For example for home monitoring or other medical devices.  (en)">
+                comment = <"*Multiple occurrences will allow details for each form of connectivity to be recorded. For example: internet access; cable; or PSTN line; mobile coverage.
+ (en)">
+            >
+            ["at0041"] = <
+                text = <"Numero di piani">
+                description = <"Il numero di piani all'interno dell'abitazione. ">
+            >
+            ["at0043"] = <
+                text = <"Elettrodomestico">
+                description = <"Descrizione di un elettrodomestico presso l'abitazione">
+                comment = <"Multiple occorrenze permetteranno di registrare i dettagli di ogni apparecchio. Ad esempio: frigorifero; boiler per l'acqua calda; lavatrice/asciugatrice o lavastoviglie.">
+            >
+            ["at0046"] = <
+                text = <"*Cooling (en)">
+                description = <"*Description about how the dwelling is cooled. (en)">
+                comment = <"*Multiple occurrences will allow details for cooling source to be recorded. For example: air conditioning; fan. (en)">
+            >
+            ["at0048"] = <
+                text = <"*Critical features (en)">
+                description = <"*Availability of critical appliances or services at the dwelling, which may support use of clinical decision support. (en)">
+                comment = <"*For example: hot water for hygiene; a refrigerator for food hygiene and safe medication storage. (en)">
+            >
+            ["at0049"] = <
+                text = <"*Feature name (en)">
+                description = <"*The name of the feature. (en)">
+                comment = <"*Coding with a terminology is desirable, where possible. For example: refrigerator; hot running water; backup generator; food cooking facilities;  (en)">
+            >
+            ["at0050"] = <
+                text = <"*Presence (en)">
+                description = <"*Presence of any relevant feature. (en)">
+            >
+            ["at0051"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"*Unknown (en)">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"*Number of rooms (en)">
+                description = <"*The number of rooms within the dwelling. (en)">
+            >
+            ["at0055"] = <
+                text = <"*Number of people (en)">
+                description = <"*The total number of people living in the dwelling. (en)">
+                comment = <"*The number of people in the household will be a subset of the people living in a shared dwelling. (en)">
+            >
+            ["at0056"] = <
+                text = <"*Ventilation (en)">
+                description = <"*Description about the ventilation within the dwelling. (en)">
+            >
+            ["at0057"] = <
+                text = <"*Persons per bedroom (en)">
+                description = <"*Number of household members sharing bedroom. (en)">
+                comment = <"*While this data element will usually record the number of people sleeping in the room where the index patient sleeps, this data element has multiple occurrences to allow for more than one bedroom to be recorded, if necessary. (en)">
+            >
+            ["at0058"] = <
+                text = <"*Cleanliness (en)">
+                description = <"*Description about the level of cleanliness of the dwelling. (en)">
+                comment = <"*For example: Adequate or Inadequate.
+ (en)">
+            >
+            ["ac9040"] = <
+                text = <"*Presence (en) (synthesised)">
+                description = <"*Presence of any relevant feature. (en) (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0051"] = <http://snomed.info/id/410515003>
+            ["at0052"] = <http://snomed.info/id/410516002>
+            ["at0053"] = <http://snomed.info/id/261665006>
+        >
+    >
+    value_sets = <
+        ["ac9040"] = <
+            id = <"ac9040">
+            members = <"at0051", "at0052", "at0053">
+        >
+    >

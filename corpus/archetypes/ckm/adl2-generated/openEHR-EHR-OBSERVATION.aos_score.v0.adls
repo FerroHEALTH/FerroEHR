@@ -1,0 +1,369 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=04a69f39-ecc4-429a-9117-779cdf4316ed; build_uid=f4bc1aa2-fc76-4a11-a488-51c71e733401)
+    openEHR-EHR-OBSERVATION.aos_score.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Hildegard Franke">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"hildi@freshehr.com">
+        ["date"] = <"2017-10-25">
+    >
+    original_namespace = <"uk.org.clinicalmodels">
+    original_publisher = <"UK Clinical Models">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"uk.org.clinicalmodels">
+    custodian_organisation = <"UK Clinical Models">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"www.researchgate.net/publication/299098820_Ankle_osteoarthritis_scale cited 25-Oct-2017.">
+    >
+    other_details = <
+        ["current_contact"] = <"Hildegard Franke, freshEHR Clinical Informatics Ltd.<hildi@freshehr.com>">
+        ["MD5-CAM-1.0.1"] = <"3901358B13278C9477BC1F26F4A8510E">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For the capture and reporting of the Ankle Osteoarthritis Score (AOS) questionnaire details.">
+            use = <"Use to record details of the Ankle Osteoarthritis Score questionnaire. This is a patient reported outcome measure (PROM) questionnaire.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this archetype may be copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners where a copyright exists.">
+            misuse = <"Not to be used unless the terms of copyright have been observed (if a copyright exists).">
+            copyright = <"© Clinical Models UK">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- AOS
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Point in time
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    CLUSTER[at0008] occurrences matches {0..1} matches {    -- Pain
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0009] occurrences matches {0..1} matches {    -- 1 Pain at its worst
+                                                value matches {
+                                                    DV_COUNT[at9001] matches {
+                                                        magnitude matches {|0..100|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0010] occurrences matches {0..1} matches {    -- 2 Pain before getting up in the morning
+                                                value matches {
+                                                    DV_COUNT[at9002] matches {
+                                                        magnitude matches {|0..100|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0011] occurrences matches {0..1} matches {    -- 3 Pain when walking barefoot
+                                                value matches {
+                                                    DV_COUNT[at9003] matches {
+                                                        magnitude matches {|0..100|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0012] occurrences matches {0..1} matches {    -- 4 Pain when standing barefoot
+                                                value matches {
+                                                    DV_COUNT[at9004] matches {
+                                                        magnitude matches {|0..100|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0013] occurrences matches {0..1} matches {    -- 5 Pain when walking wearing shoes
+                                                value matches {
+                                                    DV_COUNT[at9005] matches {
+                                                        magnitude matches {|0..100|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- 6 Pain when standing wearing shoes
+                                                value matches {
+                                                    DV_COUNT[at9006] matches {
+                                                        magnitude matches {|0..100|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0015] occurrences matches {0..1} matches {    -- 7 Pain when walking wearing shoe inserts or braces
+                                                value matches {
+                                                    DV_COUNT[at9007] matches {
+                                                        magnitude matches {|0..100|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0016] occurrences matches {0..1} matches {    -- 8 Pain when standing wearing shoe inserts or braces
+                                                value matches {
+                                                    DV_COUNT[at9008] matches {
+                                                        magnitude matches {|0..100|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0017] occurrences matches {0..1} matches {    -- 9 Pain at the end of the day
+                                                value matches {
+                                                    DV_COUNT[at9009] matches {
+                                                        magnitude matches {|0..100|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0018] occurrences matches {0..1} matches {    -- Total pain score
+                                                value matches {
+                                                    DV_COUNT[at9010] matches {
+                                                        magnitude matches {|0..100|}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0019] occurrences matches {0..1} matches {    -- Difficulty
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0020] occurrences matches {0..1} matches {    -- 1 Walking around house
+                                                value matches {
+                                                    DV_COUNT[at9011] matches {
+                                                        magnitude matches {|0..100|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0021] occurrences matches {0..1} matches {    -- 2 Walking outside on uneven ground
+                                                value matches {
+                                                    DV_COUNT[at9012] matches {
+                                                        magnitude matches {|0..100|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0022] occurrences matches {0..1} matches {    -- 3 Walking four blocks or more
+                                                value matches {
+                                                    DV_COUNT[at9013] matches {
+                                                        magnitude matches {|0..100|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0023] occurrences matches {0..1} matches {    -- 4 Climbing stairs
+                                                value matches {
+                                                    DV_COUNT[at9014] matches {
+                                                        magnitude matches {|0..100|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0024] occurrences matches {0..1} matches {    -- 5 Descending stairs
+                                                value matches {
+                                                    DV_COUNT[at9015] matches {
+                                                        magnitude matches {|0..100|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0025] occurrences matches {0..1} matches {    -- 6 Standing on tip toes
+                                                value matches {
+                                                    DV_COUNT[at9016] matches {
+                                                        magnitude matches {|0..100|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0026] occurrences matches {0..1} matches {    -- 7 Getting out of chair
+                                                value matches {
+                                                    DV_COUNT[at9017] matches {
+                                                        magnitude matches {|0..100|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0027] occurrences matches {0..1} matches {    -- 8 Climbing up or down curbs
+                                                value matches {
+                                                    DV_COUNT[at9018] matches {
+                                                        magnitude matches {|0..100|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0028] occurrences matches {0..1} matches {    -- 9 Walking fast or running
+                                                value matches {
+                                                    DV_COUNT[at9019] matches {
+                                                        magnitude matches {|0..100|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0029] occurrences matches {0..1} matches {    -- Total difficulty score
+                                                value matches {
+                                                    DV_COUNT[at9020] matches {
+                                                        magnitude matches {|0..100|}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- Total AOS score
+                                        value matches {
+                                            DV_COUNT[at9021] matches {
+                                                magnitude matches {|0..100|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0031] occurrences matches {0..1} matches {    -- Total COFAS score
+                                        value matches {
+                                            DV_QUANTITY[at9022] matches {
+                                                property matches {[at9000]}    -- Qualified real
+                                                magnitude matches {|0.0..100.0|}
+                                                units matches {"1"}
+                                                precision matches {2}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0006] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0007] matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9023]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0004] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0005] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"AOS">
+                description = <"Ankle Osteoarthritis Score (AOS) questionnaire.">
+            >
+            ["at0002"] = <
+                text = <"Point in time">
+                description = <"A specific date and/or time which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0005"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"e.g. Local hospital departmental infomation or additional metadata to align with HL7 or CDISC equivalents.">
+            >
+            ["at0007"] = <
+                text = <"Confounding factors">
+                description = <"Record any issues or factors that may impact on the score or interpretation.">
+            >
+            ["at0008"] = <
+                text = <"Pain">
+                description = <"Details of patient-reported extent of pain during past week.">
+            >
+            ["at0009"] = <
+                text = <"1 Pain at its worst">
+                description = <"Patient-reported estimation of pain at its worst during past week, on a scale of 0 to 100, where 0 indicates no pain and 100 indicates worst pain imaginable.">
+            >
+            ["at0010"] = <
+                text = <"2 Pain before getting up in the morning">
+                description = <"Patient-reported estimation of pain before getting up in the morning during past week, on a scale of 0 to 100, where 0 indicates no pain and 100 indicates worst pain imaginable.">
+            >
+            ["at0011"] = <
+                text = <"3 Pain when walking barefoot">
+                description = <"Patient-reported estimation of pain when walking barefoot during past week, on a scale of 0 to 100, where 0 indicates no pain and 100 indicates worst pain imaginable.">
+            >
+            ["at0012"] = <
+                text = <"4 Pain when standing barefoot">
+                description = <"Patient-reported estimation of pain when standing barefoot during past week, on a scale of 0 to 100, where 0 indicates no pain and 100 indicates worst pain imaginable.">
+            >
+            ["at0013"] = <
+                text = <"5 Pain when walking wearing shoes">
+                description = <"Patient-reported estimation of pain when walking wearing shoes during past week, on a scale of 0 to 100, where 0 indicates no pain and 100 indicates worst pain imaginable.">
+            >
+            ["at0014"] = <
+                text = <"6 Pain when standing wearing shoes">
+                description = <"Patient-reported estimation of pain when standing wearing shoes during past week, on a scale of 0 to 100, where 0 indicates no pain and 100 indicates worst pain imaginable.">
+            >
+            ["at0015"] = <
+                text = <"7 Pain when walking wearing shoe inserts or braces">
+                description = <"Patient-reported estimation of pain when walking wearing shoe inserts or braces during past week, on a scale of 0 to 100, where 0 indicates no pain and 100 indicates worst pain imaginable.">
+            >
+            ["at0016"] = <
+                text = <"8 Pain when standing wearing shoe inserts or braces">
+                description = <"Patient-reported estimation of pain when standing wearing shoe inserts or braces during past week, on a scale of 0 to 100, where 0 indicates no pain and 100 indicates worst pain imaginable.">
+            >
+            ["at0017"] = <
+                text = <"9 Pain at the end of the day">
+                description = <"Patient-reported estimation of pain at the end of the day during past week, on a scale of 0 to 100, where 0 indicates no pain and 100 indicates worst pain imaginable.">
+            >
+            ["at0018"] = <
+                text = <"Total pain score">
+                description = <"Total score from questions 1 to 9, calculated as sum of 1 to 9 divided by 9.">
+            >
+            ["at0019"] = <
+                text = <"Difficulty">
+                description = <"Details of patient-reported extent of difficulty performing activities.">
+            >
+            ["at0020"] = <
+                text = <"1 Walking around house">
+                description = <"Patient-reported estimation of difficulty walking around the house during past week, on a scale of 0 to 100, where 0 indicates no difficulty and 100 indicates so difficult unable.">
+            >
+            ["at0021"] = <
+                text = <"2 Walking outside on uneven ground">
+                description = <"Patient-reported estimation of difficulty walking outside on uneven ground during past week, on a scale of 0 to 100, where 0 indicates no difficulty and 100 indicates so difficult unable.">
+            >
+            ["at0022"] = <
+                text = <"3 Walking four blocks or more">
+                description = <"Patient-reported estimation of difficulty walking four blocks or more during past week, on a scale of 0 to 100, where 0 indicates no difficulty and 100 indicates so difficult unable.">
+            >
+            ["at0023"] = <
+                text = <"4 Climbing stairs">
+                description = <"Patient-reported estimation of difficulty climbing stairs during past week, on a scale of 0 to 100, where 0 indicates no difficulty and 100 indicates so difficult unable.">
+            >
+            ["at0024"] = <
+                text = <"5 Descending stairs">
+                description = <"Patient-reported estimation of difficulty descending stairs during past week, on a scale of 0 to 100, where 0 indicates no difficulty and 100 indicates so difficult unable.">
+            >
+            ["at0025"] = <
+                text = <"6 Standing on tip toes">
+                description = <"Patient-reported estimation of difficulty standing on tip toes during past week, on a scale of 0 to 100, where 0 indicates no difficulty and 100 indicates so difficult unable.">
+            >
+            ["at0026"] = <
+                text = <"7 Getting out of chair">
+                description = <"Patient-reported estimation of difficulty getting out of chair during past week, on a scale of 0 to 100, where 0 indicates no difficulty and 100 indicates so difficult unable.">
+            >
+            ["at0027"] = <
+                text = <"8 Climbing up or down curbs">
+                description = <"Patient-reported estimation of difficulty climbing up or down curbs during past week, on a scale of 0 to 100, where 0 indicates no difficulty and 100 indicates so difficult unable.">
+            >
+            ["at0028"] = <
+                text = <"9 Walking fast or running">
+                description = <"Patient-reported estimation of difficulty walking fast or running during past week, on a scale of 0 to 100, where 0 indicates no difficulty and 100 indicates so difficult unable.">
+            >
+            ["at0029"] = <
+                text = <"Total difficulty score">
+                description = <"Total score from questions 1 to 9, calculated as sum of 1 to 9 divided by 9.">
+            >
+            ["at0030"] = <
+                text = <"Total AOS score">
+                description = <"Total combined score for pain and difficulty, calculated as total (pain score + total difficulty score) / 2. ">
+            >
+            ["at0031"] = <
+                text = <"Total COFAS score">
+                description = <"Total score according to Canadian Orthopaedics Foot and Ankle Society.">
+            >
+            ["at9000"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/380>
+        >
+    >

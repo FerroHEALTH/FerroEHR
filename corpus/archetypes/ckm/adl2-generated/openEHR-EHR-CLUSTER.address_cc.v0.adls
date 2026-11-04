@@ -1,0 +1,485 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=a4357b7c-5bf5-47ce-bcdd-f4bbbb56238d; build_uid=da53bdc0-c971-42ea-a850-ec2a70cfa451)
+    openEHR-EHR-CLUSTER.address_cc.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Sarah Ballout">
+                ["organisation"] = <"MHH-Hannover">
+                ["email"] = <"ballout.sarah@mh-hannover.de">
+            >
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            author = <
+                ["name"] = <"Paolo Anedda">
+                ["organisation"] = <"Inpeco">
+                ["email"] = <"paolo.anedda@inpeco.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Hildegard McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"hildi@freshehr.com">
+        ["date"] = <"2018-07-20">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"https://fhir.hl7.org.uk/STU3/StructureDefinition/CareConnect-Patient-1 cited 30-Jul-2018.">
+        ["2"] = <"https://fhir.hl7.org.uk/STU3/StructureDefinition/CareConnect-Practitioner-1 cited 30-Jul-2018.">
+    >
+    other_details = <
+        ["current_contact"] = <"Hildegard McNicoll, freshEHR Clinical Informatics Ltd.<hildi@freshehr.com>">
+        ["MD5-CAM-1.0.1"] = <"B45108B932C6EF98E9395E13A429D538">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Repräsentation Adressdaten in Abstimmung mit der entsprechenden FHIR-Ressource.">
+            use = <"Zur Repräsentation von Adressangaben, die mit den entsprechenden FHIR-Ressourcen abgestimmt sind.
+
+Dieser Cluster-Archetyp ist für die Verwendung innerhalb der an den FHIR-Ressourcen ausgerichteten Archetypen wie CLUSTER.fhir_contact.v0 und CLUSTER.fhir_practitioner.v0 vorgesehen.">
+            misuse = <"">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"*For the recording of address details aligned with corresponding FHIR resource.(en)">
+            use = <"*Use to record address details aligned with the corresponding FHIR resources.
+
+This cluster archetype is intended to be used inside FHIR resource aligned archetypes such as CLUSTER.fhir_contact.v0 and CLUSTER.fhir_practitioner.v0.(en)">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For the recording of address details aligned with corresponding FHIR resource.">
+            use = <"Use to record address details aligned with the corresponding FHIR resources.
+
+This cluster archetype is intended to be used inside FHIR resource aligned archetypes such as CLUSTER.fhir_contact.v0 and CLUSTER.fhir_practitioner.v0.">
+            misuse = <"">
+            copyright = <"© Apperta Foundation, openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"Registrare i dettagli dell'indirizzo allineati con la corrispondente risorsa FHIR.">
+            use = <"Utilizzare per registrare i dettagli dell'indirizzo in linea con le corrispondenti risorse FHIR.
+
+Questo archetipo cluster è destinato a essere utilizzato all'interno di archetipi allineati alle risorse FHIR come CLUSTER.fhir_contact.v0 e CLUSTER.fhir_practitioner.v0.">
+            misuse = <"">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Address
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Use
+                value matches {
+                    DV_CODED_TEXT[at9002] matches {
+                        defining_code matches {[ac9000]}    -- Use (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Type
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9001]}    -- Type (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Text
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0011] matches {    -- Line
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            ELEMENT[at0012] occurrences matches {0..1} matches {    -- City
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+            ELEMENT[at0013] occurrences matches {0..1} matches {    -- District
+                value matches {
+                    DV_TEXT[at9007]
+                }
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Postal code
+                value matches {
+                    DV_TEXT[at9008]
+                }
+            }
+            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Country
+                value matches {
+                    DV_TEXT[at9009]
+                }
+            }
+            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Valid period start
+                value matches {
+                    DV_DATE_TIME[at9010]
+                }
+            }
+            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Valid period end
+                value matches {
+                    DV_DATE_TIME[at9011]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Adresse">
+                description = <"Adressangaben abgestimmt mit FHIR-Ressource.">
+            >
+            ["at0001"] = <
+                text = <"Verwendung">
+                description = <"Der Zweck der Adresse.">
+            >
+            ["at0002"] = <
+                text = <"Haus">
+                description = <"Wohnanschrift.">
+            >
+            ["at0003"] = <
+                text = <"Arbeit">
+                description = <"Arbeitsanschrift.">
+            >
+            ["at0004"] = <
+                text = <"Vorläufig">
+                description = <"Vorläufige Anschrift.">
+            >
+            ["at0005"] = <
+                text = <"Alt">
+                description = <"Alte Anschrift.">
+            >
+            ["at0006"] = <
+                text = <"Typ">
+                description = <"Es wird zwischen Adressen (physischen Adressen, die Sie besuchen können) und Postanschriften (z.B. Postfächer und Pflegeanschriften) unterschieden. Die meisten Adressen sind beides.">
+            >
+            ["at0007"] = <
+                text = <"Postanschrift">
+                description = <"Die postalische Anschrift.">
+            >
+            ["at0008"] = <
+                text = <"Physikalisch">
+                description = <"Die Physikalische Anschrift.">
+            >
+            ["at0009"] = <
+                text = <"Beides">
+                description = <"Address which is both physical and postal.">
+            >
+            ["at0010"] = <
+                text = <"Text">
+                description = <"Eine Volltextdarstellung der Anschrift.">
+            >
+            ["at0011"] = <
+                text = <"Verbindung">
+                description = <"Diese Komponente enthält die Hausnummer, Wohnungsnummer, Straßenname, Straßenbezeichnung, Straßenbeschreibung, Postfachnummer, Lieferhinweise und ähnliche Adressinformationen.">
+            >
+            ["at0012"] = <
+                text = <"Ort">
+                description = <"Der Name der Stadt, des Ortes, des Dorfes oder einer anderen Gemeinde oder eines Lieferzentrums.">
+            >
+            ["at0013"] = <
+                text = <"Bezirk">
+                description = <"Der Name des Verwaltungsgebietes (Grafschaft).">
+            >
+            ["at0014"] = <
+                text = <"Postleitzahl">
+                description = <"Eine Postleitzahl, die eine durch den Postdienst definierte Region bezeichnet.">
+            >
+            ["at0015"] = <
+                text = <"Land">
+                description = <"Land - eine Nation, wie sie allgemein verstanden oder allgemein akzeptiert wird.">
+            >
+            ["at0016"] = <
+                text = <"Beginn der Gültigkeitsdauer">
+                description = <"Der Beginn der Laufzeit. Die Grenze ist inklusive.">
+            >
+            ["at0017"] = <
+                text = <"Ende der Gültigkeitsdauer">
+                description = <"Das Ende der Laufzeit. Wenn das Ende der Berichtszeit fehlt, bedeutet dies, dass die aktuelle Berichtszeit noch nicht abgeschlossen ist. Der Beginn kann in der Vergangenheit und das Enddatum in der Zukunft liegen, was bedeutet, dass das Ende der Zeitspanne zu diesem Zeitpunkt erwartungsgemäß/geplant ist.">
+            >
+            ["ac9000"] = <
+                text = <"Verwendung (synthesised)">
+                description = <"Der Zweck der Adresse. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Typ (synthesised)">
+                description = <"Es wird zwischen Adressen (physischen Adressen, die Sie besuchen können) und Postanschriften (z.B. Postfächer und Pflegeanschriften) unterschieden. Die meisten Adressen sind beides. (synthesised)">
+            >
+        >
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"Osoite">
+                description = <"*Address details aligned with FHIR resource.(en)">
+            >
+            ["at0001"] = <
+                text = <"Käyttötarkoitus">
+                description = <"Tarkenne osoitteen luonteesta">
+            >
+            ["at0002"] = <
+                text = <"Koti">
+                description = <"Kotiosoite">
+            >
+            ["at0003"] = <
+                text = <"Työ">
+                description = <"Työosoite">
+            >
+            ["at0004"] = <
+                text = <"Väliaikainen">
+                description = <"Väliaikainen osoite">
+            >
+            ["at0005"] = <
+                text = <"Vanha / entinen">
+                description = <"Vanha / entinen osoite">
+            >
+            ["at0006"] = <
+                text = <"Jakelu">
+                description = <"Onko osoite postilokero vai katuosoite.">
+            >
+            ["at0007"] = <
+                text = <"Postilokero">
+                description = <"Postilokero osoite">
+            >
+            ["at0008"] = <
+                text = <"Katuosoite">
+                description = <"Katuosoite">
+            >
+            ["at0009"] = <
+                text = <"Molemmat">
+                description = <"Katu - sekä postilokero osoite">
+            >
+            ["at0010"] = <
+                text = <"Osoite">
+                description = <"Koko osoite">
+            >
+            ["at0011"] = <
+                text = <"Lähiosoite">
+                description = <"Kuvataan asunnon numero, talon numero, kadun nimi, PO numero, mahdolliset ohjeistukset paikantamiseksi">
+            >
+            ["at0012"] = <
+                text = <"Kaupunki">
+                description = <"Kaupunki">
+            >
+            ["at0013"] = <
+                text = <"Lääni">
+                description = <"Lääni">
+            >
+            ["at0014"] = <
+                text = <"Postinumero">
+                description = <"Postinumero">
+            >
+            ["at0015"] = <
+                text = <"Maa">
+                description = <"Maan nimi">
+            >
+            ["at0016"] = <
+                text = <"Alkaen">
+                description = <"Osoitteen käytön ajanjakson aloitus hetki">
+            >
+            ["at0017"] = <
+                text = <"Päättyen">
+                description = <"Osoitteen käytön päättymisen ajanjakso. Jos päättymispäivää ei ole asetettu, tarkoittaa se että osoite on käytössä. Aloitusaika voidaan asettaa menneisyyteen ja päättyminen tulevaisuuteen , kuvaten näin suunniteltua osoitteen käyttöaikaa.">
+            >
+            ["ac9000"] = <
+                text = <"Käyttötarkoitus (synthesised)">
+                description = <"Tarkenne osoitteen luonteesta (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Jakelu (synthesised)">
+                description = <"Onko osoite postilokero vai katuosoite. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Address">
+                description = <"Address details aligned with FHIR resource.">
+            >
+            ["at0001"] = <
+                text = <"Use">
+                description = <"The purpose of the address.">
+            >
+            ["at0002"] = <
+                text = <"Home">
+                description = <"Home address.">
+            >
+            ["at0003"] = <
+                text = <"Work">
+                description = <"Work address.">
+            >
+            ["at0004"] = <
+                text = <"Temp">
+                description = <"Temporary address.">
+            >
+            ["at0005"] = <
+                text = <"Old">
+                description = <"Old address.">
+            >
+            ["at0006"] = <
+                text = <"Type">
+                description = <"Distinguishes between physical addresses (those you can visit) and mailing addresses (e.g. PO Boxes and care-of addresses). Most addresses are both.">
+            >
+            ["at0007"] = <
+                text = <"Postal">
+                description = <"Postal type of address.">
+            >
+            ["at0008"] = <
+                text = <"Physical">
+                description = <"Physical type of address.">
+            >
+            ["at0009"] = <
+                text = <"Both">
+                description = <"Address which is both physical and postal.">
+            >
+            ["at0010"] = <
+                text = <"Text">
+                description = <"A full text representation of the address.">
+            >
+            ["at0011"] = <
+                text = <"Line">
+                description = <"This component contains the house number, apartment number, street name, street direction, P.O. Box number, delivery hints, and similar address information.">
+            >
+            ["at0012"] = <
+                text = <"City">
+                description = <"The name of the city, town, village or other community or delivery center.">
+            >
+            ["at0013"] = <
+                text = <"District">
+                description = <"The name of the administrative area (county).">
+            >
+            ["at0014"] = <
+                text = <"Postal code">
+                description = <"A postal code designating a region defined by the postal service.">
+            >
+            ["at0015"] = <
+                text = <"Country">
+                description = <"Country - a nation as commonly understood or generally accepted.">
+            >
+            ["at0016"] = <
+                text = <"Valid period start">
+                description = <"The start of the period. The boundary is inclusive.">
+            >
+            ["at0017"] = <
+                text = <"Valid period end">
+                description = <"The end of the period. If the end of the period is missing, it means that the period is ongoing. The start may be in the past, and the end date in the future, which means that period is expected/planned to end at that time.">
+            >
+            ["ac9000"] = <
+                text = <"Use (synthesised)">
+                description = <"The purpose of the address. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Type (synthesised)">
+                description = <"Distinguishes between physical addresses (those you can visit) and mailing addresses (e.g. PO Boxes and care-of addresses). Most addresses are both. (synthesised)">
+            >
+        >
+        ["it"] = <
+            ["at0000"] = <
+                text = <"Indirizzo">
+                description = <"Dettagli dell'indirizzo allineati alla risorsa FHIR.">
+            >
+            ["at0001"] = <
+                text = <"Utilizzo">
+                description = <"Scopo di utilizzo dell'indirizzo.">
+            >
+            ["at0002"] = <
+                text = <"Casa">
+                description = <"Indirizzo di casa.">
+            >
+            ["at0003"] = <
+                text = <"Lavoro">
+                description = <"Indirizzo di lavoro.">
+            >
+            ["at0004"] = <
+                text = <"Temporaneo">
+                description = <"Indirizzo temporaneo.">
+            >
+            ["at0005"] = <
+                text = <"Precedente">
+                description = <"Indirizzo precedente.">
+            >
+            ["at0006"] = <
+                text = <"Tipo">
+                description = <"Distingue tra indirizzi fisici (quelli visitabili) e indirizzi postali (ad es. caselle postali e indirizzi di assistenza). La maggior parte degli indirizzi sono entrambi.">
+            >
+            ["at0007"] = <
+                text = <"Postale">
+                description = <"Indirizzo di tipo postale.">
+            >
+            ["at0008"] = <
+                text = <"Fisico">
+                description = <"Indirizzo di tipo fisico.">
+            >
+            ["at0009"] = <
+                text = <"Entrambi">
+                description = <"Indirizzo che è sia fisico che postale.">
+            >
+            ["at0010"] = <
+                text = <"Testo">
+                description = <"Una rappresentazione testuale completa dell'indirizzo.">
+            >
+            ["at0011"] = <
+                text = <"Linea">
+                description = <"Questo componente contiene il numero civico, il numero dell'appartamento, il nome dell'appartamento, il nome della strada, la direzione della strada, il numero della casella postale, i suggerimenti per la consegna e informazioni simili sull'indirizzo.">
+            >
+            ["at0012"] = <
+                text = <"Città">
+                description = <"Il nome della città, paese, villaggio o altra comunità o centro di consegna.">
+            >
+            ["at0013"] = <
+                text = <"Provincia">
+                description = <"Il nome dell'area amministrativa (Provincia). ">
+            >
+            ["at0014"] = <
+                text = <"Codice postale">
+                description = <"Un codice definito dal servizio postale che designa un comune.">
+            >
+            ["at0015"] = <
+                text = <"Nazione">
+                description = <"Paese - una nazione come comunemente intesa o generalmente accettata.">
+            >
+            ["at0016"] = <
+                text = <"Inizio periodo valido">
+                description = <"L'inizio del periodo. L'estremo è incluso. ">
+            >
+            ["at0017"] = <
+                text = <"Fine periodo valido">
+                description = <"La fine del periodo. Se manca la fine del periodo, significa che il periodo è in corso. L'inizio può essere nel passato, e la data di fine nel futuro, il che significa che il periodo è previsto / pianificato per finire in quel momento.">
+            >
+            ["ac9000"] = <
+                text = <"Utilizzo (synthesised)">
+                description = <"Scopo di utilizzo dell'indirizzo. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Tipo (synthesised)">
+                description = <"Distingue tra indirizzi fisici (quelli visitabili) e indirizzi postali (ad es. caselle postali e indirizzi di assistenza). La maggior parte degli indirizzi sono entrambi. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0007", "at0008", "at0009">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0002", "at0003", "at0004", "at0005">
+        >
+    >

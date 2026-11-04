@@ -1,0 +1,1083 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=90a3a0e4-23f0-49ff-8eae-fa748c7f9a72; build_uid=658c82a0-ff94-4a14-ab9f-86ccdbb2a6b5)
+    openEHR-EHR-OBSERVATION.audiogram_result.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Kerrie Lee">
+        ["organisation"] = <"Hearing Health Program, Northern Territory">
+        ["email"] = <"kerrie.lee2@bigpond.com">
+        ["date"] = <"2012-10-10">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Amarjit Anand, NT Department of Health/NT Hearing", "Judith Boswell, Adelaide Hearing Consultants, Australia", "Stephen Chu, NEHTA, Australia", "Kimberley Crebbin, NT Hearing Services, Australia", "Kathy Currie, Northern Territory Health, Australia", "Lisa Dawson, NT Hearing, Northern Territory", "Jade Frederiksen, Hearing Health Program, DoH, Australia", "Sam Harkus, Australian Hearing, Australia", "Sam Heard, Ocean Informatics, Australia (Editor)", "Paul Hickey, Hearing Health Program, Australia", "Oliver Hosking, Remote Health NT, Australia", "Anthony Leech, Hearing Health, Australia", "Kerrie Lee, Ngaanyatjarra Health Service, Australia", "Heather Leslie, Atomica Informatics, Australia (Editor)", "Rebecca Matthews, NT Hearing Services - NTG, Australia", "Ian McNicoll, Ocean Informatics UK, United Kingdom", "Mark Ramjan, NT Department of Health, Australia", "Bojana Sarkic, Northern Territory Government, Australia", "Kelly Simmons, Department of Health, Australia", "Prasha Sooful, Royal Darwin Hospital, Australia", "Fiona Wake, RAHC, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Derived from: Audiogram result, Draft archetype [Internet]. Australian Digital Health Agency (NEHTA), ADHA Clinical Knowledge Manager. Authored: 2012 Oct 10. Available at: http://dcm.nehta.org.au/ckm#showArchetype_1013.1.1097_17 (discontinued).">
+        ["2"] = <"Sabini P, Sclafani AP. Efficacy of serologic testing in asymmetric sensorineural hearing loss. Otolaryngol Head Neck Surg. 2000 Apr;122(4):469-76. PubMed PMID: 10740163.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"11B16DFF344B9BDCD3C6DE5524A5617B">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record measurements of hearing acuity using a calibrated hearing test device, and their interpretation by a clinician.">
+            keywords = <"hearing", "test", "audiogram", "audiometry", "acuity", "threshold", "decibels", "ABR", "VROA", "VRA", "play">
+            use = <"Use to record measurements and related findings for a single identified test of hearing acuity, for each ear tested separately or both ears simultaneously, via air conduction and/or bone conduction, with masking when required.
+
+Use to record the interpretation of all measurements of hearing acuity for each ear or both ears if tested simultaneously, and an overall interpretation (or audiological diagnosis). 
+
+This archetype has been designed to capture hearing threshold determination for air conduction and/or bone conduction (with or without masking) for the following tests: 
+- Pure Tone Audiometry;
+- Play Audiometry;
+- Auditory Brainstem Response; and
+- Visual Reinforcement Orientation Audiometry.
+
+All of the data elements are recorded using a single method or protocol. If, during the test, any of the protocol parameters need to be modified, then the subsequent part of the test will need to be recorded within a separate instance of the test data, using the updated protocol parameters.">
+            misuse = <"Not to be used for hearing screening assessment - use the OBSERVATION.hearing_screening archetype.
+
+Not to be used to record other auditory assessments such as:
+- Behavioural Observation Audiometry (BOA);
+- Most Comfortable Listening Level (MCL) and Uncomfortable Listening Level (UCL); and
+- Auditory Brainstem Response (ABR) for any purpose other than hearing threshold determination.
+These assessments need to be recorded in specific archetypes for the purpose.">
+            copyright = <"© Northern Territory Department of Health (Australia), openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Audiogram test result
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Any point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0037] occurrences matches {1} matches {    -- Test result name
+                                        value matches {
+                                            DV_TEXT[at9024]
+                                        }
+                                    }
+                                    CLUSTER[at0006] occurrences matches {0..3} matches {    -- Result details
+                                        items cardinality matches {2..*; unordered} matches {
+                                            ELEMENT[at0007] occurrences matches {1} matches {    -- Test ear
+                                                value matches {
+                                                    DV_CODED_TEXT[at9025] matches {
+                                                        defining_code matches {[ac9000]}    -- Test ear (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            CLUSTER[at0139] occurrences matches {0..2} matches {    -- Air conduction result
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0141] occurrences matches {0..1} matches {    -- Air conduction masking
+                                                        value matches {
+                                                            DV_BOOLEAN[at9026] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    CLUSTER[at0048] matches {    -- Measurement
+                                                        items cardinality matches {2; unordered} matches {
+                                                            ELEMENT[at0011] occurrences matches {1} matches {    -- Frequency
+                                                                value matches {
+                                                                    DV_QUANTITY[at9027] matches {
+                                                                        property matches {[at9001]}    -- Frequency
+                                                                        [magnitude, units, precision] matches {
+                                                                            [{|125.0..16000.0|}, {"Hz"}, {0}],
+                                                                            [{|0.125..16.0|}, {"kHz"}, {3}]
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Threshold level
+                                                                value matches {
+                                                                    DV_QUANTITY[at9028] matches {
+                                                                        property matches {[at9002]}    -- Loudness
+                                                                        magnitude matches {|-10.0..120.0|}
+                                                                        units matches {"dB"}
+                                                                        precision matches {0}
+                                                                    }
+                                                                }
+                                                                null_flavour matches {
+                                                                    DV_CODED_TEXT[at9029] matches {
+                                                                        defining_code matches {[ac9007]}    -- Threshold level (synthesised)
+                                                                    }
+                                                                }
+                                                            }
+                                                            ELEMENT[at0153] occurrences matches {0..1} matches {    -- No response
+                                                                value matches {
+                                                                    DV_BOOLEAN[at9030] matches {
+                                                                        value matches {True}
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0122] occurrences matches {0..1} matches {    -- No test result
+                                                        value matches {
+                                                            DV_BOOLEAN[at9031] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0123] occurrences matches {0..1} matches {    -- Reason for no result
+                                                        value matches {
+                                                            DV_TEXT[at9032]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            CLUSTER[at0140] occurrences matches {0..2} matches {    -- Bone conduction result
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0142] occurrences matches {0..1} matches {    -- Bone conduction masking
+                                                        value matches {
+                                                            DV_BOOLEAN[at9033] matches {
+                                                                value matches {True}
+                                                            }
+                                                        }
+                                                    }
+                                                    CLUSTER[at0143] occurrences matches {0..1} matches {    -- Measurement
+                                                        items cardinality matches {1..*; unordered} matches {
+                                                            ELEMENT[at0144] occurrences matches {1} matches {    -- Frequency
+                                                                value matches {
+                                                                    DV_QUANTITY[at9034] matches {
+                                                                        property matches {[at9001]}    -- Frequency
+                                                                        [magnitude, units, precision] matches {
+                                                                            [{|125.0..16000.0|}, {"Hz"}, {0}],
+                                                                            [{|0.125..16.0|}, {"kHz"}, {3}]
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                            ELEMENT[at0145] occurrences matches {0..1} matches {    -- Threshold level
+                                                                value matches {
+                                                                    DV_QUANTITY[at9035] matches {
+                                                                        property matches {[at9002]}    -- Loudness
+                                                                        magnitude matches {|-10.0..120.0|}
+                                                                        units matches {"dB"}
+                                                                        precision matches {0}
+                                                                    }
+                                                                }
+                                                            }
+                                                            ELEMENT[at0154] occurrences matches {0..1} matches {    -- No response
+                                                                value matches {
+                                                                    DV_BOOLEAN[at9036] matches {
+                                                                        value matches {True, False}
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0146] occurrences matches {0..1} matches {    -- No test result
+                                                        value matches {
+                                                            DV_BOOLEAN[at9037] matches {
+                                                                value matches {True, False}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0147] occurrences matches {0..1} matches {    -- Reason for no result
+                                                        value matches {
+                                                            DV_TEXT[at9038]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            CLUSTER[at0055] occurrences matches {0..1} matches {    -- Hearing threshold interpretation
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0056] occurrences matches {0..1} matches {    -- Pure tone average
+                                                        value matches {
+                                                            DV_QUANTITY[at9039] matches {
+                                                                property matches {[at9002]}    -- Loudness
+                                                                magnitude matches {|-10.0..120.0|}
+                                                                units matches {"dB"}
+                                                                precision matches {1}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0135] occurrences matches {0..1} matches {    -- Degree of loss
+                                                        value matches {
+                                                            DV_TEXT[at9040]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0065] occurrences matches {0..1} matches {    -- Type of loss
+                                                        value matches {
+                                                            DV_CODED_TEXT[at9041] matches {
+                                                                defining_code matches {[ac9008]}    -- Type of loss (synthesised)
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0070] matches {    -- Clinical interpretation
+                                                        value matches {
+                                                            DV_TEXT[at9042]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0126] occurrences matches {0..1} matches {    -- Articulation index
+                                                        value matches {
+                                                            DV_PROPORTION[at9043] matches {
+                                                                numerator matches {|0.0..1.0|}
+                                                                is_integral matches {False}
+                                                                type matches {1}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0166] occurrences matches {0..1} matches {    -- Comment
+                                                        value matches {
+                                                            DV_TEXT[at9044]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0071] occurrences matches {0..1} matches {    -- Sensorineural symmetry
+                                        value matches {
+                                            DV_CODED_TEXT[at9045] matches {
+                                                defining_code matches {[ac9009]}    -- Sensorineural symmetry (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0131] occurrences matches {0..1} matches {    -- Laterality of loss
+                                        value matches {
+                                            DV_CODED_TEXT[at9046] matches {
+                                                defining_code matches {[ac9010]}    -- Laterality of loss (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0165] occurrences matches {0..1} matches {    -- Degree of impairment
+                                        value matches {
+                                            DV_TEXT[at9047]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0167] matches {    -- Multimedia
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0121] matches {    -- Overall interpretation
+                                        value matches {
+                                            DV_TEXT[at9048]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0172] matches {    -- Test not done
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9049]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0013] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Aided status
+                                        value matches {
+                                            DV_CODED_TEXT[at9050] matches {
+                                                defining_code matches {[ac9011; at31]}    -- Aided status (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0164] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9051]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    INTERVAL_EVENT[at0163] matches {    -- Average
+                        math_function matches {
+                            DV_CODED_TEXT[at9052] matches {
+                                defining_code matches {[at9012]}    -- median
+                            }
+                        }
+                        data matches {
+                            use_node ITEM_TREE[at9053] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                        state matches {
+                            use_node ITEM_TREE[at9054] /data[at0001]/events[at0002]/state[at0013]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0032] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0171] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0109] occurrences matches {0..1} matches {    -- Air presentation
+                        value matches {
+                            DV_CODED_TEXT[at9055] matches {
+                                defining_code matches {[ac9013]}    -- Air presentation (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0113] occurrences matches {0..1} matches {    -- Bone presentation
+                        value matches {
+                            DV_CODED_TEXT[at9056] matches {
+                                defining_code matches {[ac9014]}    -- Bone presentation (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0075] occurrences matches {0..1} matches {    -- Test environment
+                        value matches {
+                            DV_CODED_TEXT[at9057] matches {
+                                defining_code matches {[ac9015]}    -- Test environment (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0157] occurrences matches {0..1} matches {    -- Background noise
+                        value matches {
+                            DV_CODED_TEXT[at9058] matches {
+                                defining_code matches {[ac9016]}    -- Background noise (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0034] occurrences matches {0..1} matches {    -- Test stimulus
+                        value matches {
+                            DV_CODED_TEXT[at9059] matches {
+                                defining_code matches {[ac9017]}    -- Test stimulus (synthesised)
+                            }
+                        }
+                    }
+                    CLUSTER[at0085] occurrences matches {0..1} matches {    -- Click stimulus specification
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0086] occurrences matches {0..1} matches {    -- Onset ramp
+                                value matches {
+                                    DV_QUANTITY[at9060] matches {
+                                        property matches {[at9018]}    -- Time
+                                        units matches {"ms"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0087] occurrences matches {0..1} matches {    -- Offset ramp
+                                value matches {
+                                    DV_QUANTITY[at9061] matches {
+                                        property matches {[at9018]}    -- Time
+                                        units matches {"ms"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0088] occurrences matches {0..1} matches {    -- Total duration
+                                value matches {
+                                    DV_QUANTITY[at9062] matches {
+                                        property matches {[at9018]}    -- Time
+                                        units matches {"ms"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0093] occurrences matches {0..1} matches {    -- Threshold determination protocol
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0127] occurrences matches {0..1} matches {    -- Threshold definition
+                                value matches {
+                                    DV_CODED_TEXT[at9063] matches {
+                                        defining_code matches {[ac9019]}    -- Threshold definition (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0094] occurrences matches {0..1} matches {    -- Step size
+                                value matches {
+                                    DV_CODED_TEXT[at9064] matches {
+                                        defining_code matches {[ac9020]}    -- Step size (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0099] occurrences matches {0..1} matches {    -- Direction
+                                value matches {
+                                    DV_CODED_TEXT[at9065] matches {
+                                        defining_code matches {[ac9021]}    -- Direction (synthesised)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0047] matches {    -- Test instrument
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0149] matches {    -- Hearing device
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0134] matches {    -- Reliability
+                        value matches {
+                            DV_TEXT[at9066]
+                        }
+                    }
+                    ELEMENT[at0119] occurrences matches {0..1} matches {    -- Test modifications required
+                        value matches {
+                            DV_TEXT[at9067]
+                        }
+                    }
+                    ELEMENT[at0089] occurrences matches {0..1} matches {    -- Calibration reference dB
+                        value matches {
+                            DV_CODED_TEXT[at9068] matches {
+                                defining_code matches {[ac9022]}    -- Calibration reference dB (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0061] occurrences matches {0..1} matches {    -- Criteria for pure tone average
+                        value matches {
+                            DV_CODED_TEXT[at9069] matches {
+                                defining_code matches {[ac9023]}    -- Criteria for pure tone average (synthesised)
+                            }
+                            DV_TEXT[at9070]
+                        }
+                    }
+                    ELEMENT[at0138] occurrences matches {0..1} matches {    -- Criteria for asymmetry
+                        value matches {
+                            DV_TEXT[at9071]
+                        }
+                    }
+                    ELEMENT[at0120] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9072]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Audiogram test result">
+                description = <"Measurement of hearing acuity using a calibrated hearing test device, and associated clinical interpretation.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time event">
+                description = <"Default, unspecified point in time which may be explicitly defined in a template or at run-time. For example, in a template, this event can be cloned and specifically identified to be the first and/or second test conducted as a part of a comprehensive assessment, such as a Hearing Conservation or Industrial Audiometric Assessment.">
+            >
+            ["at0006"] = <
+                text = <"Result details">
+                description = <"The test result measurements and interpretations which can be recorded per ear, or for both ears simultaneously.">
+            >
+            ["at0007"] = <
+                text = <"Test ear">
+                description = <"Identification of the ear(s) to which the test stimulus is being presented.">
+            >
+            ["at0008"] = <
+                text = <"Left ear">
+                description = <"The test stimuli were presented to the left ear only.">
+            >
+            ["at0009"] = <
+                text = <"Right ear">
+                description = <"The test stimuli were presented to the right ear only.">
+            >
+            ["at0011"] = <
+                text = <"Frequency">
+                description = <"The stimulus frequency tested.">
+                comment = <"Frequency is not applicable if a click stimulus is presented.">
+            >
+            ["at0012"] = <
+                text = <"Threshold level">
+                description = <"The stimulus intensity at threshold for the test frequency.">
+            >
+            ["at0027"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the test results and intepretation not captured in other fields.">
+            >
+            ["at0028"] = <
+                text = <"Aided status">
+                description = <"Indication regarding use of an assistive listening device by the test subject during the test.">
+            >
+            ["at0029"] = <
+                text = <"Left aided">
+                description = <"Left ear testing has been aided by a hearing device, such as a hearing aid or cochlear implant.">
+            >
+            ["at0030"] = <
+                text = <"Unaided">
+                description = <"Testing has not been aided by a hearing device, such as a hearing aid or cochlear implant.">
+            >
+            ["at0034"] = <
+                text = <"Test stimulus">
+                description = <"Identification of the stimulus used in the hearing test to measure the hearing threshold.">
+            >
+            ["at0035"] = <
+                text = <"Tone burst">
+                description = <"The test stimulus is a tone burst.">
+            >
+            ["at0036"] = <
+                text = <"Click">
+                description = <"The test stimulus is a click.">
+            >
+            ["at0037"] = <
+                text = <"Test result name">
+                description = <"Identification of the Audiometry test performed.">
+                comment = <"Coding with an external terminology is preferred, where possible. Applicable tests include: Pure Tone Audiometry; Play Audiometry; Auditory Brainstem Response (for threshold determination); and Visual Reinforcement Orientation Audiometry.">
+            >
+            ["at0047"] = <
+                text = <"Test instrument">
+                description = <"Details of device used to conduct the test.">
+                comment = <"Details of the headphones and bone conductors that are calibrated to be used in conjunction with a specific hearing test instrument will be nested as specific CLUSTER archetypes within the CLUSTER.hearing_test_instrument archetype.">
+            >
+            ["at0048"] = <
+                text = <"Measurement">
+                description = <"The measured frequency/threshold dB level pair for air conduction results.">
+            >
+            ["at0049"] = <
+                text = <"Binaural">
+                description = <"The test stimuli were presented to both ears simultaneously in a soundfield.">
+            >
+            ["at0055"] = <
+                text = <"Hearing threshold interpretation">
+                description = <"Interpretation of a series of audiometric measurements for purposes of hearing threshold assessment.">
+            >
+            ["at0056"] = <
+                text = <"Pure tone average">
+                description = <"The average pure tone threshold according to the specified averaging criteria.">
+                comment = <"This calculation is typically determined using air conduction thresholds.">
+            >
+            ["at0061"] = <
+                text = <"Criteria for pure tone average">
+                description = <"The criteria on which the Pure Tone Average is calculated. The average is based on air conduction thresholds and masked thresholds replace unmasked thresholds when applying the formula.">
+                comment = <"If recording the Criteria as a narrative, it is possible to identify the frequencies used for non-standard Pure Tone Average as free text.">
+            >
+            ["at0062"] = <
+                text = <"3 frequency average">
+                description = <"The pure tone hearing threshold is calculated using 0.5, 1 and 2 kHz.">
+            >
+            ["at0063"] = <
+                text = <"4 frequency average">
+                description = <"The pure tone hearing threshold is calculated using 0.5, 1, 2 and 4 kHz.">
+            >
+            ["at0065"] = <
+                text = <"Type of loss">
+                description = <"Identified type of hearing loss for the test ear, based on all measurements.">
+                comment = <"If there is no degree of loss, then this data element is not applicable.">
+            >
+            ["at0066"] = <
+                text = <"Mixed">
+                description = <"A mixed hearing loss pattern has been identified for the Test Ear, based on the presence of an air/bone gap and bone conduction thresholds outside normal range.">
+            >
+            ["at0067"] = <
+                text = <"Sensorineural">
+                description = <"A sensorineural hearing loss pattern has been identified for the Test Ear, based on no air/bone gap and thresholds outside normal range.">
+            >
+            ["at0068"] = <
+                text = <"Conductive">
+                description = <"A conductive hearing loss pattern has been identified for the Test Ear, based on the presence of an air/bone gap and bone conduction thresholds within normal range.">
+            >
+            ["at0069"] = <
+                text = <"Indeterminate">
+                description = <"It is not possible to determine the pattern of hearing loss.">
+            >
+            ["at0070"] = <
+                text = <"Clinical interpretation">
+                description = <"Clinical interpretation of all measurements for the test ear.">
+                comment = <"Coding with a terminology is preferred, where possible. Not to be used for recording the interpretation for both ears when the ears are tested simultaneously - use the data element 'Overall Interpretation' instead.">
+            >
+            ["at0071"] = <
+                text = <"Sensorineural symmetry">
+                description = <"An interpretation about the symmetry of sensorineural component of hearing loss, based on bone conduction measurements for both ears.">
+            >
+            ["at0072"] = <
+                text = <"Symmetrical">
+                description = <"The hearing loss is symmetrical.">
+            >
+            ["at0073"] = <
+                text = <"Asymmetrical">
+                description = <"The hearing loss is asymmetrical.">
+            >
+            ["at0075"] = <
+                text = <"Test environment">
+                description = <"The environment in which the audiometric test is administered.">
+                comment = <"This data element is commonly used in industry hearing programs.">
+            >
+            ["at0076"] = <
+                text = <"Audiometric booth">
+                description = <"Sound-treated test environment that meets audiometric standards for ambient noise.">
+            >
+            ["at0080"] = <
+                text = <"Warble Tone">
+                description = <"The test stimulus is a frequency modulated tone.">
+            >
+            ["at0081"] = <
+                text = <"Pure Tone">
+                description = <"The test stimulus is a pure tone.">
+            >
+            ["at0085"] = <
+                text = <"Click stimulus specification">
+                description = <"Identification of parameters specifying a click stimulus.">
+            >
+            ["at0086"] = <
+                text = <"Onset ramp">
+                description = <"Time over which the stimulus grows to full amplitude.">
+            >
+            ["at0087"] = <
+                text = <"Offset ramp">
+                description = <"Time over which the stimulus depletes to zero amplitude.">
+            >
+            ["at0088"] = <
+                text = <"Total duration">
+                description = <"Total duration of the click stimulus.">
+            >
+            ["at0089"] = <
+                text = <"Calibration reference dB">
+                description = <"Scale used for acoustic calibration of the test signal.">
+            >
+            ["at0090"] = <
+                text = <"dB SPL">
+                description = <"The test stimuli are calibrated using the sound pressure level scale.">
+            >
+            ["at0091"] = <
+                text = <"dB HL">
+                description = <"The test stimuli are calibrated using the hearing level scale.">
+            >
+            ["at0092"] = <
+                text = <"dB nHL">
+                description = <"The test stimuli are calibrated using the normal hearing level scale.">
+            >
+            ["at0093"] = <
+                text = <"Threshold determination protocol">
+                description = <"Protocol used to measure the hearing threshold for pure tone, play and visual reinforcement orientation audiometry only.">
+                comment = <"Not applicable for ABR testing.">
+            >
+            ["at0094"] = <
+                text = <"Step size">
+                description = <"The step size (in decibels) of the change in the stimulus intensity for threshold determination.">
+            >
+            ["at0095"] = <
+                text = <"1 dB">
+                description = <"Step size of one decibel.">
+            >
+            ["at0096"] = <
+                text = <"5 dB">
+                description = <"Step size of five decibels.">
+            >
+            ["at0097"] = <
+                text = <"10 dB">
+                description = <"Step size of ten decibels.">
+            >
+            ["at0098"] = <
+                text = <"20 dB">
+                description = <"Step size of twenty decibels.">
+            >
+            ["at0099"] = <
+                text = <"Direction">
+                description = <"The direction of change in the stimulus intensity.">
+            >
+            ["at0100"] = <
+                text = <"Ascending">
+                description = <"Threshold is calculated based on the ascending runs where the stimulus moves from below threshold to above threshold.">
+            >
+            ["at0101"] = <
+                text = <"Descending">
+                description = <"Threshold is calculated based on the descending runs where the stimulus moves from above threshold to below threshold.">
+            >
+            ["at0109"] = <
+                text = <"Air presentation">
+                description = <"Presentation of the air conduction test stimulus indirectly to the inner ear through the atmosphere, via the auditory canal and middle ear structures.">
+            >
+            ["at0110"] = <
+                text = <"Soundfield">
+                description = <"The stimulus is presented via a loudspeaker located at least one metre away from the subject.">
+            >
+            ["at0111"] = <
+                text = <"Insert earphone">
+                description = <"The stimulus is presented via insert earphones.">
+            >
+            ["at0112"] = <
+                text = <"Headphones">
+                description = <"The stimulus is presented via external headphones - either circumaural or supraaural.">
+            >
+            ["at0113"] = <
+                text = <"Bone presentation">
+                description = <"Presentation of the bone conduction test stimulus directly to the inner ear via the cranial bones.">
+            >
+            ["at0114"] = <
+                text = <"Mastoid">
+                description = <"The posterior part of the temporal bone, including the mastoid process.">
+            >
+            ["at0115"] = <
+                text = <"Forehead">
+                description = <"Area of the head bounded by the normal hairline, eyebrows and the temples on either side.">
+            >
+            ["at0119"] = <
+                text = <"Test modifications required">
+                description = <"Narrative description of any modfications to the standard methodology required to enable successful completion of the test.">
+            >
+            ["at0120"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the protocol for the audiogram not captured in other fields.">
+                comment = <"For example, the co-operation of the test subject or description of the method used for testing.">
+            >
+            ["at0121"] = <
+                text = <"Overall interpretation">
+                description = <"Overall clinical interpretation of the measurements and related findings using an audiometer.">
+                comment = <"Coding with a terminology is preferred, where possible. This data element is effectively an audiological diagnosis. Binaural test results reflect either the performance for both ears (if equal hearing) or only the better ear (where the hearing is not symmetrical).">
+            >
+            ["at0122"] = <
+                text = <"No test result">
+                description = <"No air conduction test result is available for the test ear.">
+                comment = <"Record as True if the clinician was unable to record a result for the test ear or binaural testing in a soundfield, as defined by the 'Test Ear' data element.">
+            >
+            ["at0123"] = <
+                text = <"Reason for no result">
+                description = <"Reason why no air conduction result is available for the test ear.">
+                comment = <"For example, patient was not cooperative; patient was not capable; ran out of time.">
+            >
+            ["at0126"] = <
+                text = <"Articulation index">
+                description = <"An algorithm to predict the amount of speech that is audible to a patient with a specific hearing loss.">
+            >
+            ["at0127"] = <
+                text = <"Threshold definition">
+                description = <"Definition of the protocol used to define the threshold level used in the test.">
+            >
+            ["at0128"] = <
+                text = <"Minimum response level">
+                description = <"The softest level at which a subject responds to a stimulus.">
+            >
+            ["at0129"] = <
+                text = <"2/3 responses">
+                description = <"The softest level at which the subject responds to two out of three consecutive threshold runs.">
+            >
+            ["at0130"] = <
+                text = <"3/6 responses">
+                description = <"The softest level at which the subject responds to three out of six consecutive threshold runs.">
+            >
+            ["at0131"] = <
+                text = <"Laterality of loss">
+                description = <"An interpretation about the laterality of hearing loss, based on all hearing acuity measurements for both ears.">
+                comment = <"If there is no degree of loss in both ears, then this data element is not applicable.">
+            >
+            ["at0132"] = <
+                text = <"Bilateral">
+                description = <"Loss of hearing in both ears.">
+            >
+            ["at0133"] = <
+                text = <"Unilateral">
+                description = <"Loss of hearing in one ear.">
+            >
+            ["at0134"] = <
+                text = <"Reliability">
+                description = <"Narrative description of the reliability of the test results.">
+                comment = <"If an appropriate value set can be determined, this could be coded. The maximum occurrences of this data element have been set to two to allow for both narrative and a coded value to be selected in a template.">
+            >
+            ["at0135"] = <
+                text = <"Degree of loss">
+                description = <"Category of the degree of hearing loss derived from the dB threshold values using specified criteria.">
+                comment = <"Coding with a terminology is desirable, where possible. For example: none, mild, moderate, severe and profound. Each of these categories should be clearly defined on the basis of a dB range appropriate for age.">
+            >
+            ["at0138"] = <
+                text = <"Criteria for asymmetry">
+                description = <"The criteria on which asymmetry is defined in the test result interpretation.">
+                comment = <"For example:  binaural difference in bone conduction thresholds of >10 dB at two consecutive frequencies or >15 dB at one frequency (0.25–8.0 kHz).">
+            >
+            ["at0139"] = <
+                text = <"Air conduction result">
+                description = <"The thresholds obtained using air conduction testing.">
+            >
+            ["at0140"] = <
+                text = <"Bone conduction result">
+                description = <"The thresholds obtained using bone conduction testing.">
+            >
+            ["at0141"] = <
+                text = <"Air conduction masking">
+                description = <"A masking stimulus was applied to the non-test ear to obtain specified air conduction thresholds.">
+            >
+            ["at0142"] = <
+                text = <"Bone conduction masking">
+                description = <"A masking stimulus was applied to the non-test ear to obtain specified bone conduction thresholds.">
+            >
+            ["at0143"] = <
+                text = <"Measurement">
+                description = <"The measured frequency/threshold dB level pair for bone conduction results.">
+            >
+            ["at0144"] = <
+                text = <"Frequency">
+                description = <"The stimulus frequency of the test signal.">
+            >
+            ["at0145"] = <
+                text = <"Threshold level">
+                description = <"The intensity of the test stimulus at the subject's threshold for the test frequency.">
+            >
+            ["at0146"] = <
+                text = <"No test result">
+                description = <"No bone conduction test result is available for the test ear.">
+            >
+            ["at0147"] = <
+                text = <"Reason for no result">
+                description = <"Reason why no bone conduction result is available for the test ear.">
+            >
+            ["at0148"] = <
+                text = <"Narrow Band Noise">
+                description = <"The test stimulus is a narrow band noise centred on the specified frequency.">
+            >
+            ["at0149"] = <
+                text = <"Hearing device">
+                description = <"Details of the hearing device used.">
+                comment = <"For example: hearing aid or bone conductor aid.">
+            >
+            ["at0150"] = <
+                text = <"Right aided">
+                description = <"Right ear testing has been aided by a hearing device, such as a hearing aid or cochlear implant.">
+            >
+            ["at0151"] = <
+                text = <"Bilateral aided">
+                description = <"Testing has been aided by use of bilateral hearing devices, such as a hearing aids or cochlear implants.">
+            >
+            ["at0152"] = <
+                text = <"Bone conduction aided">
+                description = <"Testing has been aided by a bone conduction device.">
+            >
+            ["at0153"] = <
+                text = <"No response">
+                description = <"No response from subject at identified frequency.">
+            >
+            ["at0154"] = <
+                text = <"No response">
+                description = <"No response from subject at identified frequency.">
+            >
+            ["at0155"] = <
+                text = <"Retrocochlear">
+                description = <"A form of sensorineural hearing loss in which the lesion is proximal to the cochlear.">
+            >
+            ["at0156"] = <
+                text = <"Non-sound treated room">
+                description = <"Test environment that does not meet audiometric standards for ambient noise.">
+            >
+            ["at0157"] = <
+                text = <"Background noise">
+                description = <"The amount and nature of noise in the environment that may influence the test results.">
+                comment = <"If testing is conducted in an audiometric booth, this data element is redundant.">
+            >
+            ["at0158"] = <
+                text = <"Not clinically significant">
+                description = <"The background noise is not likely to compromise test results.">
+            >
+            ["at0159"] = <
+                text = <"Clinically significant">
+                description = <"The background noise may compromise test results.">
+            >
+            ["at0160"] = <
+                text = <"Pulse tone">
+                description = <"The test stimulus is a pulse tone.">
+            >
+            ["at0163"] = <
+                text = <"Average">
+                description = <"Record of the average measured results from more than one test. For example, the average of the 3000Hz to 6000Hz measurements in a Hearing Conservation or Industrial Audiometry Assessment. The data elements required in this use case may be quite limited and relevant ones revealed via templating.">
+            >
+            ["at0164"] = <
+                text = <"Confounding factors">
+                description = <"Narrative description of factors, not recorded elsewhere, that may influence the threshold measurements.">
+                comment = <"For example: noise exposure prior to test.">
+            >
+            ["at0165"] = <
+                text = <"Degree of impairment">
+                description = <"Category of the degree of overall hearing impairment  derived from the dB threshold values using specified criteria based on the better hearing ear.">
+            >
+            ["at0166"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the hearing threshold interpretation not captured in other fields.">
+                comment = <"For example: to explain the reason why a degree of loss has been recorded that appears to deviate from the protocol for the corresponding pure tone average.">
+            >
+            ["at0167"] = <
+                text = <"Multimedia">
+                description = <"Digital representation of the test results.">
+            >
+            ["at0171"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0172"] = <
+                text = <"Test not done">
+                description = <"Details to explicitly record that this test was not performed.">
+            >
+            ["at9002"] = <
+                text = <"Loudness">
+                description = <"Loudness">
+            >
+            ["at9018"] = <
+                text = <"Time">
+                description = <"Time">
+            >
+            ["at9003"] = <
+                text = <"unknown">
+                description = <"unknown">
+            >
+            ["at9012"] = <
+                text = <"median">
+                description = <"median">
+            >
+            ["at9006"] = <
+                text = <"no information">
+                description = <"no information">
+            >
+            ["at9004"] = <
+                text = <"masked">
+                description = <"masked">
+            >
+            ["at9005"] = <
+                text = <"not applicable">
+                description = <"not applicable">
+            >
+            ["at9001"] = <
+                text = <"Frequency">
+                description = <"Frequency">
+            >
+            ["ac9000"] = <
+                text = <"Test ear (synthesised)">
+                description = <"Identification of the ear(s) to which the test stimulus is being presented. (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"Threshold level (synthesised)">
+                description = <"The stimulus intensity at threshold for the test frequency. (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"Type of loss (synthesised)">
+                description = <"Identified type of hearing loss for the test ear, based on all measurements. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Sensorineural symmetry (synthesised)">
+                description = <"An interpretation about the symmetry of sensorineural component of hearing loss, based on bone conduction measurements for both ears. (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Laterality of loss (synthesised)">
+                description = <"An interpretation about the laterality of hearing loss, based on all hearing acuity measurements for both ears. (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Aided status (synthesised)">
+                description = <"Indication regarding use of an assistive listening device by the test subject during the test. (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Air presentation (synthesised)">
+                description = <"Presentation of the air conduction test stimulus indirectly to the inner ear through the atmosphere, via the auditory canal and middle ear structures. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Bone presentation (synthesised)">
+                description = <"Presentation of the bone conduction test stimulus directly to the inner ear via the cranial bones. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Test environment (synthesised)">
+                description = <"The environment in which the audiometric test is administered. (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Background noise (synthesised)">
+                description = <"The amount and nature of noise in the environment that may influence the test results. (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Test stimulus (synthesised)">
+                description = <"Identification of the stimulus used in the hearing test to measure the hearing threshold. (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"Threshold definition (synthesised)">
+                description = <"Definition of the protocol used to define the threshold level used in the test. (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"Step size (synthesised)">
+                description = <"The step size (in decibels) of the change in the stimulus intensity for threshold determination. (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Direction (synthesised)">
+                description = <"The direction of change in the stimulus intensity. (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"Calibration reference dB (synthesised)">
+                description = <"Scale used for acoustic calibration of the test signal. (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Criteria for pure tone average (synthesised)">
+                description = <"The criteria on which the Pure Tone Average is calculated. The average is based on air conduction thresholds and masked thresholds replace unmasked thresholds when applying the formula. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9002"] = <http://openehr.org/id/123>
+            ["at9018"] = <http://openehr.org/id/128>
+            ["at9003"] = <http://openehr.org/id/253>
+            ["at9012"] = <http://openehr.org/id/268>
+            ["at9006"] = <http://openehr.org/id/271>
+            ["at9004"] = <http://openehr.org/id/272>
+            ["at9005"] = <http://openehr.org/id/273>
+            ["at9001"] = <http://openehr.org/id/382>
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0110", "at0111", "at0112">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0030", "at0150", "at0029", "at0151", "at0152">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0133", "at0132">
+        >
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0035", "at0036", "at0080", "at0081", "at0148", "at0160">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0159", "at0158">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0076", "at0156">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0114", "at0115">
+        >
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0072", "at0073">
+        >
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0068", "at0067", "at0155", "at0066", "at0069">
+        >
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at9003", "at9004", "at9005", "at9006">
+        >
+        ["ac9020"] = <
+            id = <"ac9020">
+            members = <"at0095", "at0096", "at0097", "at0098">
+        >
+        ["ac9023"] = <
+            id = <"ac9023">
+            members = <"at0062", "at0063">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0009", "at0008", "at0049">
+        >
+        ["ac9022"] = <
+            id = <"ac9022">
+            members = <"at0090", "at0091", "at0092">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0100", "at0101">
+        >
+        ["ac9019"] = <
+            id = <"ac9019">
+            members = <"at0128", "at0129", "at0130">
+        >
+    >

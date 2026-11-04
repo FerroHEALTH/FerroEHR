@@ -1,0 +1,272 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=2a2e1acd-c083-428c-b1fa-9ee66e6449d2; build_uid=8f99518b-d884-4805-bc6c-e3eaafd7744e)
+    openEHR-EHR-OBSERVATION.padss.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-02-19">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Marshall SI, Chung F. Discharge criteria and complications after ambulatory surgery. Anesth Analg. 1999 Mar;88(3):508-17. doi: 10.1097/00000539-199903000-00008. PMID: 10071996.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"2912D14DA9833011E874B09DB27822F4">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter and their total sum for the PADSS.">
+            keywords = <"recovery", "anaesthesia", "post-anaesthesia", "discharge", "ambulatory">
+            use = <"Use to record the results for each component parameter and their total sum for the PADSS.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Post Anaesthesia Discharge Scoring System (PADSS)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Vital signs
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0013]}],    -- BP and pulse ±>40% of pre-operative baseline
+                                                    [{1}, {[at0014]}],    -- BP and pulse ±20-40% of pre-operative baseline
+                                                    [{2}, {[at0015]}]    -- BP and pulse ±<20% of pre-operative baseline
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Activity level
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- Unable to ambulate
+                                                    [{1}, {[at0006]}],    -- Requires assistance
+                                                    [{2}, {[at0007]}]    -- Steady gait, no dizziness, or meets preoperative level
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Nausea and vomiting
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0009]}],    -- Severe: continues after repeated treatment
+                                                    [{1}, {[at0010]}],    -- Moderate: successfully treated with IM medication
+                                                    [{2}, {[at0011]}]    -- Minimal: successfully treated with PO medication
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Pain acceptable
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0018]}],    -- No
+                                                    [{2}, {[at0019]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Surgical bleeding
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0021]}],    -- Severe: more than three dressing changes required
+                                                    [{1}, {[at0022]}],    -- Moderate: up to two dressing changes required
+                                                    [{2}, {[at0023]}]    -- Minimal: does not require dressing change
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9010] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0025] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0026] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Post Anaesthesia Discharge Scoring System (PADSS)">
+                description = <"An assessment score used to evaluate recovery after anaesthesia for determining home-readiness.">
+                comment = <"c 1999">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Activity level">
+                description = <"">
+                comment = <"The patient must be able to ambulate at preoperative level.">
+            >
+            ["at0005"] = <
+                text = <"Unable to ambulate">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Requires assistance">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Steady gait, no dizziness, or meets preoperative level">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Nausea and vomiting">
+                description = <"">
+                comment = <"The patient should have minimal nausea and vomiting before discharge">
+            >
+            ["at0009"] = <
+                text = <"Severe: continues after repeated treatment">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Moderate: successfully treated with IM medication">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Minimal: successfully treated with PO medication">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Vital signs">
+                description = <"">
+                comment = <"Vital signs must be stable and consistent with age and preoperative baseline.">
+            >
+            ["at0013"] = <
+                text = <"BP and pulse ±>40% of pre-operative baseline">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"BP and pulse ±20-40% of pre-operative baseline">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"BP and pulse ±<20% of pre-operative baseline">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Pain acceptable">
+                description = <"">
+                comment = <"The patient should have minimal or no pain before discharge. The level of pain should be acceptable to the patient. Pain should be controllable by oral analgesics. The location, type and intensity of pain should be consistent with anticipated postoperative discomfort.">
+            >
+            ["at0018"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Surgical bleeding">
+                description = <"">
+                comment = <"Postoperative bleeding should be consistent with expected blood loss for the procedure.">
+            >
+            ["at0021"] = <
+                text = <"Severe: more than three dressing changes required">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Moderate: up to two dressing changes required">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Minimal: does not require dressing change">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Total score">
+                description = <"The total sum of each component parameter for the PADSS.">
+            >
+            ["at0026"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9010"] = <
+                text = <"Vital signs (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Activity level (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Nausea and vomiting (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Pain acceptable (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Surgical bleeding (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0018", "at0019">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0009", "at0010", "at0011">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0005", "at0006", "at0007">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0013", "at0014", "at0015">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0021", "at0022", "at0023">
+        >
+    >

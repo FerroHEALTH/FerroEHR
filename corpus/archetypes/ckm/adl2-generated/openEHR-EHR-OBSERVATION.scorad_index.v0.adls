@@ -1,0 +1,669 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=20938d79-537a-4576-9739-039d68c51254; build_uid=b477279f-ab91-4f91-b4bc-9ca691997772)
+    openEHR-EHR-OBSERVATION.scorad_index.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Marit Alice Venheim">
+                ["organisation"] = <"Helse Vest IKT">
+                ["email"] = <"marit.alice.venheim@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics,UK">
+        ["email"] = <"ian@freshehr.org">
+        ["date"] = <"2015-02-09">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Atomica Informatics, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Severity scoring of atopic dermatitis: the SCORAD index. Consensus Report of the European Task Force on Atopic Dermatitis. Dermatology. 1993;186(1):23-31. doi: 10.1159/000247298. PubMed PMID: 8435513.">
+        ["2"] = <"PO-SCORAD, Norvege: https://www.fondation-dermatite-atopique.org/sites/default/files/PO_Scorad_Patients_Feuillet-NORVEGE.pdf">
+        ["3"] = <"Atopisk eksem. Berents TL., Saunes M., Schopf T., Vindenes HK.Tidsskr Nor Legeforen 2018 doi: 10.4045/tidsskr.18.007. https://tidsskriftet.no/2018/08/klinisk-oversikt/atopisk-eksem">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"AE5097765A261D86495DDF910C18C708">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"SCORing Atopic Dermatitis (SCORAD) er en indeks som brukes til å uttrykke alvorlighetsgraden av atopisk eksem. Det kombinerer alvorlighetsgrad og andel av berørt område.">
+            use = <"">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record an estimate of severity of atopic dermatitis.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- SCORAD index
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Affected area total (A)
+                                        value matches {
+                                            DV_PROPORTION[at9007] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                type matches {2}
+                                                precision matches {0}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] matches {    -- Intensity - erythema
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0006]}],    -- None
+                                                    [{1}, {[at0007]}],    -- Mild
+                                                    [{2}, {[at0008]}],    -- Moderate
+                                                    [{3}, {[at0009]}]    -- Severe
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] matches {    -- Intensity - oedema/papulation
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0011]}],    -- None
+                                                    [{1}, {[at0012]}],    -- Mild
+                                                    [{2}, {[at0013]}],    -- Moderate
+                                                    [{3}, {[at0014]}]    -- Severe
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] matches {    -- Intensity - lichenification
+                                        value matches {
+                                            DV_ORDINAL[at9010] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0016]}],    -- None
+                                                    [{1}, {[at0017]}],    -- Mild
+                                                    [{2}, {[at0018]}],    -- Moderate
+                                                    [{3}, {[at0019]}]    -- Severe
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] matches {    -- Intensity - excoriation
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0021]}],    -- None
+                                                    [{1}, {[at0022]}],    -- Mild
+                                                    [{2}, {[at0023]}],    -- Moderate
+                                                    [{3}, {[at0024]}]    -- Severe
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0025] matches {    -- Intensity - oozing/crusts
+                                        value matches {
+                                            DV_ORDINAL[at9012] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0026]}],    -- None
+                                                    [{1}, {[at0027]}],    -- Mild
+                                                    [{2}, {[at0028]}],    -- Moderate
+                                                    [{3}, {[at0029]}]    -- Severe
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0030] matches {    -- Intensity - dryness
+                                        value matches {
+                                            DV_ORDINAL[at9013] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0031]}],    -- None
+                                                    [{1}, {[at0032]}],    -- Mild
+                                                    [{2}, {[at0033]}],    -- Moderate
+                                                    [{3}, {[at0034]}]    -- Severe
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0035] occurrences matches {0..1} matches {    -- Intensity total (B)
+                                        value matches {
+                                            DV_COUNT[at9014] matches {
+                                                magnitude matches {|0..18|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0036] occurrences matches {0..1} matches {    -- Subjective - daily pruritis
+                                        value matches {
+                                            DV_COUNT[at9015] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0037] occurrences matches {0..1} matches {    -- Subjective - sleeplessness
+                                        value matches {
+                                            DV_COUNT[at9016] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0038] occurrences matches {0..1} matches {    -- Subjective total (C)
+                                        value matches {
+                                            DV_COUNT[at9017] matches {
+                                                magnitude matches {|0..20|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0039] occurrences matches {0..1} matches {    -- SCORAD index
+                                        value matches {
+                                            DV_COUNT[at9018] matches {
+                                                magnitude matches {|0..103|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0040] occurrences matches {0..1} matches {    -- Total intensity grade
+                                        value matches {
+                                            DV_CODED_TEXT[at9019] matches {
+                                                defining_code matches {[ac9006]}    -- Total intensity grade (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0044] occurrences matches {0..1} matches {    -- Objective SCORAD index
+                                        value matches {
+                                            DV_COUNT[at9020] matches {
+                                                magnitude matches {|0..83|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0045] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0046] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"SCORAD index">
+                description = <"En kvantitativ skala for å måle alvorlighetsgraden av atopisk eksem basert på dekningsområde og plakk utseende.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Enhver vurdering av SCORAD utført på et angitt tidspunkt.">
+            >
+            ["at0004"] = <
+                text = <"Totalt affektert område (A)">
+                description = <"Total estimat av affektert område på kroppen.">
+                comment = <"Vanligvis regnet ut ved å bruke \"ni prosentregelen\".">
+            >
+            ["at0005"] = <
+                text = <"Intensitet - erythema">
+                description = <"Intenistetsnivået på erythema eller rødhet.">
+            >
+            ["at0006"] = <
+                text = <"Ingen">
+                description = <"Erythema er fraværende.">
+            >
+            ["at0007"] = <
+                text = <"Mild">
+                description = <"Mild erythema.">
+            >
+            ["at0008"] = <
+                text = <"Moderat">
+                description = <"Moderat erythema.">
+            >
+            ["at0009"] = <
+                text = <"Alvorlig">
+                description = <"Alvorlig erythema.">
+            >
+            ["at0010"] = <
+                text = <"Intensiset - ødem/hevelse">
+                description = <"Intenistetsnivået på ødem eller hevelse.">
+            >
+            ["at0011"] = <
+                text = <"Ingen">
+                description = <"Ødem eller hevelse er fraværende.">
+            >
+            ["at0012"] = <
+                text = <"Mild">
+                description = <"Mild grad av ødem eller hevelse.">
+            >
+            ["at0013"] = <
+                text = <"Moderat">
+                description = <"Moderat grad av ødem eller hevelse.">
+            >
+            ["at0014"] = <
+                text = <"Alvorlig">
+                description = <"Alvorlig grad av ødem eller hevelse.">
+            >
+            ["at0015"] = <
+                text = <"Intensitet - fortykning">
+                description = <"Graden av fortykning på huden.">
+            >
+            ["at0016"] = <
+                text = <"Ingen">
+                description = <"Fortykning på huden er fraværende.">
+            >
+            ["at0017"] = <
+                text = <"Mild">
+                description = <"Mild fortykning på huden.">
+            >
+            ["at0018"] = <
+                text = <"Moderat">
+                description = <"Moderat fortykning på huden.">
+            >
+            ["at0019"] = <
+                text = <"Alvorlig">
+                description = <"Alvorlig fortykning på huden.">
+            >
+            ["at0020"] = <
+                text = <"Intensitet - hudavskrapning">
+                description = <"Graden av hudavskrapning eller skader på grunn av oppkloring.">
+            >
+            ["at0021"] = <
+                text = <"Ingen">
+                description = <"Hudavskrapning er fraværende.">
+            >
+            ["at0022"] = <
+                text = <"Mild">
+                description = <"Mild hudavskrapning.">
+            >
+            ["at0023"] = <
+                text = <"Moderat">
+                description = <"Moderat hudavskrapning.">
+            >
+            ["at0024"] = <
+                text = <"Alvorlig">
+                description = <"Alvorlig hudavskrapning.">
+            >
+            ["at0025"] = <
+                text = <"Intensitet - væsking/skorper.">
+                description = <"Graden av væsking eller skorper.">
+            >
+            ["at0026"] = <
+                text = <"Ingen">
+                description = <"Væsking eller skorper er fraværende.">
+            >
+            ["at0027"] = <
+                text = <"Mild">
+                description = <"Mild grad av væsking eller skorper.">
+            >
+            ["at0028"] = <
+                text = <"Moderat">
+                description = <"Moderat grad av væsking eller skorper">
+            >
+            ["at0029"] = <
+                text = <"Alvorlig">
+                description = <"Alvorlig grad av væsking eller skorper">
+            >
+            ["at0030"] = <
+                text = <"Intensitet - tørrhet">
+                description = <"Tørrhetsgraden på hud uten eksem.">
+            >
+            ["at0031"] = <
+                text = <"Ingen">
+                description = <"Tørrhet er fraværende.">
+            >
+            ["at0032"] = <
+                text = <"Mild">
+                description = <"Mild grad av tørrhet.">
+            >
+            ["at0033"] = <
+                text = <"Moderat">
+                description = <"Moderat grad av tørrhet.">
+            >
+            ["at0034"] = <
+                text = <"Alvorlig">
+                description = <"Alvorlig grad av tørrhet.">
+            >
+            ["at0035"] = <
+                text = <"Intensitet totalt (B)">
+                description = <"Total poengsum for de 6 intensitets-realterte verdiene.">
+            >
+            ["at0036"] = <
+                text = <"Subjektivt - daglig kløe">
+                description = <"Subjektiv vurdering av hvor mye det klør.">
+                comment = <"Vanligvis representert ved en visuell analog skala.">
+            >
+            ["at0037"] = <
+                text = <"Subjektivt - søvnløshet">
+                description = <"Subjektiv vurdering av opplevd søvnløshet.">
+                comment = <"Vanligvis representert ved en visuell analog skala.">
+            >
+            ["at0038"] = <
+                text = <"Subjektivt total (C)">
+                description = <"Total poengsum for subjektiv skårene.">
+            >
+            ["at0039"] = <
+                text = <"SCORAD index">
+                description = <"Den kalkulerte index skåren.">
+                comment = <"Basert på formelen A/5 = 7B/2 +C.">
+            >
+            ["at0040"] = <
+                text = <"Total intesitets grad">
+                description = <"Total poengsum uttrykt som et sett karakterer">
+            >
+            ["at0041"] = <
+                text = <"Mild">
+                description = <"Den totale poengsummen er mindre enn 25.">
+            >
+            ["at0042"] = <
+                text = <"Moderat">
+                description = <"Poengsummen er mellom 25 og 50.">
+            >
+            ["at0043"] = <
+                text = <"Alvorlig">
+                description = <"Poengsummen er over 50.">
+            >
+            ["at0044"] = <
+                text = <"Objektiv SCORAD index">
+                description = <"Den beregnede indeksskåren kun basert på totalområdet og intensiteten for det berørte området.">
+                comment = <"Bassert på formelen A/5 +7B/2.">
+            >
+            ["at0046"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["ac9020"] = <
+                text = <"Intensitet - erythema (synthesised)">
+                description = <"Intenistetsnivået på erythema eller rødhet. (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Intensiset - ødem/hevelse (synthesised)">
+                description = <"Intenistetsnivået på ødem eller hevelse. (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"Intensitet - fortykning (synthesised)">
+                description = <"Graden av fortykning på huden. (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Intensitet - hudavskrapning (synthesised)">
+                description = <"Graden av hudavskrapning eller skader på grunn av oppkloring. (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"Intensitet - væsking/skorper. (synthesised)">
+                description = <"Graden av væsking eller skorper. (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"Intensitet - tørrhet (synthesised)">
+                description = <"Tørrhetsgraden på hud uten eksem. (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Total intesitets grad (synthesised)">
+                description = <"Total poengsum uttrykt som et sett karakterer (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"SCORAD index">
+                description = <"Clinical assessment tool used to assess the extent and severity of eczema (SCORing Atopic Dermatitis).">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Affected area total (A)">
+                description = <"The estimated total of affected area on the body.">
+                comment = <"Usually calculated using the 'rule of 9'. ">
+            >
+            ["at0005"] = <
+                text = <"Intensity - erythema">
+                description = <"The level of intensity of a erythema or redness.">
+            >
+            ["at0006"] = <
+                text = <"None">
+                description = <"Erythema is absent.">
+            >
+            ["at0007"] = <
+                text = <"Mild">
+                description = <"Erythema is mild.">
+            >
+            ["at0008"] = <
+                text = <"Moderate">
+                description = <"Erythema is moderate.">
+            >
+            ["at0009"] = <
+                text = <"Severe">
+                description = <"Erythema is severe.">
+            >
+            ["at0039"] = <
+                text = <"SCORAD index">
+                description = <"The calculated index score.">
+                comment = <"Based on a formula A/5 = 7B/2 +C.">
+            >
+            ["at0040"] = <
+                text = <"Total intensity grade">
+                description = <"The total score expressed as a set of grades.">
+            >
+            ["at0041"] = <
+                text = <"Mild">
+                description = <"The overall score is less than 25.">
+            >
+            ["at0042"] = <
+                text = <"Moderate">
+                description = <"The score is between 25 and 50.">
+            >
+            ["at0043"] = <
+                text = <"Severe">
+                description = <"The toal score is over 50.">
+            >
+            ["at0010"] = <
+                text = <"Intensity - oedema/papulation">
+                description = <"The level of intensity of a oedema or papulation.">
+            >
+            ["at0011"] = <
+                text = <"None">
+                description = <"Oedema or papulation is absent.">
+            >
+            ["at0012"] = <
+                text = <"Mild">
+                description = <"Oedema or papulation is mild.">
+            >
+            ["at0013"] = <
+                text = <"Moderate">
+                description = <"Oedema or papulation is moderate.">
+            >
+            ["at0014"] = <
+                text = <"Severe">
+                description = <"Oedema or papulation is severe.">
+            >
+            ["at0015"] = <
+                text = <"Intensity - lichenification">
+                description = <"The level of intensity of a lichenification or thickening of the skin.">
+            >
+            ["at0016"] = <
+                text = <"None">
+                description = <"Lichenification is absent.">
+            >
+            ["at0017"] = <
+                text = <"Mild">
+                description = <"Lichenification is mild.">
+            >
+            ["at0018"] = <
+                text = <"Moderate">
+                description = <"Lichenification is moderate.">
+            >
+            ["at0019"] = <
+                text = <"Severe">
+                description = <"Lichenification is severe.">
+            >
+            ["at0030"] = <
+                text = <"Intensity - dryness">
+                description = <"The level of intensity of dryness of unaffected skin.">
+            >
+            ["at0031"] = <
+                text = <"None">
+                description = <"Dryness is absent.">
+            >
+            ["at0032"] = <
+                text = <"Mild">
+                description = <"Dryness is mild.">
+            >
+            ["at0033"] = <
+                text = <"Moderate">
+                description = <"Dryness is moderate.">
+            >
+            ["at0034"] = <
+                text = <"Severe">
+                description = <"Dryness is severe.">
+            >
+            ["at0020"] = <
+                text = <"Intensity - excoriation">
+                description = <"The level of intensity of a excoriation or scratching.">
+            >
+            ["at0021"] = <
+                text = <"None">
+                description = <"Excoriation is absent.">
+            >
+            ["at0022"] = <
+                text = <"Mild">
+                description = <"Excoriation is mild.">
+            >
+            ["at0023"] = <
+                text = <"Moderate">
+                description = <"Excoriation is moderate.">
+            >
+            ["at0024"] = <
+                text = <"Severe">
+                description = <"Excoriation is severe.">
+            >
+            ["at0025"] = <
+                text = <"Intensity - oozing/crusts">
+                description = <"The level of intensity of a oozing or crusting.">
+            >
+            ["at0026"] = <
+                text = <"None">
+                description = <"Oozing or crusting is absent.">
+            >
+            ["at0027"] = <
+                text = <"Mild">
+                description = <"Oozing or crusting is mild.">
+            >
+            ["at0028"] = <
+                text = <"Moderate">
+                description = <"Oozing or crusting is moderate.">
+            >
+            ["at0029"] = <
+                text = <"Severe">
+                description = <"Oozing or crusting is severe.">
+            >
+            ["at0035"] = <
+                text = <"Intensity total (B)">
+                description = <"The total score for the 6 intensity-related values.">
+            >
+            ["at0036"] = <
+                text = <"Subjective - daily pruritis">
+                description = <"Subjective assessment of the amount of itchiness experienced.">
+                comment = <"Usually represented on a visual analogue scale.">
+            >
+            ["at0038"] = <
+                text = <"Subjective total (C)">
+                description = <"Total of the subjective scores.">
+            >
+            ["at0037"] = <
+                text = <"Subjective - sleeplessness">
+                description = <"Subjective assessment of the amount of sleeplessness experienced.">
+                comment = <"Usually represented on a visual analogue scale.">
+            >
+            ["at0044"] = <
+                text = <"Objective SCORAD index">
+                description = <"The calculated index score based on the affected area total and intensity only.">
+                comment = <"Based on a formula A/5 + 7B/2.">
+            >
+            ["at0046"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9020"] = <
+                text = <"Intensity - erythema (synthesised)">
+                description = <"The level of intensity of a erythema or redness. (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Intensity - oedema/papulation (synthesised)">
+                description = <"The level of intensity of a oedema or papulation. (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"Intensity - lichenification (synthesised)">
+                description = <"The level of intensity of a lichenification or thickening of the skin. (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Intensity - excoriation (synthesised)">
+                description = <"The level of intensity of a excoriation or scratching. (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"Intensity - oozing/crusts (synthesised)">
+                description = <"The level of intensity of a oozing or crusting. (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"Intensity - dryness (synthesised)">
+                description = <"The level of intensity of dryness of unaffected skin. (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Total intensity grade (synthesised)">
+                description = <"The total score expressed as a set of grades. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9020"] = <
+            id = <"ac9020">
+            members = <"at0006", "at0007", "at0008", "at0009">
+        >
+        ["ac9024"] = <
+            id = <"ac9024">
+            members = <"at0026", "at0027", "at0028", "at0029">
+        >
+        ["ac9023"] = <
+            id = <"ac9023">
+            members = <"at0021", "at0022", "at0023", "at0024">
+        >
+        ["ac9022"] = <
+            id = <"ac9022">
+            members = <"at0016", "at0017", "at0018", "at0019">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0011", "at0012", "at0013", "at0014">
+        >
+        ["ac9006"] = <
+            id = <"ac9006">
+            members = <"at0041", "at0042", "at0043">
+        >
+        ["ac9025"] = <
+            id = <"ac9025">
+            members = <"at0031", "at0032", "at0033", "at0034">
+        >
+    >

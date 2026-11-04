@@ -1,0 +1,487 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=08dfb4fb-7589-41af-8aec-09868bd1ca3b; build_uid=9ade9739-fc60-4197-b7bc-ec1dd337ba65)
+    openEHR-EHR-CLUSTER.language.v1.1.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch, Alina Rehberg">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de, rehberg.alina@mh-hannover.de">
+            >
+        >
+        ["pt-pt"] = <
+            language = <[ISO_639-1::pt-pt]>
+            author = <
+                ["name"] = <"Hugo Silva, Vanessa Pereira, Alex Anguelov">
+                ["organisation"] = <"University of Minho, Luxembourg Institute of Health (LIH), Promptly">
+                ["email"] = <"pg50416@uminho.pt, vanessapereira@protonmail.com, alex.mario.ang@gmail.com">
+            >
+            other_details = <
+                ["other_contributors"] = <"Diogo Neto, Beatriz soares">
+            >
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            author = <
+                ["name"] = <"Riikka Lahtela, Heidi Koikkalainen">
+                ["organisation"] = <"Istekki, Finland">
+                ["email"] = <"riikka.lahtela@istekki.fi, heidi.koikkalainen@freshehr.com">
+            >
+            other_details = <
+                ["other_contributors"] = <"Henri Huttunen, UNA Oy, Finland
+Anna-Leena Karvonen, Tietoevry">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjoern Arntzen, John Tore Valand, Marte Vassli Gullesen">
+                ["organisation"] = <"Oslo universitetssykehus HF, Helse Bergen HF, Helse Nord IKT, Helse Vest IKT">
+                ["email"] = <"marte.vassli.gullesen@hnikt.no, john.tore.valand@helse-vest-ikt.no">
+            >
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+            author = <
+                ["name"] = <"Lin Zhang">
+                ["organisation"] = <"Taikang Insurance Group">
+                ["email"] = <"linforest@163.com">
+            >
+            accreditation = <"?">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Vebjørn Arntzen">
+        ["organisation"] = <"Oslo University Hospital">
+        ["email"] = <"varntzen@ous-hf.no">
+        ["date"] = <"2017-07-06">
+    >
+    original_namespace = <"no.openEHR Norway">
+    original_publisher = <"openEHR Norway">
+    other_contributors = <"Erling Are Hole, Helse Bergen, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Heidi Aursand, Oslo universitetssykehus, Norway", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Birgitte Bjerkely, Senter for sjeldne diagnoser, OUS, Norway", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Valborg Ellingsen, Haraldsplass Diakonale sykehus, Norway", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Jessica Hansen, Universitetet i Oslo, Norway", "Ingrid Heitmann, Oslo universitetssykehus HF, Norway", "Annette Hole Sjøborg, DIPS ASA, Norway", "Hilde Hollås, DIPS AS, Norway", "Roar Holm, Helse Vest IKT A/S, Norway", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Siren Kraakenes, Helse Vest IKT, Norway", "Panita Laksuktom, Haukeland universitetssjukehus, Norway", "Øygunn Leite Kallevik, Helse Bergen, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Rose Mari Eikås, Helse Bergen, Norway", "Siv Marie Lien, DIPS ASA, Norway", "Hildegard McNicoll, freshEHR Clinical Informatics Ltd., United Kingdom", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Jagan Mohan, Mahatma Gandhi Medical College and Research Institute, India", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Anine Ramberg, DIPS ASA, Norway", "Gro-Hilde Severinsen, Norwegian center for ehealthresearch, Norway", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Laila Storesund, Haraldsplass diakonale sykehus, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia", "Micaela Thierley, Helse Bergen/Haraldsplass sykehus, Norway", "Susanne Trønnes, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"F4F61553DC74420B59E63AC2A0AE0822">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung von Details über ein mündliches, schriftliches oder symbolisches Mitteilungsverfahren.">
+            keywords = <"Unterzeichnung", "Zeichensprache", "Sprache", "Signatur", "Lautsprecher", "mündlich", "schriftlich", "Kompetenz", "Sprechen", "Übersetzen", "interpretieren">
+            use = <"Der Archetyp wird verwendet, um Details über ein mündliches, schriftliches oder symbolisches Mitteilungsverfahren darzustellenn. Der Kontext der Angaben zur Sprache wird durch die übergeordneten Archetypen bereitgestellt, in denen dieser Archetyp verschachtelt ist. Zum Beispiel:
+
+    um die primäre oder bevorzugte Sprache eines Patienten zu erfassen, verwenden Sie diesen Archetyp im Kontext von CLUSTER.communication;
+    um die bevorzugte oder erforderliche Sprache als Teil einer Dolmetscheranfrage zu erfassen, verwenden Sie CLUSTER.interpreter_requirements;
+    
+Verwenden Sie eine separate Instanz dieses Archetyps, um jede Sprache darzustellen, wenn mehrere Sprachen darzustellen werden müssen, z. B. Norwegisch und Suaheli.">
+            misuse = <"Der Archetyp darf nicht zur Darstellung von Fähigkeiten und Mitteln zum Austausch von Informationen mit einer Einzelperson verwendet werden – verwenden Sie CLUSTER.communication für diesen Zweck.
+
+Darf nicht verwendet werden, um Details zu einer Anfrage für Dolmetscherdienste darzustellen – verwenden Sie CLUSTER.interpreter_requirements mit einem geeigneten INSTRUCTION-Archetyp, zum Beispiel INSTRUCTION.service_request.">
+            copyright = <"© openEHR Norway, openEHR Foundation">
+        >
+        ["pt-pt"] = <
+            language = <[ISO_639-1::pt-pt]>
+            purpose = <"Registar pormenores sobre um sistema de comunicação falado, escrito ou simbólico.">
+            keywords = <"sinalizar", "língua gestual", "língua", "sinais", "falante", "falado", "falada", "escrito", "proficiência", "discurso", "traduzir", "interpretar">
+            use = <"*Use to record details about a spoken, written or symbolic system of communication. The context of the language details is provided by the parent archetypes within which this archetype is nested. For example:
+- to record a patient's primary or preferred language, use this archetype within the context of EVALUATION.communication_capability;
+- to record the preferred or required language as part of a request for an interpreter, use CLUSTER.interpreter_request;
+
+Use a separate instance of this archetype to record each language in the situation where multiple languages need to be recorded, for example Norwegian and Swahili. (en)">
+            misuse = <"*Not to be used to record capability and means for exchanging information with an individual - use EVALUATION.communication_capability for this purpose.
+
+Not to be used to record details about a request for interpreter services - use CLUSTER.interpreter_request with a suitable INSTRUCTION archetype, for example INSTRUCTION.service_request. (en)">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"Puhutun, kirjoitetun tai symbolisen viestintätavan yksityiskohtien tallentamiseen.">
+            keywords = <"viittominen", "viittomakieli", "viitottu kieli", "kieli", "merkki", "puhuja", "puhuttu", "kirjoitettu", "taito", "puhe", "kääntää", "tulkata", "tulkkaus">
+            use = <"*Use to record details about a spoken, written or symbolic system of communication. The context of the language details is provided by the parent archetypes within which this archetype is nested. For example:
+- to record a patient's primary or preferred language, use this archetype within the context of EVALUATION.communication_capability;
+- to record the preferred or required language as part of a request for an interpreter, use CLUSTER.interpreter_request;
+
+Use a separate instance of this archetype to record each language in the situation where multiple languages need to be recorded, for example Norwegian and Swahili. (en)">
+            misuse = <"*Not to be used to record capability and means for exchanging information with an individual - use EVALUATION.communication_capability for this purpose.
+
+Not to be used to record details about a request for interpreter services - use CLUSTER.interpreter_request with a suitable INSTRUCTION archetype, for example INSTRUCTION.service_request. (en)">
+            copyright = <"© openEHR Norway, openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljer om muntlig (tale, tegnspråk) eller skriftlig kommunikasjon.">
+            keywords = <"tegn", "tegnspråk", "tale", "morsmål", "språk", "språkbruk", "dialekt", "taktil", "blindeskrift", "skrift", "målføre", "målform", "skriftspråk", "skriftlig">
+            use = <"For å registrere detaljer om muntlig (tale, tegnspråk) eller skriftlig kommunikasjon. Den overordnede arketypen som denne arketypen nøstes i bestemmer konteksten for registreringen av språket. For eksempel:
+
+- For å registrere et individs primære eller foretrukne språk, bruk denne arketypen i arketypen EVALUATION.communication_capability (Evne til kommunikasjon).
+- For å registrere foretrukket eller påkrevd språk som en del av en forespørsel om tolk, bruk denne arketypen i arketypen CLUSTER.interpreter_request (Forespørsel om tolk).
+
+Dersom det er behov for å registrere flere språk - for eksempel norsk og swahili, må arketypen gjentas for hvert språk.">
+            misuse = <"Brukes ikke for å registrere evne og metoder for utveksling av informasjon med et individ. Bruk arketypen EVALUATION.communication_capability (Evne til kommunikasjon) for dette formålet.
+
+Brukes ikke for å registrere en forespørsel om tolketjenester. Bruk arketypen CLUSTER.interpreter_request (Forespørsel om tolk) sammen med en passende INSTRUCTION-arketype, for eksempel INSTRUCTION.service_request (Helsetjenesteforespørsel).">
+            copyright = <"© openEHR Norway, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about a spoken, written or symbolic system of communication.">
+            keywords = <"signing", "sign language", "tongue", "sign", "speaker", "spoken", "written", "proficiency", "speech", "translate", "interpret">
+            use = <"Use to record details about a spoken, written or symbolic system of communication. The context of the language details is provided by the parent archetypes within which this archetype is nested. For example:
+- to record a patient's primary or preferred language, use this archetype within the context of EVALUATION.communication_capability;
+- to record the preferred or required language as part of a request for an interpreter, use CLUSTER.interpreter_request;
+
+Use a separate instance of this archetype to record each language in the situation where multiple languages need to be recorded, for example Norwegian and Swahili.">
+            misuse = <"Not to be used to record capability and means for exchanging information with an individual - use EVALUATION.communication_capability for this purpose.
+
+Not to be used to record details about a request for interpreter services - use CLUSTER.interpreter_request with a suitable INSTRUCTION archetype, for example INSTRUCTION.service_request.">
+            copyright = <"© openEHR Norway, openEHR Foundation">
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+            purpose = <"用于记录关于口头类、书面类或符号类（手势语类；手语类）沟通交流体系的详情。">
+            keywords = <"手势语", "使用手势语", "打手势语", "手语", "使用手语", "打手语", "符号语言", "使用符号语言", "说话方式", "语言", "手势", "符号", "说话者", "口语", "口头", "口头语", "口头语言", "书面", "书面语", "书面语言", "精通", "熟练程度", "精通程度", "讲话", "说话能力", "言语", "翻译", "书面翻译", "口头翻译", "口译">
+            use = <"*Use to record details about a spoken, written or symbolic system of communication. The context of the language details is provided by the parent archetypes within which this archetype is nested. For example:
+- to record a patient's primary or preferred language, use this archetype within the context of EVALUATION.communication_capability;
+- to record the preferred or required language as part of a request for an interpreter, use CLUSTER.interpreter_request;
+
+Use a separate instance of this archetype to record each language in the situation where multiple languages need to be recorded, for example Norwegian and Swahili. (en)">
+            misuse = <"*Not to be used to record capability and means for exchanging information with an individual - use EVALUATION.communication_capability for this purpose.
+
+Not to be used to record details about a request for interpreter services - use CLUSTER.interpreter_request with a suitable INSTRUCTION archetype, for example INSTRUCTION.service_request. (en)">
+            copyright = <"© openEHR Norway, openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Language
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- Language name
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Variant
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0006] matches {    -- Mode
+                value matches {
+                    DV_CODED_TEXT[at9004] matches {
+                        defining_code matches {[ac9004]}    -- Mode (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0004] matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Sprache">
+                description = <"Eine Sammlung von Wörtern, ihrer Aussprache und Methoden zu ihrer Kombination, die von einer bestimmten Gemeinschaft verstanden und als Kommunikationsform verwendet werden.">
+            >
+            ["at0001"] = <
+                text = <"Sprachenname">
+                description = <"Der Name der Sprache.">
+                comment = <"Zum Beispiel: Deutsch, Mandarin, Swahili, Französisch oder Norwegische Gebärdensprache. Die Kodierung von „Sprache“ mit einer Terminologie wird nach Möglichkeit bevorzugt. ISO 639-3-Codes enthalten den einfachen Namen der Sprache, können aber den Namen und die Modalität kombiniert darstellen - zum Beispiel die deutsche Gebärdensprache. Der für geeignete Codes festgelegte Wert kann vom Modus abhängen.">
+            >
+            ["at0002"] = <
+                text = <"Variante">
+                description = <"Der Name des Dialekts oder Soziolekts, falls zutreffend.">
+            >
+            ["at0004"] = <
+                text = <"Kommentar">
+                description = <"Zusätzlicher Text über die Sprache, die in anderen Bereichen nicht erfasst wurde.">
+                comment = <"Zum Beispiel: Blindenschrift wird zum taktilen Lesen/Schreiben verwendet oder das Lippenlesen wird verwendet, um eine Hörbehinderung zu ergänzen.">
+            >
+            ["at0006"] = <
+                text = <"Modus">
+                description = <"Die Kommunikationsmethode für die angegebene Sprache.">
+            >
+            ["at0007"] = <
+                text = <"Sprechen">
+                description = <"Die Stimme wird verwendet.">
+            >
+            ["at0008"] = <
+                text = <"Zeichen">
+                description = <"Körperliche Aktionen oder Gesten werden verwendet. Dieser Wert ist redundant, wenn die Identifizierung des Modus Bestandteil des \"Sprachnamens\" ist, wie z. B. 'Norwegische Gebärdensprache'.">
+            >
+            ["at0009"] = <
+                text = <"Lesen">
+                description = <"Es werden geschriebene oder gedruckte Buchstaben, Wörter, Bilder oder Symbole verwendet.">
+            >
+            ["at0010"] = <
+                text = <"Schreiben">
+                description = <"Es wird eine Zusammensetzung aus Buchstaben, Wörtern, Bildern oder Symbolen verwendet.">
+            >
+            ["at0012"] = <
+                text = <"Taktiles Lesen">
+                description = <"Interpretation von schriftlichem Material durch Berührung wird verwendet.">
+            >
+            ["ac9004"] = <
+                text = <"Modus (synthesised)">
+                description = <"Die Kommunikationsmethode für die angegebene Sprache. (synthesised)">
+            >
+        >
+        ["pt-pt"] = <
+            ["at0000"] = <
+                text = <"Idioma">
+                description = <"Uma coleção de palavras, a sua pronúncia e métodos de combinação, compreendidas por uma comunidade específica e utilizadas como forma de comunicação.">
+            >
+            ["at0001"] = <
+                text = <"Nome do idioma">
+                description = <"O nome do idioma.">
+                comment = <"Por exemplo: mandarim, suaíli, francês ou norueguês. É preferível codificar 'Linguagem' com uma terminologia, sempre que possível. Os códigos ISO 639-3 incluem o nome simples da língua, mas podem representar o nome e a modalidade combinados - por exemplo, a língua gestual norueguesa. O valor definido para os códigos apropriados pode depender do modo.">
+            >
+            ["at0002"] = <
+                text = <"Variante">
+                description = <"O nome do dialecto ou sociolecto, se apropriado.">
+            >
+            ["at0004"] = <
+                text = <"Comentário">
+                description = <"Narrativa adicional sobre a linguagem/idioma não capturada noutros campos.">
+                comment = <"Por exemplo: O Braille é utilizado para leitura/escrita tátil ou a leitura labial é utilizada para complementar uma deficiência auditiva.">
+            >
+            ["at0006"] = <
+                text = <"Modo">
+                description = <"O método de comunicação para o idioma especificado.">
+            >
+            ["at0007"] = <
+                text = <"Fala">
+                description = <"A voz é utilizada.">
+            >
+            ["at0008"] = <
+                text = <"Sinais">
+                description = <"Ações físicas ou gestos são utilizados. Este valor é redundante se a identificação do modo for um componente do 'Nome do idioma', como por exemplo 'Linguagem de sinais norueguesa'.">
+            >
+            ["at0009"] = <
+                text = <"Leitura">
+                description = <"Letras escritas ou impressas, palavras, imagens ou símbolos são utilizados.">
+            >
+            ["at0010"] = <
+                text = <"Escrita">
+                description = <"Composição de letras, palavras, imagens ou símbolos são utilizados.">
+            >
+            ["at0012"] = <
+                text = <"Leitura tátil">
+                description = <"A interpretação de material escrito através do toque é utilizada.">
+            >
+            ["ac9004"] = <
+                text = <"Modo (synthesised)">
+                description = <"O método de comunicação para o idioma especificado. (synthesised)">
+            >
+        >
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"Kieli">
+                description = <"Kokoelma sanoja ja äänteitä sekä menetelmiä niiden yhdistämiseksi, mitä tietty yhteisö ymmärtää ja käyttää viestintämuotona.">
+            >
+            ["at0001"] = <
+                text = <"Kielen nimi">
+                description = <"Kielen nimi">
+                comment = <"Esimerkiksi: kiina, swahili, ranska tai norjalainen viittomakieli. Kielen koodaus terminologialla on suositeltavaa, mikäli mahdollista.">
+            >
+            ["at0002"] = <
+                text = <"Muunnos">
+                description = <"Murteen tai kielimuodon nimi, jos tarpeellista.">
+            >
+            ["at0004"] = <
+                text = <"Kommentti">
+                description = <"Sanallinen lisätieto kielestä, mikä ei tule esille muissa kentissä.">
+                comment = <"Esimerkiksi: Taktiiliseen lukemiseen käytetään pistekirjoitusta tai huulilta lukemista käytetään kuulovamman takia kommunikoinnin tukena.">
+            >
+            ["at0006"] = <
+                text = <"Käytäntö">
+                description = <"Kommunikointitapa määritetylle kielelle">
+            >
+            ["at0007"] = <
+                text = <"Puhuminen">
+                description = <"Käytetään ääntä.">
+            >
+            ["at0008"] = <
+                text = <"Viittominen">
+                description = <"Käytetään kehon liikkeitä ja ilmeitä (gesturaalisuus). Tieto on tarpeeton, jos käytäntö on tunnistettavissa kielen nimestä kuten ”norjalainen viittomakieli”.">
+            >
+            ["at0009"] = <
+                text = <"Lukeminen">
+                description = <"Käytössä on kirjoitetut ja tulostetut kirjaimet, sanat, kuvat ja symbolit.">
+            >
+            ["at0010"] = <
+                text = <"Kirjoittaminen">
+                description = <"Käytetään kirjainten, sanojen, kuvien ja symbolien yhdistelmää.">
+            >
+            ["at0012"] = <
+                text = <"Taktiilinen lukeminen">
+                description = <"Käytetään tuntoaistia kirjoitetun materiaalin tulkitsemiseen.">
+            >
+            ["ac9004"] = <
+                text = <"Käytäntö (synthesised)">
+                description = <"Kommunikointitapa määritetylle kielelle (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Språk">
+                description = <"Språk er evnen til å produsere og forstå ytringer som formidler informasjon fra ett individ til et annet, ytringene kan være enten hørbare (tale) eller synlige (tegn, skrift).">
+            >
+            ["at0001"] = <
+                text = <"Navn på språket">
+                description = <"Navnet på språket.">
+                comment = <"For eksempel Mandarin, swahili, fransk eller norsk tegnspråk. Koding av \"Språknavn\" med en terminologi er ønskelig om mulig. For eksempel ISO 639-3 eller Glottolog. Kodene i ISO 639-3 inneholder både navn på språket men kan også representere navn og modalitet, for eksempel norsk tegnspråk. Verdisettet kan variere med modalitet.">
+            >
+            ["at0002"] = <
+                text = <"Variant">
+                description = <"Navnet på dialekten eller sosiolekten.">
+            >
+            ["at0004"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekstbeskrivelse om språket og eller varianten som ikke er registrert i andre felt.">
+                comment = <"For eksempel: Braille brukes for taktil lesing/skriving eller munnavlesning brukes for å gi støtte ved nedsatt hørsel.">
+            >
+            ["at0006"] = <
+                text = <"Modalitet">
+                description = <"Metoden for kommunikasjon av språket.">
+            >
+            ["at0007"] = <
+                text = <"Tale">
+                description = <"Språket som benyttes ved tale.">
+            >
+            ["at0008"] = <
+                text = <"Tegnspråk">
+                description = <"Fysiske handlinger eller bevegelser blir brukt. Denne verdien er ikke relevant om modalitet er definert i elementet \"Navn på språket\". For eksempel norsk tegnspråk.">
+            >
+            ["at0009"] = <
+                text = <"Lesing">
+                description = <"Skriftlige eller trykte bokstaver, ord, bilder eller symboler brukes.">
+            >
+            ["at0010"] = <
+                text = <"Skriving">
+                description = <"En sammensetning av bokstaver, ord, bilder eller symboler brukes.">
+            >
+            ["at0012"] = <
+                text = <"Taktil lesing">
+                description = <"Tolkning av skriftlig materiale ved hjelp av berøring brukes.">
+            >
+            ["ac9004"] = <
+                text = <"Modalitet (synthesised)">
+                description = <"Metoden for kommunikasjon av språket. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Language">
+                description = <"A collection of words, their pronunciation and methods for combining them, understood by a specific community and used as a form of communication.">
+            >
+            ["at0001"] = <
+                text = <"Language name">
+                description = <"The name of the language.">
+                comment = <"For example: Mandarin, Swahili, French or Norwegian sign language. Coding of 'Language' with a terminology is preferred, where possible. ISO 639-3 codes include the simple name of the language but can represent the name and modality combined - for example Norwegian sign language. The value set for codes that are appropriate may depend on the mode.">
+            >
+            ["at0002"] = <
+                text = <"Variant">
+                description = <"The name of the dialect or sociolect, if appropriate.">
+            >
+            ["at0004"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the language not captured in other fields.">
+                comment = <"For example: Braille is used for tactile reading/writing or lip reading is used to supplement a hearing impairment.">
+            >
+            ["at0006"] = <
+                text = <"Mode">
+                description = <"The method of communication for the specified language.">
+            >
+            ["at0007"] = <
+                text = <"Speaking">
+                description = <"The voice is used.">
+            >
+            ["at0008"] = <
+                text = <"Signing">
+                description = <"Physical actions or gestures are used. This value is redundant if identification of the mode is a component of the 'Language name', such as 'Norwegian sign language'.">
+            >
+            ["at0009"] = <
+                text = <"Reading">
+                description = <"Written or printed letters, words, pictures or symbols is used.">
+            >
+            ["at0010"] = <
+                text = <"Writing">
+                description = <"A composition of letters, words, pictures or symbols is used.">
+            >
+            ["at0012"] = <
+                text = <"Tactile reading">
+                description = <"Interpretation of written material using touch is used.">
+            >
+            ["ac9004"] = <
+                text = <"Mode (synthesised)">
+                description = <"The method of communication for the specified language. (synthesised)">
+            >
+        >
+        ["zh-cn"] = <
+            ["at0000"] = <
+                text = <"语言">
+                description = <"特定社区所能理解并将其作为沟通交流形式的一套词语及其发音和组合方法。">
+            >
+            ["at0001"] = <
+                text = <"语言名称">
+                description = <"语言的名称">
+                comment = <"例如：汉语普通话、斯瓦希里语、法语或挪威手语。 在可能的情况下，应当首选采用标准术语集来编码“语言”。 ISO 639-3代码之中包括语言的简称，但可以表示名称与形态的组合，如挪威手语。 合适的代码取值集合可能会取决于相应的模式。">
+            >
+            ["at0002"] = <
+                text = <"语言变体">
+                description = <"在合适的情况下，用于记录方言或社会方言（某社会阶层或群体使用的一种语言变体）的名称。">
+            >
+            ["at0004"] = <
+                text = <"备注">
+                description = <"额外关于其他字段之中并未记录的有关相应语言的文本叙述。">
+                comment = <"例如：盲文用于触摸阅读/书写，或者说，唇读用于弥补听力障碍。">
+            >
+            ["at0006"] = <
+                text = <"模式">
+                description = <"指定语言的沟通交流方法。">
+            >
+            ["at0007"] = <
+                text = <"口头模式">
+                description = <"采用语音。">
+            >
+            ["at0008"] = <
+                text = <"手势语模式">
+                description = <"采用的是身体动作或手势（姿势；示意动作）。 如果模式字段的标识已经是“语言名称”字段取值的组成部分，如“挪威手语”，则该取值就属于是多余的。">
+            >
+            ["at0009"] = <
+                text = <"阅读模式">
+                description = <"采用的是书面的或印刷的字母、字词、图片或符号。">
+            >
+            ["at0010"] = <
+                text = <"书面模式">
+                description = <"采用的是字母、字词、图片或符号的组合形式。">
+            >
+            ["at0012"] = <
+                text = <"触摸阅读模式">
+                description = <"采用触摸的方式来解读书面材料。亦可称为“触觉阅读模式”。">
+            >
+            ["ac9004"] = <
+                text = <"模式 (synthesised)">
+                description = <"指定语言的沟通交流方法。 (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0007", "at0008", "at0009", "at0010", "at0012">
+        >
+    >

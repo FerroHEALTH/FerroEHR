@@ -1,0 +1,266 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3fe1d522-7611-4786-8ef3-ec68cfb9508f; build_uid=a18b8bba-5d96-483a-9226-906b2fad1f1a)
+    openEHR-EHR-OBSERVATION.pregnancy_test.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Dr. Leonardo Der Jachadurian">
+                ["organisation"] = <"Bitios.com">
+            >
+            accreditation = <"Medical Doctor (Internal Medicine Specialist)">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"Sam.Heard@OceanInformatics.com">
+        ["date"] = <"2007-04-27">
+    >
+    other_contributors = <"Heather Leslie, Atomica Informatics, Australia", ...>
+    lifecycle_state = <"in_development">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"F200E552FBEBD07302BB1962BF1396CA">
+    >
+    details = <
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Para registrar el resultado de un un test de embarazo producido comercialmente.">
+            keywords = <"embarazo", "test", "confirmación">
+            use = <"Para usar con un producto comercial.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the result of a simple test to detect early pregnancy, usually a commercial product tested on urine.">
+            keywords = <"pregnancy", "test", "confirmation">
+            use = <"A simple pregnancy test, usually testing urine, that provides a positive or negative result for early pregnancy. The test is not performed in a laboratory but by the woman or healthcare provider.">
+            misuse = <"Providing the interpretation of a B-HCG or other assessment of pregnancy. Use the Pregnancy Summary archetype to record pregnancy.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل اختبار حمل بمنتَج تجاري">
+            keywords = <"الحمل", "اختبار", "تأكيد">
+            use = <"يستخدم في وجود منتج تجاري">
+            misuse = <"">
+            copyright = <"© 2011 openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Pregnancy test result
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Point in time
+                        data matches {
+                            ITEM_LIST[at0003] matches {
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {1} matches {    -- Result
+                                        value matches {
+                                            DV_CODED_TEXT[at9004] matches {
+                                                defining_code matches {[ac9001]}    -- Result (synthesised)
+                                            }
+                                        }
+                                    }
+                                    allow_archetype ELEMENT[at0013] matches {    -- Image representation
+                                        include
+                                            archetype_id/value matches {/.*/}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_LIST[at0009] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype ELEMENT[at0012] matches {    -- Device
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Method
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"*Pregnancy test result(en)">
+                description = <"*Result of a simple test to detect early pregnancy, usually a commercial product tested on urine.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Point in time(en)">
+                description = <"*Default, unspecified point in time event which may be explicitly defined in a template or at run-time.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Result(en)">
+                description = <"*The result of the test.(en)">
+            >
+            ["at0005"] = <
+                text = <"*Negative(en)">
+                description = <"*The result does not show any sign of pregnancy.(en)">
+            >
+            ["at0006"] = <
+                text = <"*Inconclusive(en)">
+                description = <"*The result is inconclusive.(en)">
+            >
+            ["at0007"] = <
+                text = <"*Weakly positive(en)">
+                description = <"*The result is consistent with the products criteria for pregnancy, but only weakly.(en)">
+            >
+            ["at0008"] = <
+                text = <"*Strongly positive(en)">
+                description = <"*The result is strongly consistent with the product's criteria for pregnancy.(en)">
+            >
+            ["at0011"] = <
+                text = <"*Indeterminate(en)">
+                description = <"*It is not possible to tell if the test is positive or negative.(en)">
+            >
+            ["at0012"] = <
+                text = <"*Device(en)">
+                description = <"*Identification of the product used for the test.(en)">
+            >
+            ["at0013"] = <
+                text = <"*Image representation(en)">
+                description = <"*An image of the test result.(en)">
+            >
+            ["at0014"] = <
+                text = <"*Method(en)">
+                description = <"*Description of the method used to perform the test.(en)">
+            >
+            ["ac9001"] = <
+                text = <"*Result(en) (synthesised)">
+                description = <"*The result of the test.(en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Pregnancy test result">
+                description = <"Result of a simple test to detect early pregnancy, usually a commercial product tested on urine.">
+            >
+            ["at0002"] = <
+                text = <"Point in time">
+                description = <"Default, unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Result">
+                description = <"The result of the test.">
+            >
+            ["at0005"] = <
+                text = <"Negative">
+                description = <"The result does not show any sign of pregnancy.">
+            >
+            ["at0006"] = <
+                text = <"Inconclusive">
+                description = <"The result is inconclusive.">
+            >
+            ["at0007"] = <
+                text = <"Weakly positive">
+                description = <"The result is consistent with the products criteria for pregnancy, but only weakly.">
+            >
+            ["at0008"] = <
+                text = <"Strongly positive">
+                description = <"The result is strongly consistent with the product's criteria for pregnancy.">
+            >
+            ["at0011"] = <
+                text = <"Indeterminate">
+                description = <"It is not possible to tell if the test is positive or negative.">
+            >
+            ["at0012"] = <
+                text = <"Device">
+                description = <"Identification of the product used for the test.">
+            >
+            ["at0013"] = <
+                text = <"Image representation">
+                description = <"An image of the test result.">
+            >
+            ["at0014"] = <
+                text = <"Method">
+                description = <"Description of the method used to perform the test.">
+            >
+            ["ac9001"] = <
+                text = <"Result (synthesised)">
+                description = <"The result of the test. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"*Pregnancy test result(en)">
+                description = <"*Result of a simple test to detect early pregnancy, usually a commercial product tested on urine.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Point in time(en)">
+                description = <"*Default, unspecified point in time event which may be explicitly defined in a template or at run-time.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Result(en)">
+                description = <"*The result of the test.(en)">
+            >
+            ["at0005"] = <
+                text = <"*Negative(en)">
+                description = <"*The result does not show any sign of pregnancy.(en)">
+            >
+            ["at0006"] = <
+                text = <"*Inconclusive(en)">
+                description = <"*The result is inconclusive.(en)">
+            >
+            ["at0007"] = <
+                text = <"*Weakly positive(en)">
+                description = <"*The result is consistent with the products criteria for pregnancy, but only weakly.(en)">
+            >
+            ["at0008"] = <
+                text = <"*Strongly positive(en)">
+                description = <"*The result is strongly consistent with the product's criteria for pregnancy.(en)">
+            >
+            ["at0011"] = <
+                text = <"*Indeterminate(en)">
+                description = <"*It is not possible to tell if the test is positive or negative.(en)">
+            >
+            ["at0012"] = <
+                text = <"*Device(en)">
+                description = <"*Identification of the product used for the test.(en)">
+            >
+            ["at0013"] = <
+                text = <"*Image representation(en)">
+                description = <"*An image of the test result.(en)">
+            >
+            ["at0014"] = <
+                text = <"*Method(en)">
+                description = <"*Description of the method used to perform the test.(en)">
+            >
+            ["ac9001"] = <
+                text = <"*Result(en) (synthesised)">
+                description = <"*The result of the test.(en) (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0011">
+        >
+    >

@@ -1,0 +1,773 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=24f51bf9-bcc2-47e6-b035-e03d63fc6a1f; build_uid=0c00cb63-d882-4789-83b5-9e27946b84d8)
+    openEHR-EHR-EVALUATION.medication_summary.v1.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Ramona Wellmann, Alina Rehberg, Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"wellmann.ramona@mh-hannover.de, rehberg.alina@mh-hannover.de, Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Gro-Hilde Ulriksen, John Tore Valand, Liv Laugen, Vebjørn Arntzen">
+                ["organisation"] = <"Norwegian centre for e-health research, Helse Bergen, ​Oslo University Hospital, Norway">
+                ["email"] = <"john.tore.valand@helse-bergen.no, liv.laugen@ous-hf.no, varntzen@ous-hf.no, john.tore.valand@helse-vest-ikt.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Adriana Kitajima, Débora Farage, Fernanda Maia, Laíse Figueiredo, Marivan Abrahão">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"contato@coreconsulting.com.br">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2015-12-08">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Dag Aarhus, Vestre Viken HF, Norway", "Ulrich Andersen, Denmark", "Ole Andreas Bjordal, Webmed, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Terje Bektesevic Holmlund, UiT Norges arktiske universitet, Norway", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Colin Brown, NHS Scotland SCIMP, United Kingdom", "Laila Bruun, Oslo universitetssykehus HF, Norway", "Greg Burch, Tiny Medical Apps, United Kingdom", "Fatemeh Chalabianloo, Helse Bergen, Norway", "Grant Forrest, Lunaria Ltd, United Kingdom", "James Goddard, NHS Wales Informatics Service, United Kingdom", "Heather Grain, Llewelyn Grain Informatics, Australia", "Anca Heyd, DIPS ASA, Norway", "Joost Holslag, Nedap, Netherlands", "Evelyn Hovenga, EJSH Consulting, Australia", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (Nasjonal IKT redaktør)", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Kanika Kuwelker, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Tomi Laptoš, Marand, Slovenia", "Liv Laugen, Oslo universitetssykehus, Norway (Nasjonal IKT redaktør)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Pramil Liyanage, Ministry of Health, Sri Lanka", "Colin Macfarlane, Elsevier, United Kingdom", "James McClay, University of Nebraska Medical Center, United States", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Svenne Naumann, Finnmarkssykehuset, Norway", "Bjørn Næss, DIPS ASA, Norway", "Ana Pereira, CINTESIS, CUF-Porto, Portugal", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "Anders Thurin, VGR, Sweden", "Pencho Tonchev, Medical University- Pleven, Bulgaria", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway", "Thomas Wilson, Finnmarkssykehuset HF Klinikk Hammerfest, Norway", "Michael Zampaglione, Australia">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"50B8849AB9B274AB2D8E0456FA33FF85">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung von zusammenfassenden oder dauerhaften Informationen über alle Anwendungen eines bestimmten Medikaments oder einer Medikamentengruppe oder -klasse, insbesondere wenn das Anwendungsmuster oder die kumulative Dosierung überwacht werden muss.">
+            keywords = <"Medikament, Arzneimittel, Arznei, lebenslang, Medikation, Sebstmedikation, Medizin, Anamnese, Lebenszeit, kumulativ, Dosis, Anwendung, Verabreichung, Verbrauch", ...>
+            use = <"Zur Darstellung zusammenfassender Informationen über die Anrwendung eines einzelnen Medikaments oder einer Medikamentengruppe oder -klasse, insbesondere wenn das Anwendungsmuster oder die kumulative Dosierung überwacht werden muss.
+
+Dieser Archetyp wurde entwickelt, um einen Überblick über die Anrwendung von Medikamenten nur in bestimmten Situationen darzustellen, in denen es einen Mehrwert für die Gesundheitsakte darstellt, z. B. eine einzelne Instanz des Archetyps wird verwendet, um eine oder mehrere Anwendungsepisoden zu erfassen, sodass ein Anwendungsmuster identifiziert und/oder eine kumulative Dosis berechnet werden kann.
+ 
+Anwendungsbeispiele für diesen Archetyp:
+- Monitoring der ein Leben lang eingenommenen kumulativen Dosis von Doxorubicin- oder Methotrexat.
+- Monitoring der Dauer von hochdosierten Bisphosphanaten.
+- Monitoring der Anwendung eines experimentellen Medikaments in einer Studie.
+
+Verwenden Sie eine neue Instanz dieses Archetyps, um Details zu jedem Medikament oder jeder Gruppe oder Klasse von Medikamenten darzustellen.
+
+Auslöser für das Beenden einer Episode und das Beginnen einer neuen spiegeln weitgehend die lokalen Präferenzen der Datenerfassung und klinischen Prioritäten wider, einschließlich, wenn die Person:
+- das Medikament für einen längeren Zeitraum (der wahrscheinlich lokal definiert ist) nicht mehr einnimmt.
+- die angewendete Menge oder ihr Anwendungsmuster erheblich verändert.
+- die Art und Weise, wie das Medikament verabreicht wurde, ändert.">
+            misuse = <"Der Archetyp darf nicht zur Darstellung einer „Medikamentenliste“ verwendet werden. Verwenden Sie für diesen Zweck den Archetyp COMPOSITION.medication_list. Darüber hinaus darf er nicht verwendet werden, um ein Medikament innerhalb einer „Medikamentenliste“ darzustellen – verwenden Sie zu diesem Zweck entweder den INSTRUCTION.medication_order oder den ACTION.medication Archetyp.
+
+Nicht zur Darstellung einer Verordnung von einem zu verabreichenden oder einzunehmenden Medikament - verwenden Sie zu diesem Zweck den Archetyp INSTRUCTION.medication_order.
+
+Nicht zur Dokumentation der tatsächlichen Verabreichung oder Einnahme eines Medikaments - verwenden Sie den Archetyp ACTION.medication für diesen Zweck.
+
+Nicht zur Darstellung des Anwendungsstatus oder von Antworten auf vordefinierte Screening-Fragen zum Medikament zu verwenden - verwenden Sie zu diesem Zweck den Archetyp OBSERVATION.medication_screening.
+
+Nicht zu verwenden, um eine Beobachtung über die Verwendung eines Medikaments darzustellen – verwenden Sie zu diesem Zweck den Archetyp OBSERVATION.medication_statement.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere et sammendrag eller varig (persistent) informasjon om all bruk av ett spesifisert legemiddel, gruppe eller klasse av legemidler, spesielt der bruksmønsteret eller kumulativ mengde må overvåkes.">
+            keywords = <"medisin, livslang, medikament, kur, legemiddel, historikk, levetid, kumulativ, dose, administrasjon, behandling", ...>
+            use = <"Brukes for å registrere et sammendrag eller varig (persistent) informasjon om all bruk av ett spesifisert legemiddel, gruppe eller klasse av legemidler, spesielt der bruksmønsteret eller kumulativ mengde må overvåkes.
+
+Denne arketypen er utviklet for å representere en oversikt over bruken av legemidler kun i tilfeller der det gir verdi for pasientjournalen, for eksempel hvor den kumulative dosen av et legemiddel har betydelige toksiske effekter eller langtidsbruk har negative helseeffekter. For hver periode et legemiddel er brukt oppdateres samme instans av arketypen, slik at man kan følge bruken over tid og kumulativ mengde kan regnes ut.
+
+For eksempel:
+- overvåkning av kumulativ dose av Doxorubicin tatt i løpet av livet.
+- overvåking av varigheten av høydose bisfosfonater.
+- overvåking av bruk av et eksperimentelt legemiddel i en studie.
+
+Bruk en ny instans av denne arketypen for å registre detaljer om hvert enkelt legemiddel, gruppe eller klasse av legemidler.
+
+Det som skal trigge en avslutning av en periode og starte en ny avhenger av lokale behov og hva som blir prioritert klinisk. For eksempel:
+- individet har opphold i bruken av legemiddelet i en vesentlig tidsperiode.
+- stor endring i mengde eller bruksmønster.
+- endringer i administreringsvei for legemiddelet.">
+            misuse = <"Brukes ikke for å representere en legemiddeliste, bruk COMPOSITION.medication_list for dette formålet. Brukes heller ikke for å representere et legemiddel i en \"Legemiddelliste\". Bruk arketypen INSTRUCTION.medication_order (Legemiddelordinering) eller arketypen ACTION.medication (Legemiddelhåndtering) til dette formålet.
+
+Brukes ikke for å dokumentere forordningen av et legemiddel - bruk arketypen INSTRUCTION.medication_order (Legemiddelordinering) til dette formålet.
+
+Brukes ikke for å dokumentere administreringen av et legemiddel - bruk arketypen ACTION.medication (Legemiddelhåndtering) til dette formålet
+
+Brukes ikke for å registrere svar på spørsmål om legemiddelbruk i typiske spørreskjema-settinger, som Ja/Nei på spesifikke legemidler. Bruk arketypen OBSERVATION.medication_screening til dette formålet.
+
+Brukes ikke for å registrere status på bruken av ett spesifikt legemiddel på et bestemt tidspunkt - bruk arketypen OBSERVATION.medication_statement til dette formålet.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*To record summary or persistent information about the use of a single medication or group or class of medications, especially where the pattern of use or cumulative dosage needs to be monitored. (en)">
+            keywords = <"*drug, lifelong, medication, self-medicate, medicine, history, lifetime, cumulative, dose, use, administration, consumption (en)", ...>
+            use = <"*Use to record summary information about the use of a single medication or group or class of medications, especially where the pattern of use or cumulative dosage needs to be monitored.
+ 
+This archetype has been designed to represent an overview of the use of medication only in specific situations where it adds value to the health record, such as where the cumulative dose of the medication has significant toxic effects or long term use has adverse health impacts. A single instance of the archetype will be used to capture one or more episodes of use, so that a pattern of use can be identified and/or a cumulative dose can be calculated.
+ 
+Examples of use include:
+- monitoring of the cumulative dose of doxorubicin or methotrexate taken over a lifetime.
+- monitoring the duration of high dose bisphosphanates.
+- monitoring the use of an experimental medication in a trial.
+ 
+Use a new instance of this archetype to record details about each medication or group or class of medications.
+ 
+Triggers for closing one episode and commencing a new one will largely reflect local data collection preferences and clinical priorities, including if the individual:
+- stops using the medication for a significant period of time (which will likely be locally defined).
+- significantly changes their amount or pattern of use.
+- changes in the route by which the medication was administed. (en)">
+            misuse = <"*Not to be used to represent a 'Medication list' - use COMPOSITION.medication_list for this purpose. In addition, not to be used to represent a medication within a 'Medication list' - use either an INSTRUCTION.medication_order or ACTION.medication for this purpose.
+
+Not to be used for recording an order for a medication to be administered or consumed - use INSTRUCTION.medication_order for this purpose.
+
+Not to be used for documenting the actual administration or consumption of a medication - use ACTION.medication for this purpose.
+
+Not to be used for recording the status of use or screening question/answer pairs regarding the medication - use OBSERVATION.medication_screening for this purpose.
+
+Not to be used to record an observation about the use of a medication - use OBSERVATION.medication_statement for this purpose. (en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record summary or persistent information about the use of a single medication or group or class of medications, especially where the pattern of use or cumulative dosage needs to be monitored.">
+            keywords = <"drug, lifelong, medication, self-medicate, medicine, history, lifetime, cumulative, dose, use, administration, consumption", ...>
+            use = <"Use to record summary information about the use of a single medication or group or class of medications, especially where the pattern of use or cumulative dosage needs to be monitored.
+ 
+This archetype has been designed to represent an overview of the use of medication only in specific situations where it adds value to the health record, such as where the cumulative dose of the medication has significant toxic effects or long term use has adverse health impacts. A single instance of the archetype will be used to capture one or more episodes of use, so that a pattern of use can be identified and/or a cumulative dose can be calculated.
+ 
+Examples of use include:
+- monitoring of the cumulative dose of doxorubicin or methotrexate taken over a lifetime.
+- monitoring the duration of high dose bisphosphanates.
+- monitoring the use of an experimental medication in a trial.
+ 
+Use a new instance of this archetype to record details about each medication or group or class of medications.
+ 
+Triggers for closing one episode and commencing a new one will largely reflect local data collection preferences and clinical priorities, including if the individual:
+- stops using the medication for a significant period of time (which will likely be locally defined).
+- significantly changes their amount or pattern of use.
+- changes in the route by which the medication was administered.">
+            misuse = <"Not to be used to represent a 'Medication list' - use COMPOSITION.medication_list for this purpose. In addition, not to be used to represent a medication within a 'Medication list' - use either an INSTRUCTION.medication_order or ACTION.medication for this purpose.
+
+Not to be used for recording an order for a medication to be administered or consumed - use INSTRUCTION.medication_order for this purpose.
+
+Not to be used for documenting the actual administration or consumption of a medication - use ACTION.medication for this purpose.
+
+Not to be used for recording the status of use or screening question/answer pairs regarding the medication - use OBSERVATION.medication_screening for this purpose.
+
+Not to be used to record an observation about the use of a medication - use OBSERVATION.medication_statement for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Medication summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {1} matches {    -- Medication name
+                        value matches {
+                            DV_TEXT[at9000]
+                        }
+                    }
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Clinical description
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0028] matches {    -- Clinical indication
+                        value matches {
+                            DV_TEXT[at9019]
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Onset of use
+                        value matches {
+                            DV_DATE_TIME[at9004]
+                        }
+                    }
+                    CLUSTER[at0008] matches {    -- Episode
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Episode onset
+                                value matches {
+                                    DV_DATE_TIME[at9006]
+                                }
+                            }
+                            ELEMENT[at0018] matches {    -- Episode indication
+                                value matches {
+                                    DV_TEXT[at9007]
+                                }
+                            }
+                            ELEMENT[at0020] matches {    -- Therapeutic intent
+                                value matches {
+                                    DV_TEXT[at9008]
+                                }
+                            }
+                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9009]
+                                }
+                            }
+                            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Episode amount
+                                value matches {
+                                    DV_QUANTITY[at9011]
+                                    DV_TEXT[at9020]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0029] matches {    -- Additional details
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.dosage(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.dosage(-[a-zA-Z0-9_]+)*\.v2\..*|openEHR-EHR-CLUSTER\.medication(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.medication(-[a-zA-Z0-9_]+)*\.v2\..*|openEHR-EHR-CLUSTER\.therapeutic_direction\.v1\..*/}
+                            }
+                            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Episode cessation
+                                value matches {
+                                    DV_DATE_TIME[at9010]
+                                }
+                            }
+                            ELEMENT[at0031] occurrences matches {0..1} matches {    -- Episode duration
+                                value matches {
+                                    DV_DURATION[at9021] matches {
+                                        value matches {PYMDTH/|>=PT0S|}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0013] matches {    -- Episode reason for cessation
+                                value matches {
+                                    DV_TEXT[at9012]
+                                }
+                            }
+                            ELEMENT[at0032] occurrences matches {0..1} matches {    -- Route
+                                value matches {
+                                    DV_TEXT[at9022]
+                                }
+                            }
+                            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Therapeutic response
+                                value matches {
+                                    DV_TEXT[at9017]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Cumulative dose
+                        value matches {
+                            DV_QUANTITY[at9013]
+                        }
+                    }
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Cessation of use
+                        value matches {
+                            DV_DATE_TIME[at9014]
+                        }
+                    }
+                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- Reason for cessation
+                        value matches {
+                            DV_TEXT[at9023]
+                        }
+                    }
+                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Cumulative duration
+                        value matches {
+                            DV_DURATION[at9018] matches {
+                                value matches {|>=PT0S|}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0005] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9015]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0019] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Zusammenfassung der Medikation">
+                description = <"Zusammenfassende oder dauerhafte Informationen über die Anwendung eines einzelnen Medikaments oder einer Medikamentengruppe oder -klasse, insbesondere wenn das Anwendungsmuster oder die kumulative Dosierung überwacht werden muss.">
+            >
+            ["at0002"] = <
+                text = <"Name des Medikaments">
+                description = <"Name des Medikaments oder der Medikamentengruppe.">
+                comment = <"Der Medikamentenname kann als generische Substanz, Handelsname oder eine Medikamentengruppe oder -klasse dargestellt werden. Die Codierung des „Name des Medikaments“ mit einer Terminologie, die eine Entscheidungsunterstützung auslösen kann, wird nach Möglichkeit dringend empfohlen. Die Freitexteingabe sollte nur verwendet werden, wenn keine passende Terminologie vorhanden ist. Zum Beispiel: „Adriamycin“, „Doxorubicin“ oder „Anthracycline“, „Fosamax“, „Alendronat“ oder „Bisphosphanate“.">
+            >
+            ["at0006"] = <
+                text = <"Datum der letzten Aktualisierung">
+                description = <"Das Datum der letzten Aktualisierung der Zusammenfassung der Medikation.">
+            >
+            ["at0007"] = <
+                text = <"Klinische Beschreibung">
+                description = <"Einfache Beschreibung über die allgemeine Anrwendung des Medikaments.">
+                comment = <"Zum Beispiel: „Zwischen 1996 und 2001 gegen Osteoporose eingesetzt. Nach fünfjähriger Anwendung eingestellt, um das Risiko von Nebenwirkungen zu minimieren.“">
+            >
+            ["at0008"] = <
+                text = <"Anwendungszeitraum">
+                description = <"Details zur Anwendung des Medikaments während eines bestimmten Zeitraums.">
+                comment = <"Auslöser für das Beenden einer Episode und das Beginnen einer neuen können sein:
+- eine Dosisänderung,
+- oder eine wesentliche Änderung des Anwendungsmusters.">
+            >
+            ["at0009"] = <
+                text = <"Beginn der Anwendung">
+                description = <"Das Datum, an dem das Medikament zum ersten Mal verabreicht wurde.">
+                comment = <"Kann ein Teildatum sein, zum Beispiel nur ein Jahr.">
+            >
+            ["at0010"] = <
+                text = <"Ende der Anwendung">
+                description = <"Das Datum, an dem das Medikament zuletzt verabreicht wurde.">
+                comment = <"Kann ein Teildatum sein, zum Beispiel nur ein Jahr.">
+            >
+            ["at0011"] = <
+                text = <"Beginn des Anwendungszeitraums">
+                description = <"Das Datum der ersten Verabreichung des Medikaments für diese Episode.">
+                comment = <"Kann ein Teildatum sein, zum Beispiel nur ein Jahr.">
+            >
+            ["at0012"] = <
+                text = <"Ende des Anwendungszeitraums">
+                description = <"Das Datum der letzten Verabreichung des Medikaments für diese Episode.">
+                comment = <"Kann ein Teildatum sein, zum Beispiel nur ein Jahr.">
+            >
+            ["at0013"] = <
+                text = <"Grund für das Ende des Anwendungszeitraums">
+                description = <"Der Grund, warum die Anwendung des Medikaments beendet wurde.">
+                comment = <"Wenn möglich, wird die Codierung mit einer externen Terminologie bevorzugt. Zum Beispiel: suboptimale Kontrolle von Diabetes; Nebenwirkung oder hohe Kosten.">
+            >
+            ["at0014"] = <
+                text = <"Beschreibung">
+                description = <"Einfache Beschreibung der Anwendung des Medikaments während des definierten Anwendungszeitraums.">
+            >
+            ["at0015"] = <
+                text = <"Kumulative Dosis">
+                description = <"Gesamtmenge des über die Lebenszeit der Person angewendeten Medikaments.">
+                comment = <"Zum Beispiel: Überwachung der kumulativen Dosis von Doxorubicin.
+Kann manuell berechnet oder über die EHR aus mehreren Quellen abgeleitet werden.">
+            >
+            ["at0016"] = <
+                text = <"Menge im Anwendungszeitraum">
+                description = <"Kumulative Dosis des in dieser Episode verwendeten Medikaments.">
+            >
+            ["at0018"] = <
+                text = <"Indikation für den Anwendungszeitraum">
+                description = <"Die klinische Indikation für die Anwendung des Medikaments in dem Anwendungszeitraum, insbesondere wenn dieser spezifischer ist oder von der „Klinischen Indikation“ abweicht oder es keine klinische Indikation gibt, die für alle Anwendungszeiträume gilt.">
+                comment = <"Möglicherweise können dieses Element und das Element auf dem Grundlevel „Klinische Indikation“ miteinander in Konflikt stehen. In diesen Situationen hat dieses Element den Vorrang vor der „Klinischen Indikation“ für diese Episode.
+Wenn möglich, wird die Kodierung mit einer externen Terminologie bevorzugt. Zum Beispiel: „Krebstherapie“ oder „rheumatoide Arthritis bei Osteoporose“.">
+            >
+            ["at0019"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen.">
+            >
+            ["at0020"] = <
+                text = <"Therapeutische Intention">
+                description = <"Die therapeutische Absicht für die Anrwendung des Medikaments in diesem Anwendungszeitraum.">
+                comment = <"Codierung mit einer externen Terminologie, soweit möglich wird empfohlen. Zum Beispiel: Schmerzlinderung; palliativ oder kurativ; Kurzzeitkurs oder lebenslange Antibiotika.
+	
+
+">
+            >
+            ["at0022"] = <
+                text = <"Therapeutisches Ansprechen">
+                description = <"Das beobachtete Ansprechen der Person auf die Behandlung mit diesem Medikament während des Anwendungszeitraums.">
+                comment = <"Wenn möglich, wird die Codierung mit einer externen Terminologie bevorzugt. Zum Beispiel: HWI behoben.">
+            >
+            ["at0027"] = <
+                text = <"Kumulative Dauer">
+                description = <"Die Gesamtdauer über alle Anwendungszeiträume.">
+                comment = <"Kann manuell berechnet oder über die EHR aus mehreren Quellen abgeleitet werden.">
+            >
+            ["at0028"] = <
+                text = <"Klinische Indikation">
+                description = <"Die allgemeine klinische Indikation für die Anrwendung des Medikaments.">
+                comment = <"Wenn möglich, wird die Codierung mit einer externen Terminologie bevorzugt. Zum Beispiel: „Osteoporose“.">
+            >
+            ["at0029"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Zusätzliche Angaben zur Anwendung des Medikaments innerhalb des Anwendungszeitraums.">
+            >
+            ["at0030"] = <
+                text = <"Grund für das Ende">
+                description = <"Der Grund, warum die Anwendung des Medikaments eingestellt wurde.">
+                comment = <"Wenn möglich, wird die Codierung mit einer externen Terminologie bevorzugt. Zum Beispiel: suboptimale Kontrolle von Diabetes; Nebenwirkung oder hohe Kosten.">
+            >
+            ["at0031"] = <
+                text = <"Dauer des Anwendungszeitraums">
+                description = <"Die Dauer der Anwendung des Medikaments in dieser Episode.">
+                comment = <"Wenn die Elemente „Beginn des Anwendungszeitraums“ und „Ende des Anwendungszeitraums“ in Systemen verwendet werden, kann dieses Datenelement in diesem Szenario berechnet oder alternativ als redundant betrachtet werden.">
+            >
+            ["at0032"] = <
+                text = <"Verabreichungsweg">
+                description = <"Der Verabreichungsweg des Medikamentes während dieses Anwendungszeitraumes.">
+                comment = <"Zum Beispiel: „oral“, „intravenös“ oder „topisch“. Wenn möglich, ist eine Kodierung des Verabreichungswegs mit einer Terminologie vorzuziehen.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Legemiddelsammendrag">
+                description = <"Sammendrag eller varig (persistent) informasjon om all bruk av ett spesifisert legemiddel, gruppe eller klasse av legemidler, spesielt der bruksmønsteret eller kumulativ mengde må overvåkes.">
+            >
+            ["at0002"] = <
+                text = <"Navn på legemiddel">
+                description = <"Navn på legemiddel eller gruppe av legemidler.">
+                comment = <"Navn på legemiddel kan representeres som en generisk substans, handelsnavn, gruppe eller klasse av legemidler. Det anbefales å kode \"Navn på legemiddel\" med en terminologi om mulig, slik at det kan brukes for eksempel i beslutningsstøtte. Fritekst bør bare benyttes der det ikke finnes en passende terminologi.
+For eksempel: '\"Adriamycin\"; \"doxorubicin\" eller \"anthracycliner\"; \"Fosamax\", \"alendronsyre\" eller \"bifosonater\".">
+            >
+            ["at0006"] = <
+                text = <"Sist oppdatert">
+                description = <"Datoen da legemiddelsammendraget sist ble oppdatert.">
+            >
+            ["at0007"] = <
+                text = <"Klinisk beskrivelse">
+                description = <"Fritekstbeskrivelse om den overordnede bruken av legemiddelet.">
+                comment = <"For eksempel: \"Brukt i perioden mellom 1996 og 2001 mot osteoporose, avsluttet etter fem år for å redusere risikoen for bivirkninger.\"">
+            >
+            ["at0008"] = <
+                text = <"Periode">
+                description = <"Detaljer om bruken av legemiddelet i en spesifisert tidsperiode.">
+                comment = <"Triggere for å lukke en episode og starte en ny kan være en endring av dosering, eller en betydelig endring i bruksmønster.">
+            >
+            ["at0009"] = <
+                text = <"Startdato for bruk">
+                description = <"Datoen da legemiddelet først ble administrert.">
+                comment = <"Kan være en deldato, for eksempel kun årstall.">
+            >
+            ["at0010"] = <
+                text = <"Sluttdato for bruk">
+                description = <"Datoen da legemiddelet sist ble administrert.">
+                comment = <"Kan være en deldato, for eksempel kun årstall.">
+            >
+            ["at0011"] = <
+                text = <"Periodens startdato">
+                description = <"Datoen da legemiddelet først ble administrert i denne perioden.">
+                comment = <"Kan være en deldato, for eksempel kun årstall.">
+            >
+            ["at0012"] = <
+                text = <"Periodens sluttdato">
+                description = <"Datoen da legemiddelet sist ble administrert i denne perioden.">
+                comment = <"Kan være en deldato, for eksempel kun årstall.">
+            >
+            ["at0013"] = <
+                text = <"Periodens årsak til seponering">
+                description = <"Årsak til at bruken av legemiddelet ble avsluttet i denne perioden.">
+                comment = <"Koding med en terminologi foretrekkes, der det er mulig. For eksempel: Dårlig kontrollert diabetes, overfølsomhetsreaksjoner eller høye kostnader.">
+            >
+            ["at0014"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse om bruken av legemiddelet i denne perioden.">
+            >
+            ["at0015"] = <
+                text = <"Kumulativ mengde">
+                description = <"Samlet mengde av legemiddelet brukt over individets livstid.">
+                comment = <"For eksempel: monitorering av kumulativ mengde av doxorubicin.
+Kan regnes ut manuelt eller utledes via ulike kilder, som for eksempel kurvesystemet eller andre deler av den elektroniske pasientjournalen.">
+            >
+            ["at0016"] = <
+                text = <"Mengde i perioden">
+                description = <"Kumulativ mengde brukt av legemiddelet i denne perioden.">
+            >
+            ["at0018"] = <
+                text = <"Indikasjon for perioden">
+                description = <"Klinisk indikasjon for bruk av legemiddelet i denne perioden, særlig der dette er mer spesifikt eller skiller seg fra informasjonen i dataelementet 'Klinisk indikasjon'. Kan også brukes der det ikke er noen klinisk indikasjon som gjelder for alle episoder.">
+                comment = <"Dette dataelementet og dataelementet \"Klinisk indikasjon\" på arketypens toppnivå, kan potensielt komme i konflikt med hverandre. I disse tilfellene vil dette dataelementet ha forrang over \"Klinisk indikasjon\". Koding med en terminologi er foretrekkes, der det er mulig. For eksempel: kreftbehandling eller revmatoid artritt ved osteoporose.
+">
+            >
+            ["at0019"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0020"] = <
+                text = <"Terapeutisk hensikt">
+                description = <"Den terapeutiske hensikten for bruken av legemiddelet i denne perioden.">
+                comment = <"Koding med en terminologi foretrekkes, der det er mulig. For eksempel: smertelindring, palliativ eller kurativ, kur eller livslang behandling med antibiotika.">
+            >
+            ["at0022"] = <
+                text = <"Behandlingsrespons">
+                description = <"Individets respons til behandling med dette legemiddelet i løpet av denne perioden.">
+                comment = <"Koding med en terminologi foretrekkes, der det er mulig. For eksempel: Urinveisinfeksjonen er behandlet.">
+            >
+            ["at0027"] = <
+                text = <"Kumulativ varighet">
+                description = <"Samlet varighet av alle periodene.">
+                comment = <"Kan regnes ut manuelt eller utledes via ulike kilder, som for eksempel kurvesystemet eller andre deler av den elektroniske pasientjournalen.">
+            >
+            ["at0028"] = <
+                text = <"Klinisk indikasjon">
+                description = <"Overordnet klinisk indikasjon for bruk av legemiddelet.">
+                comment = <"Koding med en terminologi foretrekkes, der det er mulig. For eksempel: \"Osteoporose\".">
+            >
+            ["at0029"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere detaljer om legemiddelbruken i denne perioden.">
+            >
+            ["at0030"] = <
+                text = <"Årsak til seponering">
+                description = <"Årsak til at bruken av legemiddelet ble avsluttet.">
+                comment = <"Koding med en terminologi foretrekkes, der det er mulig. For eksempel: Dårlig kontrollert diabetes, overfølsomhetsreaksjoner eller høye kostnader.">
+            >
+            ["at0031"] = <
+                text = <"Periodens varighet">
+                description = <"Varigheten for bruk av legemiddelet i denne perioden.">
+                comment = <"Om \"Periodens startdato\" og \"Periodens sluttdato\" er brukt i systemer, kan dette dataelementet kalkuleres eller alternativt være overflødig i dette scenariet.">
+            >
+            ["at0032"] = <
+                text = <"Administreringsvei">
+                description = <"Administreringsveien for det ordinerte legemiddelet i denne perioden.">
+                comment = <"For eksempel \"oral bruk\", \"intravenøst\", \"på huden\" eller \"enteralt\". Koding med en terminologi foretrekkes, der det er mulig.">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Sumário de medicamentos">
+                description = <"*Summary or persistent information about the use of a single medication or group of medications, especially where the pattern of use or cumulative dosage needs to be monitored. (en)">
+            >
+            ["at0002"] = <
+                text = <"Nome do medicamento">
+                description = <"*Name of medication or group of medications. (en)">
+                comment = <"*The medication name can be represented as a generic substance, trade name or a group or class of medications. Coding of 'Medication name' with a terminology capable of triggering decision support is strongly recommended where possible. Free text entry should only be used if there is no appropriate terminology available. For example: 'Adriamycin'; 'doxorubicin' or 'anthracyclines'; 'Fosamax', 'alendronate' or 'bisphosphanates'. (en)">
+            >
+            ["at0006"] = <
+                text = <"Última atualização">
+                description = <"A última data em que esse sumário de medicamente foi atualizado.">
+            >
+            ["at0007"] = <
+                text = <"Descrição clínica">
+                description = <"*Changing the description to: Narrative description about the overall use of the medication. (en)">
+                comment = <"*For example: \"Used between 1996 and 2001 against osteoporosis. Ceased after five years of use to minimise risk of adverse effects.\" (en)">
+            >
+            ["at0008"] = <
+                text = <"Episódio">
+                description = <"*Details about use of the medication during a specified period of time. (en)">
+                comment = <"*Triggers for closing one episode and commencing a new one can include: 
+- a change in dose; 
+- or a significant change in the pattern of use (en)">
+            >
+            ["at0009"] = <
+                text = <"Início de uso">
+                description = <"*The date when the medication was first administered. (en)">
+                comment = <"*Can be a partial date, for example, only a year. (en)">
+            >
+            ["at0010"] = <
+                text = <"*Cessation of use (en)">
+                description = <"*The date when the medication was last administered. (en)">
+                comment = <"*Can be a partial date, for example, only a year. (en)">
+            >
+            ["at0011"] = <
+                text = <"Início do episódio">
+                description = <"*The date of the first administration of the medication for this episode. (en)">
+                comment = <"*Can be a partial date, for example, only a year. (en)">
+            >
+            ["at0012"] = <
+                text = <"Término do episódio">
+                description = <"*The date of the last administration of the medication for this episode. (en)">
+                comment = <"*Can be a partial date, for example, only a year. (en)">
+            >
+            ["at0013"] = <
+                text = <"*Episode reason for cessation (en)">
+                description = <"Razão pela qual esse medicamento foi interrompido.">
+                comment = <"*Coding with an external terminology is preferred, where possible. For example: sub-optimal control of diabetes; adverse reaction; or high cost. (en)">
+            >
+            ["at0014"] = <
+                text = <"*Description (en)">
+                description = <"Descrição do uso durante o episódio de uso identificado.">
+            >
+            ["at0015"] = <
+                text = <"Dose cumulativa">
+                description = <"Quantidade total já consumida.">
+                comment = <"*For example: monitoring of the cumulative dose of doxorubicin.
+May be manually calculated or derived via the EHR from multiple sources.
+
+ (en)">
+            >
+            ["at0016"] = <
+                text = <"*Episode amount (en)">
+                description = <"*Cumulative dose of the medication used in this episode. (en)">
+            >
+            ["at0018"] = <
+                text = <"*Episode indication (en)">
+                description = <"*The clinical indication for the administration or consumption of the medication during this episode. (en)">
+                comment = <"*This element and the root level 'Clinical indication' element can potentially be in conflict with each other. In those situations, this element takes precedence over 'Clinical indication' for this episode.
+Coding with an external terminology is preferred, where possible. 
+For example: 'Cancer therapy' or 'rheumatoid arthritis for osteoporosis'. (en)">
+            >
+            ["at0019"] = <
+                text = <"Extensão">
+                description = <"Informação adicional requerida para entender o contexto local ou alinhar com outros modelos de referência/formalismos.">
+                comment = <"Por exemplo: requisitos de informação local ou metadados adicionais para alinhar com equivalentes do FHIR ou CIMI.">
+            >
+            ["at0020"] = <
+                text = <"*Therapeutic intent (en)">
+                description = <"*The therapeutic intent for use of the medication during this episode. (en)">
+                comment = <"*Coding with an external terminology, where possible. For example: pain relief; palliative or curative; short term course or life-long antibiotics. (en)">
+            >
+            ["at0022"] = <
+                text = <"*Therapeutic response (en)">
+                description = <"*The individual's response to the treatment by this medication during this episode. (en)">
+                comment = <"*Coding with an external terminology is preferred, where possible. For example: UTI resolved (en)">
+            >
+            ["at0027"] = <
+                text = <"*Cumulative duration (en)">
+                description = <"*The sum of the duration of all episodes. (en)">
+                comment = <"*May be manually calculated or derived via the EHR from multiple sources. (en)">
+            >
+            ["at0028"] = <
+                text = <"*Clinical indication (en)">
+                description = <"*The overall clinical indication for the administration or consumption of the medication. (en)">
+                comment = <"*Coding with an external terminology is preferred, where possible. For example: 'Osteoporosis'. (en)">
+            >
+            ["at0029"] = <
+                text = <"*Additional details (en)">
+                description = <"*Additional details about medication use during this episode. (en)">
+            >
+            ["at0030"] = <
+                text = <"*Reason for cessation (en)">
+                description = <"*The reason why all use of the medication was stopped. (en)">
+                comment = <"*Coding with an external terminology is preferred, where possible. For example: sub-optimal control of diabetes; adverse reaction; or high cost. (en)">
+            >
+            ["at0031"] = <
+                text = <"*Episode duration (en)">
+                description = <"*The duration of the use of the medication in this episode.  (en)">
+                comment = <"*If 'Episode onset' and 'Episode cessation' are used in systems, this data element may be calculated, or alternatively, be considered redundant in this scenario. (en)">
+            >
+            ["at0032"] = <
+                text = <"*Route (en)">
+                description = <"*The route by which the ordered item was, administed during this episode. (en)">
+                comment = <"*For example: 'oral', 'intravenous', or 'topical'. Coding of the route with a terminology is preferred, where possible. (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Medication summary">
+                description = <"Summary or persistent information about the use of a single medication or group of medications, especially where the pattern of use or cumulative dosage needs to be monitored.">
+            >
+            ["at0002"] = <
+                text = <"Medication name">
+                description = <"Name of medication or group of medications.">
+                comment = <"The medication name can be represented as a generic substance, trade name or a group or class of medications. Coding of 'Medication name' with a terminology capable of triggering decision support is strongly recommended where possible. Free text entry should only be used if there is no appropriate terminology available. For example: 'Adriamycin'; 'doxorubicin' or 'anthracyclines'; 'Fosamax', 'alendronate' or 'bisphosphanates'.">
+            >
+            ["at0006"] = <
+                text = <"Last updated">
+                description = <"The date this medication summary was last updated.">
+            >
+            ["at0007"] = <
+                text = <"Clinical description">
+                description = <"Narrative description about the overall use of the medication.">
+                comment = <"For example: \"Used between 1996 and 2001 against osteoporosis. Ceased after five years of use to minimise risk of adverse effects.\"">
+            >
+            ["at0008"] = <
+                text = <"Episode">
+                description = <"Details about use of the medication during a specified period of time.">
+                comment = <"Triggers for closing one episode and commencing a new one can include: 
+- a change in dose; 
+- or a significant change in the pattern of use">
+            >
+            ["at0009"] = <
+                text = <"Onset of use">
+                description = <"The date when the medication was first administered.">
+                comment = <"Can be a partial date, for example, only a year.">
+            >
+            ["at0010"] = <
+                text = <"Cessation of use">
+                description = <"The date when the medication was last administered.">
+                comment = <"Can be a partial date, for example, only a year.">
+            >
+            ["at0011"] = <
+                text = <"Episode onset">
+                description = <"The date of the first administration of the medication for this episode.">
+                comment = <"Can be a partial date, for example, only a year.">
+            >
+            ["at0012"] = <
+                text = <"Episode cessation">
+                description = <"The date of the last administration of the medication for this episode.">
+                comment = <"Can be a partial date, for example, only a year.">
+            >
+            ["at0013"] = <
+                text = <"Episode reason for cessation">
+                description = <"The reason why use of the medication was stopped.">
+                comment = <"Coding with an external terminology is preferred, where possible. For example: sub-optimal control of diabetes; adverse reaction; or high cost.">
+            >
+            ["at0014"] = <
+                text = <"Description">
+                description = <"Narrative description about the use of the medication during this episode.">
+            >
+            ["at0015"] = <
+                text = <"Cumulative dose">
+                description = <"Total amount of the medication used over the lifetime of the individual.">
+                comment = <"For example: monitoring of the cumulative dose of doxorubicin.
+May be manually calculated or derived via the EHR from multiple sources.
+
+">
+            >
+            ["at0016"] = <
+                text = <"Episode amount">
+                description = <"Cumulative dose of the medication used in this episode.">
+            >
+            ["at0018"] = <
+                text = <"Episode indication">
+                description = <"The clinical indication for the use of the medication during this episode, particularly if this is more specific or differs from the 'Clinical indication', or there is no clinical indication that applies for all episodes.">
+                comment = <"This element and the root level 'Clinical indication' element can potentially be in conflict with each other. In those situations, this element takes precedence over 'Clinical indication' for this episode.
+Coding with an external terminology is preferred, where possible. 
+For example: 'Cancer therapy' or 'rheumatoid arthritis for osteoporosis'.">
+            >
+            ["at0019"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0020"] = <
+                text = <"Therapeutic intent">
+                description = <"The therapeutic intent for use of the medication during this episode.">
+                comment = <"Coding with an external terminology, where possible. For example: pain relief; palliative or curative; short term course or life-long antibiotics.">
+            >
+            ["at0022"] = <
+                text = <"Therapeutic response">
+                description = <"The observed response to the treatment with this medication during this episode.">
+                comment = <"Coding with an external terminology is preferred, where possible. For example: UTI resolved">
+            >
+            ["at0027"] = <
+                text = <"Cumulative duration">
+                description = <"The sum of the duration of all episodes.">
+                comment = <"May be manually calculated or derived via the EHR from multiple sources.">
+            >
+            ["at0028"] = <
+                text = <"Clinical indication">
+                description = <"The overall clinical indication for the use of the medication.">
+                comment = <"Coding with an external terminology is preferred, where possible. For example: 'Osteoporosis'.">
+            >
+            ["at0029"] = <
+                text = <"Additional details">
+                description = <"Additional details about medication use during this episode.">
+            >
+            ["at0030"] = <
+                text = <"Reason for cessation">
+                description = <"The reason why all use of the medication was stopped.">
+                comment = <"Coding with an external terminology is preferred, where possible. For example: sub-optimal control of diabetes; adverse reaction; or high cost.">
+            >
+            ["at0031"] = <
+                text = <"Episode duration">
+                description = <"The duration of the use of the medication in this episode.">
+                comment = <"If 'Episode onset' and 'Episode cessation' are used in systems, this data element may be calculated, or alternatively, be considered redundant in this scenario.">
+            >
+            ["at0032"] = <
+                text = <"Route">
+                description = <"The route by which the ordered item was, administed during this episode.">
+                comment = <"For example: 'oral', 'intravenous', or 'topical'. Coding of the route with a terminology is preferred, where possible.">
+            >
+        >
+    >

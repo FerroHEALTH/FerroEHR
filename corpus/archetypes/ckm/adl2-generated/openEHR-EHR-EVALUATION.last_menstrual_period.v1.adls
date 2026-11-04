@@ -1,0 +1,180 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=de4f1f51-9ed3-401e-98e1-8b3b4d9aff75; build_uid=ae09ea7b-787c-494c-a987-89845ef29295)
+    openEHR-EHR-EVALUATION.last_menstrual_period.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Marit Alice Venheim, John Tore Valand">
+                ["organisation"] = <"Helse Vest IKT">
+                ["email"] = <"marit.alice.venheim@helse-vest-ikt.no, john.tore.valand@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Marit Alice Venheim">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["email"] = <"marit.alice.venheim@helse-vest-ikt-no">
+        ["date"] = <"2021-08-03">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Peter Fedorcsak, Oslo universitetssykehus, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Mikkel Johan Gaup Grønmo, Forvaltningssenter EPJ, Helse-Nord, Norway (openEHR Editor)", "Evelyn Hovenga, EJSH Consulting, Australia", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Anna Moore, University of Cambridge, United Kingdom", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Nyree Taylor, Ocean Health Systems, Australia", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "zhiping zhang, genecast, China">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"271CD0C30AF2A1828A0A2EA440800BBC">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljer om den første dagen i den siste menstruasjonsperioden individet opplevde.">
+            keywords = <"menstruasjon, mensen, LNMP, LMP, LNP, DLMP", ...>
+            use = <"Brukes for å registrere detaljer om den første dagen i den siste menstruasjonsperioden individet opplevde.
+
+Bruk dataelementet \"Sikkerhet\" for å registrere sikkerhetsgraden for at datoen var korrekt. Ved registrering av startdatoen for siste menstruasjonsperiode er antagelsen at denne menstruasjonen var normal.">
+            misuse = <"Brukes ikke for å registrere detaljer om menarke eller overgangsalder - bruk arketypen EVALUATION.menstruation_summary for dette formålet.
+
+Brukes ikke for å registrere informasjon om en spesifikk dag i menstruasjonssyklusen, bruk arketypen OBSERVATION.menstrual_diary for dette formålet.
+
+Brukes ikke for å registrere informasjon om typiske eller vanlige menstruasjonssykluser eller mønstre - bruk arketypen EVALUATION.menstruation_summary for dette formålet.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the details about the first day of the most recent menstrual cycle for the individual.">
+            keywords = <"menstruation, menses, LNMP, LMP, LNP, DLMP", ...>
+            use = <"Use to record the details about the first day of the most recent menstrual cycle for the individual. 
+
+Use the data element 'Certainty' to record the level of certainty the date was correct. The assumption when recording the onset of the last menstrual cycle is that the menstruation was 'normal'.">
+            misuse = <"Not to be used to record information about menses or related symptoms, use the OBSERVATION.menstruation archetype for this purpose. 
+
+Not to be used to record information about a specific day in a menstrual cycle, use the OBSERVATION.menstrual_diary archetype for this purpose.
+
+Not to be used to record information about an individual's menstruation history events or patterns of menstruation over time, use the EVALUATION.menstruation_summary archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Last menstrual period
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {1} matches {    -- Date of onset (LMP)
+                        value matches {
+                            DV_DATE[at9000]
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Certainty
+                        value matches {
+                            DV_TEXT[at9001]
+                            DV_CODED_TEXT[at9002]
+                        }
+                    }
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0003] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0006] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9005]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Siste menstruasjonsperiode">
+                description = <"Identifisering av den første dagen i den siste menstruasjonsperioden individet opplevde.">
+            >
+            ["at0002"] = <
+                text = <"Startdato">
+                description = <"Dato for første blødningsdag.">
+                comment = <"Også kjent som siste menstruasjons første dag. Nyttig å lagre for senere bruk i beregninger som estimert termindato under graviditet, eller for å skille den siste typiske menstruasjonssyklusen fra et uregelmessig menstruasjonsmønster. Kan være en delvis dato, for eksempel bare et årstall.">
+            >
+            ["at0004"] = <
+                text = <"Sist oppdatert">
+                description = <"Dato for når Siste menstruasjonsperiode ble oppdatert.">
+            >
+            ["at0006"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0007"] = <
+                text = <"Beskrivelse av siste normale menstruasjonsperiode.">
+                description = <"Fritekstbeskrivelse av siste menstruasjonsperiode.">
+            >
+            ["at0008"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om siste menstruasjonsperiode som ikke er omfattet av andre felt.">
+            >
+            ["at0009"] = <
+                text = <"Sikkerhet">
+                description = <"Sikkerhetsgraden for at datoen var korrekt.">
+                comment = <"For eksempel sikker eller usikker.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Last menstrual period">
+                description = <"Identification of the first day of the most recent menstrual cycle for the individual.">
+            >
+            ["at0002"] = <
+                text = <"Date of onset (LMP)">
+                description = <"Date of onset of menstrual bleeding.">
+                comment = <"Also known as 'LMP'. Useful to persist for calculations including estimated date of delivery in pregnancy, or to distinguish the latest typical menstrual cycle when there is an irregular menstrual pattern.
+Can be a partial date, for example, only a year.">
+            >
+            ["at0004"] = <
+                text = <"Last updated">
+                description = <"Date when the Last menstrual period was updated.">
+            >
+            ["at0006"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR.">
+            >
+            ["at0007"] = <
+                text = <"Description">
+                description = <"Narrative description about the last menstrual period.">
+            >
+            ["at0008"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the last menstrual period, not captured in other fields.">
+            >
+            ["at0009"] = <
+                text = <"Certainty">
+                description = <"The level of certainty the date was accurate.">
+                comment = <"For example certain or uncertain.">
+            >
+        >
+    >

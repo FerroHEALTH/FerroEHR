@@ -1,0 +1,109 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=02834644-cadd-4a05-8f8f-b78eabe149c5; build_uid=a6dbe31a-5136-43e5-b225-c4c6d8e5fb39)
+    openEHR-EHR-CLUSTER.pp_spdiallele.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-09-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"9F513AD41E5D638C8CCC85E35FB18EAD">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"This option can be used as an alternative to the VcfAllele, and describes variants using the Sequence Position Deletion Insertion (SPDI) notation. We recommend that users familiarize themselves with this relatively new notation, which differs in important ways from other standards such as VCF and HGVS.">
+            use = <"Tools for interconversion between SPDI, HGVS and VCF exist at the NCBI.
+
+SPDI stands for
+
+S = SequenceId
+P = Position , a 0-based coordinate for where the Deleted Sequence starts
+D = DeletedSequence , sequence for the deletion, can be empty
+I = InsertedSequence , sequence for the insertion, can be empty
+For instance, Seq1:4:A:G refers to a single nucleotide variant at the fifth nucleotide ( nucleotide 4 according to zero-based numbering) from an A to a G. See the SPDI webpage for more examples.
+
+The SPDI notation represents variation as deletion of a sequence (D) at a given position (P) in reference sequence (S) followed by insertion of a replacement sequence (I) at that same position. Position 0 indicates a deletion that starts immediately before the first nucleotide, and position 1 represents a deletion interval that starts between the first and second residues, and so on. Either the deleted or the inserted interval can be empty, resulting a pure insertion or deletion.
+
+Note that the deleted and inserted sequences in SPDI are all written on the positive strand for two-stranded molecules.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Phenopacket SpdiAllele
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- id
+                value matches {
+                    DV_IDENTIFIER[at9000]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {1} matches {    -- seq_id
+                value matches {
+                    DV_IDENTIFIER[at9001]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {1} matches {    -- position
+                value matches {
+                    DV_COUNT[at9002]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {1} matches {    -- deleted_sequence
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0005] occurrences matches {1} matches {    -- inserted_sequence
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Phenopacket SpdiAllele">
+                description = <"SpdiAllele">
+            >
+            ["at0001"] = <
+                text = <"id">
+                description = <"An arbitrary identifier.">
+                comment = <"For example: \"clinvar:13294\".">
+            >
+            ["at0002"] = <
+                text = <"seq_id">
+                description = <"*">
+                comment = <"For example: \"NC_000001.10\".">
+            >
+            ["at0003"] = <
+                text = <"position">
+                description = <"*">
+                comment = <"For example: \"12346\".">
+            >
+            ["at0004"] = <
+                text = <"deleted_sequence">
+                description = <"*">
+                comment = <"For example: \"A\".">
+            >
+            ["at0005"] = <
+                text = <"inserted_sequence">
+                description = <"*">
+                comment = <"For example: \"G\".">
+            >
+        >
+    >

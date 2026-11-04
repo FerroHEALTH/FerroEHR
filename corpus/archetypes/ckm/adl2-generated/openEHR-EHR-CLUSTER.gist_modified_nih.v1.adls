@@ -1,0 +1,300 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=a217bc9f-1a24-4277-bc6b-34231fc93bb6; build_uid=d5eff724-b5d3-4740-a071-d3067e9559a5)
+    openEHR-EHR-CLUSTER.gist_modified_nih.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Kanika Kuwelker">
+                ["organisation"] = <"Helse Vest IKT">
+                ["email"] = <"kanika.kuwelker@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Kanika Kuwelker">
+        ["organisation"] = <"Helse Vest IKT">
+        ["email"] = <"kanika.kuwelker@helse-vest-ikt.no">
+        ["date"] = <"2024-03-19">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Koray Atalag, GALATA-Digital, New Zealand", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Anthony Burton Mariathasan, OUS, Radiumhospitalet, Norway", "Grant Forrest, Lunaria Ltd, United Kingdom", "Marianne Gårderhagen, OUS, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "June Marie Nepstad Knappskog, Helse Nord IKT AS, Norway (openEHR Editor), Norway (openEHR Editor)", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Nina Louise Jebsen, Haukeland Universitetssykehus, Norway", "June Marie Knappskog, Helse Nord IKT AS, Norway (Nasjonal IKT redaktør), Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Sonja Steigen, Universitetssykehuset Nord-Norge, Norway", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Kanthan Theivendran, NHS, United Kingdom", "John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)", "Olga Zaikova, OUS, Radiumhospitalet, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Joensuu H, Hohenberger P, Corless CL. Gastrointestinal stromal tumour. Lancet. 2013 Sep 14;382(9896):973-83. doi: 10.1016/S0140-6736(13)60106-3. Epub 2013 Apr 24. Review. PubMed PMID: 23623056">
+        ["2"] = <"Joensuu H. Risk stratification of patients diagnosed with gastrointestinal stromal tumor. Hum Pathol. 2008 Oct;39(10):1411-9. doi: 10.1016/j.humpath.2008.06.025. PubMed PMID: 18774375.">
+        ["3"] = <"Jones RL. Practical aspects of risk assessment in gastrointestinal stromal tumors. J Gastrointest Cancer. 2014 Sep;45(3):262-7. doi: 10.1007/s12029-014-9615-x. Review. PubMed PMID: 24802226; PubMed Central PMCID: PMC4126997.">
+        ["4"] = <"Serrano C, Álvarez R, Carrasco JA, Marquina G, Martínez-García J, Martínez-Marín V, Sala MÁ, Sebio A, Sevilla I, Martín-Broto J. SEOM-GEIS clinical guideline for gastrointestinal stromal tumors (2022). Clin Transl Oncol. 2023 Sep;25(9):2707-2717. doi: 10.1007/s12094-023-03177-7. Epub 2023 May 2. PMID: 37129716; PMCID: PMC10425520.">
+        ["5"] = <"Norwegian translation: Helsedirektoratet. Nasjonalt handlingsprogram med retningslinjer for diagnostikk, behandling og oppfølging av sarkom. [revised 2022 February]. [Internet]. 2022 February. Available from: https://www.helsedirektoratet.no/retningslinjer/sarkomer-handlingsprogram">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"4788EF30C5C378DD162DA7797CECFC64">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere resultatene for hvert parameter og risikokategorien for GIST basert på de modifiserte NIH-kriteriene.">
+            keywords = <"gastrointestinal stromal tumor, GIST, sarkom, kreft, neoplasme, onkologi, malignitet, risiko, risikovurdering, risikostratifisering, klassifikasjon, kategorisering", ...>
+            use = <"Brukes for å registrere resultatene for hvert parameter og risikokategorien for GIST basert på de modifiserte NIH-kriteriene.
+
+Arketypen er utviklet for å brukes i en ENTRY-arketype som vil gi den kliniske eller patologiske konteksten for registreringen. For eksempel: I SLOTet \"Spesifikke detaljer\" i arketypen Problem/diagnose (EVALUATION.problem_diagnosis), i en relevant patologirelatert CLUSTER-arketype som igjen nøstes i arketypen Laboratorieresultat (OBSERVATION.laboratory_test_result). Dette gir også mulighet for å registrere kroppssted.
+
+Når denne arketypen må inkluderes i en ikke-OBSERVATION-arketype, som for eksempel Problem/diagnose-arketypen (EVALUATION.problem_diagnosis), bør den først nøstes i Klinisk grunnlag-arketypen (CLUSTER.clinical_evidence) for å gi viktig kontekst, slik som vurderingsdato.">
+            misuse = <"Skal ikke brukes for primærregistrering av diameter og mitosetall av tumor - bruk en relevant patologirelatert ENTRY-arketype for dette.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each of the component parameters and the risk category for GIST based on the Modified NIH Criteria.">
+            keywords = <"gastrointestinal stromal tumour, tumor, GIST, sarcoma, cancer, neoplasm, oncology, malignancy, risk, risk assessment, risk stratification, classification, categorisation", ...>
+            use = <"Use to record the results for each of the component parameters and the risk category for GIST based on the Modified NIH Criteria. 
+
+The archetype is designed to be used in an ENTRY archetype that will provide the clinical or pathological context. For example: In the \"Specific Details\" SLOT in the EVALUATION.problem_diagnosis archetype, or nested in a relevant pathology-related CLUSTER archetype that is again nested in the OBSERVATION.laboratory_test_result archetype. This will also allow for documentation of body site.
+
+When this archetype needs to be included within an non-OBSERVATION archetype such as EVALUATION.problem_diagnosis, it should first be nested within the CLUSTER.clinical_evidence to provide important context such as the date of the assessment.">
+            misuse = <"Not to be used for the primary recording of diameter and mitotic count of the tumour - use a relevant pathology-related archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Modified NIH Criteria for GIST risk assessment
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Diameter
+                value matches {
+                    DV_QUANTITY[at9006] matches {
+                        property matches {[at9002]}    -- Length
+                        magnitude matches {|>=0.0|}
+                        units matches {"cm"}
+                        precision matches {1}
+                    }
+                }
+            }
+            ELEMENT[at0033] occurrences matches {0..1} matches {    -- Mitotic count
+                value matches {
+                    DV_QUANTITY[at9007] matches {
+                        property matches {[at9003]}    -- Term binding for at9003, translation not known in ADL 1.4 -> ADL 2 converter
+                        [magnitude, units, precision] matches {
+                            [{|>=0.0|}, {"{mitoses}/5.mm2"}, {0}],
+                            [{|>=0.0|}, {"{mitoses}/50.[HPF]"}, {|>=0|}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0027] occurrences matches {0..1} matches {    -- Location
+                value matches {
+                    DV_CODED_TEXT[at9008] matches {
+                        defining_code matches {[ac9004]}    -- Location (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0028] occurrences matches {0..1} matches {    -- Tumour rupture
+                value matches {
+                    DV_CODED_TEXT[at9009] matches {
+                        defining_code matches {[ac9005]}    -- Tumour rupture (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Risk category
+                value matches {
+                    DV_CODED_TEXT[at9001] matches {
+                        defining_code matches {[ac9000]}    -- Risk category (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Modifiserte NIH-kriterier for risikovurdering av GIST">
+                description = <"Et vurderingsverktøy som brukes for å stratifiere pasienter etter risiko for tilbakefall av gastrointestinal stromal tumor (GIST) etter operasjon, basert på de modifiserte kriteriene fra National Institutes of Health (NIH).">
+                comment = <"Også kjent som Joensuu kriterier. ">
+            >
+            ["at0004"] = <
+                text = <"Risikokategori">
+                description = <"Risiko for tilbakefall basert på parameterne i henhold til de modifiserte NIH-kriteriene.">
+            >
+            ["at0021"] = <
+                text = <"Meget lav risiko">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Lav risiko">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Intermediær risiko">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Høy risiko">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Diameter">
+                description = <"Største diameter av tumor.">
+                comment = <"I klinisk praksis vil den primære registreringen av tumordiameteren bli registrert ved bruk av en relevant patologirelatert arketype. I dette tilfellet bør resultatet for 'Diameter'-elementet i denne arketypen kopieres fra den primære registreringen.">
+            >
+            ["at0027"] = <
+                text = <"Lokasjon">
+                description = <"Lokalisasjon av tumor.">
+            >
+            ["at0028"] = <
+                text = <"Tumorruptur">
+                description = <"Tilstedeværelse av tumorruptur.">
+            >
+            ["at0029"] = <
+                text = <"Ventrikkel">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Ikke ventrikkel">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Tilstede">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Ikke tilstede">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Mitosetall">
+                description = <"Mitosetall av tumor.">
+                comment = <"I klinisk praksis vil den primære registreringen av mitosetall bli registrert ved bruk av en relevant patologirelatert arketype. I dette tilfellet bør resultatet for 'Mitosetall'-elementet i denne arketypen kopieres fra den primære registreringen.">
+            >
+            ["at9002"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9003"] = <
+                text = <"Term binding for at9003, translation not known in ADL 1.4 -> ADL 2 converter">
+                description = <"Term binding for at9003, translation not known in ADL 1.4 -> ADL 2 converter">
+            >
+            ["ac9004"] = <
+                text = <"Lokasjon (synthesised)">
+                description = <"Lokalisasjon av tumor. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Tumorruptur (synthesised)">
+                description = <"Tilstedeværelse av tumorruptur. (synthesised)">
+            >
+            ["ac9000"] = <
+                text = <"Risikokategori (synthesised)">
+                description = <"Risiko for tilbakefall basert på parameterne i henhold til de modifiserte NIH-kriteriene. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Modified NIH Criteria for GIST risk assessment">
+                description = <"An assessment tool used to stratify patients according to their risk of recurrence of Gastrointestinal stromal tumour (GIST) following surgery based on the Modified National Institutes of Health (NIH) Criteria.">
+                comment = <"Also known as Joensuu criteria.">
+            >
+            ["at0004"] = <
+                text = <"Risk category">
+                description = <"Risk of recurrence based on the component parameters, according to the modified NIH criteria.">
+            >
+            ["at0021"] = <
+                text = <"Very low risk">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Low risk">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Intermediate risk">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"High risk">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Diameter">
+                description = <"Largest diameter of tumour.">
+                comment = <"In clinical practice the primary registration of the tumour diameter would be recorded using a relevant pathology-related archetype. In this case, the ‘Diameter’ result in this archetype should be copied from the primary recording.">
+            >
+            ["at0027"] = <
+                text = <"Location">
+                description = <"Location of tumour.">
+            >
+            ["at0028"] = <
+                text = <"Tumour rupture">
+                description = <"Presence of tumour rupture.">
+            >
+            ["at0029"] = <
+                text = <"Gastric">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Not gastric">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Present">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Not present">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Mitotic count">
+                description = <"Mitotic count of tumour.">
+                comment = <"In clinical practice the primary registration of the mitotic count would be recorded using a relevant pathology-related archetype. In this case, the ‘Mitotic count’ result in this archetype should be copied from the primary recording.">
+            >
+            ["at9002"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["at9003"] = <
+                text = <"Term binding for at9003, translation not known in ADL 1.4 -> ADL 2 converter">
+                description = <"Term binding for at9003, translation not known in ADL 1.4 -> ADL 2 converter">
+            >
+            ["ac9004"] = <
+                text = <"Location (synthesised)">
+                description = <"Location of tumour. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Tumour rupture (synthesised)">
+                description = <"Presence of tumour rupture. (synthesised)">
+            >
+            ["ac9000"] = <
+                text = <"Risk category (synthesised)">
+                description = <"Risk of recurrence based on the component parameters, according to the modified NIH criteria. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9002"] = <http://openehr.org/id/122>
+            ["at9003"] = <http://openehr.org/id/763>
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0021", "at0022", "at0023", "at0024">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0031", "at0032">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0029", "at0030">
+        >
+    >

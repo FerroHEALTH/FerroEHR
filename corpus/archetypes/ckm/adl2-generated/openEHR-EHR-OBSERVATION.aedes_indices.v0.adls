@@ -1,0 +1,140 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f2c50f1f-3530-4b70-a0bf-7c11948652c7; build_uid=24b1a8b6-c067-475b-b59a-8e76635ec5bf)
+    openEHR-EHR-OBSERVATION.aedes_indices.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2023-07-17">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"14299CE61D45E670B9F6F0FD6C847DD4">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the parameters used to monitor the population density and breeding rate of Aedes mosquitoes.">
+            keywords = <"aedes", "mosquito", "dengue", "ovitrap">
+            use = <"Use to record parameters used to monitor the population density and breeding rate of Aedes mosquitoes, as vectors for Dengue fever, Zika virus, Chikungunya and Yellow fever.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Aedes indices
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Location category
+                                        value matches {
+                                            DV_TEXT[at9000]
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- House index (HI)
+                                        value matches {
+                                            DV_PROPORTION[at9001] matches {
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Container index (CI)
+                                        value matches {
+                                            DV_PROPORTION[at9002] matches {
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Breteau index (BI)
+                                        value matches {
+                                            DV_PROPORTION[at9003] matches {
+                                                denominator matches {100.0; 100.0}
+                                                type matches {0}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Ovitrap index (OI)
+                                        value matches {
+                                            DV_PROPORTION[at9004] matches {
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0005] matches {    -- ITEM_TREE
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0010] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Aedes indices">
+                description = <"Public health parameters used to monitor the population density and breeding rate of Aedes mosquitoes.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Location category">
+                description = <"The category or type of location being monitored.">
+                comment = <"For example: home, school, or workplace.">
+            >
+            ["at0006"] = <
+                text = <"Breteau index (BI)">
+                description = <"The number of positive containers per 100 houses.">
+                comment = <"Calculated as (number of positive containers / number of houses inspected) * 100.">
+            >
+            ["at0007"] = <
+                text = <"House index (HI)">
+                description = <"The percentage of houses or premises infested with larvae and/or pupae.">
+                comment = <"Calculated as (number of positive containers / number of houses inspected) * 100.">
+            >
+            ["at0008"] = <
+                text = <"Container index (CI)">
+                description = <"The percentage of water-holding containers infested with larvae or pupae.">
+                comment = <"Calculated as (number of positive containers / total number of containers inspected) * 100.">
+            >
+            ["at0009"] = <
+                text = <"Ovitrap index (OI)">
+                description = <"The percentage of ovitrap devices that contain eggs or larvae.">
+            >
+            ["at0010"] = <
+                text = <"Extension">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"ITEM_TREE">
+                description = <"">
+            >
+        >
+    >

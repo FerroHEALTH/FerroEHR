@@ -1,0 +1,115 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ba352ae8-71fd-4674-a5ee-746647c6bc32; build_uid=94eb294f-33ae-4ad5-9997-372ef82a918d)
+    openEHR-EHR-CLUSTER.sensory_level.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2023-06-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"AEFB542EF98CF5C4B1295EA9369F2380">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the most caudal, normally innervated, dermatome level observed in response to light touch, pain or temperature stimuli.">
+            use = <"Use to record the most caudal, normally innervated dermatome level observed in response to light touch, pain or temperature stimuli.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the CLUSTER.exam-nervous_system archetype. It can also be nested within any other relevant OBSERVATION or Physical examination-related family of CLUSTER archetypes, where clinically appropriate. 
+
+In clinical scenarios requiring the documentation of the sensory level in more than one modality, use a separate instance of this archetype for each modality.">
+            misuse = <"Not to be used to record the sensory response to light touch, pain or temperature applied to an area of skin - use the CLUSTER.sensation_finding for this purpose.
+
+Not to be used to record the sensory response to vibration applied to a bony prominence - use the CLUSTER.vibration_finding for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Sensory level
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- Modality
+                value matches {
+                    DV_CODED_TEXT[at9001] matches {
+                        defining_code matches {[ac9000]}    -- Modality (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Stimulus
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {1} matches {    -- Level
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Sensory level">
+                description = <"The most caudal, normally innervated, dermatome level observed in response to light touch, pain or temperature stimuli.">
+            >
+            ["at0001"] = <
+                text = <"Modality">
+                description = <"The type of sensation tested.">
+            >
+            ["at0002"] = <
+                text = <"Light touch">
+                description = <"Testing the individual's response to light touch.">
+            >
+            ["at0003"] = <
+                text = <"Pain">
+                description = <"Testing the individual's response to pain.">
+            >
+            ["at0006"] = <
+                text = <"Level">
+                description = <"The most caudal, normally innervated dermatome tested.">
+                comment = <"For example: T12 or C5/C6.">
+            >
+            ["at0007"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the sensory level finding, not captured in other fields.">
+            >
+            ["at0005"] = <
+                text = <"Stimulus">
+                description = <"Description of the stimulus used.">
+                comment = <"For example: testing light touch with cotton wool; or pain using a needle.">
+            >
+            ["at0004"] = <
+                text = <"Temperature">
+                description = <"Testing the individual's response to temperature.">
+            >
+            ["ac9000"] = <
+                text = <"Modality (synthesised)">
+                description = <"The type of sensation tested. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0002", "at0003", "at0004">
+        >
+    >
