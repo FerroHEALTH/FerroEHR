@@ -639,6 +639,33 @@ pub(crate) fn base_composition() -> Value {
         .expect("parse fixture")
 }
 
+/// The minimal observation composition named `name` with the reading
+/// `magnitude`: content, so a shared tree holds more than its root.
+pub(crate) fn observation_composition(name: &str, magnitude: f64) -> Value {
+    let mut c = base_composition();
+    if let Some(details) = c
+        .get_mut("archetype_details")
+        .and_then(Value::as_object_mut)
+    {
+        details.remove("template_id");
+    }
+    if let Some(root) = c.as_object_mut() {
+        root.remove("uid");
+    }
+    c["name"] = serde_json::json!({ "_type": "DV_TEXT", "value": name });
+    c["content"][0]["archetype_details"] = serde_json::json!({
+        "_type": "ARCHETYPED",
+        "archetype_id": {
+            "_type": "ARCHETYPE_ID",
+            "value": "openEHR-EHR-OBSERVATION.minimal.v1"
+        },
+        "rm_version": "1.1.0",
+    });
+    c["content"][0]["data"]["events"][0]["data"]["items"][0]["value"] =
+        serde_json::json!({ "_type": "DV_QUANTITY", "magnitude": magnitude, "units": "mm[Hg]" });
+    c
+}
+
 /// The DB's current instant (`SELECT now()`) as a `jiff::Timestamp`. Time-travel
 /// probes MUST anchor their reference instant on this server clock — the same
 /// clock that stamps `version.committed_at` — never on the test-process wall

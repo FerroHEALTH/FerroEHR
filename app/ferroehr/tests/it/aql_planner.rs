@@ -2248,15 +2248,24 @@ fn or_branch_versioned_objects_are_readable() {
 }
 
 /// The branch binding carries the scope the same object has outside the OR:
-/// the trunk head under `LATEST_VERSION`, and no restricted object.
+/// the trunk head under `LATEST_VERSION`, and no restricted object. Its
+/// version row is the head's, read from the head row, since a node row of a
+/// shared tree belongs to every version of its chain (#4944).
 #[test]
 fn an_or_branch_binding_reads_the_latest_unrestricted_version() {
     let sql = build_sql(OR_COMPOSITIONS);
-    // Two branch filters plus two bindings, each with its own head join.
+    // Two branch filters plus two bindings, each with its own head join, and
+    // each binding's version row selected as its object's trunk head.
     assert_eq!(
         sql.matches(r#""trunk_head_sys_version""#).count(),
-        4,
-        "each filter and each binding reads the trunk head"
+        6,
+        "each filter and each binding reads the trunk head, and each bound version is it"
+    );
+    assert_eq!(
+        sql.matches(r#"_n_pin_head"."trunk_head_sys_version""#)
+            .count(),
+        2,
+        "each binding's version row is its object's trunk head"
     );
     assert_eq!(
         sql.matches(r#""restricted_at" IS NULL"#).count(),
@@ -2851,9 +2860,9 @@ fn a_value_equality_with_a_parameter_is_anchored_on_the_element_rows() {
     );
     assert!(
         sql.contains(r#""va1"."vo_id" = "v0"."vo_id""#)
-            && sql.contains(r#""va1"."sys_version" = "v0"."content_key""#),
+            && sql.contains(r#""va1"."sys_version" = "v0_head"."trunk_head_content_key""#),
         "the anchor is linked to the version row of the path's versioned object, through \
-         the key of the node rows that version reads (#4415)"
+         the key of the node rows its LATEST_VERSION reads, the head's (#4415, #4944)"
     );
     assert!(
         sql.contains(r#""archetype" = $"#),

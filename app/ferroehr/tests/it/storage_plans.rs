@@ -1029,23 +1029,88 @@ const NEWEST_AQL: &str = "SELECT c/uid/value, c/context/start_time/value \
      FROM EHR e CONTAINS COMPOSITION c \
      ORDER BY c/context/start_time/value DESC, c/uid/value ASC";
 
+/// Compositions of the newest-page test with a start time each, more than
+/// the page holds, so reading the page off the index and sorting every
+/// composition differ by the rows left unread.
+const DATED_COMPOSITIONS: u32 = 120;
+
+/// A composition named `name` whose `EVENT_CONTEXT` starts at `start`.
+fn dated_composition(name: &str, start: &str) -> Value {
+    let mut c = composition(name);
+    c["context"] = json!({
+        "_type": "EVENT_CONTEXT",
+        "start_time": { "_type": "DV_DATE_TIME", "value": start },
+        "setting": {
+            "_type": "DV_CODED_TEXT",
+            "value": "other care",
+            "defining_code": {
+                "_type": "CODE_PHRASE",
+                "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                "code_string": "238"
+            }
+        }
+    });
+    c
+}
+
 /// A population-wide ordered page reads the compositions in start-time order
 /// from `idx_node_hot_composition_start` and stops at the limit, so its cost
 /// does not grow with the number of compositions (#4090).
+///
+/// The compositions carry distinct start times and outnumber the page, and the
+/// statistics are taken after they land, so the plan is the one the
+/// statistics choose over a sort of every root rather than a near tie on a
+/// store no larger than the page (#4946).
 #[tokio::test]
 async fn the_newest_compositions_page_reads_the_start_time_index() {
     let db = testkit::db().await.expect("testkit database");
     let pool = db.pool();
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
     seed(&svc, &pool).await;
+    let ehr = crate::fixtures::create_ehr(&svc).await;
+    for minute in 0..DATED_COMPOSITIONS {
+        let start = format!(
+            "2026-01-01T{:02}:{:02}:00Z",
+            minute.div_euclid(60),
+            minute.rem_euclid(60)
+        );
+        svc.create_composition(
+            ehr,
+            uv(
+                &dated_composition(&format!("dated {minute}"), &start),
+                "249",
+                None,
+            ),
+        )
+        .await
+        .expect("commit a dated composition");
+    }
+    pool.execute("ANALYZE")
+        .await
+        .expect("give the planner statistics over the dated compositions");
+    ferroehr::db::parent_statistics::refresh_pools(
+        &ferroehr::db::domain::DomainPools::from_shared(&pool),
+    )
+    .await
+    .expect("analyze the partitioned parents");
 
     let plan = explain_aql(&pool, aql_sql_limited(NEWEST_AQL, Vec::new(), Some(10))).await;
     let scans = scans(&plan);
+    let entry = on(&scans, "node_hot")
+        .into_iter()
+        .filter(|s| s.index.as_deref() == Some("idx_node_hot_composition_start"))
+        .collect::<Vec<_>>();
     assert!(
-        on(&scans, "node_hot")
-            .iter()
-            .any(|s| s.index.as_deref() == Some("idx_node_hot_composition_start")),
+        !entry.is_empty(),
         "#4090: the ordered page enters through the start-time index:\n{}",
+        render(&scans)
+    );
+    assert!(
+        entry
+            .iter()
+            .all(|s| s.rows * s.loops < f64::from(DATED_COMPOSITIONS)),
+        "#4090: the page stops reading the index at the limit, short of the {DATED_COMPOSITIONS} \
+         dated compositions:\n{}",
         render(&scans)
     );
 }

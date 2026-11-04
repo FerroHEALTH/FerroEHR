@@ -54,6 +54,7 @@ mod condition;
 mod expr;
 mod from;
 mod gates;
+mod head;
 mod predicate;
 mod scope;
 mod select;
@@ -330,6 +331,9 @@ struct Builder<'a> {
     /// canonical fragment.
     vo_alias: BTreeMap<usize, String>,
     version_vo: BTreeMap<usize, String>,
+    /// The head aliases joined ahead of their version row, whose scope adds
+    /// only its predicates (`head::HeadPlacement::Joined`).
+    joined_heads: BTreeSet<String>,
     /// Node aliases that root a VO group (targets of the REST `ehr_id` filter).
     group_roots: Vec<String>,
     /// The subset of `group_roots` whose rows are join-linked to a bound EHR
@@ -388,6 +392,7 @@ impl<'a> Builder<'a> {
             ehr_status_vo: BTreeMap::new(),
             vo_alias: BTreeMap::new(),
             version_vo: BTreeMap::new(),
+            joined_heads: BTreeSet::new(),
             group_roots: Vec::new(),
             roots_linked_to_ehr: BTreeSet::new(),
             group_vos: Vec::new(),

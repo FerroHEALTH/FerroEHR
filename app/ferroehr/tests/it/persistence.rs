@@ -77,9 +77,9 @@ async fn migrations_apply_cleanly_and_idempotently() {
     };
     // One file per concern, numbered per domain with no gaps, so
     // `_sqlx_migrations` reads as the set's table of contents.
-    assert_eq!(applied("ext").await, 11);
-    assert_eq!(applied("clinical").await, 33);
-    assert_eq!(applied("party").await, 25);
+    assert_eq!(applied("ext").await, 12);
+    assert_eq!(applied("clinical").await, 34);
+    assert_eq!(applied("party").await, 26);
     assert_eq!(applied("audit").await, 22);
 
     let tables = |schema: &'static str| {
@@ -162,22 +162,23 @@ async fn migrations_apply_cleanly_and_idempotently() {
     assert_eq!(leftovers, 0, "no first-generation schema may be created");
 }
 
-/// None of the four columns a commit updates on `vo_head` is indexed, in either
+/// None of the five columns a commit updates on `vo_head` is indexed, in either
 /// domain.
 ///
 /// That is the STRUCTURAL half of the heap-only-update property: PostgreSQL 18
 /// §"Heap-Only Tuples (HOT)" makes an update heap-only when no indexed column
 /// changes, so the property is a fact about the index set rather than about a
 /// counter that happened to move during one run. Adding an index on any of
-/// these four columns would cost every commit an index insert and a new index
+/// these five columns would cost every commit an index insert and a new index
 /// entry per version, which is what this test exists to notice. No openEHR spec
 /// governs storage layout — our own design/extension.
 #[tokio::test]
 async fn no_commit_updated_column_of_vo_head_is_indexed() {
     // The columns `HeadUpsert`'s ON CONFLICT branch writes.
-    const UPDATED: [&str; 4] = [
+    const UPDATED: [&str; 5] = [
         "head_sys_version",
         "trunk_head_sys_version",
+        "trunk_head_content_key",
         "lifecycle_state",
         "committed_at",
     ];
@@ -588,7 +589,8 @@ async fn the_append_only_versioning_model_behaves() {
     .await
     .expect("commit v2");
     sqlx::query(
-        "UPDATE vo_head SET head_sys_version = 2, trunk_head_sys_version = 2 WHERE vo_id = $1",
+        "UPDATE vo_head SET head_sys_version = 2, trunk_head_sys_version = 2, \
+         trunk_head_content_key = 2 WHERE vo_id = $1",
     )
     .bind(vo)
     .execute(&pool)
@@ -1153,17 +1155,19 @@ async fn seed_version(pool: &PgPool) -> (Uuid, Uuid) {
 async fn seed_head(pool: &PgPool, vo: Uuid) {
     sqlx::query(
         "INSERT INTO vo_head (vo_id, kind, ehr_id, head_sys_version, trunk_head_sys_version, \
-             lifecycle_state, committed_at) \
-         SELECT a.vo_id, t.kind, t.ehr_id, a.head, t.sys_version, t.lifecycle_state, \
-                t.committed_at \
+             trunk_head_content_key, lifecycle_state, committed_at) \
+         SELECT a.vo_id, t.kind, t.ehr_id, a.head, t.sys_version, t.content_key, \
+                t.lifecycle_state, t.committed_at \
          FROM (SELECT vo_id, max(sys_version) AS head FROM version \
                WHERE vo_id = $1 GROUP BY vo_id) a \
-         JOIN LATERAL (SELECT kind, ehr_id, sys_version, lifecycle_state, committed_at \
+         JOIN LATERAL (SELECT kind, ehr_id, sys_version, content_key, lifecycle_state, \
+                              committed_at \
                        FROM version WHERE vo_id = a.vo_id AND branch_number = 0 \
                        ORDER BY sys_version DESC LIMIT 1) t ON true \
          ON CONFLICT (vo_id) DO UPDATE SET \
              head_sys_version = EXCLUDED.head_sys_version, \
              trunk_head_sys_version = EXCLUDED.trunk_head_sys_version, \
+             trunk_head_content_key = EXCLUDED.trunk_head_content_key, \
              committed_at = EXCLUDED.committed_at",
     )
     .bind(vo)

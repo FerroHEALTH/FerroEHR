@@ -136,6 +136,7 @@ erDiagram
         uuid vo_id PK
         int head_sys_version "latest_version, any lineage"
         int trunk_head_sys_version "LATEST_VERSION"
+        int trunk_head_content_key "the head's node rows"
         text lifecycle_state "of the trunk head"
         text tier "hot | cold"
         timestamptz archived_at
@@ -201,7 +202,11 @@ FerroEHR does not, and it does not carry a validity interval either.
   `latest_trunk_version`); `head_sys_version` is its `latest_version` across
   every lineage. It also carries the lifecycle state, the template, the tier,
   the archive marker and the legal marks, so "what is current" is one
-  primary-key probe. None of the columns a commit changes appears in an index,
+  primary-key probe. `trunk_head_content_key` names the version whose node
+  rows hold the head's content: a version identical to its predecessor reads
+  its predecessor's rows, and a `LATEST_VERSION` query joins the node rows on
+  this column, so a tree a long chain of identical versions shares is read
+  once. None of the columns a commit changes appears in an index,
   which is the condition PostgreSQL 18 §"Heap-Only Tuples (HOT)" states for a
   heap-only update.
 - `ALL_VERSIONS` is the unfiltered table; `LATEST_VERSION` is the head row's

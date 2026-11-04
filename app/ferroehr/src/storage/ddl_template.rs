@@ -71,6 +71,11 @@ pub const NODE_COMPACT: &str = include_str!("../../migrations/templates/node_com
 /// (#4415).
 pub const VERSION_CONTENT: &str = include_str!("../../migrations/templates/version_content.sql.in");
 
+/// The head content key template: the trunk head's content key a
+/// `LATEST_VERSION` read joins the node rows on (#4944).
+pub const HEAD_CONTENT_KEY: &str =
+    include_str!("../../migrations/templates/head_content_key.sql.in");
+
 /// The version-tree key template: `uq_version_tree` keyed with the object
 /// last, so the foreign-key lookup of a node row reads one version (#4340).
 pub const VERSION_TREE_KEY: &str =
@@ -225,6 +230,16 @@ mod tests {
             "migrations/party/0025_version_content.sql",
             PARTY,
             VERSION_CONTENT,
+        ),
+        (
+            "migrations/clinical/0034_head_content_key.sql",
+            CLINICAL,
+            HEAD_CONTENT_KEY,
+        ),
+        (
+            "migrations/party/0026_head_content_key.sql",
+            PARTY,
+            HEAD_CONTENT_KEY,
         ),
     ];
 

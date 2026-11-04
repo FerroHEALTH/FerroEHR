@@ -12,13 +12,14 @@ use sea_query::{Alias, Asterisk, Expr, ExprTrait as _, JoinType, Query};
 use crate::aql::error::{AqlError, SqlError};
 use crate::aql::ir::{
     AggFunc, Contained, ContainsTree, LeafPath, Link, PathTarget, QueryIr, RmSource, SelectValue,
-    Source,
+    Source, VersionScope,
 };
-use crate::db::iden::{Ehr, Node, VersionRow};
+use crate::db::iden::{Ehr, Node, VersionRow, VoHead};
 
 use super::Builder;
 use super::expr::{col, hot, hot_unaliased};
-use super::from::{content_key, is_vo_root_type, strict_descendant};
+use super::from::{is_vo_root_type, strict_descendant};
+use super::head::{head_alias, node_key};
 
 /// The streaming-shape plan: the linear containment chain eligible for the
 /// LIMIT-streaming FROM (see [`Builder::build_from_streaming`]).
@@ -255,7 +256,7 @@ impl Builder<'_> {
         // The version spine: the one FROM item everything joins onto.
         let v = format!("v{}", plan.root);
         self.vo_alias.insert(plan.root, v.clone());
-        self.stream_spine(&v)?;
+        self.stream_spine(&v, &root.scope)?;
         self.q.and_where(hot(&v, VersionRow::Tier));
         let kinds: Vec<String> = root.rm_type.names().to_vec();
         self.q.and_where(col(&v, VersionRow::Kind).is_in(kinds));
@@ -319,7 +320,7 @@ impl Builder<'_> {
                 // versioned object, so strict containment in it is version
                 // membership minus the root row itself (`num = 0`).
                 sub.and_where(col(&inner, Node::VoId).eq(col(&v, VersionRow::VoId)))
-                    .and_where(col(&inner, Node::SysVersion).eq(content_key(&v)))
+                    .and_where(col(&inner, Node::SysVersion).eq(node_key(&v, &root.scope)))
                     .and_where(col(&inner, Node::Num).gt(0));
             }
             self.q.join_lateral(
@@ -342,11 +343,39 @@ impl Builder<'_> {
     /// is probed by the anchor's versions even when the chain is too long for
     /// the planner to reorder it.
     ///
+    /// Under `LATEST_VERSION` the leading anchor joins the head row on its
+    /// content key and the head names the one version row, so an anchor row a
+    /// chain of identical versions shares reaches one version (#4944).
+    ///
     /// # Errors
     /// [`AqlError`] from the anchors' predicate lowering.
-    fn stream_spine(&mut self, v: &str) -> Result<(), AqlError> {
+    fn stream_spine(&mut self, v: &str, scope: &VersionScope) -> Result<(), AqlError> {
         let mut anchors = self.value_anchors()?.into_iter();
         match anchors.next() {
+            Some(first) if matches!(scope, VersionScope::Latest) && first.version == v => {
+                let h = head_alias(v);
+                let head_link = col(&first.alias, Node::VoId).eq(col(&h, VoHead::VoId)).and(
+                    col(&first.alias, Node::SysVersion).eq(col(&h, VoHead::TrunkHeadContentKey)),
+                );
+                let version_link = col(v, VersionRow::VoId)
+                    .eq(col(&h, VoHead::VoId))
+                    .and(col(v, VersionRow::SysVersion).eq(col(&h, VoHead::TrunkHeadSysVersion)));
+                self.q
+                    .from_subquery(first.select, Alias::new(first.alias.as_str()));
+                self.q.join_as(
+                    JoinType::Join,
+                    VoHead::Table,
+                    Alias::new(h.as_str()),
+                    head_link,
+                );
+                self.q.join_as(
+                    JoinType::Join,
+                    VersionRow::Table,
+                    Alias::new(v),
+                    version_link,
+                );
+                self.joined_heads.insert(h);
+            }
             Some(first) => {
                 let link = first.link();
                 self.q
@@ -419,7 +448,7 @@ impl Builder<'_> {
             .from(Node::Table)
             .and_where(hot_unaliased())
             .and_where(Expr::col(Node::VoId).eq(col(v, VersionRow::VoId)))
-            .and_where(Expr::col(Node::SysVersion).eq(content_key(v)))
+            .and_where(Expr::col(Node::SysVersion).eq(node_key(v, &root.scope)))
             .and_where(Expr::col(Node::Num).eq(Expr::val(0)))
             .offset(0);
         self.q.join_lateral(

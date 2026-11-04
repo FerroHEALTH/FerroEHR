@@ -167,7 +167,8 @@ pub(crate) fn gate(
 /// # Errors
 /// The `409`-class [`ServiceError::Conflict`] of [`refuse`], naming the first
 /// offending version in `(vo_id, sys_version)` order; a storage failure of the
-/// candidate read or the body load.
+/// candidate read or the body load; and an exception naming a candidate whose
+/// root or body the reads did not find, which is never served unassessed.
 pub(crate) async fn gate_result_bodies(
     pool: &sqlx::PgPool,
     profile: SpecProfile,
@@ -210,6 +211,19 @@ pub(crate) async fn gate_result_bodies(
                 candidate.kind, candidate.vo_id
             ))
         })?;
+        let version_uid = || {
+            crate::versioning::object_version_id::object_version_id(
+                candidate.vo_id,
+                &candidate.creating_system_id,
+                crate::versioning::object_version_id::TreeId::from_columns(
+                    candidate.trunk_version,
+                    candidate.branch_number,
+                    candidate.branch_version,
+                ),
+            )
+        };
+        // A candidate came from a result row, so it has node rows: a root or
+        // body the reads did not find is a storage defect, refused (#4960).
         let canonical = candidate
             .root_interval
             .and_then(|(num, num_cap)| {
@@ -220,24 +234,20 @@ pub(crate) async fn gate_result_bodies(
                     num_cap,
                 })
             })
-            .cloned()
-            .unwrap_or(Value::Null);
+            .filter(|body| !body.is_null())
+            .ok_or_else(|| {
+                ServiceError::exception(format!(
+                    "the stored body of version {} could not be read for the spec_profile \
+                     `{profile}` assessment, so it is not served",
+                    version_uid()
+                ))
+            })?;
         gate(
             profile,
             kind,
             candidate.stable_compatible,
-            &canonical,
-            &|| {
-                crate::versioning::object_version_id::object_version_id(
-                    candidate.vo_id,
-                    &candidate.creating_system_id,
-                    crate::versioning::object_version_id::TreeId::from_columns(
-                        candidate.trunk_version,
-                        candidate.branch_number,
-                        candidate.branch_version,
-                    ),
-                )
-            },
+            canonical,
+            &version_uid,
         )?;
     }
     Ok(())

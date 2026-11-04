@@ -33,7 +33,8 @@
 //!   own counter, never over query text: `n{sid}`, `v{sid}`, `e{sid}`,
 //!   `x{ctr}`, `xv{ctr}`, `s{ctr}`, `w{ctr}`, `b{ctr}`, `p{ctr}`, `qg{ctr}`,
 //!   `esv{ctr}`, `esn{ctr}`, `a_v{sid}`, the row bindings' inner `b{ctr}_n` /
-//!   `w{ctr}_n` and one-row `b{ctr}_one` / `w{ctr}_one`, and the streaming
+//!   `w{ctr}_n` and one-row `b{ctr}_one` / `w{ctr}_one`, the head probe
+//!   `b{ctr}_n_pin_head` of a versioned `OR` branch, and the streaming
 //!   source's inner `n{sid}_s` (`aql::sql::from`, `aql::sql::value`,
 //!   `aql::sql::select`), plus the two fixed `ehr` aliases of the patient-scope
 //!   rule, `subject_row` and `subject_other` (`aql::sql::subject`).
@@ -582,6 +583,7 @@ const IDENTIFIERS: &[&str] = &[
     "content_key",
     // vo_head
     "trunk_head_sys_version",
+    "trunk_head_content_key",
     "restricted_at",
     "research_objected_at",
     "research_objection_ground",
@@ -614,6 +616,7 @@ const ALIAS_PATTERNS: &[&str] = &[
     r"^w[0-9]+$",
     r"^b[0-9]+$",
     r"^(b|w)[0-9]+_(n|one)$",
+    r"^b[0-9]+_n_pin_head$",
     r"^n[0-9]+_s$",
     r"^p[0-9]+$",
     r"^qg[0-9]+$",

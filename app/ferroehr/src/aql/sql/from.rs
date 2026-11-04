@@ -35,10 +35,14 @@ use crate::aql::ir::{
     Coercion, Contained, ContainsTree, EhrField, EhrPredicate, Link, PathTarget, QueryIr, RmSource,
     Source, VersionField, VersionScope,
 };
-use crate::db::iden::{CommitAudit, Ehr, Node, VersionRow, VoHead};
+use crate::db::iden::{CommitAudit, Ehr, Node, VersionRow};
 
 use super::expr::version_field_expr;
 use super::expr::{cast, col, hot, type_cond};
+use super::head::{
+    HeadPlacement, bind_head, content_key, head_alias, node_key, trunk_at_instant,
+    trunk_head_version,
+};
 use super::{Builder, VoGroup};
 
 /// The correlation anchor for an `OR` / `NOT CONTAINS` `EXISTS` subquery.
@@ -127,57 +131,6 @@ fn folder_items_exists(parent_node: &str, child_node: &str) -> Expr {
     Expr::exists(sub)
 }
 
-/// Bind the head row of the object `version_alias` belongs to into `q`, and
-/// return its alias: a `JOIN` on the streaming shape, a FROM item with its
-/// predicates otherwise.
-///
-/// One join serves two predicates that used to be two correlated `EXISTS`
-/// subqueries. The restriction gate: GDPR Art. 18(2) leaves storage as the
-/// only processing a restricted object admits (`docs/law/eu/gdpr/text.html`),
-/// and answering a query from its content is processing, so the mark is a
-/// predicate on the head join rather than a post-filter — a restricted object
-/// contributes no row to any result set, under `LATEST_VERSION` and
-/// `ALL_VERSIONS` alike (`RESULT_SET` has no per-row diagnostic channel, QUERY
-/// master01 §Result Set; a point read of the same object answers `403`). And,
-/// when the caller asks for it, `LATEST_VERSION`: the version row is the
-/// object's current TRUNK head, `vo_head.trunk_head_sys_version` IS
-/// `latest_trunk_version` (RM common master06 §The 'Virtual Version Tree').
-///
-/// Written as a join on the head's primary key, the version row is reached
-/// through `pk_version` with all three columns bound; the `EXISTS` form let the
-/// planner reach it by `vo_id` alone through the at-time index and walk every
-/// trunk version of the object per node row (#3453). The `branch_number = 0`
-/// predicate is implied by the head and deliberately not written: it is what
-/// made that partial index applicable. No openEHR spec governs restriction of
-/// processing or storage access paths — our own design/extension.
-fn bind_head(
-    q: &mut SelectStatement,
-    version_alias: &str,
-    latest: bool,
-    gates: super::gates::Gates,
-    streaming: bool,
-) -> String {
-    let h = format!("{version_alias}_head");
-    let mut cond = col(&h, VoHead::VoId)
-        .eq(col(version_alias, VersionRow::VoId))
-        .and(col(&h, VoHead::RestrictedAt).is_null());
-    for predicate in gates.on_head(&h) {
-        cond = cond.and(predicate);
-    }
-    if latest {
-        cond = cond.and(
-            col(version_alias, VersionRow::SysVersion).eq(col(&h, VoHead::TrunkHeadSysVersion)),
-        );
-    }
-    if streaming {
-        q.join_as(JoinType::Join, VoHead::Table, Alias::new(h.as_str()), cond);
-    } else {
-        q.from_as(VoHead::Table, Alias::new(h.as_str()));
-        q.and_where(cond);
-    }
-    h
-}
-
 /// The research objection is not standing on this `ehr` alias.
 ///
 /// GDPR Art. 21(6) gives the subject a right to object to processing "for
@@ -197,39 +150,6 @@ pub(super) fn research_objection_clear(ehr_alias: &str) -> Expr {
         Ehr::ResearchObjectionGround,
     )
     .is_not_null())
-}
-
-/// Version-at-time: the version row is the TRUNK version in force at `at`.
-///
-/// Validity is derived rather than stored: version *i* is valid over
-/// `[committed_at_i, committed_at_i+1)`, so the row in force at an instant is
-/// the trunk row with the greatest `committed_at` at or before it (RM common
-/// master06 §Committal and Audits gives `committed_at` its meaning; the
-/// derivation is our own storage design).
-fn trunk_at_instant(version_alias: &str, at: Expr) -> Expr {
-    let s = format!("{version_alias}_at");
-    let mut sub = Query::select();
-    sub.expr(Expr::val(1));
-    sub.from_as(VersionRow::Table, Alias::new(s.as_str()));
-    sub.and_where(hot(&s, VersionRow::Tier));
-    sub.and_where(col(&s, VersionRow::VoId).eq(col(version_alias, VersionRow::VoId)));
-    sub.and_where(col(&s, VersionRow::BranchNumber).eq(Expr::val(0)));
-    sub.and_where(col(&s, VersionRow::CommittedAt).gt(col(version_alias, VersionRow::CommittedAt)));
-    sub.and_where(col(&s, VersionRow::CommittedAt).lte(at.clone()));
-    col(version_alias, VersionRow::CommittedAt)
-        .lte(at)
-        .and(Expr::exists(sub).not())
-}
-
-/// The node rows a version row `voa` reads: its own, or the rows of the
-/// version `content_sys_version` names when its content equalled its
-/// predecessor's at commit, the stored `version.content_key` (#4415). Every
-/// join from a version row to node rows compares `node.sys_version` with this
-/// column, never with `voa.sys_version`, so the planner joins and estimates on
-/// a plain column; a node-to-node join stays on the node key, both rows lying
-/// in one tree.
-pub(super) fn content_key(voa: &str) -> Expr {
-    col(voa, VersionRow::ContentKey)
 }
 
 /// Whether `child` is a STRICT nested-set descendant of `parent` within one
@@ -638,11 +558,15 @@ impl Builder<'_> {
             }
             Ok(on)
         })?;
+        // The node is the scope's: under LATEST_VERSION the head's version is
+        // its one version row, and every version sharing its tree otherwise.
         let vo = self.left_bind_rows(BoundTable::Version, |_, inner| {
+            let version = trunk_head_version(&r.scope, inner, col(&node, Node::VoId))
+                .unwrap_or_else(|| content_key(inner).eq(col(&node, Node::SysVersion)));
             Ok(vec![
                 hot(inner, VersionRow::Tier),
                 col(inner, VersionRow::VoId).eq(col(&node, Node::VoId)),
-                content_key(inner).eq(col(&node, Node::SysVersion)),
+                version,
             ])
         })?;
         self.node_alias.insert(sid, node.clone());
@@ -888,7 +812,7 @@ impl Builder<'_> {
             self.q
                 .and_where(col(&node, Node::VoId).eq(col(&voa, VersionRow::VoId)));
             self.q
-                .and_where(col(&node, Node::SysVersion).eq(content_key(&voa)));
+                .and_where(col(&node, Node::SysVersion).eq(node_key(&voa, &r.scope)));
             // A class that occurs only as its object's root is the `num = 0`
             // row, so the node probe is one primary-key row, not a scan of the
             // whole version's nodes filtered by type (#4089).
@@ -1010,7 +934,7 @@ impl Builder<'_> {
                         // needs the child's own version spine + scope, which a
                         // by-value descendant satisfies too by sharing the
                         // parent's spine row.
-                        let voa = self.branch_spine(sub, alias);
+                        let voa = self.branch_spine(sub, alias, scope);
                         self.bind_branch_scope(sub, &voa, scope)?;
                         sub.and_where(
                             strict_descendant(alias, parent).or(folder_items_exists(parent, alias)),
@@ -1020,7 +944,7 @@ impl Builder<'_> {
                         // The child is its own versioned object: bind its
                         // version spine + scope (the Ehr arm's shape), then
                         // the reference edge over the anchor folder's subtree.
-                        let voa = self.branch_spine(sub, alias);
+                        let voa = self.branch_spine(sub, alias, scope);
                         self.bind_branch_scope(sub, &voa, scope)?;
                         sub.and_where(folder_items_exists(parent, alias));
                     }
@@ -1028,7 +952,7 @@ impl Builder<'_> {
                 Ok(())
             }
             ExistsAnchor::Ehr(e) => {
-                let voa = self.branch_spine(sub, alias);
+                let voa = self.branch_spine(sub, alias, scope);
                 sub.and_where(col(alias, Node::EhrId).eq(col(e, Ehr::Id)));
                 // Same version-spine mirror as the FROM path (see above):
                 // lets the planner bound the EXISTS by the EHR instead of the
@@ -1040,14 +964,20 @@ impl Builder<'_> {
     }
 
     /// Joins the operand node's own version row into an `EXISTS` subquery: a
-    /// hot-tier row of the node's versioned object whose content key is the
-    /// node's `sys_version`, and returns that row's alias.
-    fn branch_spine(&mut self, sub: &mut SelectStatement, alias: &str) -> String {
+    /// hot-tier row of the node's versioned object whose node key under
+    /// `scope` is the node's `sys_version` (`head::node_key`, the head's under
+    /// `LATEST_VERSION`, #4944), and returns that row's alias.
+    fn branch_spine(
+        &mut self,
+        sub: &mut SelectStatement,
+        alias: &str,
+        scope: &VersionScope,
+    ) -> String {
         let voa = format!("xv{}", self.next_ctr());
         sub.from_as(VersionRow::Table, Alias::new(voa.as_str()));
         sub.and_where(hot(&voa, VersionRow::Tier));
         sub.and_where(col(alias, Node::VoId).eq(col(&voa, VersionRow::VoId)));
-        sub.and_where(col(alias, Node::SysVersion).eq(content_key(&voa)));
+        sub.and_where(col(alias, Node::SysVersion).eq(node_key(&voa, scope)));
         voa
     }
 
@@ -1074,7 +1004,7 @@ impl Builder<'_> {
                 .into());
             }
         };
-        bind_head(sub, voa, latest, self.gates, false);
+        bind_head(sub, voa, latest, self.gates, HeadPlacement::From);
         Ok(())
     }
 
@@ -1101,7 +1031,9 @@ impl Builder<'_> {
         let vo_link = col(&vo, VersionRow::EhrId).eq(col(&ehr, Ehr::Id));
         let node_link = col(&node, Node::VoId)
             .eq(col(&vo, VersionRow::VoId))
-            .and(col(&node, Node::SysVersion).eq(content_key(&vo)));
+            .and(col(&node, Node::SysVersion).eq(node_key(&vo, &VersionScope::Latest)));
+        // Current = latest trunk (master06 latest_trunk_version), the head
+        // bound before the node row that joins its content key.
         if self.streaming {
             self.q.join_as(
                 JoinType::Join,
@@ -1109,6 +1041,7 @@ impl Builder<'_> {
                 Alias::new(vo.as_str()),
                 vo_link,
             );
+            bind_head(&mut self.q, &vo, true, self.gates, HeadPlacement::Join);
             self.q.join_as(
                 JoinType::Join,
                 Node::Table,
@@ -1117,6 +1050,7 @@ impl Builder<'_> {
             );
         } else {
             self.q.from_as(VersionRow::Table, Alias::new(vo.as_str()));
+            bind_head(&mut self.q, &vo, true, self.gates, HeadPlacement::From);
             self.q.from_as(Node::Table, Alias::new(node.as_str()));
             self.q.and_where(vo_link);
             self.q.and_where(node_link);
@@ -1125,8 +1059,6 @@ impl Builder<'_> {
         self.q.and_where(hot(&node, Node::Tier));
         self.q
             .and_where(col(&vo, VersionRow::Kind).eq(Expr::val("EHR_STATUS")));
-        // Current = latest trunk (master06 latest_trunk_version).
-        bind_head(&mut self.q, &vo, true, self.gates, self.streaming);
         self.q.and_where(col(&node, Node::Num).eq(Expr::val(0)));
         self.ehr_status_node.insert(ehr_sid, node.clone());
         self.ehr_status_vo.insert(ehr_sid, vo);
@@ -1160,18 +1092,23 @@ impl Builder<'_> {
     }
 
     pub(super) fn push_scope(&mut self, voa: &str, scope: &VersionScope) -> Result<(), AqlError> {
+        let placement = match (self.streaming, self.joined_heads.contains(&head_alias(voa))) {
+            (_, true) => HeadPlacement::Joined,
+            (true, false) => HeadPlacement::Join,
+            (false, false) => HeadPlacement::From,
+        };
         match scope {
             VersionScope::Latest => {
                 // LATEST_VERSION = the latest TRUNK version (RM common master06
                 // latest_trunk_version; open branch tips coexist and are not
                 // "the latest version" of the container).
-                bind_head(&mut self.q, voa, true, self.gates, self.streaming);
+                bind_head(&mut self.q, voa, true, self.gates, placement);
             }
             VersionScope::All => {
-                bind_head(&mut self.q, voa, false, self.gates, self.streaming);
+                bind_head(&mut self.q, voa, false, self.gates, placement);
             }
             VersionScope::Predicate(p) if p.field == VersionField::TimeCommitted => {
-                bind_head(&mut self.q, voa, false, self.gates, self.streaming);
+                bind_head(&mut self.q, voa, false, self.gates, placement);
                 // Version-at-time: the TRUNK version in force at the instant; a
                 // branch version live at that instant coexists by design and
                 // must not duplicate the row.
@@ -1182,7 +1119,7 @@ impl Builder<'_> {
                     .and_where(trunk_at_instant(voa, cast(Expr::val(value), "timestamptz")));
             }
             VersionScope::Predicate(p) => {
-                bind_head(&mut self.q, voa, false, self.gates, self.streaming);
+                bind_head(&mut self.q, voa, false, self.gates, placement);
                 let rhs = cast(Expr::val(self.bind_value(&p.value)?), "text");
                 let lhs = version_field_expr(voa, || self.ensure_audit(voa), p.field);
                 self.q

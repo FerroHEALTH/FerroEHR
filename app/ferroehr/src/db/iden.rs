@@ -183,6 +183,9 @@ pub enum VoHead {
     /// `trunk_head_sys_version` — the greatest `sys_version` on the trunk:
     /// `LATEST_VERSION`.
     TrunkHeadSysVersion,
+    /// `trunk_head_content_key` — the trunk head's `version.content_key`: the
+    /// `sys_version` whose node rows hold its content (#4944).
+    TrunkHeadContentKey,
     /// `lifecycle_state` — the lifecycle state of the trunk head.
     LifecycleState,
     /// `template_id` — the template of the trunk head.
@@ -338,6 +341,7 @@ mod tests {
         include_str!("../../migrations/clinical/0029_access_opt_out.sql"),
         include_str!("../../migrations/clinical/0031_node_compact.sql"),
         include_str!("../../migrations/clinical/0032_version_content.sql"),
+        include_str!("../../migrations/clinical/0034_head_content_key.sql"),
     ];
 
     /// Whether a later migration adds `col` to `table`.
@@ -480,6 +484,7 @@ mod tests {
                     VersionRow::StableCompatible.to_string(),
                     VersionRow::CommittedAt.to_string(),
                     VersionRow::Body.to_string(),
+                    VersionRow::ContentKey.to_string(),
                 ],
             ),
             (
@@ -491,6 +496,7 @@ mod tests {
                     VoHead::Tier.to_string(),
                     VoHead::HeadSysVersion.to_string(),
                     VoHead::TrunkHeadSysVersion.to_string(),
+                    VoHead::TrunkHeadContentKey.to_string(),
                     VoHead::LifecycleState.to_string(),
                     VoHead::TemplateId.to_string(),
                     VoHead::CommittedAt.to_string(),

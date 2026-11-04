@@ -71,6 +71,7 @@ mod federation_node;
 mod fixtures;
 mod import_concurrency;
 mod item_tag_fixture;
+mod latest_head_fan_out;
 mod legal_marks;
 mod licence_stamp;
 mod manufacturer;

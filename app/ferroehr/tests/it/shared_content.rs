@@ -16,7 +16,6 @@
 //! to match the current version only. No openEHR spec governs the physical
 //! sharing of stored content: our own design.
 
-use serde_json::Value;
 use sqlx::PgPool;
 
 use ferroehr::config::versioning::RESEND_OPERATION;
@@ -26,7 +25,7 @@ use ferroehr::storage::integrity::StorageParityScope;
 use ferroehr::system_log::config::{AuditConfig, StoreConfig};
 use ferroehr::system_log::sender;
 
-use crate::fixtures::{base_composition, create_ehr, uv};
+use crate::fixtures::{create_ehr, observation_composition, uv};
 use crate::node_readers::aql_answers;
 
 /// The AQL statements whose answers must not move when a version shares its
@@ -44,33 +43,6 @@ const QUERIES: [&str; 5] = [
      WHERE c/name/value = 'same' ORDER BY c/uid/value",
 ];
 
-/// The minimal observation composition named `name` with the reading
-/// `magnitude`: content, so a shared tree holds more than its root.
-fn composition(name: &str, magnitude: f64) -> Value {
-    let mut c = base_composition();
-    if let Some(details) = c
-        .get_mut("archetype_details")
-        .and_then(Value::as_object_mut)
-    {
-        details.remove("template_id");
-    }
-    if let Some(root) = c.as_object_mut() {
-        root.remove("uid");
-    }
-    c["name"] = serde_json::json!({ "_type": "DV_TEXT", "value": name });
-    c["content"][0]["archetype_details"] = serde_json::json!({
-        "_type": "ARCHETYPED",
-        "archetype_id": {
-            "_type": "ARCHETYPE_ID",
-            "value": "openEHR-EHR-OBSERVATION.minimal.v1"
-        },
-        "rm_version": "1.1.0",
-    });
-    c["content"][0]["data"]["events"][0]["data"]["items"][0]["value"] =
-        serde_json::json!({ "_type": "DV_QUANTITY", "magnitude": magnitude, "units": "mm[Hg]" });
-    c
-}
-
 /// The chain the tests read: v1 `same`, v2 `same` again (shares v1's rows),
 /// v3 `other` (its own rows), v4 `other` again (shares v3's rows).
 struct Chain {
@@ -83,7 +55,10 @@ struct Chain {
 async fn commit_chain(svc: &FerroEhrService) -> Chain {
     let ehr_id = create_ehr(svc).await;
     let v1 = svc
-        .create_composition(ehr_id, uv(&composition("same", 120.0), "249", None))
+        .create_composition(
+            ehr_id,
+            uv(&observation_composition("same", 120.0), "249", None),
+        )
         .await
         .expect("v1 commits")
         .version_uid();
@@ -95,9 +70,9 @@ async fn commit_chain(svc: &FerroEhrService) -> Chain {
         .expect("uuid");
     let mut uids = vec![v1];
     for body in [
-        composition("same", 120.0),
-        composition("other", 130.0),
-        composition("other", 130.0),
+        observation_composition("same", 120.0),
+        observation_composition("other", 130.0),
+        observation_composition("other", 130.0),
     ] {
         let preceding = uids.last().expect("a preceding version").clone();
         let committed = svc
@@ -130,6 +105,29 @@ async fn stored_versions(
     .fetch_all(pool)
     .await
     .expect("read the stored versions")
+}
+
+/// The head's content key of `vo_id` (`vo_head.trunk_head_content_key`,
+/// #4944), after checking that every head row of the store names its trunk
+/// head's `content_key`.
+async fn head_content_key(pool: &PgPool, vo_id: VoId) -> Option<i32> {
+    let mismatched: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM vo_head h \
+         LEFT JOIN version v ON v.vo_id = h.vo_id AND v.sys_version = h.trunk_head_sys_version \
+         WHERE h.trunk_head_content_key IS DISTINCT FROM v.content_key",
+    )
+    .fetch_one(pool)
+    .await
+    .expect("compare every head with its trunk head");
+    assert_eq!(
+        mismatched, 0,
+        "every head names the rows its trunk head reads"
+    );
+    sqlx::query_scalar("SELECT trunk_head_content_key FROM vo_head WHERE vo_id = $1")
+        .bind(vo_id)
+        .fetch_one(pool)
+        .await
+        .expect("read the head's content key")
 }
 
 /// Every version's body read by uid, its node rows reassembled, and the AQL
@@ -202,6 +200,11 @@ async fn identical_content_is_stored_once_and_every_version_reads_back_whole() {
     assert_eq!(stored[1].2, Some(1), "v2 reads v1's rows");
     assert_eq!(stored[2].2, None);
     assert_eq!(stored[3].2, Some(3), "v4 reads v3's rows");
+    assert_eq!(
+        head_content_key(&pool, chain.vo_id).await,
+        Some(3),
+        "the head names the rows its trunk head v4 reads"
+    );
     assert!(
         stored
             .iter()
@@ -332,11 +335,21 @@ async fn a_delete_an_archive_and_a_restore_keep_the_shared_tree() {
         (stored[4].1, stored[4].2, stored[4].3.as_ref()),
         (0, None, None)
     );
+    assert_eq!(
+        head_content_key(&pool, chain.vo_id).await,
+        Some(5),
+        "a logical delete is its own content: no rows"
+    );
 
     svc.archive_ehrs(&[chain.ehr_id]).await.expect("archive");
     svc.restore_archived_ehrs(&[chain.ehr_id])
         .await
         .expect("restore");
+    assert_eq!(
+        head_content_key(&pool, chain.vo_id).await,
+        Some(5),
+        "the archive and the restore keep the head's content key"
+    );
     let mut conn = pool.acquire().await.expect("a connection");
     for (i, body) in before.nodes.iter().enumerate() {
         let sys_version = i32::try_from(i + 1).expect("a small ordinal");
@@ -411,8 +424,72 @@ async fn a_rebuilt_sharing_version_reads_its_own_rows_again() {
     assert_eq!(stored[1].2, None, "v2 reads its own rows again");
     assert_eq!(stored[1].1, stored[0].1, "v2 holds a full tree");
     assert_eq!(stored[3].2, Some(3), "v4 still shares v3's untouched rows");
+    assert_eq!(
+        head_content_key(&pool, chain.vo_id).await,
+        Some(3),
+        "the head still reads v3's rows"
+    );
     let after = served(&pool, &svc, &chain).await;
     assert_eq!(before, after);
+}
+
+/// The rebuild of the head when it shares a tree points the head's content
+/// key at the head's own new rows (#4944), so a `LATEST_VERSION` read follows
+/// them.
+#[tokio::test]
+async fn a_rebuilt_sharing_head_names_its_own_rows() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let chain = commit_chain(&svc).await;
+    let before = served(&pool, &svc, &chain).await;
+
+    // Damage the tree v3 and v4, the head, read.
+    sqlx::query(
+        "UPDATE node SET name = 'damaged' WHERE vo_id = $1 AND sys_version = 3 AND num = 0",
+    )
+    .bind(chain.vo_id)
+    .execute(&pool)
+    .await
+    .expect("damage the shared tree");
+    let report = svc
+        .rebuild_version_nodes(StorageParityScope::default())
+        .await
+        .expect("rebuild");
+    assert_eq!(report.versions_rebuilt, 2, "{report:?}");
+    let stored = stored_versions(&pool, chain.vo_id).await;
+    assert_eq!(stored[3].2, None, "v4 reads its own rows again");
+    assert_eq!(
+        head_content_key(&pool, chain.vo_id).await,
+        Some(4),
+        "the head names v4's own rows"
+    );
+    let after = served(&pool, &svc, &chain).await;
+    assert_eq!(before, after);
+}
+
+/// A composition bound in an `OR` branch under `LATEST_VERSION` is answered
+/// once with the head's uid when its head shares its predecessor's tree: the
+/// branch's version row is the head's, never every version reading the tree
+/// (#4944).
+#[tokio::test]
+async fn an_or_branch_answers_a_shared_head_once() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let chain = commit_chain(&svc).await;
+    let answers = aql_answers(
+        &svc,
+        &["SELECT c1/uid/value FROM EHR e CONTAINS \
+           (COMPOSITION c1[openEHR-EHR-COMPOSITION.minimal.v1] \
+            OR COMPOSITION c2[openEHR-EHR-COMPOSITION.referral.v1])"],
+    )
+    .await;
+    assert_eq!(
+        answers,
+        vec![vec![serde_json::json!([chain.uids[3]]).to_string()]],
+        "one row, the head v4's uid"
+    );
 }
 
 /// The `resend` records on the access log, as `(resource_id,
@@ -467,7 +544,10 @@ async fn the_opt_in_rule_answers_a_resend_with_the_existing_version() {
         .with_skip_identical_resend(true);
     let ehr_id = create_ehr(&svc).await;
     let v1 = svc
-        .create_composition(ehr_id, uv(&composition("same", 120.0), "249", None))
+        .create_composition(
+            ehr_id,
+            uv(&observation_composition("same", 120.0), "249", None),
+        )
         .await
         .expect("v1 commits");
     let uid = v1.version_uid();
@@ -482,7 +562,7 @@ async fn the_opt_in_rule_answers_a_resend_with_the_existing_version() {
         .update_composition(
             ehr_id,
             vo_id,
-            uv(&composition("same", 120.0), "251", Some(&uid)),
+            uv(&observation_composition("same", 120.0), "251", Some(&uid)),
         )
         .await
         .expect("the re-send is answered");
@@ -522,7 +602,7 @@ async fn the_opt_in_rule_answers_a_resend_with_the_existing_version() {
         .update_composition(
             ehr_id,
             vo_id,
-            uv(&composition("other", 130.0), "251", Some(&uid)),
+            uv(&observation_composition("other", 130.0), "251", Some(&uid)),
         )
         .await
         .expect("a changed update commits");
@@ -540,7 +620,7 @@ async fn the_opt_in_rule_answers_a_resend_with_the_existing_version() {
             ehr_id,
             vo_id,
             uv(
-                &composition("same", 120.0),
+                &observation_composition("same", 120.0),
                 "251",
                 Some(&changed.version_uid()),
             ),

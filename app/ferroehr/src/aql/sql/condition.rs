@@ -55,7 +55,7 @@ use crate::aql::ir::{
 use crate::db::iden::{Node, VersionRow};
 
 use super::expr::{binoper, call, col, hot};
-use super::from::{BoundTable, attribute_child, binding_rows, content_key};
+use super::from::{BoundTable, attribute_child, binding_rows};
 use super::predicate::raw_numeric_wanted;
 use super::value::ItemWalk;
 use super::{Builder, StepBinding, ValueMode};
@@ -214,6 +214,7 @@ impl Builder<'_> {
         let Some(version) = self.version_alias_of(leaf.source.0) else {
             return Ok(None);
         };
+        let key = self.node_key_of(&version);
         let alias = format!("va{}", self.next_ctr());
         let node = format!("{alias}_n");
         let mut select = Query::select();
@@ -243,6 +244,7 @@ impl Builder<'_> {
         Ok(Some(ValueAnchor {
             alias,
             version,
+            key,
             select,
         }))
     }
@@ -652,6 +654,9 @@ pub(super) struct ValueAnchor {
     pub(super) alias: String,
     /// The `version` alias the item links to.
     pub(super) version: String,
+    /// The column the item's `sys_version` joins: the node key of the version
+    /// row under its scope (`head::node_key`, #4944).
+    key: Expr,
     /// The item: `SELECT DISTINCT vo_id, sys_version FROM node …`.
     pub(super) select: SelectStatement,
 }
@@ -661,7 +666,7 @@ impl ValueAnchor {
     pub(super) fn link(&self) -> Expr {
         col(&self.alias, Node::VoId)
             .eq(col(&self.version, VersionRow::VoId))
-            .and(col(&self.alias, Node::SysVersion).eq(content_key(&self.version)))
+            .and(col(&self.alias, Node::SysVersion).eq(self.key.clone()))
     }
 }
 
