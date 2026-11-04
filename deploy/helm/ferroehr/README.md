@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). The chart refuses to render until config.deployment_profile names the posture: sandbox, which must not hold real patient data, or production (start from values-production.yaml).
 
-![Version: 21.0.0-rc11](https://img.shields.io/badge/Version-21.0.0--rc11-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.6.0-rc10](https://img.shields.io/badge/AppVersion-5.6.0--rc10-informational?style=flat-square)
+![Version: 21.0.0-rc12](https://img.shields.io/badge/Version-21.0.0--rc12-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.6.0-rc10](https://img.shields.io/badge/AppVersion-5.6.0--rc10-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -44,7 +44,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 21.0.0-rc11 \
+  --version 21.0.0-rc12 \
   --namespace ferroehr --create-namespace \
   --set config.deployment_profile=sandbox \
   --set database.existingSecret=ferroehr-db \
@@ -62,7 +62,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `21.0.0-rc11` |
+| the **chart** (templates, defaults, this document) | `--version` | `21.0.0-rc12` |
 | the **server image** | `image.tag` | `5.6.0-rc10` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -74,7 +74,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:21.0.0-rc11 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:21.0.0-rc12 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -82,7 +82,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:21.0.0-rc11 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:21.0.0-rc11 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:21.0.0-rc12 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.6.0-rc10 \
   -R FerroHEALTH/FerroEHR
@@ -160,12 +160,15 @@ Service (and at the chart's FerroTERM when `terminology.enabled` is set). It
 needs two things the render refuses to go without: `bridge.cdr.existingSecret`,
 a Secret holding its CDR credential (`user` and `password`, a Basic user of the
 CDR whose `scopes` grant what FerroBRIDGE calls), and at least one peer in
-`bridge.networkPolicy.ingressFrom`. FerroBRIDGE authenticates no caller yet
-([FerroBRIDGE#400](https://github.com/FerroHEALTH/FerroBRIDGE/issues/400)), so
-the chart keeps it cluster-internal: a ClusterIP Service, no Ingress, and a
-NetworkPolicy that admits only the peers you name. Its mapping files come from a
-ConfigMap of yours (`bridge.mappings.existingConfigMap` plus the keys in
-`bridge.mappings.files`); FerroBRIDGE's own documentation is at
+`bridge.networkPolicy.ingressFrom`. FerroBRIDGE checks the caller of its
+FHIRconnect operations, FHIR facade and operator API through `[auth]`
+(`bridge.config.auth`), and a mapping set needs `auth.issuer` and
+`auth.audience` or `auth.enabled = false` before it starts. A caller it admits
+acts on the CDR with its credential, so the chart keeps it cluster-internal: a
+ClusterIP Service, no Ingress, and a NetworkPolicy that admits only the peers
+you name. Its mapping files come from a ConfigMap of yours
+(`bridge.mappings.existingConfigMap` plus the keys in `bridge.mappings.files`);
+FerroBRIDGE's own documentation is at
 <https://ferrobridge.eu/docs/>.
 
 ## Requirements
@@ -174,7 +177,7 @@ Kubernetes: `>=1.36.0-0`
 
 | Repository | Name | Version |
 |------------|------|---------|
-| oci://ghcr.io/ferrohealth/charts | ferropix | 0.3.4 |
+| oci://ghcr.io/ferrohealth/charts | ferropix | 0.3.6 |
 
 > [!NOTE]
 > Rows under `config.*` carry no description here on purpose. Those keys are the
@@ -230,19 +233,19 @@ Kubernetes: `>=1.36.0-0`
 | backup.ttlSecondsAfterFinished | int | `86400` | How long a finished dump's pod is kept for its logs. |
 | bridge.affinity | object | `{}` | Affinity. |
 | bridge.cdr.existingSecret | string | `""` | Name of an EXISTING Secret holding FerroBRIDGE's credential for this release's CDR. Required. It must carry the keys `user` and `password`, a user of the CDR's `config.auth.basic.users` (RFC 7617) whose `scopes` grant what FerroBRIDGE calls. The password is mounted as a FILE and named by its `_file` key in config.toml, so it never enters the ConfigMap or the pod's environment; the user name, which FerroBRIDGE does not treat as a secret, reaches the container as `FERROBRIDGE__CDR__CREDENTIALS__USER`. |
-| bridge.config | object | `{}` | Further FerroBRIDGE configuration, rendered into its config.toml beside the keys the chart writes (FerroBRIDGE's configuration reference: https://ferrobridge.eu/docs/operate/configuration.html). FerroBRIDGE refuses an unknown key at boot, so a typo here is a crash loop, not a silent default. Refused at render: `cdr.base_url`, `cdr.credentials`, `server.listen`, `terminology` while `terminology.enabled` is on, `mappings.directory` while `mappings.existingConfigMap` is set, and any secret-shaped key (a password, a token, `cdm.url`), whose `_file` sibling takes a file you mount with `extraVolumes`. |
+| bridge.config | object | `{}` | Further FerroBRIDGE configuration, rendered into its config.toml beside the keys the chart writes (FerroBRIDGE's configuration reference: https://ferrobridge.eu/docs/operate/configuration.html). FerroBRIDGE refuses an unknown key at boot, so a typo here is a crash loop, not a silent default. Refused at render: `cdr.base_url`, `cdr.credentials`, `server.listen`, `terminology` while `terminology.enabled` is on, `mappings.directory` while `mappings.existingConfigMap` is set, and any secret-shaped key (a password, a token, `cdm.url`), whose `_file` sibling takes a file you mount with `extraVolumes`. A mapping set turns the FHIRconnect operations on, and FerroBRIDGE then refuses to start until `auth.issuer` and `auth.audience` name the issuer of its callers' tokens, or `auth.enabled` is false. |
 | bridge.enabled | bool | `false` | Deploy FerroBRIDGE alongside the CDR. Needs `bridge.cdr.existingSecret` and at least one `bridge.networkPolicy.ingressFrom` peer; the render is refused without either. |
 | bridge.extraEnv | list | `[]` | Extra environment for FerroBRIDGE (escape hatch). |
 | bridge.extraVolumeMounts | list | `[]` | Extra volume mounts for the FerroBRIDGE container. |
 | bridge.extraVolumes | list | `[]` | Extra volumes for the FerroBRIDGE pod, such as a Secret holding a `_file` credential named in `config`. |
-| bridge.image.digest | string | `"sha256:c92e58dac60d0d1cb94b446e2414ebdc2b209a42c87df3aaf0b18d7c51d5c774"` | Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an install runs the exact image this chart was validated against. |
+| bridge.image.digest | string | `"sha256:4cdf8d4b4c4d626b99a3929a363198067f87ac70875f4ce6db1d0614884f12af"` | Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an install runs the exact image this chart was validated against. |
 | bridge.image.pullPolicy | string | `"IfNotPresent"` | Pull policy. |
 | bridge.image.repository | string | `"ghcr.io/ferrohealth/ferrobridge"` | FerroBRIDGE image repository. A separate product on its own release line (https://github.com/FerroHEALTH/FerroBRIDGE), BUSL-1.1 from the same Licensor as FerroEHR. |
-| bridge.image.tag | string | `""` | Image tag. Empty falls back to the FerroBRIDGE release this chart is pinned to (0.0.5), never `.Chart.appVersion`, which is FerroEHR's line. A tag other than that pin is REFUSED while `digest` below is non-empty: the digest wins, so the tag would be inert. Clear `digest` to deploy a tag. |
+| bridge.image.tag | string | `""` | Image tag. Empty falls back to the FerroBRIDGE release this chart is pinned to (0.0.17), never `.Chart.appVersion`, which is FerroEHR's line. A tag other than that pin is REFUSED while `digest` below is non-empty: the digest wins, so the tag would be inert. Clear `digest` to deploy a tag. |
 | bridge.mappings.existingConfigMap | string | `""` | Name of an EXISTING ConfigMap holding the FHIRconnect mapping files FerroBRIDGE serves `$tofhir` and `$toopenehr` with. Empty means no mapping set: FerroBRIDGE starts, and those two operations answer 503. The templates each context names are fetched from this release's CDR at boot, so a template the CDR does not hold stops the start. |
-| bridge.mappings.files | list | `[]` | The keys of `existingConfigMap` to mount, one file each. Required with `existingConfigMap`. Each key is mounted on its own (`subPath`), because a whole ConfigMap volume carries the kubelet's `..data` snapshot directories, which FerroBRIDGE 0.0.5's recursive walk reads as a second and third copy of every file and refuses as duplicate mapping names. A `subPath` mount does not follow later edits to the ConfigMap; the pod's rollout annotation hashes this list, not the ConfigMap's contents, so restart the workload after editing it. |
+| bridge.mappings.files | list | `[]` | The keys of `existingConfigMap` to mount, one file each. Required with `existingConfigMap`. Each key is mounted on its own (`subPath`), because a whole ConfigMap volume carries the kubelet's `..data` snapshot directories, which FerroBRIDGE's recursive walk reads as a second and third copy of every file and refuses as duplicate mapping names. A `subPath` mount does not follow later edits to the ConfigMap; the pod's rollout annotation hashes this list, not the ConfigMap's contents, so restart the workload after editing it. |
 | bridge.networkPolicy.extraEgress | list | `[]` | Egress rules beyond the ones the chart writes (this release's CDR, its FerroTERM when that runs, and DNS). Raw NetworkPolicyEgressRule entries, for an upstream you name in `config`, such as an external terminology server. |
-| bridge.networkPolicy.ingressFrom | list | `[]` | The peers admitted to FerroBRIDGE's port. REQUIRED: the render is refused while it is empty, because an ingress rule with no `from` admits every source and FerroBRIDGE authenticates nobody yet. Raw NetworkPolicyPeer entries; the schema refuses an empty peer and an empty selector inside one, which would select every pod or every namespace. There is deliberately no admit-everything key. |
+| bridge.networkPolicy.ingressFrom | list | `[]` | The peers admitted to FerroBRIDGE's port. REQUIRED: the render is refused while it is empty, because an ingress rule with no `from` admits every source, and with `config.auth.enabled` false FerroBRIDGE admits every caller. Raw NetworkPolicyPeer entries; the schema refuses an empty peer and an empty selector inside one, which would select every pod or every namespace. There is deliberately no admit-everything key. |
 | bridge.nodeSelector | object | `{}` | Node selector. |
 | bridge.podDisruptionBudget | object | `{"enabled":false,"minAvailable":1,"unhealthyPodEvictionPolicy":"AlwaysAllow"}` | Protect FerroBRIDGE during voluntary disruption. Off by default: the shipped `replicaCount` is 1, and a budget over a single pod blocks the drain it exists to survive. |
 | bridge.podSecurityContext | object | `{"fsGroup":65532,"fsGroupChangePolicy":"OnRootMismatch","runAsGroup":65532,"runAsNonRoot":true,"runAsUser":65532,"seccompProfile":{"type":"RuntimeDefault"},"supplementalGroupsPolicy":"Strict"}` | Pod-level security context. Mirrors the server's. The user-namespace setting is NOT mirrored here: it is the release-wide `hostUsers` key. |
@@ -255,7 +258,7 @@ Kubernetes: `>=1.36.0-0`
 | bridge.terminationGracePeriodSeconds | int | `20` | Termination grace period. FerroBRIDGE drains in-flight requests on SIGTERM for up to its own `server.shutdown_timeout_ms` (10 s by default). |
 | bridge.tolerations | list | `[]` | Tolerations. |
 | bridge.topologySpreadConstraints | list | `[]` | Topology spread for FerroBRIDGE's pods. Empty uses the chart's default: one replica per node, `ScheduleAnyway`, scoped to the ReplicaSet being rolled. Set it to replace that wholesale. |
-| bridge.usageReport.enabled | string | `nil` | FerroBRIDGE's usage report. Empty follows the top-level `usageReport.enabled`; true or false decides for FerroBRIDGE alone. The chart writes it into `[usage_report]` of config.toml, with the deployment `helm`, for a FerroBRIDGE release from 0.0.7 on; the pinned 0.0.5 sends no report and refuses the section, so it gets none. |
+| bridge.usageReport.enabled | string | `nil` | FerroBRIDGE's usage report. Empty follows the top-level `usageReport.enabled`; true or false decides for FerroBRIDGE alone. The chart writes it into `[usage_report]` of config.toml, with the deployment `helm`, for a FerroBRIDGE release from 0.0.7 on; a release before it sends no report and refuses the section, so it gets none. |
 | config.admin.enabled | bool | `false` |  |
 | config.audit.categories.archetypes | object | `{}` |  |
 | config.audit.categories.templates | object | `{}` |  |
@@ -328,8 +331,8 @@ Kubernetes: `>=1.36.0-0`
 | extraVolumes | list | `[]` | Extra volumes / volumeMounts (e.g. an external secret store for the PGP key). |
 | ferropix.config.server.base_path | string | `""` | FerroPIX's `[server] base_path`, read here to build the FHIR base the CDR is pointed at. |
 | ferropix.enabled | bool | `true` | Deploy FerroPIX beside the CDR and point config.ehr_index at it. |
-| ferropix.image.digest | string | `"sha256:01adb1e7cc91b46409cc315162200fb99a712a9232508d5c85a228554d22d6d3"` | FerroPIX image digest of release `tag`. Pinned here so the image this chart deploys is stated by this chart. |
-| ferropix.image.tag | string | `"0.0.12"` | The FerroPIX release the pinned `digest` belongs to. The dependency chart deploys the digest, and the Artifact Hub entry names this tag. |
+| ferropix.image.digest | string | `"sha256:389f40d144fe2ef3d79c1c1628e9a662a058961b1650c5541e601addc27112d8"` | FerroPIX image digest of release `tag`. Pinned here so the image this chart deploys is stated by this chart. |
+| ferropix.image.tag | string | `"0.0.14"` | The FerroPIX release the pinned `digest` belongs to. The dependency chart deploys the digest, and the Artifact Hub entry names this tag. |
 | ferropix.service.port | int | `8080` | FerroPIX's Service port, read here to build the FHIR base the CDR is pointed at. |
 | ferropix.usageReport.enabled | bool | `true` | FerroPIX's own usage report switch, read by the dependency chart. A dependency chart cannot read this chart's `usageReport.enabled`, so with that set to false, set this false too: the render refuses the pair `usageReport.enabled=false` and `ferropix.usageReport.enabled=true`. |
 | fullnameOverride | string | `""` | Override the full resource name. |
@@ -437,10 +440,10 @@ Kubernetes: `>=1.36.0-0`
 | terminology.enabled | bool | `false` | Deploy FerroTERM alongside the CDR. |
 | terminology.extraEnv | list | `[]` | Extra environment for FerroTERM (escape hatch). |
 | terminology.failOnError | bool | `false` | What the CDR does when the terminology server cannot answer. `false` (the server's own shipped default) accepts the binding; `true` turns an unreachable server into a 422 refusal. No released openEHR text decides between the two. |
-| terminology.image.digest | string | `"sha256:f25ddad886fd218ae1eb82af6b81b8ed16651333f5bd802e621c5ae83b0913f1"` | Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an install runs the exact image this chart was validated against. |
+| terminology.image.digest | string | `"sha256:efaa80152721c3738e0d0c0695cadbfefe89c1cf6df3567b9d3bc1788767e047"` | Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an install runs the exact image this chart was validated against. |
 | terminology.image.pullPolicy | string | `"IfNotPresent"` | Pull policy. |
 | terminology.image.repository | string | `"ghcr.io/ferrohealth/ferroterm"` | FerroTERM image repository. A separate product on its own release line (https://github.com/FerroHEALTH/FerroTERM), BUSL-1.1 from the same Licensor as FerroEHR. |
-| terminology.image.tag | string | `""` | Image tag. Empty falls back to the FerroTERM release this chart is pinned to (0.3.3) — never `.Chart.appVersion`, which is FerroEHR's line. A tag other than that pin is REFUSED while `digest` below is non-empty: the digest wins, so the tag would be inert while the values file claimed otherwise. Clear `digest` to deploy a tag. |
+| terminology.image.tag | string | `""` | Image tag. Empty falls back to the FerroTERM release this chart is pinned to (0.4.0) — never `.Chart.appVersion`, which is FerroEHR's line. A tag other than that pin is REFUSED while `digest` below is non-empty: the digest wins, so the tag would be inert while the values file claimed otherwise. Clear `digest` to deploy a tag. |
 | terminology.index.mountPath | string | `"/data/index"` | Directory the index claim is mounted at, read-only. Rendered as `FERROTERM__TERMINOLOGY__INDEX` only when a claim is named. |
 | terminology.index.persistentVolumeClaim | string | `""` | Name of an EXISTING PersistentVolumeClaim holding a built index for a release you hold a licence for. Empty means the shaped seed is served alone. The chart provisions no storage and renders no build Job: build the index off-cluster with `ferroterm-build --rf2 <release.zip> --out <dir>` and fill the claim from that output. |
 | terminology.logFormat | string | `"json"` | Log format (`json` or `pretty`), passed as `FERROTERM__TELEMETRY__FORMAT`. |

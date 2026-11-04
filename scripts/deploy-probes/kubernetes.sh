@@ -1146,9 +1146,9 @@ probes_k8s_term_index() {
 # ── FerroBRIDGE, the chart's bridge workload (#3713) ──────────────────────────
 #
 # A fourth Deployment from a fourth image, and the one whose network policy
-# carries the most weight: FerroBRIDGE authenticates no caller yet
-# (FerroHEALTH/FerroBRIDGE#400), so the NetworkPolicy is the only thing between
-# a pod in the cluster and the CDR acting under FerroBRIDGE's credential. The
+# carries the most weight: a caller FerroBRIDGE admits acts on the CDR under
+# FerroBRIDGE's credential, and with `[auth] enabled = false` it admits every
+# caller, so the NetworkPolicy decides which pod in the cluster reaches it. The
 # family measures the posture the runtime applies, admission, the credential
 # reaching the CDR, the mapping set arriving through per-key mounts, and the
 # policy refusing a pod it does not name while serving one it does.
@@ -1167,6 +1167,12 @@ bridge:
     files:
       - probe.context.yml
       - probe_blood_pressure.yml
+  # The probe's CDR has no token issuer, and FerroBRIDGE reads its issuer at
+  # boot, so the operations lane runs open and the NetworkPolicy is the barrier
+  # this family measures.
+  config:
+    auth:
+      enabled: false
   networkPolicy:
     ingressFrom:
       - podSelector:
@@ -1286,7 +1292,7 @@ probes_k8s_bridge() {
              -f "$K8S_AUTH_VALUES" --set database.existingSecret=ferroehr-db \
              --set bridge.enabled=true --set bridge.cdr.existingSecret=probe 2>&1)"
   assert_contains "$guard" "bridge.networkPolicy.ingressFrom" \
-    "FerroBRIDGE authenticates no caller, so an open ingress rule must not render"
+    "a caller FerroBRIDGE admits acts on the CDR, so an open ingress rule must not render"
   guard="$(helm template "$K8S_RELEASE" deploy/helm/ferroehr -n "$K8S_NS" \
              -f "$K8S_AUTH_VALUES" --set database.existingSecret=ferroehr-db \
              --set bridge.enabled=true \

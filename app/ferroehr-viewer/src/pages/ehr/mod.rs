@@ -28,7 +28,7 @@ use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu};
-use ferrohealth_ui::view::dialog::{ConfirmForm, Confirmation, danger_form_dialog};
+use ferrohealth_ui::view::dialog::{ConfirmForm, Confirmation, Stakes, confirm_dialog};
 use ferrohealth_ui::view::identifier::{Domain, KEEP, Masked, Reveal, Revealed};
 use ferrohealth_ui::view::subject::{Subject, SubjectLine, subject_line};
 use ferrohealth_ui::view::surface::{Crumb, Header, page_heading};
@@ -333,7 +333,7 @@ fn delete_dialog(ehr_id: &str) -> Html {
         ferrohealth_ui::icon::icon(Glyph::TRASH, "16"),
         t(tr(RecordsMsg::EhrDeleteConfirm))
     ));
-    danger_form_dialog(
+    confirm_dialog(
         &current(),
         Confirmation {
             id: DELETE_DIALOG.into(),
@@ -344,10 +344,11 @@ fn delete_dialog(ehr_id: &str) -> Html {
             .into(),
             message: tr(RecordsMsg::EhrDeleteMessage).into(),
         },
-        ConfirmForm {
+        Stakes::Danger,
+        Some(ConfirmForm {
             action: ehr_href(ehr_id),
             fields,
-        },
+        }),
         confirm,
     )
 }
@@ -551,7 +552,7 @@ fn missing(ehr_id: &str, error: &ViewerError) -> Html {
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     let back = ferrohealth_ui::view::button::link_button(
         "/ehrs".to_owned(),

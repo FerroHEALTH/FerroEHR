@@ -366,7 +366,7 @@ pub async fn page() -> Drawn {
             badge: None,
             subtitle_view: None,
         },
-        ferrohealth_ui::view::action::ActionGroup::none(),
+        ferrohealth_ui::view::action::ActionGroup::default(),
     );
     let Some(typed) = typed else {
         let body = heading.then(info_note(t(tr(OverviewMsg::FindEmpty))));

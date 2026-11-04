@@ -482,8 +482,8 @@ mod tests {
             "/favicon.svg",
             "/ferroehr-icon.svg",
             "/auth/callback",
-            "/ferrohealth-ui/0.6.0/ferrohealth-ui.css",
-            "/ferrohealth-ui/0.6.0/scripts/fui.js",
+            "/ferrohealth-ui/0.6.6/ferrohealth-ui.css",
+            "/ferrohealth-ui/0.6.6/scripts/fui.js",
             "/api/find_answer",
         ] {
             assert!(is_public_path(public), "{public} must be public");

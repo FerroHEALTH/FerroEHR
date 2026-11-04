@@ -16,7 +16,7 @@
 //! governs the viewer's pages: our own design.
 
 use ferrohealth_ui::html::Html;
-use ferrohealth_ui::table::view::{Body, Column, DataTable, Sorting, cell, data_table};
+use ferrohealth_ui::table::view::{Body, Column, DataTable, cell, data_table};
 use ferrohealth_ui::view::chart::{ChartWords, LineChart, Series, line_chart};
 use ferrohealth_ui::view::results::{Export, ResultsPane, Shown, Switch, results_pane};
 use serde::{Deserialize, Serialize};
@@ -175,12 +175,7 @@ fn table(columns: &[String], rows: &[Vec<String>]) -> Html {
         })
         .collect();
     let caption = tr(QueriesMsg::ResultsTitle);
-    data_table(DataTable {
-        caption: &caption,
-        columns: &columns,
-        sorting: Sorting::default(),
-        body: Body::Rows(rows),
-    })
+    data_table(DataTable::new(&caption, &columns, Body::Rows(rows)))
 }
 
 /// A plot, drawn.

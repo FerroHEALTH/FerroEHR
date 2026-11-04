@@ -494,8 +494,8 @@ network_policy_gate() {
   fi
 
   # ── FerroBRIDGE: narrowed by CONSTRUCTION ─────────────────────────────────
-  # FerroBRIDGE authenticates no caller yet (FerroHEALTH/FerroBRIDGE#400), so
-  # whoever reaches its port acts on the CDR with its credential. Its policy
+  # A caller FerroBRIDGE admits acts on the CDR with its credential, every
+  # caller once `bridge.config.auth.enabled` is false. Its policy
   # must carry exactly the operator's peers (an empty list is refused at render,
   # probed in the refusal registry), its egress must reach the CDR, FerroTERM and
   # DNS and nothing else by default, and no Ingress may be rendered for it.
@@ -524,7 +524,7 @@ network_policy_gate() {
       fi
     fi
     if [[ -n "$(printf '%s' "$render" | yq -r 'select(.kind == "Ingress") | .metadata.name' | sed '/^$/d')" ]]; then
-      red "  bridge: an Ingress is rendered, and FerroBRIDGE authenticates no caller yet"
+      red "  bridge: an Ingress is rendered, and a caller FerroBRIDGE admits acts on the CDR"
       fenced=1
     fi
     if [[ "$(printf '%s' "$render" | yq -r 'select(.kind == "Service" and .metadata.name == "ferroehr-bridge") | .spec.type // "ClusterIP"' | sed '/^$/d')" != "ClusterIP" ]]; then
@@ -618,7 +618,7 @@ refusal_registry_gate() {
     "_helpers.tpl|sets a key the chart already writes|${bridge}|--set-string bridge.config.terminology.base_url=http://tx.example.com/r4|bridge.config.terminology;terminology.enabled=false"
     "_helpers.tpl|sets a key the chart already writes|${bridge}|--set-string bridge.config.mappings.directory=/srv/mappings|bridge.config.mappings.directory;bridge.mappings.existingConfigMap"
     "_helpers.tpl|sets a key the chart already writes|${bridge}|--set-string bridge.config.server.listen=[::]:9090|bridge.config.server.listen"
-    "bridge.yaml|with an empty bridge.networkPolicy.ingressFrom|${bridge}|--set bridge.networkPolicy.ingressFrom=null|bridge.networkPolicy.ingressFrom;FerroBRIDGE#400"
+    "bridge.yaml|with an empty bridge.networkPolicy.ingressFrom|${bridge}|--set bridge.networkPolicy.ingressFrom=null|bridge.networkPolicy.ingressFrom;auth.enabled"
     "bridge.yaml|with an empty bridge.cdr.existingSecret|${bridge}|--set bridge.cdr.existingSecret=|bridge.cdr.existingSecret;password"
     "bridge.yaml|with an empty bridge.mappings.files|${bridge}|--set bridge.mappings.files=null|bridge.mappings.files;..data"
     "bridge.yaml|with an empty bridge.mappings.existingConfigMap|${bridge}|--set bridge.mappings.existingConfigMap=|bridge.mappings.existingConfigMap"
@@ -1124,8 +1124,13 @@ an own value off|true false false|--set terminology.usageReport.enabled=false --
 CASES
   usage_report_render "$bridge" --set usageReport.enabled=false > "$rendered"
   got="$(usage_report_facts "$rendered")"
+  [[ "$got" == "false false false" ]] \
+    || { red "  the pinned FerroBRIDGE renders '${got}', want 'false false false'"; failed=1; }
+  usage_report_render "$bridge" --set usageReport.enabled=false \
+    --set bridge.image.digest= --set bridge.image.tag=0.0.5 > "$rendered"
+  got="$(usage_report_facts "$rendered")"
   [[ "$got" == "false false none" ]] \
-    || { red "  the pinned FerroBRIDGE (no [usage_report]) renders '${got}', want 'false false none'"; failed=1; }
+    || { red "  a FerroBRIDGE before 0.0.7 (no [usage_report]) renders '${got}', want 'false false none'"; failed=1; }
   usage_report_render "${CI_DIR}/all-features-values.yaml" --set usageReport.enabled=false \
     --set ferropix.usageReport.enabled=false --show-only charts/ferropix/templates/configmap.yaml > "$rendered"
   got="$(toml_value "$(yq '.data."ferropix.toml"' "$rendered")" usage_report enabled)"

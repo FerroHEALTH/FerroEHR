@@ -16,7 +16,7 @@
 
 use std::collections::BTreeMap;
 
-use ferrohealth_ui::view::change::Change;
+use ferrohealth_ui::table::change::Change;
 
 use crate::adl2::{TemplateFamily, split_hrid, version_key};
 use crate::bff::templates::TemplateRow;

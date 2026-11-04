@@ -19,9 +19,7 @@ use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::filter::{Find, find_form};
 use ferrohealth_ui::table::model::{OpenWindow, StateSource};
 use ferrohealth_ui::table::pager::{Listing as PagerListing, PostTo, post_open_pager};
-use ferrohealth_ui::table::view::{
-    Body, Column, DataTable, Role, Sorting, cell, data_table, title_cell,
-};
+use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, cell, data_table, title_cell};
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::action_menu::{Act, Action};
 use ferrohealth_ui::view::form::Field;
@@ -81,18 +79,13 @@ fn table(rows: &[(String, String)]) -> Html {
         .iter()
         .map(|(ehr_id, created)| {
             let href = ehr_href(ehr_id);
-            let title = title_cell(Some(&href), short(ehr_id), None);
+            let title = title_cell(None, Some(&href), short(ehr_id), None);
             let created = cell(&columns[1], crate::pages::common::ago(created));
             h(format!("<tr>{title}{created}</tr>"))
         })
         .collect();
     let caption = tr(Msg::NavEhrs);
-    data_table(DataTable {
-        caption: &caption,
-        columns: &columns,
-        sorting: Sorting::default(),
-        body: Body::Rows(body),
-    })
+    data_table(DataTable::new(&caption, &columns, Body::Rows(body)))
 }
 
 /// The rows of a result page of the list's AQL.
@@ -514,7 +507,7 @@ pub async fn new_page() -> Drawn {
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     Drawn::page(
         tr(RecordsMsg::NewEhr),

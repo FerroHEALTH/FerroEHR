@@ -22,9 +22,7 @@ use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::table::model::Paging;
 use ferrohealth_ui::table::model::Window;
 use ferrohealth_ui::table::pager::{Listing as PagerListing, PostTo, post_pager};
-use ferrohealth_ui::table::view::{
-    Body, Column, DataTable, Role, Sorting, cell, data_table, title_cell,
-};
+use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, cell, data_table, title_cell};
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::chart::{ActivityChart, activity_chart};
 use ferrohealth_ui::view::form::Field;
@@ -114,7 +112,7 @@ fn listing(ehr_id: &str, page: &Listed) -> Html {
         .iter()
         .map(|row| {
             let href = contribution_href(ehr_id, &row.uid);
-            let title = title_cell(Some(&href), t(shortened(&row.uid)), None);
+            let title = title_cell(None, Some(&href), t(shortened(&row.uid)), None);
             let when_cell = cell(&columns[1], ago(&row.time_committed));
             let who_cell = cell(&columns[2], t(&row.committer));
             let change = cell(&columns[3], t(change_words(&row.change_type_rubric)));
@@ -122,12 +120,7 @@ fn listing(ehr_id: &str, page: &Listed) -> Html {
         })
         .collect();
     let caption = tr(RecordsMsg::EhrTabContributions);
-    data_table(DataTable {
-        caption: &caption,
-        columns: &columns,
-        sorting: Sorting::default(),
-        body: Body::Rows(rows),
-    })
+    data_table(DataTable::new(&caption, &columns, Body::Rows(rows)))
 }
 
 /// The words of an `audit_change_type` rubric, the rubric itself when the
@@ -337,19 +330,14 @@ fn made_table(ehr_id: &str, made: &[Made]) -> Html {
             let object = crate::uid::container_uid_of(&version.id);
             let href = (version.namespace == "local" && version.kind.contains("COMPOSITION"))
                 .then(|| crate::pages::composition::composition_href(ehr_id, &object));
-            let title = title_cell(href.as_deref(), t(shortened(&object)), None);
+            let title = title_cell(None, href.as_deref(), t(shortened(&object)), None);
             let kind = cell(&columns[1], t(&version.kind));
             let number = cell(&columns[2], t(version_number(&version.id)));
             h(format!("<tr>{title}{kind}{number}</tr>"))
         })
         .collect();
     let caption = tr(RecordsMsg::ContributionVersions);
-    data_table(DataTable {
-        caption: &caption,
-        columns: &columns,
-        sorting: Sorting::default(),
-        body: Body::Rows(rows),
-    })
+    data_table(DataTable::new(&caption, &columns, Body::Rows(rows)))
 }
 
 /// One contribution's model.
@@ -447,7 +435,7 @@ pub async fn page() -> Drawn {
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     let body = match read_contribution(ehr_id.clone(), uid).await {
         ContributionModel::Read(facts, record) => contribution_view(&ehr_id, &facts, record),
@@ -1009,7 +997,7 @@ pub async fn new_page() -> Drawn {
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     Drawn::page(
         tr(RecordsMsg::ContributionNewTitle),

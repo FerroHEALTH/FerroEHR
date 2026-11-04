@@ -18,12 +18,11 @@
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::table::view::{
-    Body, Column, DataTable, Role, Sorting, cell, data_table, title_cell,
-};
+use ferrohealth_ui::table::versions::older_version;
+use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, cell, data_table, title_cell};
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::action_menu::{Act, Action, Item, Menu};
-use ferrohealth_ui::view::dialog::{ConfirmForm, Confirmation, danger_form_dialog};
+use ferrohealth_ui::view::dialog::{ConfirmForm, Confirmation, Stakes, confirm_dialog};
 use ferrohealth_ui::view::flow::FlowState;
 use ferrohealth_ui::view::form::Field;
 use ferrohealth_ui::view::reading::{Level, Reading, reading};
@@ -32,7 +31,6 @@ use ferrohealth_ui::view::surface::{
 };
 use ferrohealth_ui::view::tabs::{Tab, binder};
 use ferrohealth_ui::view::template::list::{ListCard, list_card, list_empty};
-use ferrohealth_ui::view::versions::older_version;
 
 use crate::bff::demographics::contribution::ContributionState;
 use crate::bff::demographics::contribution::fetch_demographic_contribution;
@@ -255,12 +253,7 @@ fn index_table(rows: &[Indexed]) -> Html {
         })
         .collect();
     let caption = tr(RecordsMsg::PartiesTagIndex);
-    data_table(DataTable {
-        caption: &caption,
-        columns: &columns,
-        sorting: Sorting::default(),
-        body: Body::Rows(body),
-    })
+    data_table(DataTable::new(&caption, &columns, Body::Rows(body)))
 }
 
 /// Opens the party the form names: its page when its kind holds it, the page
@@ -584,7 +577,7 @@ fn new_party_view(model: Form<NewParty>) -> Html {
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     let kind_field = Field::new("pk", tr(Msg::ColumnKind))
         .help(tr(RecordsMsg::PartyKindHelp))
@@ -804,7 +797,7 @@ fn relationships(kind: PartyKind, uid: &str, state: &PartyState) -> Html {
                     r#"<span class="fui-row-sub"><code>{}</code></span>"#,
                     t(&relationship.archetype_node_id)
                 ));
-                let title = title_cell(href.as_deref(), t(&relationship.name), Some(sub));
+                let title = title_cell(None, href.as_deref(), t(&relationship.name), Some(sub));
                 let target = t(shortened(&relationship.target.id));
                 let target_kind = PartyKind::from_rm_type(&relationship.target.rm_type)
                     .map_or_else(|| relationship.target.rm_type.clone(), kind_words);
@@ -816,12 +809,7 @@ fn relationships(kind: PartyKind, uid: &str, state: &PartyState) -> Html {
             })
             .collect();
         let caption = tr(RecordsMsg::PartyRelationships);
-        data_table(DataTable {
-            caption: &caption,
-            columns: &columns,
-            sorting: Sorting::default(),
-            body: Body::Rows(rows),
-        })
+        data_table(DataTable::new(&caption, &columns, Body::Rows(rows)))
     };
     panel(section(
         Some(tr(RecordsMsg::PartyRelationships)),
@@ -1114,7 +1102,7 @@ fn party_missing(uid: &str, refusal: &Refused) -> (String, Html) {
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     (tr(RecordsMsg::PartyRefused), heading.then(refusal.view()))
 }
@@ -1258,7 +1246,7 @@ fn party_view(uid: &str, party: Party) -> (String, Html) {
         before_deletion.as_deref(),
     );
     let dialog = current.as_ref().map(|state| {
-        danger_form_dialog(
+        confirm_dialog(
             &crate::locale::current(),
             Confirmation {
                 id: DELETE_DIALOG.into(),
@@ -1276,13 +1264,14 @@ fn party_view(uid: &str, party: Party) -> (String, Html) {
                 )
                 .into(),
             },
-            ConfirmForm {
+            Stakes::Danger,
+            Some(ConfirmForm {
                 action: party_href(kind, uid),
                 fields: h(format!(
                     r#"<input type="hidden" name="intent" value="delete-party"><input type="hidden" name="version" value="{}">"#,
                     t(&state.version_uid)
                 )),
-            },
+            }),
             h(format!(
                 r#"<button type="submit" class="fui-button fui-button-danger">{}{}</button>"#,
                 ferrohealth_ui::icon::icon(Glyph::TRASH, "16"),
@@ -1640,7 +1629,7 @@ fn edit_party_view(uid: &str, editor: PartyEditor) -> (String, Html) {
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     let section_body = section(
         Some(tr(RecordsMsg::CompositionDocument)),
@@ -1854,7 +1843,7 @@ fn relationship_view(
         ))
         .more(more),
     );
-    let dialog = danger_form_dialog(
+    let dialog = confirm_dialog(
         &current(),
         Confirmation {
             id: DELETE_RELATIONSHIP.into(),
@@ -1865,13 +1854,14 @@ fn relationship_view(
             .into(),
             message: tr(RecordsMsg::RelationshipDeleteMessage).into(),
         },
-        ConfirmForm {
+        Stakes::Danger,
+        Some(ConfirmForm {
             action: relationship_href(uid),
             fields: h(format!(
                 r#"<input type="hidden" name="intent" value="delete-relationship"><input type="hidden" name="version" value="{}">"#,
                 t(&state.version_uid)
             )),
-        },
+        }),
         h(format!(
             r#"<button type="submit" class="fui-button fui-button-danger">{}{}</button>"#,
             ferrohealth_ui::icon::icon(Glyph::TRASH, "16"),
@@ -2103,7 +2093,7 @@ fn new_relationship_view(model: Form<NewRelationship>) -> Html {
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     let from = definitions(vec![(
         tr(RecordsMsg::RelationshipSource),
@@ -2306,7 +2296,7 @@ fn edit_relationship_view(uid: &str, editor: RelationshipEditor) -> (String, Htm
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     let kind_field = Field::new("re-ty", tr(RecordsMsg::RelationshipType)).view(h(format!(
         r#"<input id="re-ty" name="type" type="text" class="fui-input fui-mono" required value="{}">"#,
@@ -2404,7 +2394,7 @@ fn party_contribution_view(state: &ContributionState) -> Html {
                 .or_else(|| {
                     (version.rm_type == "PARTY_RELATIONSHIP").then(|| relationship_href(&object))
                 });
-            let title = title_cell(href.as_deref(), t(shortened(&object)), None);
+            let title = title_cell(None, href.as_deref(), t(shortened(&object)), None);
             h(format!(
                 "<tr>{title}{}{}</tr>",
                 cell(&columns[1], t(&version.rm_type)),
@@ -2413,12 +2403,7 @@ fn party_contribution_view(state: &ContributionState) -> Html {
         })
         .collect();
     let caption = tr(RecordsMsg::ContributionVersions);
-    let table = data_table(DataTable {
-        caption: &caption,
-        columns: &columns,
-        sorting: Sorting::default(),
-        body: Body::Rows(made),
-    });
+    let table = data_table(DataTable::new(&caption, &columns, Body::Rows(made)));
     card_panel(Html::join([
         section(
             Some(tr(RecordsMsg::ContributionAudit)),
@@ -2459,7 +2444,7 @@ pub async fn party_contribution_page() -> Drawn {
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     let body = match read_party_contribution(uid).await {
         Ok(state) => party_contribution_view(&state),

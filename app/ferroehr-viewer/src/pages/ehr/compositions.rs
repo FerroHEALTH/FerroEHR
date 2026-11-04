@@ -15,9 +15,7 @@ use ferrohealth_ui::html::Html;
 use ferrohealth_ui::table::filter::{Find, find_form};
 use ferrohealth_ui::table::model::{OpenWindow, StateSource};
 use ferrohealth_ui::table::pager::{Listing as PagerListing, PostTo, post_open_pager};
-use ferrohealth_ui::table::view::{
-    Body, Column, DataTable, Role, Sorting, cell, data_table, title_cell,
-};
+use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, cell, data_table, title_cell};
 use ferrohealth_ui::view::template::list::{ActiveFilters, FilterChip, active_filters, list_empty};
 
 use crate::bff::ehrs::cell_text;
@@ -248,7 +246,7 @@ fn panel(ehr_id: &str, panel: Panel) -> Html {
                 r#"<span class="fui-row-sub">{}</span>"#,
                 t(&row.template)
             ));
-            let title = title_cell(Some(&href), t(&row.name), Some(sub));
+            let title = title_cell(None, Some(&href), t(&row.name), Some(sub));
             let start = cell(&columns[1], ago(&row.start));
             let composer = cell(&columns[2], t(&row.composer));
             let version = cell(&columns[3], t(version));
@@ -264,12 +262,7 @@ fn panel(ehr_id: &str, panel: Panel) -> Html {
         list_empty(sentence, None)
     } else {
         let caption = tr(RecordsMsg::EhrTabCompositions);
-        data_table(DataTable {
-            caption: &caption,
-            columns: &columns,
-            sorting: Sorting::default(),
-            body: Body::Rows(body),
-        })
+        data_table(DataTable::new(&caption, &columns, Body::Rows(body)))
     };
     let pager = (window.page > 1 || window.has_next()).then(|| {
         let pager = post_open_pager(

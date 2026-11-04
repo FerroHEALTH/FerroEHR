@@ -16,9 +16,7 @@
 
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
-use ferrohealth_ui::table::view::{
-    Body, Column, DataTable, Role, Sorting, cell, data_table, title_cell,
-};
+use ferrohealth_ui::table::view::{Body, Column, DataTable, Role, cell, data_table, title_cell};
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::coding::{Coding, Layout, coding};
 use ferrohealth_ui::view::form::Field;
@@ -118,7 +116,7 @@ fn heading() -> Html {
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     )
 }
 
@@ -316,19 +314,14 @@ pub async fn terminologies_page() -> Drawn {
                     ));
                     h(format!(
                         "<tr>{}{}{}</tr>",
-                        title_cell(Some(&row.href), t(&row.name), Some(sub)),
+                        title_cell(None, Some(&row.href), t(&row.name), Some(sub)),
                         cell(&columns[1], t(&row.publisher)),
                         cell(&columns[2], t(&row.version))
                     ))
                 })
                 .collect();
             let caption = tr(DefinitionsMsg::TermTerminologies);
-            let table = data_table(DataTable {
-                caption: &caption,
-                columns: &columns,
-                sorting: Sorting::default(),
-                body: Body::Rows(rows),
-            });
+            let table = data_table(DataTable::new(&caption, &columns, Body::Rows(rows)));
             panel(section(
                 Some(tr(DefinitionsMsg::TermServed)),
                 u64::try_from(ids.len()).ok(),
@@ -378,7 +371,7 @@ pub async fn terminology_page() -> Drawn {
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     let body = match descriptor {
         Ok(Some(descriptor)) => {

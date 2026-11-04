@@ -335,13 +335,13 @@ pub fn at_time_row(
     action: String,
     value: &str,
     opens: String,
-) -> ferrohealth_ui::view::versions::AtTime {
-    ferrohealth_ui::view::versions::AtTime {
+) -> ferrohealth_ui::table::versions::AtTime {
+    ferrohealth_ui::table::versions::AtTime {
         action,
         field: date_field(
             "at",
             "at",
-            ferrohealth_ui::view::versions::at_time_label(&current())
+            ferrohealth_ui::table::versions::at_time_label(&current())
                 .text()
                 .to_owned(),
             value,
@@ -732,7 +732,7 @@ mod tests {
     fn a_time_in_a_list_reads_relative_to_the_page_instant_and_an_unknown_value_as_it_stands() {
         let now = clock("2026-10-21T09:42:11Z".parse().expect("an instant"));
         assert_eq!("2026-10-21T09:42:11Z", now);
-        let locale = ferrohealth_ui::i18n::Locale::english();
+        let locale = ferrohealth_ui::i18n::Locale::default();
         assert_eq!(
             "13 s ago",
             relative_reading(&locale, "2026-10-21T09:41:58Z", &now)

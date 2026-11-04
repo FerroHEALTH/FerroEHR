@@ -1508,7 +1508,7 @@
       "additionalProperties": true
     },
     "bridge": {
-      "description": "FerroBRIDGE, the FHIR and openEHR bridge, deployed as its own workload against this release's CDR. Off by default. Cluster-internal while FerroBRIDGE has no inbound authentication (FerroHEALTH/FerroBRIDGE#400): there is no Ingress key and no Service type key, and enabling it without a networkPolicy.ingressFrom peer or a cdr.existingSecret is refused at render.",
+      "description": "FerroBRIDGE, the FHIR and openEHR bridge, deployed as its own workload against this release's CDR. Off by default. Cluster-internal, because a caller FerroBRIDGE's [auth] admits acts on the CDR with its credential: there is no Ingress key and no Service type key, and enabling it without a networkPolicy.ingressFrom peer or a cdr.existingSecret is refused at render.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -1556,7 +1556,7 @@
           }
         },
         "service": {
-          "description": "Always ClusterIP: FerroBRIDGE authenticates no caller yet, so no key publishes it.",
+          "description": "Always ClusterIP: a caller FerroBRIDGE admits acts on the CDR with its credential, so no key publishes it.",
           "type": "object",
           "additionalProperties": false,
           "properties": {

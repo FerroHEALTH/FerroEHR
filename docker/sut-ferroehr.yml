@@ -187,9 +187,9 @@ services:
   # terminology content is distributed with this repo.
   terminology:
     profiles: [terminology]
-    # Digest-pinned FerroTERM 0.3.3, the release docker-compose.terminology.yml
+    # Digest-pinned FerroTERM 0.4.0, the release docker-compose.terminology.yml
     # and the Helm chart pin; no `:latest`.
-    image: ghcr.io/ferrohealth/ferroterm:0.3.3@sha256:f25ddad886fd218ae1eb82af6b81b8ed16651333f5bd802e621c5ae83b0913f1
+    image: ghcr.io/ferrohealth/ferroterm:0.4.0@sha256:efaa80152721c3738e0d0c0695cadbfefe89c1cf6df3567b9d3bc1788767e047
     environment:
       FERROTERM__TERMINOLOGY__CODE_SYSTEMS: /seed
       FERROTERM__TELEMETRY__FORMAT: json

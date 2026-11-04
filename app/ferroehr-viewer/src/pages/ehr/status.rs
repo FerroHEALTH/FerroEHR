@@ -18,11 +18,11 @@
 use ferrohealth_ui::highlight::Language;
 use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
+use ferrohealth_ui::table::versions::older_version;
 use ferrohealth_ui::view::action::ActionGroup;
 use ferrohealth_ui::view::form::keyed_check_field;
 use ferrohealth_ui::view::identifier::{Domain, KEEP, Masked};
 use ferrohealth_ui::view::surface::{Crumb, Header, Mode, definitions, editor_heading};
-use ferrohealth_ui::view::versions::older_version;
 
 use crate::bff::ehr_detail::status::{
     EhrStatusState, fetch_ehr_status, fetch_ehr_status_version, fetch_status_revision_history,
@@ -527,7 +527,7 @@ pub async fn edit_page() -> Drawn {
             badge: None,
             subtitle_view: None,
         },
-        ActionGroup::none(),
+        ActionGroup::default(),
     );
     Drawn::page(
         tr(RecordsMsg::StatusEditTitle),

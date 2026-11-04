@@ -8,7 +8,7 @@
 //! openEHR spec governs the viewer's pages: our own design.
 
 use ferrohealth_ui::html::Html;
-use ferrohealth_ui::view::versions::{Standing, Version, VersionHistory, version_history};
+use ferrohealth_ui::table::versions::{Standing, Version, VersionHistory, version_history};
 
 use ferrohealth_ui::view::surface::definitions;
 

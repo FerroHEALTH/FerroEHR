@@ -17,7 +17,7 @@ use ferrohealth_ui::html::Html;
 use ferrohealth_ui::icon::Glyph;
 use ferrohealth_ui::tone::Tone;
 use ferrohealth_ui::view::action::ActionGroup;
-use ferrohealth_ui::view::dialog::{Explanation, info_dialog};
+use ferrohealth_ui::view::dialog::{Explanation, Width, info_dialog};
 use ferrohealth_ui::view::secret::{SecretState, secret_state};
 use ferrohealth_ui::view::status::badge;
 use ferrohealth_ui::view::surface::Header;
@@ -55,6 +55,7 @@ fn how_dialog() -> Html {
             change = t(tr(ConsoleMsg::ConfigHowChange)),
             nothing = t(tr(ConsoleMsg::ConfigHowNothing)),
         )),
+        Width::Wide,
     )
 }
 
@@ -201,7 +202,9 @@ fn value_view(value: &Leaf) -> Html {
     match value {
         Leaf::Flag(true) => badge(Tone::Ok, tr(ConsoleMsg::ConfigOn)),
         Leaf::Flag(false) => badge(Tone::Neutral, tr(ConsoleMsg::ConfigOff)),
-        Leaf::Text(text) if is_redacted(text) => secret_state(&current(), &SecretState::Redacted),
+        Leaf::Text(text) if is_redacted(text) => {
+            secret_state(&current(), &SecretState::Redacted, None)
+        }
         Leaf::Text(text) if text.is_empty() => none(),
         Leaf::Text(text) => h(format!("<code>{}</code>", t(text))),
         Leaf::Number(number) => t(number),
@@ -269,7 +272,7 @@ impl OwnSecret {
             Self::Inline => SecretState::Redacted,
             Self::Unset => SecretState::Unset,
         };
-        secret_state(&current(), &state)
+        secret_state(&current(), &state, None)
     }
 }
 
@@ -483,7 +486,7 @@ pub async fn page() -> Drawn {
                     badge: None,
                     subtitle_view: None,
                 },
-                actions: ActionGroup::none(),
+                actions: ActionGroup::default(),
                 source: Source::File {
                     file: if viewer {
                         "ferroehr-viewer.toml".to_owned()

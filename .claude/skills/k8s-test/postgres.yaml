@@ -46,7 +46,7 @@ spec:
       containers:
         - name: postgres
           # The published 5.4.1 image, by digest: a tag can move under a run.
-          image: ghcr.io/ferrohealth/ferroehr-postgres:5.4.1@sha256:eb3a720d6245f5472fe5f70ab66ed9662fe6addfa9c543f470ebc689f2eb2cfe
+          image: ghcr.io/ferrohealth/ferroehr-postgres:5.5.0@sha256:dfe1d5c1bb95d31d3f6ff00fec03cd76ae20d57d20e6225b31e5bc68adf7fa81
           env:
             - name: POSTGRES_PASSWORD
               valueFrom:

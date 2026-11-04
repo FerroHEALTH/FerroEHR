@@ -44,7 +44,12 @@ bridge:
     files:
       - blood_pressure.context.yml
       - blood_pressure.yml
+  # A mapping set turns the FHIRconnect operations on, which FerroBRIDGE starts
+  # only with `[auth]` naming an issuer and an audience.
   config:
+    auth:
+      issuer: https://idp.example.org
+      audience: [https://bridge.example.org/fhir]
     operations:
       composition_language: en
       composition_territory: NL
