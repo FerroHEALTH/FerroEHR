@@ -240,3 +240,47 @@ fn extra_languages_are_recorded_in_conversion_details() {
         "the OPT's sl term definitions reach a converted root"
     );
 }
+
+/// No root converted from the Better template raises VATID or VATCV: each
+/// slot that replaced an embedded root is defined in every language of its
+/// parent's terminology, and a term keyed by no local code (the `°C` and `°F`
+/// unit labels) is dropped with a `conversion_details` entry.
+#[test]
+fn converted_roots_define_their_slots_and_carry_only_local_codes() {
+    let path = format!("{}/{DEMO_VITALS}", env!("CARGO_MANIFEST_DIR"));
+    let xml = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path}: {e}"));
+    let opt = opt14::from_xml(&xml).unwrap_or_else(|e| panic!("parse OPT {path}: {e:?}"));
+    let conversion = convert_opt_to_adl2(&opt).expect("convert Demo Vitals");
+    for root in &conversion.roots {
+        let errors: Vec<_> = openehr_adl::validate::validate_source(
+            &root.adl2,
+            None,
+            &openehr_adl::validate::rm::ProductionRmModel,
+            &openehr_adl::validate::bindings::NoTerminologyResolver,
+        )
+        .unwrap_or_else(|e| panic!("{}: validate: {e:?}", root.archetype_id))
+        .into_iter()
+        .filter(|issue| {
+            matches!(
+                issue.code,
+                openehr_adl::validate::catalogue::ValidationCode::Vatid
+                    | openehr_adl::validate::catalogue::ValidationCode::Vatcv
+            )
+        })
+        .collect();
+        assert!(errors.is_empty(), "{}: {errors:?}", root.archetype_id);
+    }
+    let temperature = conversion
+        .roots
+        .iter()
+        .find(|root| root.archetype_id == "openEHR-EHR-OBSERVATION.body_temperature-zn.v1")
+        .expect("the temperature root converts");
+    assert!(
+        temperature
+            .conversion_details
+            .keys()
+            .any(|key| key == "dropped_term.en.°C"),
+        "the unit label is reported: {:?}",
+        temperature.conversion_details
+    );
+}

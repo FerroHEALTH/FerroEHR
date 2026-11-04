@@ -293,6 +293,9 @@ struct RootCx {
     extra_terms: Vec<ArchetypeTerm>,
     /// `(terminology-key, code, uri)` term-binding entries.
     extra_bindings: Vec<(String, String, String)>,
+    /// The terms of each slot that replaced an embedded root: the slot's
+    /// at-code and the embedded root's concept term per language.
+    slot_terms: Vec<(String, BTreeMap<String, ArchetypeTerm>)>,
     notes: BTreeMap<String, String>,
 }
 
