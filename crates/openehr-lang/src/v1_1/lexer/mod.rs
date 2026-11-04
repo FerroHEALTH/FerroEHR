@@ -55,7 +55,7 @@
 //!   and `ElLexer.g4`'s own case-sensitive spelling wherever it does.
 
 mod reclassify;
-mod token;
+pub(crate) mod token;
 
 use logos::Logos;
 
