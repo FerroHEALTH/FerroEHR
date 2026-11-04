@@ -86,6 +86,16 @@ pub fn raw_id_concept(raw: &str) -> &str {
     before_version.rsplit_once('.').map_or(core, |(_, c)| c)
 }
 
+/// The specialisation depth a raw archetype id states: the number of `-`
+/// specialisations in its `domain_concept` (`CLUSTER.exam-foot` is depth 1).
+///
+/// Grammar: `domain_concept = concept_name, { '-', specialisation }` (BASE
+/// `base_types` `master05-identification_package.adoc` §Syntaxes).
+#[must_use]
+pub fn raw_id_specialisation_depth(raw: &str) -> usize {
+    raw_id_concept(raw).matches('-').count()
+}
+
 /// The numeric release-version segment of a raw archetype id
 /// (`…concept.v1.2.3-rc.4` → `1.2.3`); empty when the id carries no `.v<digit>`
 /// marker.

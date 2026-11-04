@@ -63,5 +63,7 @@ pub mod lower;
 mod metadata;
 mod multiplicity;
 pub mod opt;
+pub(crate) mod quantity_property;
+pub mod specialised_codes;
 pub(crate) mod term_constraint;
 mod walk;

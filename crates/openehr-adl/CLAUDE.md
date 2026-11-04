@@ -71,12 +71,16 @@ else; each helper has exactly ONE home.
 |---|---|
 | `adl14/lower` | the 1.4-only cADL productions (qualified/listed term constraints, inline dADL domain blocks) |
 | `adl14/domain` | the inline dADL domain-block lowering to `DV_QUANTITY`/`DV_ORDINAL`/… |
+| `adl14/term_constraint` | the 1.4 terminology-constraint rewrite shared by the converter and `create_opt` (single code → at-code, list → minted value set, external → bound at-code, no codes → one open ac-code per terminology) |
+| `adl14/code_shift` | the 1.4 → 2 code numbering (`shift_code`) and the ac allocation floor |
+| `adl14/quantity_property` | the ONE owner of the AOM 1.4 `DV_QUANTITY.property` pseudo-attribute: the converter drop and the ADL 2 `VCARM` advice read it |
+| `adl14/specialised_codes` | `check_introduced_codes`: the AOM 1.4 rule that a specialisation's new term codes carry its depth in dots, judged against the 1.4 parent |
 | `adl14/convert` | the 1.4→2 conversion core: code planning, node-id renumbering, terminology rebuild |
 | `adl14/term_constraint` | the ONE 1.4 terminology-constraint rewrite (external code → bound at-code, code list → ac value set), behind the `CodeSpace` seam: the converter shifts codes into the ADL2 numbering, `opt::create_opt` keeps an unconverted constituent's 1.4 codes as authored |
 | `adl14/walk` | the read-only definition traversals the code planning consumes + the shared `cco_data_mut` |
 | `adl14/multiplicity` | the 1.4 default-occurrences materialisation + RM-default cardinality/occurrences elision |
 | `adl14/metadata` | the description / standardised meta-data / HRID-version transform |
-| `adl14/differ` | the differential-form reducer |
+| `adl14/differ` | the differential-form reducer: strips complex objects, slots and proxies the flat parent holds unchanged, and keeps only own-level terms (VTSD) |
 | `adl14/log` | the `ConversionLog` (code remaps, value sets, notes) |
 | `adl14/opt` | the OPT 1.4 → ADL 2 front end over the `openehr_its::opt14` model: `convert_opt_to_adl2` decomposes a flattened 1.4 OPT into one source archetype per embedded `C_ARCHETYPE_ROOT` (`decompose`; embedded children become slots, the fills recorded as `FillEdge`s), maps its constraints (`primitive`, `slot`, `tuple`, `value`) and runs each through `adl14/convert`, returning each root's ADL 2 text, `ConversionLog` and `conversion_details` |
 

@@ -24,6 +24,10 @@ use openehr_am::v2_4::aom2::archetype::authored_archetype::{
 use openehr_am::v2_4::aom2::constraint_model::c_attribute::CAttribute;
 use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
+use openehr_am::v2_4::aom2::definitions::adl_code_definitions::AdlCodeDefinitionsData;
+
+use crate::codes::specialisation_depth;
+use crate::hrid::raw_id_specialisation_depth;
 
 /// The flat-parent definition, if `parent` is an authored archetype.
 fn flat_definition(parent: &Archetype) -> Option<&CComplexObject> {
@@ -113,20 +117,47 @@ fn attr_is_empty_inherited(attr: &CAttribute) -> bool {
         && attr.differential_path.is_none()
 }
 
+/// Whether `child` is an object node (complex object, archetype slot or
+/// proxy) that the flat parent holds unchanged under the same node id.
 fn is_inherited_unchanged(child: &CObject, parent_def: &CComplexObject) -> bool {
-    let CObject::CComplexObject(cco) = child else {
-        return false;
+    let nid = match child {
+        CObject::CComplexObject(cco) => node_id_of_cco(cco),
+        CObject::ArchetypeSlot(slot) => &slot.node_id,
+        CObject::CComplexObjectProxy(proxy) => &proxy.node_id,
+        _ => return false,
     };
-    let nid = node_id_of_cco(cco);
     // A `.N`-suffixed (redefined) or synthesised-new node is never
     // inherited-unchanged.
     if nid.contains('.') {
         return false;
     }
-    let Some(pmatch) = find_by_node_id(parent_def, nid) else {
-        return false;
+    match child {
+        CObject::CComplexObject(cco) => {
+            find_by_node_id(parent_def, nid).is_some_and(|pmatch| structurally_equal(cco, pmatch))
+        }
+        _ => find_object_by_node_id(parent_def, nid).is_some_and(|pmatch| pmatch == child),
+    }
+}
+
+/// Depth-first search for a slot or proxy with `node_id` anywhere under `def`.
+fn find_object_by_node_id<'a>(def: &'a CComplexObject, node_id: &str) -> Option<&'a CObject> {
+    let CComplexObject::CComplexObject(d) = def else {
+        return None;
     };
-    structurally_equal(cco, pmatch)
+    for attr in d.attributes.iter().flatten() {
+        for child in attr.children.iter().flatten() {
+            let found = match child {
+                CObject::ArchetypeSlot(slot) if slot.node_id == node_id => Some(child),
+                CObject::CComplexObjectProxy(proxy) if proxy.node_id == node_id => Some(child),
+                CObject::CComplexObject(cco) => find_object_by_node_id(cco, node_id),
+                _ => None,
+            };
+            if found.is_some() {
+                return found;
+            }
+        }
+    }
+    None
 }
 
 fn node_id_of_cco(cco: &CComplexObject) -> &str {
@@ -183,8 +214,18 @@ fn prune_terminology(data: &mut AuthoredArchetypeData) {
             }
         }
     }
+    // VTSD (`AOM2/master07-terminology_package.adoc` §Validity Rules): a
+    // differential archetype defines only codes of its own level; an inherited
+    // id- or at-code keeps its definition in the parent.
+    let depth = raw_id_specialisation_depth(&data.archetype_id.physical_id());
+    let concept = data.terminology.concept_code.clone();
+    let own_level = |code: &str| {
+        code == concept
+            || AdlCodeDefinitionsData::is_value_set_code(code)
+            || specialisation_depth(code) == Some(depth)
+    };
     for terms in data.terminology.term_definitions.values_mut() {
-        terms.retain(|code, _| referenced.contains(code));
+        terms.retain(|code, _| referenced.contains(code) && own_level(code));
     }
     if let Some(bindings) = data.terminology.term_bindings.as_mut() {
         for m in bindings.values_mut() {
