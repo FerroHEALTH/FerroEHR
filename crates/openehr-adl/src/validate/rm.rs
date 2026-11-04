@@ -41,6 +41,7 @@ use openehr_rm::v1_2::model;
 
 use super::catalogue::ValidationCode;
 use super::{ValidationIssue, push_issue};
+use crate::adl14::quantity_property::{ADL2_REFUSAL_ADVICE, is_quantity_property};
 use crate::aom::access::{
     child_occurrences, complex_attributes, complex_rm_type, object_node_id, object_rm_type,
 };
@@ -497,15 +498,14 @@ impl RmScan<'_> {
                     // type is itself known; an unknown enclosing type is already
                     // VCORM/VCORMT at the level above.
                     if !rm_type.is_empty() && self.rm.type_exists(rm_type) {
-                        push_issue(
-                            &mut self.issues,
-                            ValidationCode::Vcarm,
-                            format!(
-                                "attribute {:?} is not defined on reference-model type {rm_type:?}",
-                                attr.rm_attribute_name
-                            ),
-                            &attr_path,
+                        let name = &attr.rm_attribute_name;
+                        let mut message = format!(
+                            "attribute {name:?} is not defined on reference-model type {rm_type:?}"
                         );
+                        if is_quantity_property(rm_type, name) {
+                            message = format!("{message}: {ADL2_REFUSAL_ADVICE}");
+                        }
+                        push_issue(&mut self.issues, ValidationCode::Vcarm, message, &attr_path);
                     }
                     // The declared type is unknown, so no VCORMT/VCAEX/etc for
                     // this attribute; still descend for VCORM on the subtree.

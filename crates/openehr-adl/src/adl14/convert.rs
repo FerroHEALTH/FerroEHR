@@ -41,9 +41,11 @@ use crate::adl14::log::ConversionLog;
 use crate::adl14::metadata::{set_release_version, transform_description};
 use crate::adl14::multiplicity::{elide_multiplicity, materialise_adl14_occurrences};
 use crate::adl14::term_constraint::{CodeSpace, TermMinter, rewrite_definition};
-use crate::adl14::walk::{cco_data_mut, collect_local_value_codes, collect_node_codes};
+use crate::adl14::walk::{
+    cco_data_mut, collect_local_value_codes, collect_node_codes, collect_slot_codes,
+};
 use crate::aom::access::{common_mut, tuple_primitive_node_ids_mut};
-use crate::codes::NodeCoding;
+use crate::codes::{NodeCoding, is_new_at_level, specialisation_parent_from_code};
 use crate::error::SyntaxError;
 
 /// Configuration for a 1.4→2 conversion (all spec-silent — our own design).
@@ -101,6 +103,21 @@ pub enum ConvertError {
     /// not yet converted here).
     #[error("1.4→2 conversion supports authored archetypes only: {0}")]
     Unsupported(String),
+    /// A specialised 1.4 source introduces term codes that do not carry its
+    /// specialisation depth (AOM 1.4 `master07-ontology_package.adoc`
+    /// §Specialisation Depth), found by
+    /// [`crate::adl14::specialised_codes::check_introduced_codes`].
+    #[error(
+        "the specialisation at depth {depth} introduces term codes its parent does not define \
+         without {depth} '.' marker(s), which AOM 1.4 requires: {}",
+        codes.join(", ")
+    )]
+    UndottedNewCodes {
+        /// The child's specialisation depth.
+        depth: usize,
+        /// The offending codes, in code order.
+        codes: Vec<String>,
+    },
 }
 
 /// Parse a 1.4 `.adl` source and convert it to an ADL2 [`Archetype`].
@@ -203,7 +220,11 @@ impl<'a> Converter<'a> {
 
     fn run(&mut self, mut data: AuthoredArchetypeData) -> AuthoredArchetypeData {
         // 1. Build the node-id map + synthesis counters from the definition.
-        crate::adl14::walk::drop_quantity_properties(&mut data.definition, "", self.minter.log);
+        crate::adl14::quantity_property::drop_quantity_properties(
+            &mut data.definition,
+            "",
+            self.minter.log,
+        );
         self.plan_codes(&data);
         // 2. Renumber node ids in document order: existing mapped, empty minted.
         self.renumber_nodes(&mut data.definition);
@@ -227,6 +248,7 @@ impl<'a> Converter<'a> {
 
     fn plan_codes(&mut self, data: &AuthoredArchetypeData) {
         let (max_id, deferred_nodes) = self.plan_node_codes(data);
+        self.plan_redefined_slots(data);
         let (max_at, deferred_values) = self.plan_value_codes(data);
         self.next_id = max_id + 1;
         self.minter.allocate_above(
@@ -282,6 +304,38 @@ impl<'a> Converter<'a> {
             self.node_map.insert(code.to_owned(), new);
         });
         (max_id, deferred)
+    }
+
+    /// Gives a 1.4 slot that redefines a parent slot (`at0004.1`) the node id
+    /// of the slot it redefines (`id5`): AOM 2 VDSSID, "a slot node in a
+    /// specialised archetype that redefines a slot node in the flat parent must
+    /// have an identical node id" (`AOM2/master04.5-constraint_model-class_definitions.adoc`).
+    ///
+    /// A new slot (`at0.5`) keeps its own code, and the standalone collapse
+    /// has no parent to keep an id of.
+    fn plan_redefined_slots(&mut self, data: &AuthoredArchetypeData) {
+        if self.cfg.collapse_specialised_codes {
+            return;
+        }
+        let mut redefined = Vec::new();
+        collect_slot_codes(&data.definition, &mut |code| {
+            if code.contains('.') && !is_new_at_level(code) {
+                redefined.push(code.to_owned());
+            }
+        });
+        for code in redefined {
+            let mut parent = specialisation_parent_from_code(&code);
+            // `at0004.0.1` redefines the top parent's `at0004` past a `.0` filler.
+            while let Some(p) = parent.as_deref().filter(|p| p.ends_with(".0")) {
+                parent = specialisation_parent_from_code(p);
+            }
+            let Some(parent) = parent else { continue };
+            let id = shift_code(&parent, "id");
+            self.minter.log.note(format!(
+                "specialised slot {code} takes the node id {id} of the slot it redefines (VDSSID)"
+            ));
+            self.node_map.insert(code, id);
+        }
     }
 
     /// Records the value at-codes referenced in constraints (local single or

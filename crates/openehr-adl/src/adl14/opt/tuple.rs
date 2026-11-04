@@ -152,7 +152,7 @@ pub(super) fn ordinal_tuple(c: &opt14::types::CDvOrdinal, cx: &mut RootCx) -> CO
 }
 
 /// `C_DV_QUANTITY` → a `property` terminology-code attribute, which the
-/// converter drops and reports (`crate::adl14::walk::drop_quantity_properties`),
+/// converter drops and reports (`crate::adl14::quantity_property::drop_quantity_properties`),
 /// plus the `[units, magnitude(, precision)]` attribute tuple (`master04.4`
 /// §Tuple Constraints). The precision member is included only when some item
 /// constrains it (uniform tuple arity; rows without one carry an

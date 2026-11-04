@@ -124,6 +124,13 @@ declares for the upload besides the 409 duplicate:
 - **A source that parses but fails validation** lists the AOM2 validity
   (`V`-prefixed) rule codes in its `errors`: `VARD`, `VCORM`, `VCARM`, `VACSD`
   and friends.
+- **A constraint on `property` under `DV_QUANTITY`** fails `VCARM`: no RM
+  release defines that attribute, and AOM 2 has no `C_DV_QUANTITY`. It is the
+  ADL 1.4 archetype-profile attribute `C_DV_QUANTITY.property`, which some
+  1.4 to 2 converters copy into ADL 2. The error names the path and points you
+  to the archetype's ADL 1.4 source: upload that as an
+  [archetype source](#archetype-sources-a-ferroehr-extension), and its
+  conversion to ADL 2 drops the property.
 - **A description without an author or a lifecycle state** fails validation
   under the default `development` profile, and the `errors` name
   `RESOURCE_DESCRIPTION.Original_author_valid` or
@@ -309,8 +316,11 @@ The answer is `application/json`:
 
 An id nothing is stored under answers **404**. A stored source that no
 longer converts answers **422**, the status an archetype upload answers
-for a source it cannot accept. The routes only read, so the read-only role
-may call them.
+for a source it cannot accept. A specialised archetype whose stored parent
+lacks a term code the archetype introduces without its specialisation dots
+(`at0006` where depth 1 needs `at0.1`) also answers **422**: AOM 1.4 requires
+the dots on every code a specialisation adds. The routes only read, so the
+read-only role may call them.
 
 **No openEHR specification defines a conversion.** The ADL 2 specification
 says ADL 1.4 archetypes must be convertible, but no released text sets the

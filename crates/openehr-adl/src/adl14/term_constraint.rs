@@ -147,6 +147,10 @@ impl<'a> TermMinter<'a> {
             .map(str::trim)
             .filter(|s| !s.is_empty())
             .collect();
+        if source_codes.is_empty() {
+            let assumed = assumed_raw.map(str::to_owned);
+            return (self.open_value_set_ac(terminology), assumed);
+        }
         let is_local = terminology == "local";
         let mut at_code = |minter: &mut Self, code: &str| {
             if is_local {
@@ -186,6 +190,33 @@ impl<'a> TermMinter<'a> {
             description,
             binding: None,
             value_set_members: Some(at_codes.to_vec()),
+        });
+        ac
+    }
+
+    /// The minted ac-code for a constraint that names `terminology` and no
+    /// codes (`[openEHR::]`): one per terminology, with no value set and no
+    /// binding, since no URI names a whole terminology as a value set
+    /// (`ADL2/master07.13-adl_terminology.adoc` §`Value_sets` Sub-section).
+    fn open_value_set_ac(&mut self, terminology: &str) -> String {
+        let key = format!("{terminology}::");
+        if let Some(existing) = self.log.value_set(&key) {
+            return existing.to_owned();
+        }
+        let ac = self.alloc_ac();
+        self.log.record_value_set(&key, &ac);
+        self.log.note(format!(
+            "terminology constraint [{key}] names no codes: converted to {ac}, \
+             an open value set with no members and no binding"
+        ));
+        self.minted.push(Minted {
+            code: ac.clone(),
+            text: format!("Any {terminology} code"),
+            description: format!(
+                "Any code of the {terminology} terminology (the ADL 1.4 constraint named no codes)"
+            ),
+            binding: None,
+            value_set_members: None,
         });
         ac
     }
