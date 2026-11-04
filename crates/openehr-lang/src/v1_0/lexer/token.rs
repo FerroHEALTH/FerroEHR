@@ -21,8 +21,8 @@
 
 use logos::Logos;
 
-use crate::v1_1::lexer::scan;
-use crate::v1_1::lexer::scan::{
+use crate::v1_1::lexer::token::scan;
+use crate::v1_1::lexer::token::scan::{
     contained_regexp_rest, embedded_uri_rest, opening_or, plug_in_rest,
 };
 

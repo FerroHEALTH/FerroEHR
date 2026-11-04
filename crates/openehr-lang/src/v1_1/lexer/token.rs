@@ -20,8 +20,9 @@
 
 use logos::Logos;
 
-use super::scan;
-use super::scan::{contained_regexp_rest, embedded_uri_rest, opening_or, plug_in_rest};
+pub(crate) mod scan;
+
+use scan::{contained_regexp_rest, embedded_uri_rest, opening_or, plug_in_rest};
 
 /// A token of the shared openEHR lexical superset.
 ///
