@@ -226,7 +226,7 @@ ferrohealth-smart = { version = "=0.8.8", default-features = false, features = [
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
 # memory and sealed stores, and the sign-in routes (`axum`), over
 # ferrohealth-smart's relying party. Verified on crates.io 2026-11-03 (0.2.0).
-ferrohealth-session = { version = "=0.2.2", default-features = false }
+ferrohealth-session = { version = "=0.2.3", default-features = false }
 # The policy decision of the FerroHEALTH family (FerroAUTH, the same
 # Licensor's BUSL-1.1 code): the attribute-based request over the subject
 # ferrohealth-smart authenticates, the Cedar engine (`cedar`) and the remote
