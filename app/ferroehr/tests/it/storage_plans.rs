@@ -51,7 +51,7 @@ use ferroehr::ids::{EhrId, VoId};
 use ferroehr::service::FerroEhrService;
 use ferroehr::storage::version_repo::{meta, read};
 
-use crate::fixtures::{composition, uv};
+use crate::fixtures::{ckm_example, composition, uv};
 
 // ── the seeded store ─────────────────────────────────────────────────────────
 
@@ -2097,24 +2097,6 @@ async fn a_read_by_vo_id_probes_each_commit_audit_by_key_over_stale_parent_stati
          commit audit by one primary-key probe:\n{}",
         walked.join("\n")
     );
-}
-
-/// Upload one vendored CKM template and generate its committable example, as
-/// the storage bench seeds it.
-async fn ckm_example(svc: &FerroEhrService, template: &str) -> Value {
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join(format!("../../corpus/templates/ckm/{template}.opt"));
-    let xml = std::fs::read_to_string(path).expect("the vendored OPT is readable");
-    let template_id = openehr_its::opt14::from_xml(&xml)
-        .expect("the vendored OPT parses")
-        .template_id
-        .value;
-    svc.template_adl14_upload(&xml)
-        .await
-        .expect("upload the template");
-    svc.template_adl14_example(template_id, Some("medium".to_owned()), None)
-        .await
-        .expect("the template generates an example composition")
 }
 
 /// The population `CONTAINS` of the storage bench's `contains_exists` enters

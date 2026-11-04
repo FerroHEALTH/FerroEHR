@@ -29,7 +29,7 @@ use ferroehr::aql::sql::SqlCtx;
 use ferroehr::config::profile::SpecProfile;
 use ferroehr::service::FerroEhrService;
 
-use crate::fixtures::{create_ehr, db_now, observation_composition, uv};
+use crate::fixtures::{ckm_example, create_ehr, db_now, observation_composition, uv};
 
 /// EHRs of the seed.
 const SEED_EHRS: usize = 20;
@@ -301,4 +301,123 @@ async fn a_read_at_an_instant_reads_a_shared_tree_once() {
         seeded.before_chains
     );
     assert_bounded(&pool, &aql, Bounded::NodesAndVersions, seeded.objects).await;
+}
+
+/// First versions the bench's `create_first_version` commits into one EHR
+/// before its paths group reads, scaled down from about 1 950.
+const FIRST_VERSIONS: usize = 800;
+/// Versions of each of the bench's two `supersede` chains, scaled down from
+/// about 1 100.
+const BENCH_CHAIN: u32 = 400;
+/// The bench's `LIMIT`; an early stop reads a few times this many rows.
+const PAGE: f64 = 50.0;
+
+/// The storage bench's store when its paths group runs: the two vendored CKM
+/// templates committed in turn over every EHR, one kept object per EHR
+/// superseded identically, the seed's statistics, then the commit group's
+/// first versions and identical chains in one EHR, and the statistics
+/// autovacuum takes of them. Returns the objects the store holds.
+async fn seed_bench(svc: &FerroEhrService, pool: &PgPool) -> usize {
+    let vital_signs = ckm_example(svc, "vital-signs").await;
+    let gp_data_set = ckm_example(svc, "gp-data-set").await;
+    let mut ehrs = Vec::new();
+    for _ in 0..SEED_EHRS {
+        ehrs.push(create_ehr(svc).await);
+    }
+    for (index, ehr) in ehrs.iter().cycle().take(SEED_COMPOSITIONS).enumerate() {
+        let body = if index.div_euclid(SEED_EHRS).is_multiple_of(2) {
+            &vital_signs
+        } else {
+            &gp_data_set
+        };
+        svc.create_composition(*ehr, uv(body, "249", None))
+            .await
+            .expect("commit a seed composition");
+    }
+    for ehr in &ehrs {
+        let first = svc
+            .create_composition(*ehr, uv(&vital_signs, "249", None))
+            .await
+            .expect("commit a kept composition");
+        let preceding = first.version_uid();
+        svc.update_composition(*ehr, first.vo_id, uv(&vital_signs, "251", Some(&preceding)))
+            .await
+            .expect("supersede the kept composition");
+    }
+    pool.execute("ANALYZE").await.expect("analyze the seed");
+    ferroehr::db::parent_statistics::refresh_pools(
+        &ferroehr::db::domain::DomainPools::from_shared(pool),
+    )
+    .await
+    .expect("analyze the seeded partitioned parents");
+    let ehr = *ehrs.first().expect("the seed holds EHRs");
+    for _ in 0..FIRST_VERSIONS {
+        svc.create_composition(ehr, uv(&vital_signs, "249", None))
+            .await
+            .expect("commit a first version");
+    }
+    for _ in 0..2 {
+        let mut head = svc
+            .create_composition(ehr, uv(&vital_signs, "249", None))
+            .await
+            .expect("the chain's first version");
+        for _ in 1..BENCH_CHAIN {
+            head = svc
+                .update_composition(ehr, head.vo_id, uv(&vital_signs, "251", None))
+                .await
+                .expect("an identical supersession");
+        }
+    }
+    pool.execute("ANALYZE")
+        .await
+        .expect("analyze the grown store");
+    SEED_COMPOSITIONS + SEED_EHRS + FIRST_VERSIONS + 2
+}
+
+/// The bench's `flat_2_sibling_leaves` and `flat_3_sibling_leaves` keep the
+/// `LIMIT` early stop: the version rows walked in uid order until 50
+/// blood-pressure observations are found (#4944).
+///
+/// With the archetype predicate's specialisation disjunct as a `LIKE` and the
+/// composition root reached through the nested-set interval, the planner put
+/// the answer at a tenth of its rows, priced the early stop at ten times its
+/// cost, and joined the whole population into a top-N sort with every answer
+/// row's leaf probes: about 53 000 pages a call on the bench's `poc` class
+/// against 3 951 before #4929.
+#[tokio::test]
+async fn a_flat_population_read_stops_at_its_limit() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let objects = seed_bench(&svc, &pool).await;
+    let event = "o/data[at0001]/events[at0006]/data[at0003]";
+    for leaves in [
+        ["at0004", "at0005"].as_slice(),
+        &["at0004", "at0005", "at1006"],
+    ] {
+        let columns: Vec<String> = leaves
+            .iter()
+            .map(|leaf| format!("{event}/items[{leaf}]/value/magnitude"))
+            .collect();
+        let aql = format!(
+            "SELECT {} FROM EHR e CONTAINS COMPOSITION c \
+             CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.blood_pressure.v2] \
+             ORDER BY c/uid/value LIMIT 50",
+            columns.join(", ")
+        );
+        let plan = explain(&pool, &aql).await;
+        let mut nodes = Vec::new();
+        emitted(&plan[0]["Plan"], &mut nodes);
+        let rendered = nodes
+            .iter()
+            .map(|(rows, label)| format!("{rows:>9} {label}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(
+            nodes.iter().all(|(rows, _)| *rows < 5.0 * PAGE),
+            "#4944: {aql}\nover {objects} objects, a node returned {} rows or more, \
+             so the read gave up its early stop:\n{rendered}",
+            5.0 * PAGE
+        );
+    }
 }
