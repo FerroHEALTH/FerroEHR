@@ -16,7 +16,6 @@ use openehr_base::prelude::{
     ResourceAnnotations, ResourceDescriptionItem, TerminologyCode, TranslationDetails, Uuid,
 };
 
-use crate::hrid::hrid_to_string;
 use crate::print::odin::{quoted, term_code_str};
 use crate::print::{Parts, Printer, Translations};
 
@@ -38,7 +37,7 @@ impl Printer {
         } else {
             self.line(0, &format!("{keyword} ({meta})"));
         }
-        self.line(1, &hrid_to_string(parts.archetype_id));
+        self.line(1, &parts.archetype_id.to_string());
     }
 
     // ── language (master07.07) ──────────────────────────────────────────────

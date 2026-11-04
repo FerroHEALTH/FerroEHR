@@ -9,7 +9,8 @@
 //! `BASE/docs/artefact_identification/master03-artefact_source_id.adoc` §Formal Model (the
 //! `artefact_hrid` / `local_hrid` / `hrid_root` grammar), and
 //! `BASE/docs/artefact_identification/master04-versioning.adoc` §Version Numbering (the
-//! `version_id` grammar). The [`FromStr`] reading follows the physical form of
+//! `version_id` grammar). The [`FromStr`] reading and the [`fmt::Display`]
+//! writing follow the physical form of
 //! `AM/docs/ADL2/master07.05-adl_identification.adoc`.
 
 use std::fmt;
@@ -94,6 +95,15 @@ impl FromStr for ArchetypeHrid {
             version_status,
             build_count,
         })
+    }
+}
+
+impl fmt::Display for ArchetypeHrid {
+    /// Writes the physical form [`ArchetypeHrid::physical_id`] gives,
+    /// `[ns::]publisher-package-class.concept.vMAJOR.MINOR.PATCH[-status[.build]]`,
+    /// the form [`FromStr`] reads back.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.physical_id())
     }
 }
 
@@ -219,14 +229,15 @@ impl ArchetypeHrid {
     /// grammar `version_id = release_version [ extension ]`, `extension =
     /// version_modifier '.' issue_number`, `version_modifier = '-rc' |
     /// '-alpha'`; the class page adds `beta` and spells `released` as the empty
-    /// modifier.
+    /// modifier. A modifier read with no build count writes none, as
+    /// [`FromStr`] read it.
     #[must_use]
     pub fn version_id(&self) -> String {
         let modifier = self.version_modifier();
-        if modifier.is_empty() {
-            self.release_version.clone()
-        } else {
-            format!("{}-{modifier}.{}", self.release_version, self.build_count)
+        match (modifier.is_empty(), self.build_count.is_empty()) {
+            (true, _) => self.release_version.clone(),
+            (false, true) => format!("{}-{modifier}", self.release_version),
+            (false, false) => format!("{}-{modifier}.{}", self.release_version, self.build_count),
         }
     }
 
@@ -351,6 +362,25 @@ mod tests {
         assert_eq!(parsed.release_version, "1.8.2");
         assert_eq!(parsed.build_count, "4");
         assert_eq!(parsed.physical_id(), id);
+    }
+
+    #[test]
+    fn display_writes_the_physical_form_that_parses_back() {
+        for id in [
+            "openEHR-EHR-OBSERVATION.blood_pressure.v1.8.2",
+            "org.openehr::openEHR-EHR-OBSERVATION.blood_pressure.v1.8.2-rc.4",
+            "openEHR-EHR-CLUSTER.device.v1.0.0-beta.3",
+            "openEHR-EHR-CLUSTER.device.v0.0.1-alpha",
+        ] {
+            let parsed: ArchetypeHrid = id.parse().expect("parses");
+            assert_eq!(parsed.to_string(), id, "{id} writes back unchanged");
+            assert_eq!(parsed.to_string(), parsed.physical_id());
+        }
+        assert_eq!(
+            hrid(None, VersionStatus::Alpha, "").version_id(),
+            "1.8.2-alpha",
+            "a modifier with no build count writes no trailing `.`"
+        );
     }
 
     #[test]

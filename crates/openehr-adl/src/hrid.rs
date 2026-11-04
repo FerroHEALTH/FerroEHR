@@ -8,7 +8,7 @@
 //! Archetype Identifier — the physical form
 //! `[ns::]publisher-package-class.concept.vMAJOR[.MINOR[.PATCH]][-status[.build]]`.
 //! [`parse_hrid`] reads that form into the generated
-//! `openehr_am::v2_4::aom2` [`ArchetypeHrid`] and `hrid_to_string` writes it
+//! `openehr_am::v2_4::aom2` [`ArchetypeHrid`] and its `Display` writes it
 //! back; the two are inverses over a normalised (3-part-version) id.
 //!
 //! Two further, deliberately *looser* readings of the same grammar live here so
@@ -23,8 +23,6 @@
 //! [`raw_id_version`] — goes through the one primitive [`version_marker`], so
 //! the grammar has exactly one reading. See that function for why the reading
 //! is the LAST `.v<digit>`.
-
-use std::fmt::Write;
 
 use openehr_am::v2_4::aom2::archetype::archetype_hrid::ArchetypeHrid;
 use openehr_am::v2_4::aom2::archetype::archetype_hrid_impl::HridError;
@@ -42,30 +40,6 @@ use openehr_am::v2_4::aom2::archetype::archetype_hrid_impl::HridError;
 /// Returns a message describing the first structural problem.
 pub fn parse_hrid(s: &str) -> Result<ArchetypeHrid, String> {
     s.parse().map_err(|e: HridError| e.to_string())
-}
-
-/// Reconstruct an [`ArchetypeHrid`] string
-/// (`[ns::]publisher-package-class.concept.vMAJOR.MINOR.PATCH[-status.build]`;
-/// `master07.05`).
-#[must_use]
-pub(crate) fn hrid_to_string(h: &ArchetypeHrid) -> String {
-    let mut s = String::new();
-    if let Some(ns) = &h.namespace {
-        let _ = write!(s, "{ns}::");
-    }
-    let _ = write!(
-        s,
-        "{}-{}-{}.{}.v{}",
-        h.rm_publisher, h.rm_package, h.rm_class, h.concept_id, h.release_version
-    );
-    let status = h.version_modifier();
-    if !status.is_empty() {
-        let _ = write!(s, "-{status}");
-        if !h.build_count.is_empty() {
-            let _ = write!(s, ".{}", h.build_count);
-        }
-    }
-    s
 }
 
 /// The `publisher-package-class.concept` lookup key of an [`ArchetypeHrid`].
@@ -266,11 +240,7 @@ mod tests {
         ] {
             let parsed = parse_hrid(hrid).expect("a well-formed HRID");
             assert_eq!(parsed.version_status, status, "{hrid}");
-            assert_eq!(
-                hrid_to_string(&parsed),
-                hrid,
-                "{hrid} writes back unchanged"
-            );
+            assert_eq!(parsed.to_string(), hrid, "{hrid} writes back unchanged");
         }
     }
 

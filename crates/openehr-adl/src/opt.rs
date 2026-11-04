@@ -69,7 +69,6 @@ use crate::aom::access::{
 };
 use crate::artefact::{ArchetypeRepository, view};
 use crate::flatten::{FlattenError, flat_form};
-use crate::hrid::hrid_to_string;
 use crate::odin::nil_uuid;
 use crate::paths::parse_path;
 use openehr_lang::nesting::Nesting;
@@ -158,7 +157,7 @@ pub fn create_opt(
     // parent) to the plain flat form (OPT2 master03 §Flattening builds on the
     // standard flattening).
     let flat_root = flat_form(root, &work)?;
-    let root_id = hrid_to_string(view(&flat_root).archetype_id);
+    let root_id = view(&flat_root).archetype_id.to_string();
     let parts = RootParts::of(&flat_root);
 
     // Apply the OPT-specific transform to the flat definition, gathering the
@@ -229,12 +228,12 @@ pub fn unresolved_constituents(root: &Archetype, repo: &ArchetypeRepository) -> 
     let mut missing = std::collections::BTreeSet::new();
     let mut seen = std::collections::BTreeSet::new();
     let mut queue = vec![root];
-    seen.insert(hrid_to_string(view(root).archetype_id));
+    seen.insert(view(root).archetype_id.to_string());
     while let Some(artefact) = queue.pop() {
         let mut lineage = artefact;
         while let Some(parent_id) = view(lineage).parent_archetype_id {
             match work.resolve(parent_id, view(lineage).archetype_id.namespace.as_deref()) {
-                Some(parent) if seen.insert(hrid_to_string(view(parent).archetype_id)) => {
+                Some(parent) if seen.insert(view(parent).archetype_id.to_string()) => {
                     lineage = parent;
                 }
                 Some(_) => break,
@@ -257,7 +256,7 @@ pub fn unresolved_constituents(root: &Archetype, repo: &ArchetypeRepository) -> 
             let namespace = view(artefact).archetype_id.namespace.as_deref();
             match work.resolve(&reference.archetype_ref, namespace) {
                 Some(constituent) => {
-                    if seen.insert(hrid_to_string(view(constituent).archetype_id)) {
+                    if seen.insert(view(constituent).archetype_id.to_string()) {
                         queue.push(constituent);
                     }
                 }
@@ -433,7 +432,7 @@ impl Transform<'_> {
         let Some(constituent) = work.resolve(&r.archetype_ref, referrer.map(|(ns, _)| ns)) else {
             return Err(OptError::UnresolvedReference(r.archetype_ref.clone()));
         };
-        let full_id = hrid_to_string(view(constituent).archetype_id);
+        let full_id = view(constituent).archetype_id.to_string();
         if self.inlining.contains(&full_id) {
             let mut chain = self.inlining.clone();
             chain.push(full_id);
@@ -446,7 +445,7 @@ impl Transform<'_> {
                 .resolve(parent, overlay.archetype_id.namespace.as_deref())
                 .map_or_else(
                     || parent.to_owned(),
-                    |found| hrid_to_string(view(found).archetype_id),
+                    |found| view(found).archetype_id.to_string(),
                 );
             self.overlay_parents.insert(full_id.clone(), parent_id);
         }
