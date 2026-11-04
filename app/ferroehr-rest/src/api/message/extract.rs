@@ -34,7 +34,6 @@
               negotiate seam produced once (stored-content serving / commit interior)"
 )]
 
-use axum::extract::State;
 use axum::response::Response;
 use http::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
@@ -46,7 +45,7 @@ use openehr_rm::v1_2::ehr_extract::common::extract_spec::ExtractSpec;
 
 use ferroehr::ids::EhrId;
 
-use crate::api::{RequestParts, guarded_dispatch};
+use crate::api::{RequestParts, guarded_handler};
 use crate::extensions::access::{ehr_access, opt_out, patient_scope};
 use crate::negotiate;
 use crate::overview::error::RestError;
@@ -55,7 +54,7 @@ use crate::state::AppState;
 
 /// The EHR-Extract extension routes as a native `utoipa-axum` router — **no
 /// ITS-REST contract** (see the module docs). Group-relative paths (nested
-/// under the extensions root); every operation runs through [`guarded_dispatch`] onto
+/// under the extensions root); every operation runs through [`guarded_dispatch`](crate::api::guarded_dispatch) onto
 /// its handler.
 pub(crate) fn extract_routes() -> OpenApiRouter<AppState> {
     // One `routes!` per PATH (handlers in a single call must share the path).
@@ -66,271 +65,231 @@ pub(crate) fn extract_routes() -> OpenApiRouter<AppState> {
         .routes(routes!(message_import_ehr_extract))
 }
 
-/// Export one whole EHR as EXTRACTs (`GET /message/export/{ehr_id}`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module
-/// docs).
-#[utoipa::path(
-    get, path = "/message/export/{ehr_id}", tag = "message",
-    params(("ehr_id" = String, Path, description = "The EHR to export.")),
-    responses(
-        (status = 200, description = "A list of `EXTRACT`s — one canonical \
-                                      `EXTRACT` carrying every versioned object \
-                                      of the EHR, latest versions only \
-                                      (`extract_version_spec.adoc`: \"By \
-                                      default, only latest versions are \
-                                      included\").",
-         body = Vec<serde_json::Value>),
-        (status = 400, description = "`ehr_id` is not a well-formed UUID. \
-                                      Refused before \
-                                      any lookup: a malformed identifier is \
-                                      never resolved against the store.",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated (auth enabled, no valid \
-                                      principal). Refused before the path \
-                                      parameter is even parsed.",
-         body = serde_json::Value),
-        (status = 404, description = "No EHR with this id.",
-         body = serde_json::Value),
-        (status = 406, description = "No representation satisfies `Accept` \
-                                      (the extract list is JSON only).",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn message_export_ehrs(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = match crate::api::read_request::into_parts(request).await {
-        Ok(parts) => parts,
-        Err(unreadable) => return axum::response::IntoResponse::into_response(unreadable),
-    };
-    guarded_dispatch(state, "message_export_ehrs", parts, export_ehrs).await
+guarded_handler! {
+    /// Export one whole EHR as EXTRACTs (`GET /message/export/{ehr_id}`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module
+    /// docs).
+    #[utoipa::path(
+        get, path = "/message/export/{ehr_id}", tag = "message",
+        params(("ehr_id" = String, Path, description = "The EHR to export.")),
+        responses(
+            (status = 200, description = "A list of `EXTRACT`s — one canonical \
+                                          `EXTRACT` carrying every versioned object \
+                                          of the EHR, latest versions only \
+                                          (`extract_version_spec.adoc`: \"By \
+                                          default, only latest versions are \
+                                          included\").",
+             body = Vec<serde_json::Value>),
+            (status = 400, description = "`ehr_id` is not a well-formed UUID. \
+                                          Refused before \
+                                          any lookup: a malformed identifier is \
+                                          never resolved against the store.",
+             body = serde_json::Value),
+            (status = 401, description = "Unauthenticated (auth enabled, no valid \
+                                          principal). Refused before the path \
+                                          parameter is even parsed.",
+             body = serde_json::Value),
+            (status = 404, description = "No EHR with this id.",
+             body = serde_json::Value),
+            (status = 406, description = "No representation satisfies `Accept` \
+                                          (the extract list is JSON only).",
+             body = serde_json::Value)
+        )
+    )]
+    message_export_ehrs => export_ehrs
 }
 
-/// Export EXTRACTs by `EXTRACT_SPEC` (`POST /message/export`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). A read modelled as `POST`
-/// because its selector is a whole `EXTRACT_SPEC` structure, exactly as the
-/// released ad-hoc AQL read is (`query_execute_post`).
-#[utoipa::path(
-    post, path = "/message/export", tag = "message",
-    request_body(content = serde_json::Value,
-                 description = "A canonical `EXTRACT_SPEC` (RM `ehr_extract` \
-                                `extract_spec.adoc`): the mandatory `manifest` \
-                                naming the entities (each by `ehr_id` or \
-                                `subject_id`, optionally narrowed by \
-                                `item_list`), the `extract_type` coded term, \
-                                and the optional `version_spec`.",
-                 example = json!({
-                     "_type": "EXTRACT_SPEC",
-                     "extract_type": {
-                         "_type": "DV_CODED_TEXT",
-                         "value": "openEHR EHR",
-                         "defining_code": {
-                             "_type": "CODE_PHRASE",
-                             "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
-                             "code_string": "803"
+guarded_handler! {
+    /// Export EXTRACTs by `EXTRACT_SPEC` (`POST /message/export`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module
+    /// docs). A read modelled as `POST`
+    /// because its selector is a whole `EXTRACT_SPEC` structure, exactly as the
+    /// released ad-hoc AQL read is (`query_execute_post`).
+    #[utoipa::path(
+        post, path = "/message/export", tag = "message",
+        request_body(content = serde_json::Value,
+                     description = "A canonical `EXTRACT_SPEC` (RM `ehr_extract` \
+                                    `extract_spec.adoc`): the mandatory `manifest` \
+                                    naming the entities (each by `ehr_id` or \
+                                    `subject_id`, optionally narrowed by \
+                                    `item_list`), the `extract_type` coded term, \
+                                    and the optional `version_spec`.",
+                     example = json!({
+                         "_type": "EXTRACT_SPEC",
+                         "extract_type": {
+                             "_type": "DV_CODED_TEXT",
+                             "value": "openEHR EHR",
+                             "defining_code": {
+                                 "_type": "CODE_PHRASE",
+                                 "terminology_id": { "_type": "TERMINOLOGY_ID", "value": "openehr" },
+                                 "code_string": "803"
+                             }
+                         },
+                         "include_multimedia": false,
+                         "priority": 0,
+                         "link_depth": 0,
+                         "manifest": {
+                             "_type": "EXTRACT_MANIFEST",
+                             "entities": [ {
+                                 "_type": "EXTRACT_ENTITY_MANIFEST",
+                                 "extract_id_key": "7d44b88c-4199-4bad-97dc-d78268e01398",
+                                 "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398"
+                             } ]
                          }
-                     },
-                     "include_multimedia": false,
-                     "priority": 0,
-                     "link_depth": 0,
-                     "manifest": {
-                         "_type": "EXTRACT_MANIFEST",
-                         "entities": [ {
-                             "_type": "EXTRACT_ENTITY_MANIFEST",
-                             "extract_id_key": "7d44b88c-4199-4bad-97dc-d78268e01398",
-                             "ehr_id": "7d44b88c-4199-4bad-97dc-d78268e01398"
-                         } ]
-                     }
-                 })),
-    responses(
-        (status = 200, description = "A list of `EXTRACT`s — one canonical \
-                                      `EXTRACT` per manifest entity, in \
-                                      manifest order (`EXTRACT_MANIFEST.\
-                                      entities` is `1..*`, so the list is \
-                                      never empty).",
-         body = Vec<serde_json::Value>),
-        (status = 400, description = "The body is not a well-formed \
-                                      `EXTRACT_SPEC`, an entity names neither \
-                                      `ehr_id` nor `subject_id`, an \
-                                      `extract_type` outside the \
-                                      extract-content-type codes RM ehr_extract \
-                                      `master04-common_package.adoc` names \
-                                      (`openehr-ehr`, `openehr-demographic`, \
-                                      `openehr-synchronisation`, \
-                                      `openehr-generic`, `generic-emr`, plus \
-                                      the catch-all `other`), or a \
-                                      selection this service does not support \
-                                      (`criteria`, an unsupported \
-                                      `commit_time_interval`).",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated.", body = serde_json::Value),
-        (status = 403, description = "The `EHR_ACCESS` settings of an EHR the \
-                                      manifest names refuse the caller. Every \
-                                      named EHR passes the gate a read of it \
-                                      passes before any content is read, so \
-                                      one refused EHR refuses the whole \
-                                      export.",
-         body = serde_json::Value),
-        (status = 404, description = "An entity's `ehr_id`/`subject_id` \
-                                      resolves to no EHR, or an \
-                                      `item_list` entry names no version \
-                                      container in that EHR.",
-         body = serde_json::Value),
-        (status = 415, description = "The request `Content-Type` is neither \
-                                      `application/json` nor `application/xml`.",
-         body = serde_json::Value),
-        (status = 500, description = "The `EHR_ACCESS` settings of an EHR the \
-                                      manifest names cannot be read, so the \
-                                      EHR is held closed and the export is \
-                                      refused.",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn message_export_ehr_extracts(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = match crate::api::read_request::into_parts(request).await {
-        Ok(parts) => parts,
-        Err(unreadable) => return axum::response::IntoResponse::into_response(unreadable),
-    };
-    guarded_dispatch(
-        state,
-        "message_export_ehr_extracts",
-        parts,
-        export_ehr_extracts,
-    )
-    .await
+                     })),
+        responses(
+            (status = 200, description = "A list of `EXTRACT`s — one canonical \
+                                          `EXTRACT` per manifest entity, in \
+                                          manifest order (`EXTRACT_MANIFEST.\
+                                          entities` is `1..*`, so the list is \
+                                          never empty).",
+             body = Vec<serde_json::Value>),
+            (status = 400, description = "The body is not a well-formed \
+                                          `EXTRACT_SPEC`, an entity names neither \
+                                          `ehr_id` nor `subject_id`, an \
+                                          `extract_type` outside the \
+                                          extract-content-type codes RM ehr_extract \
+                                          `master04-common_package.adoc` names \
+                                          (`openehr-ehr`, `openehr-demographic`, \
+                                          `openehr-synchronisation`, \
+                                          `openehr-generic`, `generic-emr`, plus \
+                                          the catch-all `other`), or a \
+                                          selection this service does not support \
+                                          (`criteria`, an unsupported \
+                                          `commit_time_interval`).",
+             body = serde_json::Value),
+            (status = 401, description = "Unauthenticated.", body = serde_json::Value),
+            (status = 403, description = "The `EHR_ACCESS` settings of an EHR the \
+                                          manifest names refuse the caller. Every \
+                                          named EHR passes the gate a read of it \
+                                          passes before any content is read, so \
+                                          one refused EHR refuses the whole \
+                                          export.",
+             body = serde_json::Value),
+            (status = 404, description = "An entity's `ehr_id`/`subject_id` \
+                                          resolves to no EHR, or an \
+                                          `item_list` entry names no version \
+                                          container in that EHR.",
+             body = serde_json::Value),
+            (status = 415, description = "The request `Content-Type` is neither \
+                                          `application/json` nor `application/xml`.",
+             body = serde_json::Value),
+            (status = 500, description = "The `EHR_ACCESS` settings of an EHR the \
+                                          manifest names cannot be read, so the \
+                                          EHR is held closed and the export is \
+                                          refused.",
+             body = serde_json::Value)
+        )
+    )]
+    message_export_ehr_extracts => export_ehr_extracts
 }
 
-/// Import a whole EHR from an EXTRACT (`POST /message/import{?ehr_id}`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). The target EHR id is optional — hence a query parameter rather than a path
-/// segment: the resource being created is the EHR, and the caller MAY fix its
-/// identifier (RM common `master06` §Copying Case 1).
-#[utoipa::path(
-    post, path = "/message/import", tag = "message",
-    params(("ehr_id" = Option<String>, Query,
-            description = "Optional: create the clone under THIS identifier \
-                           (the same patient in another EHR system). \
-                           Absent ⇒ the source EHR id the extract \
-                           carries is re-used (RM common `master06` §Copying \
-                           Case 1).")),
-    request_body(content = serde_json::Value,
-                 description = "A canonical `EXTRACT` (RM `ehr_extract` \
-                                `extract.adoc`) carrying the whole EHR: it \
-                                MUST include an `EHR_STATUS` versioned object, \
-                                since `EHR.ehr_status` is `1..1`.",
-                 example = json!({ "_type": "EXTRACT" })),
-    responses(
-        (status = 201, description = "The EHR was cloned. The body names the \
-                                      created EHR (`{ \"uid\": … }`), which a \
-                                      caller that supplied no `ehr_id` cannot \
-                                      otherwise know.",
-         body = serde_json::Value,
-         example = json!({ "uid": "7d44b88c-4199-4bad-97dc-d78268e01398" })),
-        (status = 400, description = "The body is not a well-formed `EXTRACT`, \
-                                      it carries no `EHR_STATUS` versioned \
-                                      object, it names no source EHR id while \
-                                      `ehr_id` is absent, or a content item / \
-                                      `ORIGINAL_VERSION` is malformed.",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated.", body = serde_json::Value),
-        (status = 403, description = "The authenticated principal carries the \
-                                      configured read-only role: an import \
-                                      writes, so it is refused before the body \
-                                      is read.",
-         body = serde_json::Value),
-        (status = 409, description = "An EHR with the target id already \
-                                      exists, or the imported \
-                                      `EHR_STATUS` names a subject another EHR \
-                                      already holds (one EHR per subject, RM \
-                                      ehr `master04` §EHR Status).",
-         body = serde_json::Value),
-        (status = 415, description = "The request `Content-Type` is neither \
-                                      `application/json` nor `application/xml`.",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn message_import_ehr(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = match crate::api::read_request::into_parts(request).await {
-        Ok(parts) => parts,
-        Err(unreadable) => return axum::response::IntoResponse::into_response(unreadable),
-    };
-    guarded_dispatch(state, "message_import_ehr", parts, import_ehr).await
+guarded_handler! {
+    /// Import a whole EHR from an EXTRACT (`POST /message/import{?ehr_id}`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module
+    /// docs). The target EHR id is optional — hence a query parameter rather than a path
+    /// segment: the resource being created is the EHR, and the caller MAY fix its
+    /// identifier (RM common `master06` §Copying Case 1).
+    #[utoipa::path(
+        post, path = "/message/import", tag = "message",
+        params(("ehr_id" = Option<String>, Query,
+                description = "Optional: create the clone under THIS identifier \
+                               (the same patient in another EHR system). \
+                               Absent ⇒ the source EHR id the extract \
+                               carries is re-used (RM common `master06` §Copying \
+                               Case 1).")),
+        request_body(content = serde_json::Value,
+                     description = "A canonical `EXTRACT` (RM `ehr_extract` \
+                                    `extract.adoc`) carrying the whole EHR: it \
+                                    MUST include an `EHR_STATUS` versioned object, \
+                                    since `EHR.ehr_status` is `1..1`.",
+                     example = json!({ "_type": "EXTRACT" })),
+        responses(
+            (status = 201, description = "The EHR was cloned. The body names the \
+                                          created EHR (`{ \"uid\": … }`), which a \
+                                          caller that supplied no `ehr_id` cannot \
+                                          otherwise know.",
+             body = serde_json::Value,
+             example = json!({ "uid": "7d44b88c-4199-4bad-97dc-d78268e01398" })),
+            (status = 400, description = "The body is not a well-formed `EXTRACT`, \
+                                          it carries no `EHR_STATUS` versioned \
+                                          object, it names no source EHR id while \
+                                          `ehr_id` is absent, or a content item / \
+                                          `ORIGINAL_VERSION` is malformed.",
+             body = serde_json::Value),
+            (status = 401, description = "Unauthenticated.", body = serde_json::Value),
+            (status = 403, description = "The authenticated principal carries the \
+                                          configured read-only role: an import \
+                                          writes, so it is refused before the body \
+                                          is read.",
+             body = serde_json::Value),
+            (status = 409, description = "An EHR with the target id already \
+                                          exists, or the imported \
+                                          `EHR_STATUS` names a subject another EHR \
+                                          already holds (one EHR per subject, RM \
+                                          ehr `master04` §EHR Status).",
+             body = serde_json::Value),
+            (status = 415, description = "The request `Content-Type` is neither \
+                                          `application/json` nor `application/xml`.",
+             body = serde_json::Value)
+        )
+    )]
+    message_import_ehr => import_ehr
 }
 
-/// Import an EXTRACT into an existing EHR
-/// (`POST /message/import/{ehr_id}`).
-///
-/// **Our own extension — no ITS-REST operation governs this** (module
-/// docs). RM common `master06` §Copying Cases 2/3 describe the copy.
-#[utoipa::path(
-    post, path = "/message/import/{ehr_id}", tag = "message",
-    params(("ehr_id" = String, Path,
-            description = "The EHR the extract's content lands in \
-                           (mandatory).")),
-    request_body(content = serde_json::Value,
-                 description = "A canonical `EXTRACT` whose content items \
-                                become new versions of the addressed EHR's \
-                                versioned objects.",
-                 example = json!({ "_type": "EXTRACT" })),
-    responses(
-        (status = 204, description = "The extract's versions landed. No body: \
-                                      the operation returns nothing, and \
-                                      the affected resources are read through \
-                                      their own released endpoints."),
-        (status = 400, description = "The body is not a well-formed `EXTRACT`, \
-                                      `ehr_id` is not a well-formed UUID, or a \
-                                      content item / `ORIGINAL_VERSION` is \
-                                      malformed.",
-         body = serde_json::Value),
-        (status = 401, description = "Unauthenticated.", body = serde_json::Value),
-        (status = 403, description = "The authenticated principal carries the \
-                                      configured read-only role: an import \
-                                      writes, so it is refused before the body \
-                                      is read.",
-         body = serde_json::Value),
-        (status = 404, description = "No EHR with this id.",
-         body = serde_json::Value),
-        (status = 409, description = "The EHR already holds an \
-                                      `EHR_STATUS`/`EHR_ACCESS` under a \
-                                      different object id, or the imported \
-                                      status names a subject another EHR \
-                                      holds.",
-         body = serde_json::Value),
-        (status = 415, description = "The request `Content-Type` is neither \
-                                      `application/json` nor `application/xml`.",
-         body = serde_json::Value),
-        (status = 422, description = "A version in the extract is semantically \
-                                      invalid (template/RM/terminology \
-                                      validation).",
-         body = serde_json::Value)
-    )
-)]
-pub(crate) async fn message_import_ehr_extract(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-) -> Response {
-    let parts = match crate::api::read_request::into_parts(request).await {
-        Ok(parts) => parts,
-        Err(unreadable) => return axum::response::IntoResponse::into_response(unreadable),
-    };
-    guarded_dispatch(
-        state,
-        "message_import_ehr_extract",
-        parts,
-        import_ehr_extract,
-    )
-    .await
+guarded_handler! {
+    /// Import an EXTRACT into an existing EHR
+    /// (`POST /message/import/{ehr_id}`).
+    ///
+    /// **Our own extension — no ITS-REST operation governs this** (module
+    /// docs). RM common `master06` §Copying Cases 2/3 describe the copy.
+    #[utoipa::path(
+        post, path = "/message/import/{ehr_id}", tag = "message",
+        params(("ehr_id" = String, Path,
+                description = "The EHR the extract's content lands in \
+                               (mandatory).")),
+        request_body(content = serde_json::Value,
+                     description = "A canonical `EXTRACT` whose content items \
+                                    become new versions of the addressed EHR's \
+                                    versioned objects.",
+                     example = json!({ "_type": "EXTRACT" })),
+        responses(
+            (status = 204, description = "The extract's versions landed. No body: \
+                                          the operation returns nothing, and \
+                                          the affected resources are read through \
+                                          their own released endpoints."),
+            (status = 400, description = "The body is not a well-formed `EXTRACT`, \
+                                          `ehr_id` is not a well-formed UUID, or a \
+                                          content item / `ORIGINAL_VERSION` is \
+                                          malformed.",
+             body = serde_json::Value),
+            (status = 401, description = "Unauthenticated.", body = serde_json::Value),
+            (status = 403, description = "The authenticated principal carries the \
+                                          configured read-only role: an import \
+                                          writes, so it is refused before the body \
+                                          is read.",
+             body = serde_json::Value),
+            (status = 404, description = "No EHR with this id.",
+             body = serde_json::Value),
+            (status = 409, description = "The EHR already holds an \
+                                          `EHR_STATUS`/`EHR_ACCESS` under a \
+                                          different object id, or the imported \
+                                          status names a subject another EHR \
+                                          holds.",
+             body = serde_json::Value),
+            (status = 415, description = "The request `Content-Type` is neither \
+                                          `application/json` nor `application/xml`.",
+             body = serde_json::Value),
+            (status = 422, description = "A version in the extract is semantically \
+                                          invalid (template/RM/terminology \
+                                          validation).",
+             body = serde_json::Value)
+        )
+    )]
+    message_import_ehr_extract => import_ehr_extract
 }
 
 // ── operations ────────────────────────────────────────────────────────────────
