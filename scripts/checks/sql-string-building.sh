@@ -100,7 +100,7 @@ KEYWORDS='SELECT|FROM|WHERE|ORDER[[:space:]]+BY|GROUP[[:space:]]+BY|HAVING|JOIN|
 # needle must appear on the flagged line for the exemption to apply, so it cannot
 # silently widen to a neighbouring statement, and it may carry spaces.
 #
-# `node_repo.rs` composes the promoted-column list of one INSERT header from
+# `node_write.rs` composes the promoted-column list of one INSERT header from
 # `storage::promoted::PROMOTED_LEAVES`, whose `column` field is a variant of the
 # schema catalog `crate::db::iden::Node` — a closed set of identifiers in our own
 # source, with no request-time input, and the values themselves are bound through
@@ -110,7 +110,7 @@ KEYWORDS='SELECT|FROM|WHERE|ORDER[[:space:]]+BY|GROUP[[:space:]]+BY|HAVING|JOIN|
 # its inputs are the two `Domain` constants in the same file and a committed
 # template, and its only consumer is a test that compares the rendering with the
 # committed migrations. Nothing here reaches a connection.
-EXEMPT='app/ferroehr/src/storage/node_repo.rs:push_str(sea_query::Iden::unquoted(&leaf.column))
+EXEMPT='app/ferroehr/src/storage/node_write.rs:push_str(sea_query::Iden::unquoted(&leaf.column))
 app/ferroehr/src/storage/ddl_template.rs:out.push_str(&line.replace(KINDS, &kinds))'
 
 collect() {
