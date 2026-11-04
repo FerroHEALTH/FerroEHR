@@ -1,0 +1,646 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=74d667fa-e36f-4897-9d5b-5323dcac2ff8; build_uid=005a25b2-4e6b-44c1-a76f-5b5b30189db1)
+    openEHR-EHR-OBSERVATION.caprini_score.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-10-02">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Caprini JA. Thrombosis risk assessment as a guide to quality patient care. Dis Mon. 2005 Feb-Mar;51(2-3):70-8. doi: 10.1016/j.disamonth.2005.02.003. PMID: 15900257.">
+        ["2"] = <"Caprini JA, Arcelus JI, Hasty JH, Tamhane AC, Fabrega F. Clinical assessment of venous thromboembolic risk in surgical patients. Semin Thromb Hemost. 1991;17 Suppl 3:304-12. PMID: 1754886.">
+        ["3"] = <"Obi AT, Pannucci CJ, Nackashi A, Abdullah N, Alvarez R, Bahl V, Wakefield TW, Henke PK. Validation of the Caprini Venous Thromboembolism Risk Assessment Model in Critically Ill Surgical Patients. JAMA Surg. 2015 Oct;150(10):941-8. doi: 10.1001/jamasurg.2015.1841. PMID: 26288124.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"10DAA8CF653325FEBA1E312AA2ABB843">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record values for individual Caprini score parameters and the total score.">
+            keywords = <"VTE", "Venous", "Thromboembolism", "Surgery", "Pre-op", "PE", "DVT", "thrombosis", "embolus", "pulmonary">
+            use = <"Use to record values for individual Caprini score parameters and the total score as part of a pre-operative assessment for venous thromboembolism.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Caprini score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Gender
+                                        value matches {
+                                            DV_CODED_TEXT[at9005] matches {
+                                                defining_code matches {[ac9000]}    -- Gender (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Age
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0008]}],    -- ≤40 years
+                                                    [{1}, {[at0009]}],    -- 41-60 years
+                                                    [{2}, {[at0010]}],    -- 61-74 years
+                                                    [{3}, {[at0011]}]    -- ≥75 years
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Planned surgery
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0013]}],    -- Minor (<45 minutes)
+                                                    [{2}, {[at0014]}],    -- Major surgery (>45 minutes), laparoscopic surgery (>45 minutes) or arthroscopic surgery
+                                                    [{5}, {[at0015]}]    -- Elective hip or knee replacement
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Overweight or obese (BMI ≥ 25)
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{1}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Varicose veins
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{1}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Swollen legs
+                                        value matches {
+                                            DV_ORDINAL[at9010] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{1}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Abnormal pulmonary function (COPD)
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{1}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Pregnant or postpartum <1 month
+                                        value matches {
+                                            DV_ORDINAL[at9012] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{1}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Current oral contraceptives or hormone replacement
+                                        value matches {
+                                            DV_ORDINAL[at9013] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{1}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Sepsis (<1 month)
+                                        value matches {
+                                            DV_ORDINAL[at9014] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{1}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Serious lung disease, including pneumonia (<1 month)
+                                        value matches {
+                                            DV_ORDINAL[at9015] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{1}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Congestive heart failure (<1 month)
+                                        value matches {
+                                            DV_ORDINAL[at9016] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{1}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Acute myocardial infarction (<1 month)
+                                        value matches {
+                                            DV_ORDINAL[at9017] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{1}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- History of major surgery (<1 month)
+                                        value matches {
+                                            DV_ORDINAL[at9018] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{1}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- History of inflammatory bowel disease
+                                        value matches {
+                                            DV_ORDINAL[at9019] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{1}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- History of unexplained stillborn infant, recurrent spontaneous abortion (≥3 factors present), premature birth with toxaemia or growth restricted infant.
+                                        value matches {
+                                            DV_ORDINAL[at9020] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{1}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0031] occurrences matches {0..1} matches {    -- Bed rest or restricted mobility during past month
+                                        value matches {
+                                            DV_ORDINAL[at9021] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0032]}],    -- None
+                                                    [{1}, {[at0033]}],    -- Yes, <3 days
+                                                    [{2}, {[at0034]}]    -- Yes, >3 days
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0035] occurrences matches {0..1} matches {    -- Malignant tumour (current or past)
+                                        value matches {
+                                            DV_ORDINAL[at9022] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{2}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0036] occurrences matches {0..1} matches {    -- Current central venous access
+                                        value matches {
+                                            DV_ORDINAL[at9023] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{2}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0037] occurrences matches {0..1} matches {    -- History of VTE
+                                        value matches {
+                                            DV_ORDINAL[at9024] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{3}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0038] occurrences matches {0..1} matches {    -- Family history of VTE
+                                        value matches {
+                                            DV_ORDINAL[at9025] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{3}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0039] occurrences matches {0..1} matches {    -- Factor V Leiden
+                                        value matches {
+                                            DV_ORDINAL[at9026] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{3}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0040] occurrences matches {0..1} matches {    -- Prothrombin 20210A
+                                        value matches {
+                                            DV_ORDINAL[at9027] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{3}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0041] occurrences matches {0..1} matches {    -- Lupus anticoagulant
+                                        value matches {
+                                            DV_ORDINAL[at9028] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{3}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0042] occurrences matches {0..1} matches {    -- Anticardiolipin antibodies
+                                        value matches {
+                                            DV_ORDINAL[at9029] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{3}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0043] occurrences matches {0..1} matches {    -- Elevated serum homocysteine
+                                        value matches {
+                                            DV_ORDINAL[at9030] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{3}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0044] occurrences matches {0..1} matches {    -- Heparin-induced thrombocytopenia
+                                        value matches {
+                                            DV_ORDINAL[at9031] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{3}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0045] occurrences matches {0..1} matches {    -- Other congenital or acquired thrombophilia
+                                        value matches {
+                                            DV_ORDINAL[at9032] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{3}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0046] occurrences matches {0..1} matches {    -- Stroke (<1 month)
+                                        value matches {
+                                            DV_ORDINAL[at9033] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{5}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0047] occurrences matches {0..1} matches {    -- Malignant tumour (current or past)
+                                        value matches {
+                                            DV_ORDINAL[at9034] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{5}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0048] occurrences matches {0..1} matches {    -- Multiple trauma (<1 month)
+                                        value matches {
+                                            DV_ORDINAL[at9035] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{5}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0049] occurrences matches {0..1} matches {    -- Acute spinal cord injury (<1 month)
+                                        value matches {
+                                            DV_ORDINAL[at9036] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- No
+                                                    [{5}, {[at0018]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0050] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9037] matches {
+                                                magnitude matches {|>=0|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0051] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0052] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Caprini score">
+                description = <"Assessment tool used to stratify risk for venous thromboembolism (VTE).">
+                comment = <"Venous thromboembolism (VTE), a disease which includes deep vein thrombosis (DVT) and pulmonary embolism (PE).">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0007"] = <
+                text = <"Age">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"≤40 years">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"41-60 years">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"61-74 years">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"≥75 years">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Gender">
+                description = <"">
+                comment = <"Used to drive UI presentation of pregnancy or hormone related risks only.">
+            >
+            ["at0005"] = <
+                text = <"Female">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Male">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Planned surgery">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Minor (<45 minutes)">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Major surgery (>45 minutes), laparoscopic surgery (>45 minutes) or arthroscopic surgery">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"History of major surgery (<1 month)">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Congestive heart failure (<1 month)">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Serious lung disease, including pneumonia (<1 month)">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Sepsis (<1 month)">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Pregnant or postpartum <1 month">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Current central venous access">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Malignant tumour (current or past)">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Stroke (<1 month)">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Multiple trauma (<1 month)">
+                description = <"">
+                comment = <"For example: multiple broken bones due to a fall; or car accident.">
+            >
+            ["at0049"] = <
+                text = <"Acute spinal cord injury (<1 month)">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Varicose veins">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Swollen legs">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"History of VTE">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Family history of VTE">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Factor V Leiden">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Bed rest or restricted mobility during past month">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"History of inflammatory bowel disease">
+                description = <"">
+                comment = <"For example: Crohn's disease or ulcerative colitis.">
+            >
+            ["at0016"] = <
+                text = <"Overweight or obese (BMI ≥ 25)">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Acute myocardial infarction (<1 month)">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Abnormal pulmonary function (COPD)">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Current oral contraceptives or hormone replacement">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Yes, <3 days">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Yes, >3 days">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Total score">
+                description = <"The total sum of each component parameter for the Caprini score.">
+            >
+            ["at0015"] = <
+                text = <"Elective hip or knee replacement">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Prothrombin 20210A">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Lupus anticoagulant">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Anticardiolipin antibodies">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Elevated serum homocysteine">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Heparin-induced thrombocytopenia">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Other congenital or acquired thrombophilia">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"History of unexplained stillborn infant, recurrent spontaneous abortion (≥3 factors present), premature birth with toxaemia or growth restricted infant.">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Malignant tumour (current or past)">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9000"] = <
+                text = <"Gender (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9037"] = <
+                text = <"Age (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9038"] = <
+                text = <"Planned surgery (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9039"] = <
+                text = <"Overweight or obese (BMI ≥ 25) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9040"] = <
+                text = <"Bed rest or restricted mobility during past month (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9040"] = <
+            id = <"ac9040">
+            members = <"at0032", "at0033", "at0034">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0005", "at0006">
+        >
+        ["ac9039"] = <
+            id = <"ac9039">
+            members = <"at0017", "at0018">
+        >
+        ["ac9038"] = <
+            id = <"ac9038">
+            members = <"at0013", "at0014", "at0015">
+        >
+        ["ac9037"] = <
+            id = <"ac9037">
+            members = <"at0008", "at0009", "at0010", "at0011">
+        >
+    >

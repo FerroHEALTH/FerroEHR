@@ -1,0 +1,413 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=93f81051-760d-4def-b2d7-be197094fec7; build_uid=cc8b43a0-850b-4b17-8bc7-6d2067e131aa)
+    openEHR-EHR-CLUSTER.imaging_exam-ovary.v1.0.1
+
+specialize
+    openEHR-EHR-CLUSTER.imaging_exam.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Peter Fedorcsak, Vebjørn Arntzen">
+                ["organisation"] = <"University of Oslo, Oslo University Hospital">
+                ["email"] = <"peterfe@uio.no, varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-11-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Marit Alice Venheim, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Abel Beneberu, THAD, Ethiopia", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Randi Brendberg, Helse Nord RHF, Norway", "Peter Fedorcsak, University of Oslo, Norway (openEHR Editor)", "Heather Grain, Llewelyn Grain Informatics, Australia", "Anca Heyd, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (Nasjonal IKT redaktør)", "Anjali Kulkarni, Karkinos, India", "Kanika Kuwelker, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Tina Tellum, Oslo Universitetssykehus, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Timmerman, D., et al., Terms, definitions and measurements to describe the sonographic features of adnexal tumors: a consensus opinion from the International Ovarian Tumor Analysis (IOTA) Group. Ultrasound Obstet Gynecol, 2000. 16(5): p. 500-5.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"721B1BFFB55744F0E24757453E1CAEEE">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To record the findings on radiological examination of an ovary, and their interpretation. (en)">
+            keywords = <"Befund, Ergebnis, Bildgebung, Körper, Organ, System, Struktur, Region, Beobachtung, Diagnostik, Radiologie, Bild", ...>
+            use = <"*Use to record the findings on radiological examination of an ovary, and their interpretation.
+
+Use a separate instance of this archetype for each ovary.
+
+The intended scope for this archetype is to eventually record all detailed findings on radiological examination of an ovary using any modality. It is anticipated that further data elements may be added as requirements are identified and confirmed.
+
+This archetype is designed to be nested within the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or within other relevant CLUSTER.imaging_exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. If this archetype needs to be extended with further levels of structured findings, additional instances of the CLUSTER.imaging_exam or its specialisations can be nested in the 'Additional details' SLOT. (en)">
+            misuse = <"*Not to be used to record imaging examination findings for any body structure or region other than a single ovary. Use other archetypes from the CLUSTER.imaging_exam family for this purpose.
+
+Not to be used to record details related to the overall findings, context or technical details related to a complete imaging examination test result. Use the OBERSERVATION.imaging_exam_result for this purpose. For example, comments on the study quality, differential diagnoses, and overall impression. (en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere funn ved bildediagnostisk undersøkelse av en eggstokk og tolkning av dem.">
+            use = <"Brukes for å registrere funn ved bildediagnostisk undersøkelse av en eggstokk og tolkning av dem.
+
+Bruk en separat instans av denne arketypen for hver eggstokk.
+
+Det tiltenkte omfanget for denne CLUSTER.imaging_exam (Bildediagnostisk undersøkelse) - arketypen er til slutt å kunne registrere alle detaljerte funn ved bildediagnostisk undersøkelse av en eggstokk. Det er forventet at flere dataelementer kan bli lagt til når krav til slike er identifisert og bekreftet.
+
+Denne arketypen er utformet for å bli nøstet i SLOT'et \"Strukturerte funn\" i OBSERVATION.imaging_exam_result (Bildediagnostisk svar) eller i andre relevante Bildediagnostisk svar-arketyper, men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende. Hvis denne arketypen, eller en spesialisering av denne, må utvides med flere nivåer med detaljerte funn eller observasjoner, kan flere forekomster av arketypen eller dens spesialiseringer nøstes i SLOT'et \"Ytterligere detaljer\".">
+            misuse = <"Skal ikke brukes til å registrere funn ved andre kroppsstrukturer eller områder enn en eggstokk. Bruk andre arketyper fra gruppen av CLUSTER.imaging_exam-arketyper for dette.
+
+Skal ikke brukes til å registrere overordnede undersøkelsesfunn, kontekst eller tekniske detaljer relatert til et fullstendig svar på billedundersøkelsen. Bruk arketypen OBSERVATION.imaging_exam_result (Bildediagnostisk svar) for å registrere dette, for eksempel kommentar om undersøkelseskvalitet, differensialdiagnose og overordnet konklusjon.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the findings on radiological examination of an ovary, and their interpretation.">
+            use = <"Use to record the findings on radiological examination of an ovary, and their interpretation.
+
+Use a separate instance of this archetype for each ovary.
+
+The intended scope for this archetype is to eventually record all detailed findings on radiological examination of an ovary using any modality. It is anticipated that further data elements may be added as requirements are identified and confirmed.
+
+This archetype is designed to be nested within the 'Structured imaging findings' SLOT in the OBSERVATION.imaging_exam_result or within other relevant CLUSTER.imaging_exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. If this archetype needs to be extended with further levels of structured findings, additional instances of the CLUSTER.imaging_exam or its specialisations can be nested in the 'Additional details' SLOT.">
+            misuse = <"Not to be used to record imaging examination findings for any body structure or region other than a single ovary. Use other archetypes from the CLUSTER.imaging_exam family for this purpose.
+
+Not to be used to record details related to the overall findings, context or technical details related to a complete imaging examination test result. Use the OBERSERVATION.imaging_exam_result for this purpose. For example, comments on the study quality, differential diagnoses, and overall impression.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Imaging examination of an ovary
+        items matches {
+            ELEMENT[at0001.1] matches {    -- Body structure
+                value matches {
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code matches {[ac0.9000]}    -- Body structure (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.3] occurrences matches {0..3} matches {    -- Diameter
+                value matches {
+                    DV_QUANTITY[at0.9002] matches {
+                        property matches {[at0.9012]}    -- Length
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"mm"}],
+                            [{|>=0.0|}, {"cm"}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.9] occurrences matches {0..1} matches {    -- Volume
+                value matches {
+                    DV_QUANTITY[at0.9009] matches {
+                        property matches {[at0.9007]}    -- Volume
+                        magnitude matches {|>=0.0|}
+                        units matches {"mL"}
+                    }
+                }
+            }
+            ELEMENT[at0.4] occurrences matches {0..3} matches {    -- Largest follicle diameter
+                value matches {
+                    DV_QUANTITY[at0.9003] matches {
+                        property matches {[at0.9012]}    -- Length
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"mm"}],
+                            [{|>=0.0|}, {"cm"}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.5] occurrences matches {0..1} matches {    -- Number of antral follicles
+                value matches {
+                    DV_COUNT[at0.9004] matches {
+                        magnitude matches {|>=0|}
+                    }
+                }
+            }
+            ELEMENT[at0.10] occurrences matches {0..1} matches {    -- Follicle distribution
+                value matches {
+                    DV_TEXT[at0.9010]
+                }
+            }
+            CLUSTER[at0.6] matches {    -- Per follicle
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0.11] occurrences matches {0..1} matches {    -- Label
+                        value matches {
+                            DV_TEXT[at0.9011]
+                        }
+                    }
+                    ELEMENT[at0.7] occurrences matches {0..3} matches {    -- Diameter
+                        value matches {
+                            DV_QUANTITY[at0.9005] matches {
+                                property matches {[at0.9012]}    -- Length
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"mm"}],
+                                    [{|>=0.0|}, {"cm"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0.8] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at0.9006]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"Bildgebende Untersuchung einer Körperstruktur">
+                description = <"*Findings on radiological examination of a single ovary. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"Körperstruktur">
+                description = <"Identifizierung der untersuchten Körperstruktur oder Region.">
+                comment = <"*If the body structure has been fully identified in this 'Body structure' element, then the 'Body site' data element and 'Structured body site' SLOT becomes redundant. (en)">
+            >
+            ["at0.1"] = <
+                text = <"Left ovary">
+                description = <"">
+            >
+            ["at0.2"] = <
+                text = <"Right ovary">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"Diameter">
+                description = <"A measured diameter of the ovary.">
+                comment = <"This data element has 3 occurrences to allow for measurements in 3 different axes.">
+            >
+            ["at0.4"] = <
+                text = <"Largest follicle diameter">
+                description = <"A measured diameter of the largest ovarian follicle.">
+                comment = <"This data element has 3 occurrences to allow for measurements in 3 different axes.">
+            >
+            ["at0.5"] = <
+                text = <"Number of antral follicles">
+                description = <"The number of antral follicles.">
+            >
+            ["at0.6"] = <
+                text = <"Per follicle">
+                description = <"Details about a single ovarian follicle.">
+            >
+            ["at0.7"] = <
+                text = <"Diameter">
+                description = <"A measured diameter of an ovarian follicle.">
+                comment = <"This data element has 3 occurrences to allow for measurements in 3 different axes.">
+            >
+            ["at0.8"] = <
+                text = <"Description">
+                description = <"Narrative description about a single follicle.">
+                comment = <"For example: may be a corpus luteum.">
+            >
+            ["at0.9"] = <
+                text = <"*Volume (en)">
+                description = <"*Measured volume of the overy. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Follicle distribution (en)">
+                description = <"*Narrative description about the distribution of follicles. (en)">
+                comment = <"*For example: normal or subcapsulated. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Label (en)">
+                description = <"*Narrative description as a way to label each follicle, for example by location or numeric. (en)">
+            >
+            ["at0.9007"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"Körperstruktur (synthesised)">
+                description = <"Identifizierung der untersuchten Körperstruktur oder Region. (synthesised)">
+            >
+            ["at0.9012"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0.1"] = <
+                text = <"Venstre eggstokk">
+                description = <"">
+            >
+            ["at0.10"] = <
+                text = <"Follikkeldistribusjon">
+                description = <"Fritekstlig beskrivelse om distribusjonen av follikler.">
+                comment = <"For eksempel \"normal\" eller \"subkapsulær\".">
+            >
+            ["at0.11"] = <
+                text = <"Merkelapp">
+                description = <"Fritekstlig beskrivelse av en follikkel for å kunne identifisere en follikkel blant flere, for eksempel ved plassering eller et tall.">
+            >
+            ["at0.2"] = <
+                text = <"Høyre eggstokk">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"Diameter">
+                description = <"Eggstokkens målte diameter.">
+                comment = <"Elementet har 3 forekomster for å tillate registrering av målinger i 3 retninger.">
+            >
+            ["at0.4"] = <
+                text = <"Største follikkels diameter">
+                description = <"Diameter av eggstokkens største follikkel.">
+                comment = <"Elementet har 3 forekomster for å tillate registrering av målinger i 3 retninger.">
+            >
+            ["at0.5"] = <
+                text = <"Antall antrale follikler">
+                description = <"Antall antrale follikler i eggstokken.">
+            >
+            ["at0.6"] = <
+                text = <"Per follikkel">
+                description = <"Detaljer om en enkel follikkel.">
+            >
+            ["at0.7"] = <
+                text = <"Diameter">
+                description = <"Follikkelens diameter.">
+                comment = <"Elementet har 3 forekomster for å tillate registrering av målinger i 3 retninger.">
+            >
+            ["at0.8"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse av en enkel follikkel.">
+                comment = <"For eksempel, sannsynlig gult legeme.">
+            >
+            ["at0.9"] = <
+                text = <"Volum">
+                description = <"Målt volum av eggstokken.">
+            >
+            ["at0000.1"] = <
+                text = <"Bildediagnostisk undersøkelse - eggstokk">
+                description = <"Funn ved bildediagnostisk undersøkelse av en eggstokk.">
+            >
+            ["at0001.1"] = <
+                text = <"Struktur">
+                description = <"Navn av undersøkt struktur eller område i kroppen.">
+                comment = <"Dersom den aktuelle strukturen i kroppen er fullt ut angitt i dette \"Kroppsstruktur\"-elementet er det ikke nødvendig å bruke \"Anatomisk lokalisasjon\" eller \"Strukturert anatomisk lokalisasjon\".">
+            >
+            ["at0.9007"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"Struktur (synthesised)">
+                description = <"Navn av undersøkt struktur eller område i kroppen. (synthesised)">
+            >
+            ["at0.9012"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Imaging examination of an ovary">
+                description = <"Findings on radiological examination of a single ovary.">
+            >
+            ["at0001.1"] = <
+                text = <"Body structure">
+                description = <"Identification of the body structure or region examined.">
+                comment = <"If the body structure has been fully identified in this 'Body structure' element, then the 'Body site' data element and 'Structured body site' SLOT becomes redundant.">
+            >
+            ["at0.1"] = <
+                text = <"Left ovary">
+                description = <"">
+            >
+            ["at0.2"] = <
+                text = <"Right ovary">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"Diameter">
+                description = <"Measured diameter of the ovary.">
+                comment = <"This data element has 3 occurrences to allow for measurements in 3 different axes.">
+            >
+            ["at0.4"] = <
+                text = <"Largest follicle diameter">
+                description = <"A measured diameter of the largest ovarian follicle.">
+                comment = <"This data element has 3 occurrences to allow for measurements in 3 different axes.">
+            >
+            ["at0.5"] = <
+                text = <"Number of antral follicles">
+                description = <"The number of antral follicles.">
+            >
+            ["at0.6"] = <
+                text = <"Per follicle">
+                description = <"Details about a single ovarian follicle.">
+            >
+            ["at0.7"] = <
+                text = <"Diameter">
+                description = <"A measured diameter of an ovarian follicle.">
+                comment = <"This data element has 3 occurrences to allow for measurements in 3 different axes.">
+            >
+            ["at0.8"] = <
+                text = <"Description">
+                description = <"Narrative description about a single follicle.">
+                comment = <"For example: may be a corpus luteum.">
+            >
+            ["at0.9"] = <
+                text = <"Volume">
+                description = <"Measured volume of the overy.">
+            >
+            ["at0.10"] = <
+                text = <"Follicle distribution">
+                description = <"Narrative description about the distribution of follicles.">
+                comment = <"For example: normal or subcapsulated.">
+            >
+            ["at0.11"] = <
+                text = <"Label">
+                description = <"Narrative description as a way to label each follicle, for example by location or numeric.">
+            >
+            ["at0.9007"] = <
+                text = <"Volume">
+                description = <"Volume">
+            >
+            ["ac0.9000"] = <
+                text = <"Body structure (synthesised)">
+                description = <"Identification of the body structure or region examined. (synthesised)">
+            >
+            ["at0.9012"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at0.9007"] = <http://openehr.org/id/129>
+            ["at0.9012"] = <http://openehr.org/id/122>
+        >
+        ["SNOMED-CT"] = <
+            ["at0.1"] = <http://snomed.info/id/43981004>
+            ["at0.2"] = <http://snomed.info/id/20837000>
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.1", "at0.2">
+        >
+    >

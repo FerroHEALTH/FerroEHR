@@ -1,0 +1,266 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=0b6ba1cc-e1e1-47fa-88fd-f7741136ca79; build_uid=fc26a3a0-ba02-4f7d-82c4-d58fb9856b72)
+    openEHR-EHR-OBSERVATION.digit_span.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Jannis Pesch">
+        ["organisation"] = <"University Hospital Basel">
+        ["email"] = <"jannis.pesch@usb.ch">
+        ["date"] = <"2024-04-10">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Amanda Herbrand, University Hospital Basel, Switzerland", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Vanessa Pereira, Luxembourg Institute of Health, Luxembourg">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Woods DL, Kishiyamaa MM, Lund EW, Herron TJ, Edwards B, Poliva O, Hink RF, Reed B. Improving digit span assessment of short-term verbal memory. J Clin Exp Neuropsychol. 2011 Jan;33(1):101-11. doi: 10.1080/13803395.2010.493149. PMID: 20680884; PMCID: PMC2978794.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"3D9E3FAB4972B44A0998F2463D9EF9E8">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a result of the digit span forward and backwards test.">
+            keywords = <"Digit span, digit span forward test, digit span backwards test, DSF, DSB, short-term verbal memory, neuropsychological assessment.", ...>
+            use = <"Use to record the result of digit span forward and backwards test.">
+            misuse = <"">
+            copyright = <"© While openEHR archetypes are all freely available under an open license, the specific content of this archetype may be copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners where a copyright exists., openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Digit span (DS)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Forward digit span (FS)
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    CLUSTER[at0024] matches {    -- Round
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0012] occurrences matches {0..1} matches {    -- First digit span
+                                                value matches {
+                                                    DV_TEXT[at9002]
+                                                }
+                                            }
+                                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Result of first digit span
+                                                value matches {
+                                                    DV_ORDINAL[at9003] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0006]}],    -- Error
+                                                            [{1}, {[at0007]}]    -- Pass
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Second digit span
+                                                value matches {
+                                                    DV_TEXT[at9004]
+                                                }
+                                            }
+                                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Result of second digit span
+                                                value matches {
+                                                    DV_ORDINAL[at9005] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0015]}],    -- Error
+                                                            [{1}, {[at0016]}]    -- Pass
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Max round (span)
+                                        value matches {
+                                            DV_COUNT[at9006] matches {
+                                                magnitude matches {|>=0|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9007] matches {
+                                                magnitude matches {|>=0|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Reliable digit span (RDS)
+                                        value matches {
+                                            DV_COUNT[at9008]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0023] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0021] matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9009]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    EVENT[at0025] occurrences matches {0..1} matches {    -- Backward digit span (BS)
+                        data matches {
+                            use_node ITEM_TREE[at9010] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                        state matches {
+                            use_node ITEM_TREE[at9011] /data[at0001]/events[at0002]/state[at0023]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0018] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Trial not completed
+                        value matches {
+                            DV_BOOLEAN[at9012] matches {
+                                value matches {True}
+                            }
+                        }
+                    }
+                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Reasons for non-completion
+                        value matches {
+                            DV_TEXT[at9013]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0022] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Digit span (DS)">
+                description = <"Digit span is a cognitive assessment tool used to measure working memory, attention, and short-term auditory memory.">
+                comment = <"Test is preforming before two errors occurred at the same list length (maximal span) and prior to making two successive errors at the same list length (total score). ">
+            >
+            ["at0002"] = <
+                text = <"Forward digit span (FS)">
+                description = <"Digit span forward is is a neuropsychological test to assess a subjects simple attention.">
+            >
+            ["at0005"] = <
+                text = <"Result of first digit span">
+                description = <"The result of the first digit span answer.">
+            >
+            ["at0006"] = <
+                text = <"Error">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Pass">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Total score">
+                description = <"The number of correctly answered digit spans.">
+            >
+            ["at0012"] = <
+                text = <"First digit span">
+                description = <"The first of two digit spans the subject has to repeat.">
+                comment = <"Record in reverse order for BS.">
+            >
+            ["at0013"] = <
+                text = <"Second digit span">
+                description = <"The second of two digit spans the subject has to repeat.">
+                comment = <"Record in reverse order for BS.">
+            >
+            ["at0014"] = <
+                text = <"Result of second digit span">
+                description = <"The result of the second digit span answer.">
+            >
+            ["at0015"] = <
+                text = <"Error">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Pass">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Max round (span)">
+                description = <"Maximum number of rounds the subject passed.">
+            >
+            ["at0019"] = <
+                text = <"Trial not completed">
+                description = <"Could the trial not be completed or was the trial terminated prematurely?">
+                comment = <"Record as True if the trial was not able to be completed as per the standard methodology. Please specify reasons for this separately. A successful trial needs not to be specifically marked.">
+            >
+            ["at0020"] = <
+                text = <"Reasons for non-completion">
+                description = <"Record the reasons if the trial was not completed or the test was terminated prematurely.">
+                comment = <"Example reasons for non-completion include (but are not limited to), if the patient's disease has progressed or physical limitations prohibit him from completing the trial, age-related declines in visual acuity or color vision, low contrast sensitivity, red/green color weakness, , color blindness, testing at nonoptimal times (i.e., evening),  indicate \"Unable to complete trial due to physical limitations\" or . In addition, record any specifics that can be observed (i.e., \"Patient lost the vision and unable to complete the test\"). If the patient did not complete a trial for any other reason, specify this as well (e.g., \"Patient fell and was too fatigued to complete another trial\", or \"Patient refused to complete trial\").">
+            >
+            ["at0021"] = <
+                text = <"Confounding factors">
+                description = <"Record any circumstances that you believe may have affected the patient's performance.">
+                comment = <"Example confounding factors include (but are not limited to): \"The patient had a cold\", \"The patient reports not feeling well\", or \"The patient tripped but did not fall\".">
+            >
+            ["at0022"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0024"] = <
+                text = <"Round">
+                description = <"An instance of one round of the digit span test. ">
+                comment = <"Consists of two digit spans that have to be repeated (in reverse order for BS) by the subject.">
+            >
+            ["at0025"] = <
+                text = <"Backward digit span (BS)">
+                description = <"Digit span backwards test is a neuropsychological test to assess a subjects short-term verbal memory.">
+            >
+            ["at0026"] = <
+                text = <"Reliable digit span (RDS)">
+                description = <"The longest sequence of numbers that the individual can accurately recall without errors across both the forward and backward tasks.">
+            >
+            ["ac9013"] = <
+                text = <"Result of first digit span (synthesised)">
+                description = <"The result of the first digit span answer. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Result of second digit span (synthesised)">
+                description = <"The result of the second digit span answer. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0000"] = <http://snomed.info/id/365848007>
+            ["at0002"] = <http://snomed.info/id/311407009>
+            ["at0025"] = <http://snomed.info/id/311476004>
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0006", "at0007">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0015", "at0016">
+        >
+    >

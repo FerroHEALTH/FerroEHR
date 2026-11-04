@@ -1,0 +1,706 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6b7ebf69-5b6d-4582-9036-e56f940f0a69; build_uid=d87ee102-8659-4383-82f0-dc11a50c01b1)
+    openEHR-EHR-CLUSTER.adverse_reaction_event.v1.0.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Helse Vest IKT AS">
+                ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no">
+            >
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Manuel José Zafra Doménech">
+                ["organisation"] = <"TRADCREA, S.L.">
+                ["email"] = <"mzafra@tradcrea.com">
+            >
+            other_details = <
+                ["other_contributors"] = <"Servei Català de la Salut">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Laura Moral Lopez">
+                ["organisation"] = <"Sistema de Salut de Catalunya">
+                ["email"] = <"lauramoral@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Silje Ljosland Bakke">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no">
+        ["date"] = <"2021-09-17">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Fatima Almeida, Critical SW, Portugal", "Grethe Almenning, Bergen kommune, Norway", "Magnus Alsaker, Helsedirektoratet, Norway", "Torunn Apelseth, Helse Bergen, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway", "Bent Asgeir Larsen, Helsedirektoratet, Norway", "Koray Atalag, University of Auckland, New Zealand", "Elaine Ayres, US National Institutes of Health, United States", "Russell B Leftwich MD, United States (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "John Bennett, NEHTA, Australia", "Steve Bentley, Allscripts, United Kingdom", "Sharmila Biswas, Dr Sharmila Biswas GP, Australia", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Terje Bless, Helse Nord FIKS, Norway", "Laila Bruun, Oslo universitetssykehus HF, Norway", "Claire Chalopin, ICCAS, University of Leipzig, Germany", "Rong Chen, Cambio Healthcare Systems, Sweden", "Stephen Chu, Queensland Health, Australia", "Matthew Cordell, NEHTA, Australia", "Howard Edidin, Edidin Group, Inc, United States", "Brett Esler, Oridashi, Australia", "David Evans, Queensland Health, Australia", "Jerry Fahrni, Kaweah Delta Health Care District, United States", "Shahla Foozonkhah, Iran ministry of health and education, Iran", "Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway", "Joanne Foster, School of Nursing & Midwifery, QLD University of Technology & Nursing Informatics Australia, Australia", "Sebastian Garde, Ocean Informatics, Germany", "Jacquie Garton-Smith, Royal Perth Hospital and DoHWA, Australia", "Sarah Gaunt, NEHTA, Australia", "Andrew Goodchild, NEHTA, Australia", "Heather Grain, Llewelyn Grain Informatics, Australia", "Trina Gregory, cpc, Australia", "Grahame Grieve, Health Intersections, Australia (Editor)", "Robert Hausam, Hausam Consulting LLC, United States", "Sam Heard, Ocean Informatics, Australia", "Kristian Heldal, Telemark Hospital Trust, Norway", "Anca Heyd, DIPS ASA, Norway", "Hilde Hollås, Norway", "Roar Holm, Helse Vest IKT A/S, Norway", "Andrew James, University of Toronto, Canada", "Julie James, Blue Wave Informatics LLP, United Kingdom", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Ivor Jones, Queensalnd Helath, Australia", "Lars Jostein Silihagen, Sopra Steria / Sykehuspartner / Sykehuset Innlandet, Norway", "Silje Kaada, Helse-Bergen, Avdeling for immunologi og transfusjonsmedisin, Norway", "Konstantinos Kalliamvakos, Cambio Healthcare Systems, Sweden", "Lars Karlsen, DIPS ASA, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Goran Karlstrom, County Of Värmland, Sweden", "Mary Kelaher, NEHTA, Australia", "Diane Kirkham, NEHTA, Australia", "Shinji Kobayashi, NPO openEHR Japan, Japan", "Robert L'egan, NEHTA, Australia", "Jobst Landgrebe, ii4sm, Switzerland", "Russell Leftwich, Russell B Leftwich MD, United States", "Fest Legemiddelverket, Statens Legemiddelverk, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hugh Leslie, Ocean Informatics, Australia", "Rikard Lovstrom, Swedish Medical Association, Sweden", "Hallvard Lærum, Oslo Universitetssykehus HF, Norway", "Arne Løberg Sæter, DIPS ASA, Norway", "Sarah Mahoney, Australia", "Luis Marco Ruiz, Norwegian Center for Integrated Care and Telemedicine, Norway", "Siv Marie Lien, DIPS ASA, Norway", "Mike Martyn, The Hobart Anaesthetic Group, Australia", "Lloyd McKenzie, Gordon Point Informatics, Canada", "David McKillop, NEHTA, Australia", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Chris Mitchell, RACGP, Australia", "Stewart Morrison, NEHTA, Australia", "Jörg Niggemann, Compugroup, Germany", "Bjørn Næss, DIPS ASA, Norway", "Tom Oniki, Intermountain Healthcare, United States", "Chris Pearce, Melbourne East GP Network, Australia", "Rune Pedersen, Universitetssykehuset i Nord Norge, Norway", "General Practice Computing Group, Australia", "Camilla Preeston, Royal Australian College of General Practitioners, Australia", "Margaret Prichard, NEHTA, Australia", "Jodie Pycroft, Adelaide Northern Division of General Practice Ltd, Australia", "Cathy Richardson, NEHTA, Australia", "Robyn Richards, NEHTA - Clinical Terminology, Australia", "Tanja Riise, Nasjonal IKT HF, Norway", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Stefan Sauermann, University of Applied Sciences Technikum Wien, Austria", "Thomas Schopf, University Hospital of North-Norway, Norway", "Thilo Schuler, Australia", "Jason Scott, Plymouth Hospitals NHS Trust, United Kingdom", "Peter Scott, Medical Objects, Australia", "Elena Shabanova, UMMSSOft, Russian Federation", "Anoop Shah, University College London, United Kingdom", "Elizabeth Stanick, Hobart Anaesthetic Group, Australia", "Laila Storesund, Haraldsplass diakonale sykehus, Norway", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Line Sæle, Nasjonal IKT HF, Norway", "Hwei-Yee Tai, Tan Tock Seng Hospital, Singapore", "John Taylor, NEHTA, Australia", "Micaela Thierley, Helse Bergen, Norway", "Gordon Tomes, Australian Institute of Health and Welfare, Australia", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Richard Townley-O'Neill, Australian Digital Health Agency, Australia", "Ines Vaz, UFN, Portugal", "Nils Widnes, Helse-Bergen, Norway", "Andrew Yap, Australia", "Kylie Young, The Royal Australian College of General Practitioners, Australia", "Lin Zhang, Taikang Insurance Group, China">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: Adverse reaction risk, Published archetype [Internet]. openEHR Foundation, openEHR Clinical Knowledge Manager [cited: 2021-10-04]. Available from: https://ckm.openehr.org/ckm/archetypes/1013.1.1713">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"EF2E88ACDF6FE3D05F990397A74EA636">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere informasjon om en spesifikk overfølsomhetsreaksjonshendelse forårsaket av eksponering for en spesifikk substans.">
+            use = <"Brukes for å registrere informasjon om en spesifikk overfølsomhetsreaksjonshendelse forårsaket av eksponering for en spesifikk substans. Substansen kan angis i elementet \"Spesifikk substans\" i denne arketypen, eller i et passende element i foreldrearketypen den er nøstet inni.
+
+Denne arketypen er laget for å brukes innenfor arketypene EVALUATION.adverse_reaction_risk eller OBSERVATION.adverse_reaction_monitoring, for å registrere detaljer om en spesifikk reaksjonshendelse. Den kan likevel også brukes innenfor andre arketyper der det er klinisk passende.
+
+Omfanget av denne arketypen er bevisst fokusert på å definere et pragmatisk datasett som brukes i de fleste kliniske systemer, eller vil være egnet for de fleste vanlige kliniske situasjoner. Den tillater imidlertid utvidelse av modellen når ekstra detaljer er nødvendig, ved å bruke SLOTene \"Reaksjonsdetaljer\", \"Eksponeringsdetaljer\", \"Detaljer om klinisk håndtering\" og \"Rapporteringsdetaljer\". Utvidelser kan være nødvendig for eksempel dersom en spesialist i allergologi eller immunologi skal registrere en mer detaljert vurdering som en del av rapportering til tilsynsorganer, eller innenfor i en klinisk studie.">
+            misuse = <"Brukes ikke til å registrere uønskede hendelser, inkludert svikt i kliniske prosesser, intervensjoner eller produkter. For eksempel: Feil bruk eller feil gjort ved feilaktig administrering av en substans, feil dosering, feilmerking, skade forårsaket av en intervensjon eller prosedyre, overdose/forgiftning etc. Bruk en spesifikk arketype for dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record information about a specific adverse reaction event caused by exposure to a specific substance.">
+            use = <"Use to record information about a specific adverse reaction event caused by exposure to a specific substance. The substance may be recorded in the 'Specific substance' element in this archetype, or in an appropriate element in the parent archetype in which this archetype is nested.
+
+This archetype is designed to be nested within the EVALUATION.adverse_reaction_risk or the OBSERVATION.adverse_reaction_monitoring archetypes, to record details about a specific reaction event, but it could also be nested within other archetypes where clinically appropriate.
+
+The scope of this archetype has deliberately focused on identifying a pragmatic data set that are used in most clinical systems or will be suitable for most common clinical scenarios; however, it permits extension of the model when additional detail is required, using the 'Reaction details', 'Exposure details', and 'Reporting details' slots. An extension may be required if a specialist allergist or immunologist needed to record a more detailed assessment as part of a report to regulatory bodies or within the context of a clinical trial.">
+            misuse = <"Not to be used to record adverse events, including failures of clinical process, interventions or products. For example: abnormal use or mistakes/errors made in maladministration of an agent or substance; incorrect dosage; mislabelling; harm or injury caused by an intervention or procedure; overdose/poisoning etc. Use a specific archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Registrar informació relacionada amb un esdeveniment específic de reacció adversa provocat per l’exposició a una substància específica.">
+            use = <"Utilitzar per a registrar informació relacionada amb un esdeveniment específic de reacció adversa provocat per l’exposició a una substància específica. La substància s’ha de registrar en l’element de «Substància específica» en aquest arquetip o en un element adient de l’arquetip primari on està situat aquest arquetip. 
+ 
+Aquest arquetip està dissenyat per a situar-se dins de l’arquetip EVALUATION.adverse_reaction_risk o de l’arquetip OBSERVATION.adverse_reaction_monitoring amb l’objectiu de registrar dades sobre un esdeveniment específic de reacció adversa, però també es pot situar dins d’altres arquetips que s’adeqüen clínicament. 
+
+L’abast d’aquest arquetip s’ha enfocat de manera deliberada en identificar un conjunt pragmàtic de dades que s’utilitzen a la majoria de sistemes clínics o que s’adeqüen a la majoria de situacions clíniques habituals; tanmateix, permet l’ampliació del model quan es requereixi informació suplementària usant les pestanyes «Dades de la reacció», «Dades de l’exposició» i «Dades de l’informe». Es podria requerir una ampliació si un al·lergòleg especialista o un immunòleg necessités registrar una avaluació més detallada com a part d’un informe destinat a organismes reguladors o dins del context d’un assaig clínic.">
+            misuse = <"No utilitzar per a registrar esdeveniments adversos, com errades en els processos, intervencions i productes clínics. Per exemple: ús indegut o dosificació incorrecta o mala administració d’un agent o substància; errors d’etiquetatge; danys o ferides causades per una operació o procediment; sobredosi/enverinament, etc. Utilitzar un arquetip específic per aquesta finalitat.">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar información relacionada con un evento específico de reacción adversa provocado por la exposición a una sustancia específica.">
+            use = <"Usar para registrar información relacionada con un evento específico de reacción adversa provocado por la exposición a una sustancia específica. La sustancia debe registrarse en el elemento \"Sustancia específica\" de este arquetipo o en un elemento apropiado del arquetipo principal donde se encuentra este arquetipo.
+
+Este arquetipo está diseñado para ubicarse dentro del arquetipo EVALUATION.adverse_reaction_risk o del arquetipo OBSERVATION.adverse_reaction_monitoring, con el objetivo de registrar datos sobre un evento específico de reacción adversa. Sin embargo, también puede situarse dentro de otros arquetipos que sean clínicamente adecuados.
+
+El alcance de este arquetipo ha sido deliberadamente enfocado en identificar un conjunto pragmático de datos que se utilizan en la mayoría de los sistemas clínicos o que se ajustan a la mayoría de situaciones clínicas habituales. No obstante, permite la ampliación del modelo cuando se requiere información adicional, mediante las pestañas \"Datos de la reacción\", \"Datos de la exposición\" y \"Datos del informe\". Esta ampliación podría ser necesaria, por ejemplo, si un alergólogo o un inmunólogo especialista necesita registrar una evaluación más detallada como parte de un informe destinado a organismos reguladores o en el contexto de un ensayo clínico.">
+            misuse = <"No utilizar para registrar eventos adversos, como errores en el proceso clínico, intervenciones o productos. Por ejemplo: uso indebido o dosificación incorrecta o mala administración de un agente o sustancia; errores de etiquetaje; daños o heridas causadas por una operación o procedimiento; sobredosis/envenenamiento, etc. Utilizar un arquetipo específico para esta finalidad.">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Adverse reaction event
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Specific substance
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Certainty
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9016]}    -- Certainty (synthesised)
+                    }
+                    DV_TEXT[at9017]
+                }
+            }
+            ELEMENT[at0006] matches {    -- Manifestation
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Reaction description
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Onset of reaction
+                value matches {
+                    DV_DATE_TIME[at9006]
+                }
+            }
+            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Duration of reaction
+                value matches {
+                    DV_DURATION[at9007]
+                }
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Severity of reaction
+                value matches {
+                    DV_CODED_TEXT[at9008] matches {
+                        defining_code matches {[ac9001]}    -- Severity of reaction (synthesised)
+                    }
+                    DV_TEXT[at9009]
+                }
+            }
+            allow_archetype CLUSTER[at0014] matches {    -- Reaction details
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.media_file(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_relative(-[a-zA-Z0-9_]+)*\.v2\..*|openEHR-EHR-CLUSTER\.symptom_sign(-[a-zA-Z0-9_]+)*\.v2\..*|openEHR-EHR-CLUSTER\.ctcae(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Initial exposure
+                value matches {
+                    DV_DATE_TIME[at9010]
+                }
+            }
+            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Duration of exposure
+                value matches {
+                    DV_DURATION[at9011]
+                }
+            }
+            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Route of exposure
+                value matches {
+                    DV_TEXT[at9012]
+                }
+            }
+            ELEMENT[at0018] occurrences matches {0..1} matches {    -- Exposure description
+                value matches {
+                    DV_TEXT[at9013]
+                }
+            }
+            allow_archetype CLUSTER[at0019] matches {    -- Exposure details
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.citation(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.citation(-[a-zA-Z0-9_]+)*\.v0\..*/}
+            }
+            ELEMENT[at0020] occurrences matches {0..1} matches {    -- Clinical management description
+                value matches {
+                    DV_TEXT[at9014]
+                }
+            }
+            allow_archetype CLUSTER[at0021] matches {    -- Clinical management details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype CLUSTER[at0022] matches {    -- Reporting details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype CLUSTER[at0023] matches {    -- Information source
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0025] matches {    -- Supporting clinical record information
+                value matches {
+                    DV_EHR_URI[at9015]
+                }
+            }
+            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9016]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Reaksjonshendelse">
+                description = <"Informasjon om en spesifikk overfølsomhetsreaksjonshendelse forårsaket av eksponering for en spesifikk substans.">
+            >
+            ["at0001"] = <
+                text = <"Spesifikk substans">
+                description = <"Substansen som anses for å være årsaken til den spesifikke reaksjonshendelsen.">
+                comment = <"For eksempel \"Amoxicillin\". I feltet \"Spesifikk substans\" kan kun en spesifikk substans, og ikke en substansgruppe, registreres. En substans kan være en blanding av enkeltsubstanser, for eksempel et legemiddelprodukt. Om verdien som registreres i \"Substans\" i foreldrearketypen er en spesifikk substans kan verdien dupliseres i dette dataelementet. Det anbefales sterkt at \"Spesifikk substans\" kodes med en terminologi, for eksempel FEST, ATC eller SNOMED CT.">
+            >
+            ["at0002"] = <
+                text = <"Sikkerhet">
+                description = <"Graden av klinisk sikkerhet om at reaksjonsmanifestasjonen av denne reaksjonshendelsen ble forårsaket av eksponering for den angitte substansen.">
+                comment = <"Fritekst-datatypen tillater lokal variasjon ved å gjøre det mulig å legge til andre verdisett i et templat. I disse tilfellene er det anbefalt at verdiene kodes med en terminologi.">
+            >
+            ["at0005"] = <
+                text = <"Bekreftet">
+                description = <"Det har blitt objektivt verifisert at manifestasjonen i denne reaksjonshendelsen ble forårsaket av eksponering for den angitte substansen. Dette kan omfatte klinisk evidens fra testing, provokasjonstesting eller observasjon.">
+            >
+            ["at0006"] = <
+                text = <"Reaksjonsmanifestasjon">
+                description = <"Kliniske symptomer og/eller tegn som observeres eller assosieres med reaksjonen.">
+                comment = <"Reaksjonsmanifestasjon kan uttrykkes som et enkeltord, en setning eller kort beskrivelse, for eksempel \"kvalme\" eller \"utslett\". \"Ingen reaksjon\" kan være passende når en reaksjon har skjedd tidligere, men ikke skjedde igjen ved ny eksponering. Det foretrekkes at reaksjonsmanifestasjon kodes ved hjelp av en terminologi når dette er mulig. Verdiene som registreres her kan vises i et skjermbilde som en del av en liste over uønskede reaksjoner.">
+            >
+            ["at0007"] = <
+                text = <"Reaksjonsbeskrivelse">
+                description = <"En fritekstbeskrivelse om den uønskede reaksjonen som helhet, inklusiv detaljer om reaksjonsmanifestasjonen dersom påkrevd.">
+            >
+            ["at0008"] = <
+                text = <"Reaksjonsdebut">
+                description = <"Dato og tidspunkt for når reaksjonen startet.">
+            >
+            ["at0009"] = <
+                text = <"Reaksjonens varighet">
+                description = <"Den totale tidsperioden reaksjonsmanifestasjonen var tilstede.">
+            >
+            ["at0010"] = <
+                text = <"Reaksjonens alvorlighetsgrad">
+                description = <"Klinisk vurdering av hendelsens alvorlighetsgrad som helhet, potensielt med vurderinger av de ulike manifestasjonene.">
+                comment = <"Det anerkjennes at denne vurderingen er svært subjektiv. Det kan være noen kliniske områder hvor objektive scoringer brukes. Objektive scoringer kan inkluderes i denne modellen ved bruk av SLOTet \"Reaksjonsdetaljer\".">
+            >
+            ["at0011"] = <
+                text = <"Mild">
+                description = <"Forårsaker milde fysiologiske effekter.">
+            >
+            ["at0012"] = <
+                text = <"Moderat">
+                description = <"Forårsaker moderate fysiologiske effekter.">
+            >
+            ["at0013"] = <
+                text = <"Alvorlig">
+                description = <"Forårsaker alvorlige fysiologiske effekter.">
+            >
+            ["at0014"] = <
+                text = <"Reaksjonsdetaljer">
+                description = <"Ytterligere detaljer om den uønskede reaksjonen, f.eks. anatomisk lokalisering og/eller Common Terminology Criteria for Adverse Events, kan brukes ved inklusjon av spesifikke arketyper i dette SLOTet.">
+                comment = <"Kan omfatte strukturerte detaljer om symptomer, den anatomiske lokaliseringen av manifestasjonen, gradering, klassifisering eller formelle vurderingskriterier for alvorlighetsgrad som Common Terminology Criteria for Adverse Events, eller en mediarepresentasjon.">
+            >
+            ["at0015"] = <
+                text = <"Første eksponering">
+                description = <"Dato og tid for første eksponering for substansen i denne reaksjonshendelsen.">
+                comment = <"Eksponering kan kompliseres ved at flere enn en eksponeringshendelse leder fram til en reaksjon. Videre detaljer om eksponeringen kan gis ved bruk av flere arketyper i SLOTet \"Eksponeringsdetaljer\" eller som tekst i \"Eksponeringsbeskrivelse\".">
+            >
+            ["at0016"] = <
+                text = <"Eksponeringsvarighet">
+                description = <"Total tidsperiode som individet ble eksponert for den angitte substansen.">
+            >
+            ["at0017"] = <
+                text = <"Eksponeringsvei">
+                description = <"Eksponeringsveien hvor subjektet ble eksponert for den angitte substansen.">
+                comment = <"Eksponeringsvei bør kodes med en terminologi når mulig.">
+            >
+            ["at0018"] = <
+                text = <"Eksponeringsbeskrivelse">
+                description = <"Fritekstbeskrivelse om eksponeringen for den angitte substansen.">
+            >
+            ["at0019"] = <
+                text = <"Eksponeringsdetaljer">
+                description = <"Ytterligere detaljer om eksponeringen for den angitte substansen.">
+            >
+            ["at0020"] = <
+                text = <"Beskrivelse av klinisk håndtering">
+                description = <"Fritekstbeskrivelse om den kliniske håndteringen av reaksjonen.">
+            >
+            ["at0021"] = <
+                text = <"Detaljer om klinisk håndtering">
+                description = <"Ytterligere strukturerte detaljer om den kliniske håndteringen av reaksjonen.">
+            >
+            ["at0022"] = <
+                text = <"Rapporteringsdetaljer">
+                description = <"Ytterligere strukturerte detaljer som kreves for rapportering til myndigheter.">
+            >
+            ["at0023"] = <
+                text = <"Informasjonskilde">
+                description = <"Detaljer om informasjonskilde.">
+                comment = <"Dette SLOTet er ment for detaljer om informasjonskilden for denne spesifikke reaksjonshendelsen.">
+            >
+            ["at0024"] = <
+                text = <"Reaksjonskommentar">
+                description = <"Ytterligere fritekstkommentarer om reaksjonshendelsen som ikke fanges opp i andre felter.">
+            >
+            ["at0025"] = <
+                text = <"Understøttende journalinformasjon">
+                description = <"Lenke til ytterligere informasjon om presentasjonen og funnene som finnes andre steder i journalen, inkludert resultatet av allergitesting.">
+                comment = <"For eksempel symptomer, undersøkelsesfunn eller diagnoser.">
+            >
+            ["at0026"] = <
+                text = <"Ubekreftet">
+                description = <"Det har ikke blitt objektivt verifisert at manifestasjonen i denne reaksjonshendelsen ble forårsaket av eksponering for den angitte substansen.">
+            >
+            ["at0027"] = <
+                text = <"Avkreftet">
+                description = <"Det har blitt avkreftet at manifestasjonen i denne reaksjonshendelsen ble forårsaket av eksponering for den angitte substansen, med tilstrekkelig nivå av klinisk sikkerhet til at utsagnet kan invalideres. Dette kan omfatte klinisk evidens fra testing, provokasjonstesting eller observasjon.">
+            >
+            ["ac9016"] = <
+                text = <"Sikkerhet (synthesised)">
+                description = <"Graden av klinisk sikkerhet om at reaksjonsmanifestasjonen av denne reaksjonshendelsen ble forårsaket av eksponering for den angitte substansen. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Reaksjonens alvorlighetsgrad (synthesised)">
+                description = <"Klinisk vurdering av hendelsens alvorlighetsgrad som helhet, potensielt med vurderinger av de ulike manifestasjonene. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Adverse reaction event">
+                description = <"Information about a specific adverse reaction event caused by exposure to a specific substance.">
+            >
+            ["at0001"] = <
+                text = <"Specific substance">
+                description = <"The substance considered to be responsible for the specific adverse reaction event.">
+                comment = <"For example: 'Amoxycillin'. Only an individual substance is a valid entry in 'Specific substance'. A substance may be a compound of simpler substances, for example a medicinal product. If the 'Substance' recorded in the archetype in which this archetype is nested is an individual substance and not a substance class, then it may be duplicated in this data element, or this element may be redundant. It is strongly recommended that 'Specific substance' be coded with a terminology, for example: RxNorm, SNOMED CT, DM+D, NDFRT, ICD-9, ICD-10, UNI, ATC or CPT.">
+            >
+            ["at0002"] = <
+                text = <"Certainty">
+                description = <"The degree of clinical certainty that the 'Manifestation' in this reaction event was caused by exposure to the identified 'Specific substance'.">
+                comment = <"The free text data type will allow for local variation by enabling other value sets to be applied to this data element in a template - in this situation it is recommended that values should be coded using a terminology.">
+            >
+            ["at0005"] = <
+                text = <"Confirmed">
+                description = <"It has been objectively verified that the 'Manifestation' in this reaction event was caused by exposure to the identified 'Substance'. This may include clinical evidence by testing, re-challenge or observation.">
+            >
+            ["at0006"] = <
+                text = <"Manifestation">
+                description = <"Clinical symptoms and/or signs that are observed or associated with the adverse reaction.">
+                comment = <"Manifestation can be expressed as a single word, phrase or brief description. For example: nausea, rash. 'No reaction' may be appropriate where a previous reaction has been noted but the reaction did not re-occur after further exposure. It is preferable that 'Manifestation' should be coded with a terminology, where possible. The values entered here may be used to display on an application screen as part of a list of adverse reactions.">
+            >
+            ["at0007"] = <
+                text = <"Reaction description">
+                description = <"Narrative description about the adverse reaction as a whole, including details of the manifestation if required.">
+            >
+            ["at0008"] = <
+                text = <"Onset of reaction">
+                description = <"The date and/or time of the onset of the reaction.">
+            >
+            ["at0009"] = <
+                text = <"Duration of reaction">
+                description = <"The total amount of time that the manifestation of the adverse reaction persisted.">
+            >
+            ["at0010"] = <
+                text = <"Severity of reaction">
+                description = <"Clinical assessment of the severity of the reaction event as a whole, potentially considering multiple different manifestations.">
+                comment = <"It is acknowledged that this assessment is very subjective. There may be some some specific practice domains where objective scales have been applied. Objective scales can be included in this model using the 'Reaction details' Cluster.">
+            >
+            ["at0011"] = <
+                text = <"Mild">
+                description = <"Causes mild physiological effects.">
+            >
+            ["at0012"] = <
+                text = <"Moderate">
+                description = <"Causes moderate physiological effects.">
+            >
+            ["at0013"] = <
+                text = <"Severe">
+                description = <"Causes severe physiological effects.">
+            >
+            ["at0014"] = <
+                text = <"Reaction details">
+                description = <"Additional details about the adverse reaction.">
+                comment = <"May include structured detail about symptoms; the anatomical location of the manifestation; grading, classification or formal severity assessments such as Common Terminology Criteria for Adverse Events; or a media representation.">
+            >
+            ["at0015"] = <
+                text = <"Initial exposure">
+                description = <"The date and/or time of the first exposure to the Substance for this Reaction Event.">
+                comment = <"Exposure can be more complicated by more than one exposure events leading to a reaction. Further details about the nature of the exposure can be provided by use of additional archetypes in the 'Exposure details' SLOT or as text in the 'Exposure description'.">
+            >
+            ["at0016"] = <
+                text = <"Duration of exposure">
+                description = <"The total amount of time the individual was exposed to the identified 'Specific substance'.">
+            >
+            ["at0017"] = <
+                text = <"Route of exposure">
+                description = <"The route by which the subject was exposed to the identified 'Specific substance'.">
+                comment = <"Coding of the Route of Exposure with a terminology should be used wherever possible.">
+            >
+            ["at0018"] = <
+                text = <"Exposure description">
+                description = <"Narrative description about the exposure to the identified 'Specific substance'.">
+            >
+            ["at0019"] = <
+                text = <"Exposure details">
+                description = <"Additional details about exposure to the 'Specific substance'.">
+            >
+            ["at0020"] = <
+                text = <"Clinical management description">
+                description = <"Narrative description about the clinical management provided.">
+            >
+            ["at0021"] = <
+                text = <"Clinical management details">
+                description = <"Additional structured details about clinical management for this reaction event.">
+            >
+            ["at0022"] = <
+                text = <"Reporting details">
+                description = <"Additional structured details required for reporting to regulatory bodies.">
+            >
+            ["at0023"] = <
+                text = <"Information source">
+                description = <"Details about the provenance of the information.">
+                comment = <"This SLOT is intended to provide details about the source of information for this particular 'Reaction event'.">
+            >
+            ["at0024"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the adverse reaction event not captured in other fields.">
+            >
+            ["at0025"] = <
+                text = <"Supporting clinical record information">
+                description = <"Link to further information about the presentation and findings that exist elsewhere in the health record, including allergy test reports.">
+                comment = <"For example, presenting symptoms, examination findings, diagnosis etc.">
+            >
+            ["at0026"] = <
+                text = <"Unconfirmed">
+                description = <"It has not been objectively verified that the 'Manifestation' in this reaction event was caused by exposure to the identified 'Substance'.">
+            >
+            ["at0027"] = <
+                text = <"Refuted">
+                description = <"It has been disputed or disproven that the 'Manifestation' in this reaction event was caused by exposure to the identified 'Substance', with a sufficient level of clinical certainty to justify invalidating the assertion. This may include clinical evidence by testing, re-challenge or observation.">
+            >
+            ["ac9016"] = <
+                text = <"Certainty (synthesised)">
+                description = <"The degree of clinical certainty that the 'Manifestation' in this reaction event was caused by exposure to the identified 'Specific substance'. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Severity of reaction (synthesised)">
+                description = <"Clinical assessment of the severity of the reaction event as a whole, potentially considering multiple different manifestations. (synthesised)">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Esdeveniment de reacció adversa">
+                description = <"Informació relacionada amb un esdeveniment específic de reacció adversa provocat per l’exposició a una substància específica.">
+            >
+            ["at0001"] = <
+                text = <"Substància específica">
+                description = <"La substància que es considera responsable de l’esdeveniment específic de reacció adversa.">
+                comment = <"Per exemple: «Amoxicil·lina». Només és vàlid introduir una substància particular en «Substància específica». Una substància pot ser un compost d’altres substàncies més pures; per exemple, un medicament. Si la «Substància» registrada en l’arquetip on es situa aquest arquetip és una substància particular i no una categoria de substàncies, aleshores es pot duplicar en aquest element de dades o aquest element pot resultar redundant. Es recomana escaridament que «Substància específica» es programi amb una terminologia. Per exemple: RxNorm, SNOMED CT, DM+D, NDFRT, ICD-9, ICD-10, UNI, ATC o CPT.">
+            >
+            ["at0002"] = <
+                text = <"Certesa">
+                description = <"El grau de certesa clínica que la «Manifestació» en aquest esdeveniment de reacció es produí per l’exposició a la «Substància específica» identificada.">
+                comment = <"El tipus de dades en text lliure permetrà la variació local en habilitar que altres conjunts de valors s’apliquen a aquest element de dades en una plantilla – és recomanable en aquesta situació que els valors es programen usant una terminologia.">
+            >
+            ["at0005"] = <
+                text = <"Confirmat">
+                description = <"S’ha confirmat amb objectivitat que la «Manifestació» d’aquest esdeveniment de reacció la causà l’exposició a la «Substància» identificada. Això pot incloure indicis clínics mitjançant proves, reexposició o observació.">
+            >
+            ["at0006"] = <
+                text = <"Manifestació">
+                description = <"Símptomes o senyals clínics que s’observen o s’associen amb la reacció adversa.">
+                comment = <"La manifestació es pot expressar amb una única paraula, oració o descripció breu. Per exemple: nàusees, erupcions. «Cap reacció» pot ser convenient quan una reacció anterior s’ha anotat, però la mateixa reacció no ha tornat a ocórrer després d’exposicions posteriors. És preferible que «Manifestació» es programi amb una terminologia en la mesura del possible. Els valors introduïts ací es poden emprar per a exposar en una pantalla d’aplicació com a part d’una llista de reaccions adverses.">
+            >
+            ["at0007"] = <
+                text = <"Descripció de la reacció">
+                description = <"Informació descriptiva de la reacció adversa en conjunt amb detalls de la manifestació si fos necessari.">
+            >
+            ["at0008"] = <
+                text = <"Aparició de la reacció">
+                description = <"La data o hora d'aparició de la reacció.">
+            >
+            ["at0009"] = <
+                text = <"Duració de la reacció">
+                description = <"La quantitat de temps total que ha persistit la manifestació de la reacció adversa.">
+            >
+            ["at0010"] = <
+                text = <"Gravetat de la reacció">
+                description = <"Avaluació clínica de la gravetat de l’esdeveniment de la reacció en conjunt, amb la possibilitat de considerar múltiples manifestacions diferents.">
+                comment = <"Es reconeix que aquesta avaluació és molt subjectiva. Pot ser que hi haja àmbits pràctics específics on s’hagin aplicat barems objectius. Es poden incloure barems objectius en aquest model emprant l’agrupació de «Dades de la reacció».">
+            >
+            ["at0011"] = <
+                text = <"Lleu">
+                description = <"Provoca efectes fisiològics lleus.">
+            >
+            ["at0012"] = <
+                text = <"Moderat">
+                description = <"Provoca efectes fisiològics moderats.">
+            >
+            ["at0013"] = <
+                text = <"Greu">
+                description = <"Provoca efectes fisiològics greus.">
+            >
+            ["at0014"] = <
+                text = <"Dades de la reacció">
+                description = <"Dades addicionals de la reacció adversa.">
+                comment = <"Pot incloure dades estructurades relacionades amb símptomes; la localització anatòmica de la manifestació; gradacions, classificacions o avaluacions de la gravetat formal com els Criteris de Terminologia d’Esdeveniments Adversos; o representacions mediàtiques.">
+            >
+            ["at0015"] = <
+                text = <"Exposició inicial">
+                description = <"La data o hora de la primera exposició a la Substància que va provocar aquest Esdeveniment de Reacció.">
+                comment = <"L’exposició pot ser més complexa quan diversos esdeveniments d’exposició produeixen una reacció. Es poden proporcionar dades complementàries sobre la natura de l’exposició utilitzant arquetips addicionals en el SLOT de «Dades de l’exposició» o com a text en «Descripció de l’exposició».">
+            >
+            ["at0016"] = <
+                text = <"Duració de l’exposició">
+                description = <"La quantitat de temps total que la persona estigué exposada a la «Substància específica» identificada.">
+            >
+            ["at0017"] = <
+                text = <"Via d’exposició">
+                description = <"La via per la qual es va exposar el pacient a la «Substància específica» identificada.">
+                comment = <"És recomanable programar la Via d’Exposició amb una terminologia quan sigui possible.">
+            >
+            ["at0018"] = <
+                text = <"Descripció de l’exposició">
+                description = <"Informació descriptiva de l’exposició a la «Substància específica» identificada.">
+            >
+            ["at0019"] = <
+                text = <"Dades de l’exposició">
+                description = <"Dades addicionals de l’exposició a la «Substància específica» identificada.">
+            >
+            ["at0020"] = <
+                text = <"Descripció de la gestió clínica">
+                description = <"Informació descriptiva de la gestió clínica proporcionada.">
+            >
+            ["at0021"] = <
+                text = <"Dades de la gestió clínica">
+                description = <"Dades addicionals estructurades de la gestió clínica relacionades amb aquest esdeveniment de reacció.">
+            >
+            ["at0022"] = <
+                text = <"Dades de l’informe">
+                description = <"Dades addicionals estructurades requerides per l’informe destinades als organismes reguladors.">
+            >
+            ["at0023"] = <
+                text = <"Fonts d’informació">
+                description = <"Dades de la procedència de la informació.">
+                comment = <"Aquest SLOT pretén proporcionar dades sobre la font de la informació d’aquest «Esdeveniment de reacció» concret.">
+            >
+            ["at0024"] = <
+                text = <"Observacions">
+                description = <"Informació addicional sobre l’esdeveniment de reacció adversa no recollida en altres caselles.">
+            >
+            ["at0025"] = <
+                text = <"Informació auxiliar de la història clínica">
+                description = <"Enllaç a informació complementària, com informes de proves d’al·lèrgies, sobre la presentació i les observacions que es troben en altra part de la història clínica.">
+                comment = <"Per exemple, presentar símptomes, observacions dels exàmens, diagnòstics, etc.">
+            >
+            ["at0026"] = <
+                text = <"No confirmat">
+                description = <"No s’ha confirmat amb objectivitat que la «Manifestació» d’aquest esdeveniment de reacció la causés l’exposició a la «Substància» identificada.">
+            >
+            ["at0027"] = <
+                text = <"Refutat">
+                description = <"S’ha qüestionat o desmentit que la «Manifestació» d’aquest esdeveniment de reacció la causés l’exposició a la «Substància» identificada, i amb un grau suficient de certesa clínica per a justificar la invalidesa d’aquesta afirmació. Això pot incloure indicis clínics mitjançant proves, reexposició o observació.">
+            >
+            ["ac9016"] = <
+                text = <"Certesa (synthesised)">
+                description = <"El grau de certesa clínica que la «Manifestació» en aquest esdeveniment de reacció es produí per l’exposició a la «Substància específica» identificada. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Gravetat de la reacció (synthesised)">
+                description = <"Avaluació clínica de la gravetat de l’esdeveniment de la reacció en conjunt, amb la possibilitat de considerar múltiples manifestacions diferents. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Evento de reacción adversa">
+                description = <"Información relacionada con un evento específico de reacción adversa provocado por la exposición a una sustancia específica.">
+            >
+            ["at0001"] = <
+                text = <"Sustancia específica">
+                description = <"La sustancia que se considera responsable del evento específico de reacción adversa.">
+                comment = <"Por ejemplo: \"Amoxicilina\". Únicamente es válido introducir una sustancia particular en \"Sustancia específica\". Una sustancia puede ser un compuesto de otras sustancias más puras, por ejemplo, un medicamento. Si la \"Sustancia\" registrada en el arquetipo donde se sitúa este arquetipo es una sustancia particular y no una categoría de sustancias, entonces se puede duplicar en este elemento de datos o este elemento puede resultar redundante. Se recomienda encarecidamente que \"Sustancia específica\" se codifique con una terminología. Por ejemplo: xNorm, SNOMED CT, DM+D, NDFRT, ICD-9, ICD-10, UNI, ATC o CPT.">
+            >
+            ["at0002"] = <
+                text = <"Certeza">
+                description = <"El grado de certeza clínica que la \"Manifestación\" en este evento de reacción se produjo por la exposición a la \"Sustancia específica\" identificada.">
+                comment = <"El tipo de datos en texto libre permitirá la variación local al habilitar que otros conjuntos de valores se apliquen a este elemento de datos en una plantilla - es recomendable en esta situación que los valores se codifiquen usando una terminología.">
+            >
+            ["at0005"] = <
+                text = <"Confirmado">
+                description = <"Se ha confirmado con objetividad que la \"Manifestación\" de este evento de reacción la causó la exposición a la \"Sustancia\" identificada. Esto puede incluir indicios clínicos mediante pruebas, reexposición u observación.">
+            >
+            ["at0006"] = <
+                text = <"Manifestación">
+                description = <"Síntomas o señales clínicas que se observan o se asocian con la reacción adversa.">
+                comment = <"La manifestación se puede expresar con una única palabra, frase o descripción breve. Por ejemplo: náuseas, erupciones. \"Ninguna reacción\" puede ser conveniente cuando una reacción anterior se ha anotado, pero la misma reacción no ha vuelto a ocurrir después de exposiciones posteriores. Es preferible que \"Manifestación\" se programe con una terminología en la medida de lo posible. Los valores introducidos aquí se pueden usar para ser mostrados en una pantalla de aplicación como parte de un listado de reacciones.">
+            >
+            ["at0007"] = <
+                text = <"Descripción de la reacción">
+                description = <"Información descriptiva de la reacción adversa en conjunto con detalles de la manifestación si fuera necesario.">
+            >
+            ["at0008"] = <
+                text = <"Aparición de la reacción">
+                description = <"La fecha y/u hora de la aparición de la reacción.">
+            >
+            ["at0009"] = <
+                text = <"Duración de la reacción">
+                description = <"La cantidad de tiempo total que ha persistido la manifestación de la reacción adversa.">
+            >
+            ["at0010"] = <
+                text = <"Gravedad de la reacción">
+                description = <"Evaluación clínica de la gravedad del evento de la reacción en conjunto, con la posibilidad de considerar múltiples manifestaciones distintas.">
+                comment = <"Se reconoce que esta evaluación es muy subjetiva. Puede ser que haya ámbitos prácticos específicos donde se hayan aplicado baremos objetivos. Se pueden incluir baremos objetivos en este modelo empleando la agrupación de \"Datos de la reacción\".">
+            >
+            ["at0011"] = <
+                text = <"Leve">
+                description = <"Provoca efectos fisiológicos leves.">
+            >
+            ["at0012"] = <
+                text = <"Moderado">
+                description = <"Provoca efectos fisiológicos moderados.">
+            >
+            ["at0013"] = <
+                text = <"Grave">
+                description = <"Provoca efectos fisiológicos graves.">
+            >
+            ["at0014"] = <
+                text = <"Detalles de la reacción">
+                description = <"Datos adicionales de la reacción adversa.">
+                comment = <"Puede incluir datos estructurados relacionados con síntomas; la localización anatómica de la manifestación; grados, clasificación o evaluaciones de la gravedad formal como los Criterios de Terminología de Eventos Adversos; o representación audiovisual.">
+            >
+            ["at0015"] = <
+                text = <"Exposición inicial">
+                description = <"La fecha y/u hora de la primera exposición a la Sustancia para este Evento de Reacción.">
+                comment = <"La exposición puede ser más compleja cuando varios eventos de exposición producen una reacción. Se pueden proporcionar datos complementarios sobre la naturaleza de la exposición utilizando arquetipos adicionales en el SLOT de \"Datos de la exposición\" o como un texto en \"Descripción de la Exposición\".">
+            >
+            ["at0016"] = <
+                text = <"Duración de la exposición">
+                description = <"La cantidad de tiempo total que la persona fue expuesta a la \"Sustancia específica\".">
+            >
+            ["at0017"] = <
+                text = <"Vía de exposición">
+                description = <"La vía por la cual se expuso el paciente a la \"Sustancia específica\" identificada.">
+                comment = <"Se recomienda codificar la \"Vía de exposición\" con una terminología cuando sea posible.">
+            >
+            ["at0018"] = <
+                text = <"Descripción de la exposición">
+                description = <"Información descriptiva de la exposición a la \"Sustancia específica\" identificada.">
+            >
+            ["at0019"] = <
+                text = <"Datos de la exposición">
+                description = <"Datos adicionales de la exposición a la \"Sustancia específica\".">
+            >
+            ["at0020"] = <
+                text = <"Descripción de la gestión clínica">
+                description = <"Información descriptiva de la gestión clínica proporcionada.">
+            >
+            ["at0021"] = <
+                text = <"Detalles de la gestión clínica">
+                description = <"Detalles adicionales estructurados de la gestión clínica relacionados con este evento de reacción.">
+            >
+            ["at0022"] = <
+                text = <"Detalles del informe">
+                description = <"Detalles adicionales estructurados requeridos para el informe destinados a organismos reguladores.">
+            >
+            ["at0023"] = <
+                text = <"Fuente de información">
+                description = <"Detalles sobre la procedencia de la información.">
+                comment = <"Este SLOT pretende proporcionar datos sobre la fuente de la información de este \"Evento de reacción\" concrecto.">
+            >
+            ["at0024"] = <
+                text = <"Comentario">
+                description = <"Información adicional sobre el evento de reacción adversa no recogida en otros campos.">
+            >
+            ["at0025"] = <
+                text = <"Información de soporte de la historia clínica">
+                description = <"Enlace a la información complementaria, con informes de pruebas de alergias, sobre la presentación y las observaciones que se encuentran en otra parte de la historia clínica.">
+                comment = <"Por ejemplo, síntomas presentes, observaciones de exámenes, diagnósticos,etc.">
+            >
+            ["at0026"] = <
+                text = <"No confirmado">
+                description = <"No se ha confirmado con objetividad que la \"Manifestación\" de este evento de reacción la causara la exposición a la \"Sustancia\" identificada.">
+            >
+            ["at0027"] = <
+                text = <"Refutado">
+                description = <"Se ha cuestionado o desmentido que la \"Manifestación\" de este evento de reacción la causara la exposición a la \"Sustancia\" identificada, y con un grado suficiente de certeza clínica para justificar la invalidez de esta afirmación. Esto puede incluir indicios clínicos mediante pruebas, reexposición u observación.">
+            >
+            ["ac9016"] = <
+                text = <"Certeza (synthesised)">
+                description = <"El grado de certeza clínica que la \"Manifestación\" en este evento de reacción se produjo por la exposición a la \"Sustancia específica\" identificada. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Gravedad de la reacción (synthesised)">
+                description = <"Evaluación clínica de la gravedad del evento de la reacción en conjunto, con la posibilidad de considerar múltiples manifestaciones distintas. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0011", "at0012", "at0013">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0026", "at0005", "at0027">
+        >
+    >

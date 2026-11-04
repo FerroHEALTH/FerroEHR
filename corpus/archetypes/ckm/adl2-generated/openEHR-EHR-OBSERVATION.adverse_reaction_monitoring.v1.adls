@@ -1,0 +1,377 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=579713aa-f7e7-4853-a1b3-6d47eb3abc20; build_uid=0ac4a842-2bfc-4875-b2dd-13c469ecd501)
+    openEHR-EHR-OBSERVATION.adverse_reaction_monitoring.v1.0.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Maximilian Meixner, Severin Kohler">
+                ["organisation"] = <"Berlin Institute of Health - BIH @ Charité">
+                ["email"] = <"maximilian.meixner@bih-charite.de, kohlerseverin@posteo.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Helse Vest IKT AS">
+                ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-08-04">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Marit Alice Venheim, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (Nasjonal IKT redaktør)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Ivar Berge, Oslo Universitetssykehus, Norway", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Gunn Elin Blakkisrud, DIPS ASA, Norway", "Fabian Franzeck, University Hospital Basel, Switzerland", "Ana Garcia, cONSULTANT, Portugal", "Heather Grain, Llewelyn Grain Informatics, Australia", "Evelyn Hovenga, EJSH Consulting, Australia", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (Nasjonal IKT redaktør)", "Mika Kiviaho, Tietoevry, Finland", "Kanika Kuwelker, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, Oslo universitetssykehus, Norway (Nasjonal IKT redaktør)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hanne Marte Bårholm, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Svenne Naumann, Finnmarkssykehuset, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Marte Rime Bø, Direktoratet for e-helse, Norway", "Terje Sagmyr, Helse Vest IKT, Norway", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Anders Thurin, VGR, Sweden", "John Tore Valand, Helse Vest IKT, Norway (Nasjonal IKT redaktør)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B62FAE424720790C4ECEAF83A0C90E4B">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Aufzeichnung von Informationen über die Ergebnisse der Überwachung auf unerwünschte Reaktionen während oder nach der Verabreichung einer Substanz.">
+            use = <"Wird verwendet, um Informationen über das Ergebnis der Überwachung auf unerwünschte Reaktionen während oder nach der Verabreichung einer Substanz aufzuzeichnen. Dies kann sowohl immunvermittelte als auch nicht immunvermittelte Reaktionen umfassen.
+
+Dieser Archetyp wurde entwickelt, um zu erfassen, ob nach der Verabreichung eines Wirkstoffs an eine Person eine Reaktion aufgetreten ist. Dies umfasst, unter anderem, die Überwachung während oder nach Impfungen, Chemotherapie oder Bluttransfusionen. Der Archetyp enthält Details zu allen Minderungsmaßnahmen im Zusammenhang mit der Verabreichung, wie z. B. Kortikosteroidbehandlung oder Aufnahme auf die Intensivstation. Details zu einer aufgetretenen Reaktion können mithilfe des Archetyps CLUSTER.adverse_reaction_event im SLOT „Reaktionsereignis“ aufgezeichnet werden.">
+            misuse = <"Nicht zu verwenden, um die Neigung einer Person zu unerwünschten Reaktionen auf bestimmte Substanzen oder Gruppen oder Klassen von Substanzen aufzuzeichnen. Verwenden Sie zu diesem Zweck den Archetyp EVALUATION.adverse_reaction_risk.
+
+Nicht zu verwenden, um das Ergebnis der Verabreichung einer Substanz mit der Absicht aufzuzeichnen, eine Reaktion hervorzurufen, z. B. Mantoux- oder Prick-Test. Verwenden Sie zu diesem Zweck andere geeignete OBSERVATION-Archetypen.
+
+Nicht zu verwenden, um Details zu einem unerwünschten Reaktionsereignis aufzuzeichnen. Verwenden Sie zu diesem Zweck den Archetyp CLUSTER.adverse_reaction_event.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere informasjon om resultatet av monitorering for overfølsomhetsreaksjoner under eller etter administrering av en substans.">
+            use = <"Brukes for å registrere informasjon om resultatet av monitorering for overfølsomhetsreaksjoner under eller etter administrering av en substans. Dette kan omfatte både immunmedierte og ikke-immunmedierte reaksjoner.
+
+Denne arketypen er laget for å registrere hvorvidt individet fikk en reaksjon mens eller etter at en substans ble administrert. Dette omfatter men er ikke begrenset til monitorering under eller etter vaksinasjoner, kjemoterapi, eller blodtransfusjoner. Den omfatter detaljer om tiltak som er gjort for å minske risikoen ved eventuelle reaksjoner, som bruk av kortikosteroider eller innleggelse på intensivavdeling. Eventuelle reaksjoner kan registreres ved hjelp av arketypen CLUSTER.reaction_event i SLOTet \"Reaksjonshendelse\".">
+            misuse = <"Skal ikke brukes for å registrere en tendens individet måtte ha for å få overfølsomhetsreaksjoner mot en spesifikk substans eller grupper/klasser av substanser. Bruk arketypen EVALUATION.adverse_reaction_risk for dette formålet.
+
+Skal ikke brukes for å registrere resultatet av administreringen av en substans der intensjonen var å fremprovosere en reaksjon, for eksempel Mantoux- eller prikktest. Bruk andre egnede OBSERVATION-arketyper for dette formålet.
+
+Skal ikke brukes for å registrere detaljer om en reaksjonshendelse. Bruk arketypen CLUSTER.adverse_reaction_event (Reaksjonshendelse) for dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record information about the outcome of monitoring for adverse reactions, during or after the administration of a substance.">
+            use = <"Use to record information about the outcome of monitoring for adverse reactions, during or after the administration of a substance. This can include both immune mediated or non-immune mediated reactions.
+
+This archetype has been designed to capture whether a reaction occurred after administration of an agent to an individual. This includes but is not limited to montoring during or after vaccinations, chemotherapy, or blood transfusions. It includes details about any mitigation efforts in the context of administration, such as corticosteroid cover, or ICU admission. Details about a reaction that occurred can be recorded using the CLUSTER.reaction_event archetype in the 'Reaction event' SLOT.">
+            misuse = <"Not to be used to record a propensity of the individual to have adverse reactions to specific substances or groups or classes of substances. Use the EVALUATION.adverse_reaction_risk archetype for this purpose.
+
+Not to be used to record the result of the administration of a substance with the intention of provoking a reaction, for example Mantoux or skin prick tests. Use other appropriate OBSERVATION archetypes for this purpose.
+
+Not to be used to record details about an adverse reaction event. Use the CLUSTER.adverse_reaction_event archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Adverse reaction monitoring
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    INTERVAL_EVENT[at0002] matches {    -- Monitoring interval
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Purpose
+                                        value matches {
+                                            DV_TEXT[at9005]
+                                        }
+                                    }
+                                    ELEMENT[at0004] occurrences matches {1} matches {    -- Substance
+                                        value matches {
+                                            DV_TEXT[at9001]
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Reaction?
+                                        value matches {
+                                            DV_CODED_TEXT[at9002] matches {
+                                                defining_code matches {[ac9004]}    -- Reaction? (synthesised)
+                                            }
+                                            DV_TEXT[at9006]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0014] matches {    -- Substance details
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.medication(-[a-zA-Z0-9_]+)*\.v2\..*/}
+                                    }
+                                    allow_archetype CLUSTER[at0016] occurrences matches {0..1} matches {    -- Reaction event
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.adverse_reaction_event(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.adverse_reaction_event(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9003]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0012] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0011] matches {    -- Mitigation factor
+                                        value matches {
+                                            DV_TEXT[at9004]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0009] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Method
+                        value matches {
+                            DV_TEXT[at9007]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0010] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Überwachung von unerwünschten Reaktionen">
+                description = <"Informationen über das Ergebnis der Überwachung auf unerwünschte Reaktionen während oder nach der Verabreichung einer Substanz.">
+                comment = <"Zu den Substanzen gehören unter anderem: eine therapeutische Substanz, die in der für die jeweilige Person geeigneten Dosierung verabreicht wird; Nahrungsmittel; Material pflanzlichen oder tierischen Ursprungs; oder Gift von Insektenstichen.">
+            >
+            ["at0002"] = <
+                text = <"Überwachungsintervall">
+                description = <"Das Zeitintervall vom Beginn der Überwachung bis zum Ende der Überwachung.">
+            >
+            ["at0004"] = <
+                text = <"Substanz">
+                description = <"Identifizierung einer dem Individuum verabreichten Substanz.">
+                comment = <"Zu den Substanzen gehören unter anderem: eine therapeutische Substanz, die in der für die Person geeigneten Dosierung verabreicht wird; Lebensmittel; von Pflanzen oder Tieren stammendes Material; oder Gift aus Insektenstichen. Wenn möglich, wird die Kodierung der Substanz mit einer Terminologie bevorzugt.">
+            >
+            ["at0005"] = <
+                text = <"Reaktion?">
+                description = <"Gab es eine Reaktion auf das verabreichte Mittel?f
+">
+                comment = <"Der Datentyp „Text“ kann verwendet werden, wenn ein anderer Wertesatz, beispielsweise eine lokale Terminologie, benötigt wird.">
+            >
+            ["at0006"] = <
+                text = <"Ja">
+                description = <"Die Person hat reagiert.">
+            >
+            ["at0007"] = <
+                text = <"Nein">
+                description = <"Die Person hat nicht reagiert.">
+            >
+            ["at0008"] = <
+                text = <"Kommentar">
+                description = <"Zusätzlicher Text zur Überwachung, der in anderen Feldern nicht erfasst wird.">
+            >
+            ["at0010"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen, die erforderlich sind, um das Modell mit lokalen Inhalten zu erweitern oder an andere Referenzmodelle oder Formalismen anzupassen.">
+                comment = <"Beispielsweise: lokale Informationsanforderungen oder zusätzliche Metadaten zur Anpassung an FHIR.">
+            >
+            ["at0011"] = <
+                text = <"Minderungsfaktor">
+                description = <"Beschreibung der vor oder während der Substanzverabreichung ergriffenen Maßnahmen, um eine erwartete Reaktion zu verhindern oder eine tatsächliche Reaktion zu verringern.">
+                comment = <"Zum Beispiel, die Substanz wurde auf der Intensivstation, mit der Hälfte der normalen Verabreichungsrate und während der Behandlung mit hochdosierten Kortikosteroide verabreicht.">
+            >
+            ["at0013"] = <
+                text = <"Zweck">
+                description = <"Der Grund, warum die Reaktionsüberwachung durchgeführt wurde.">
+                comment = <"Beispiele: Impfung, Transfusion, Chemotherapie, Allergiedesensibilisierung. Die Kodierung des Zwecks mit einer Terminologie ist, soweit möglich, zu bevorzugen.">
+            >
+            ["at0014"] = <
+                text = <"Substanzdetails">
+                description = <"Strukturierte Details über die der Person verabreichte Substanz.">
+            >
+            ["at0015"] = <
+                text = <"Unbestimmt">
+                description = <"Es lässt sich nicht feststellen, ob die Person reagiert hat oder nicht.">
+            >
+            ["at0016"] = <
+                text = <"Reaktionsereignis">
+                description = <"Einzelheiten zum Reaktionsereignis">
+                comment = <"Der Zeitpunkt des Auftretens, die Dauer, der Schweregrad und die Gewissheit der Reaktion können mithilfe des Archetyps „Reaktionsereignis“ (adverse reaction event) in diesem SLOT aufgezeichnet werden. Dieser SLOT erlaubt absichtlich nur eine Instanz des Reaktionsarchetyps „Reaktionsereignis“ (adverse reaction event), um die Details jedes Überwachungsereignisses zu beschreiben.">
+            >
+            ["at0017"] = <
+                text = <"Methode">
+                description = <"Die Methode, mit der das Vorhandensein oder Fehlen einer Reaktion beurteilt wurde.">
+                comment = <"Zum Beispiel: klinische Beobachtung, Spirometrie oder ein Labortest.">
+            >
+            ["ac9004"] = <
+                text = <"Reaktion? (synthesised)">
+                description = <"Gab es eine Reaktion auf das verabreichte Mittel?f
+ (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Monitorering for overfølsomhetsreaksjoner">
+                description = <"Informasjon om resultatet av monitorering for overfølsomhetsreaksjoner under eller etter administrering av en substans.">
+                comment = <"Substanser omfatter men er ikke begrenset til: terapeutiske substanser korrekt administrert ved en passende dose for individet, mat, materiale fra planter eller dyr, eller gift fra insektstikk.">
+            >
+            ["at0002"] = <
+                text = <"Monitoreringsintervall">
+                description = <"Tiden fra monitorering startes til monitorering avsluttes.">
+            >
+            ["at0004"] = <
+                text = <"Substans">
+                description = <"Substansen som ble gitt til individet.">
+                comment = <"Substanser omfatter men er ikke begrenset til: terapeutiske substanser korrekt administrert ved en passende dose for individet, mat, materiale fra planter eller dyr, eller gift fra insektstikk. Koding med en ekstern terminologi foretrekkes der det er mulig.">
+            >
+            ["at0005"] = <
+                text = <"Reaksjon?">
+                description = <"Skjedde det en reaksjon på den administrerte substansen?">
+                comment = <"Datatypen 'text' kan brukes der det er behov for et annet verdisett, for eksempel en lokal terminologi.">
+            >
+            ["at0006"] = <
+                text = <"Ja">
+                description = <"Individet reagerte.">
+            >
+            ["at0007"] = <
+                text = <"Nei">
+                description = <"Individet reagerte ikke.">
+            >
+            ["at0008"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om monitoreringen som ikke er fanget i andre felt.">
+            >
+            ["at0010"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0011"] = <
+                text = <"Forebyggende tiltak">
+                description = <"Beskrivelse av tiltak som er gjort før eller under administreringen for å forebygge en forventet reaksjon, eller redusere en pågående reaksjon.">
+                comment = <"For eksempel: Substansen ble administrert på intensivavdeling, ved halvparten av normal infusjonshastighet, eller under dekning av høydose kortikosteroider.">
+            >
+            ["at0013"] = <
+                text = <"Formål">
+                description = <"Årsaken til at reaksjonsmonitorering ble utført.">
+                comment = <"For eksempel vaksinasjon, transfusjon, kjemoterapi eller allergen immunterapi. Koding med en ekstern terminologi foretrekkes der det er mulig.">
+            >
+            ["at0014"] = <
+                text = <"Substansdetaljer">
+                description = <"Strukturerte detaljer om substansen som ble gitt til individet.">
+            >
+            ["at0015"] = <
+                text = <"Ubestemmelig">
+                description = <"Det kan ikke påvises hvorvidt individet reagerte eller ikke.">
+            >
+            ["at0016"] = <
+                text = <"Reaksjonshendelse">
+                description = <"Detaljer om reaksjonshendelsen.">
+                comment = <"Reaksjonstidspunkt, varighet, alvorlighetsgrad og klinisk sikkerhet kan registreres i dette SLOTet ved hjelp av arketypen \"Reaksjonshendelse\". Dette SLOTet er bevisst begrenset slik at det kun tillater én instans av \"Reaksjonshendelse\"-arketypen for hvert monitoreringsintervall.">
+            >
+            ["at0017"] = <
+                text = <"Metode">
+                description = <"Metoden for hvordan tilstedeværelse eller fravær av en overfølsomhetsreasjon ble vurdert.">
+                comment = <"For eksempel klinisk observasjon, spirometri, eller en laboratorietest.">
+            >
+            ["ac9004"] = <
+                text = <"Reaksjon? (synthesised)">
+                description = <"Skjedde det en reaksjon på den administrerte substansen? (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Adverse reaction monitoring">
+                description = <"Information about the outcome of monitoring for adverse reactions, during or after the administration of a substance.">
+                comment = <"Substances include, but are not limited to: a therapeutic substance administered correctly at an appropriate dosage for the individual; food; material derived from plants or animals; or venom from insect stings.">
+            >
+            ["at0002"] = <
+                text = <"Monitoring interval">
+                description = <"The interval of time from onset of monitoring to end of monitoring.">
+            >
+            ["at0004"] = <
+                text = <"Substance">
+                description = <"Identification of a substance administered to the individual.">
+                comment = <"Substances include, but are not limited to: a therapeutic substance administered correctly at an appropriate dosage for the individual; food; material derived from plants or animals; or venom from insect stings. Coding of the substance with a terminology is preferred, where possible.">
+            >
+            ["at0005"] = <
+                text = <"Reaction?">
+                description = <"Was there a reaction to the agent administered?">
+                comment = <"The 'text' data type can be used where a different value set, for example a local terminology, is needed.">
+            >
+            ["at0006"] = <
+                text = <"Yes">
+                description = <"The individual reacted.">
+            >
+            ["at0007"] = <
+                text = <"No">
+                description = <"The individual did not react.">
+            >
+            ["at0008"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the monitoring, not captured in other fields.">
+            >
+            ["at0010"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0011"] = <
+                text = <"Mitigation factor">
+                description = <"Description of actions undertaken prior to or during substance administration to prevent an anticipated reaction or reduce an actual reaction.">
+                comment = <"For example, that the substance was administered in ICU, at half of normal administration rate, and under cover of high dose corticosteroids.">
+            >
+            ["at0013"] = <
+                text = <"Purpose">
+                description = <"The reason why the reaction monitoring was carried out.">
+                comment = <"For example: vaccination, transfusion, chemotherapy, allergy desensitisation. Coding of the purpose with a terminology is preferred, where possible.">
+            >
+            ["at0014"] = <
+                text = <"Substance details">
+                description = <"Structured details about the substance administered to the individual.">
+            >
+            ["at0015"] = <
+                text = <"Indeterminate">
+                description = <"It cannot be determined whether the individual reacted or not.">
+            >
+            ["at0016"] = <
+                text = <"Reaction event">
+                description = <"Details about the adverse reaction event.">
+                comment = <"The onset time, duration, severity and certainty of the reaction can be recorded using the 'Adverse reaction event' archetype in this SLOT. This SLOT deliberately allows only one instance of  the Adverse event reaction archetype to describe the details of each monitoring event.">
+            >
+            ["at0017"] = <
+                text = <"Method">
+                description = <"The method of how the presence or absence of an adverse reaction was assessed.">
+                comment = <"For example: clinical observation, spirometry, or a laboratory test.">
+            >
+            ["ac9004"] = <
+                text = <"Reaction? (synthesised)">
+                description = <"Was there a reaction to the agent administered? (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0006", "at0007", "at0015">
+        >
+    >

@@ -1,0 +1,230 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=91e5614f-2336-49ff-a066-2ab8183bda70; build_uid=1d606868-59ed-4e44-8289-114019ccba9b)
+    openEHR-EHR-OBSERVATION.atrs.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Hildegard Franke">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"hildi@freshehr.com">
+        ["date"] = <"2017-10-02">
+    >
+    original_namespace = <"uk.org.clinicalmodels">
+    original_publisher = <"UK Clinical Models">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"uk.org.clinicalmodels">
+    custodian_organisation = <"UK Clinical Models">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"http://www.londonorthopaedicsurgery.co.uk/media/1467/ATRS-questionnaire.pdf cited 02-Oct-2017">
+    >
+    other_details = <
+        ["current_contact"] = <"Hildegard Franke, freshEHR Clinical Informatics Ltd.<hildi@freshehr.com>">
+        ["MD5-CAM-1.0.1"] = <"C6984A0F14AD71501FFA89812FC7A497">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For the capture and reporting of patient-reported limitations and difficulties relating to Achilles tendon injury (ATRS = Achilles Tendon Total Rupture Score).">
+            use = <"Use to record patient-reported limitations and difficulties relating to injured Achilles tendon.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this archetype may be copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners where a copyright exists.">
+            misuse = <"Not to be used unless the terms of copyright have been observed (if a copyright exists).">
+            copyright = <"© Clinical Models UK">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- ATRS
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Point in time
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Limitation due to decreased strength
+                                        value matches {
+                                            DV_COUNT[at9000] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Limitation due to fatigue
+                                        value matches {
+                                            DV_COUNT[at9001] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Limitation due to stiffness
+                                        value matches {
+                                            DV_COUNT[at9002] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Limitation due to pain
+                                        value matches {
+                                            DV_COUNT[at9003] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Limitation during activities of daily living
+                                        value matches {
+                                            DV_COUNT[at9004] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Limitation walking on uneven surfaces
+                                        value matches {
+                                            DV_COUNT[at9005] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Limitation walking quickly up stairs or hill
+                                        value matches {
+                                            DV_COUNT[at9006] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Limitation running
+                                        value matches {
+                                            DV_COUNT[at9007] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Limitation jumping
+                                        value matches {
+                                            DV_COUNT[at9008] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Limitation performing hard physical labour
+                                        value matches {
+                                            DV_COUNT[at9009] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9010] matches {
+                                                magnitude matches {|0..100|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0006] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0007] matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9011]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0004] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0005] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"ATRS">
+                description = <"Achilles Tendon Total Rupture Score (ATRS).">
+            >
+            ["at0002"] = <
+                text = <"Point in time">
+                description = <"A specific date and/or time which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0005"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"e.g. Local hospital departmental infomation or additional metadata to align with HL7 or CDISC equivalents.">
+            >
+            ["at0007"] = <
+                text = <"Confounding factors">
+                description = <"Record any issues or factors that may impact on the overall assessment or score.">
+            >
+            ["at0008"] = <
+                text = <"Limitation due to decreased strength">
+                description = <"Assessment of degree of limitation due to decreased strength in calf or Achilles tendon or foot.">
+                comment = <"Questionnaire wording: Are you limited due to decreased strength in the calf/Achilles tendon/foot? 0=Major limitation, 10=No limitations.">
+            >
+            ["at0009"] = <
+                text = <"Limitation due to fatigue">
+                description = <"Assessment of degree of limitation due to fatigue in calf or Achilles tendon or foot.">
+                comment = <"Questionnaire wording: Are you limited due to fatigue in the calf/Achilles tendon/foot? 0=Major limitation, 10=No limitations.">
+            >
+            ["at0010"] = <
+                text = <"Limitation due to stiffness">
+                description = <"Assessment of degree of limitation due to stiffness in calf or Achilles tendon or foot.">
+                comment = <"Questionnaire wording: Are you limited due to stiffness in the calf/Achilles tendon/foot? 0=Major limitation, 10=No limitations.">
+            >
+            ["at0011"] = <
+                text = <"Limitation due to pain">
+                description = <"Assessment of degree of limitation due to pain in calf or Achilles tendon or foot.">
+                comment = <"Questionnaire wording: Are you limited due to pain in the calf/Achilles tendon/foot? 0=Major limitation, 10=No limitations.">
+            >
+            ["at0012"] = <
+                text = <"Limitation during activities of daily living">
+                description = <"Assessment of degree of limitation during activities of daily living.">
+                comment = <"Questionnaire wording: Are you limited during activities of daily living? 0=Major limitation, 10=No limitations.">
+            >
+            ["at0013"] = <
+                text = <"Limitation walking on uneven surfaces">
+                description = <"Assessment of degree of limitation when walking on uneven surfaces.">
+                comment = <"Questionnaire wording: Are you limited when walking on uneven surfaces? 0=Major limitation, 10=No limitations.">
+            >
+            ["at0014"] = <
+                text = <"Limitation walking quickly up stairs or hill">
+                description = <"Assessment of degree of limitation when walking quickly up the stairs or up a hill.">
+                comment = <"Questionnaire wording: Are you limited when walking quickly up the stairs or up a hill? 0=Major limitation, 10=No limitation.">
+            >
+            ["at0015"] = <
+                text = <"Limitation running">
+                description = <"Assessment of degree of limitation during activities that include running.">
+                comment = <"Questionnaire wording: Are you limited during activities that include running? 0=Major limitation, 10=No limitation.">
+            >
+            ["at0016"] = <
+                text = <"Limitation jumping">
+                description = <"Assessment of degree of limitation during activities that include jumping.">
+                comment = <"Questionnaire wording: Are you limited during activities that include jumping? 0=Major limitation, 10=No limitations.">
+            >
+            ["at0017"] = <
+                text = <"Limitation performing hard physical labour">
+                description = <"Assessment of degree of limitation performing hard physical labour.">
+                comment = <"Questionnaire wording: Are you limited in performing hard physical labour? 0=Major limitation, 10=No limitations.">
+            >
+            ["at0018"] = <
+                text = <"Total score">
+                description = <"Total score from all individual scores.">
+            >
+        >
+    >

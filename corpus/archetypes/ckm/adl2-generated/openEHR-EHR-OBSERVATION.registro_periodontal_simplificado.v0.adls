@@ -1,0 +1,384 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c48e78ba-0c03-4083-90a5-a836aeae37a3; build_uid=c1d4a0a5-bf8b-4aaa-8c28-b90b740ef864)
+    openEHR-EHR-OBSERVATION.registro_periodontal_simplificado.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::pt]>
+    translations = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            author = <
+                ["name"] = <"Daniele S Menezes-Bacelar">
+                ["organisation"] = <"Healthcare Designs">
+                ["email"] = <"danielembacelar@gmail.com">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Daniele S Menezes-Bacelar">
+        ["organisation"] = <"Healthcare Designs">
+        ["email"] = <"danielembacelar@gmail.com">
+        ["date"] = <"2015-03-11">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Gustavo M Bacelar-Silva, Healthcare Designs", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Santos, F. A.; Bremm, L. L.; Justo, F. R.; Barth, E. Registro periodontal simplificado (PSR): um método rápido e simples de avaliação periodontal. Arq. Ciênc. Saúde Unipar: 2(1): 103-108, 1998.">
+        ["2"] = <"Nield-Gehrig JS. Fundamentals of Periodontal Instrumentation & Advanced Root Instrumentation, 5th ed. Baltimore: Lippincott Williams & Wilkins, 2004.">
+    >
+    other_details = <
+        ["current_contact"] = <"Daniele S Menezes-Bacelar, Healthcare Designs, danielembacelar@gmail.com">
+        ["MD5-CAM-1.0.1"] = <"95DF6824E934398A51AEB4DAADDF99D6">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To register the value of probing depth of simply and quickly by sextant.">
+            keywords = <"Gingival probling", "PSR", "Periodontal Screening and Recording", "Periodontium">
+            use = <"Used to record the value of probing depth of simply and quickly by sextant in any patient.">
+            misuse = <"Can not be used to probe areas other than dental-alveolus.">
+            copyright = <"*© openEHR Foundation(pt)">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*(pt)">
+            use = <"*(pt)">
+            misuse = <"*(pt)">
+            copyright = <"*(pt)">
+        >
+        ["pt"] = <
+            language = <[ISO_639-1::pt]>
+            purpose = <"Para registrar o valor da profundidade de sondagem de forma simples e rápida por sextante.">
+            keywords = <"Sondagem gengival", "PSR", "Registro periodontal simplificado", "Periodonto">
+            use = <"Usado para registrar o valor da profundidade de sondagem de forma simples e rápida por sextante em qualquer paciente.">
+            misuse = <"Nâo pode ser utilizado para sondar áreas que não sejam dento-alveorales.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Registro periodontal simplificado
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0011] occurrences matches {1..*} matches {    -- Profundidade de sondagem
+                                        value matches {
+                                            DV_ORDINAL[at9001] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0013]}],    -- Código 0
+                                                    [{1}, {[at0014]}],    -- Código 1
+                                                    [{2}, {[at0015]}],    -- Código 2
+                                                    [{3}, {[at0016]}],    -- Código 3
+                                                    [{4}, {[at0017]}]    -- Código 4
+                                                }
+                                            }
+                                            DV_CODED_TEXT[at9002] matches {
+                                                defining_code matches {[at0012]}    -- Código X
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Código *
+                                        value matches {
+                                            DV_BOOLEAN[at9003] matches {
+                                                value matches {True, False; False}
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0023] occurrences matches {0..1} matches {    -- Detalhes do código *
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Envolvimento de furca
+                                                value matches {
+                                                    DV_BOOLEAN[at9004] matches {
+                                                        value matches {True, False; False}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Mobilidade dentária
+                                                value matches {
+                                                    DV_BOOLEAN[at9005] matches {
+                                                        value matches {True, False; False}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0026] occurrences matches {0..1} matches {    -- Problemas mucogengivais
+                                                value matches {
+                                                    DV_BOOLEAN[at9006] matches {
+                                                        value matches {True, False; False}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0027] occurrences matches {0..1} matches {    -- Recessão gengival
+                                                value matches {
+                                                    DV_BOOLEAN[at9007] matches {
+                                                        value matches {True, False; False}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0018] occurrences matches {0..1} matches {    -- Comentários
+                                                value matches {
+                                                    DV_TEXT[at9008]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt"] = <
+            ["at0000"] = <
+                text = <"Registro periodontal simplificado">
+                description = <"O sistema de registro periodontal simplificado (PSR) foi projetado para iniciar a promoção, prevenção e tratamento precoce das doenças periodontais">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Código *">
+                description = <"O símbolo * é adicionado ao código de um sextante exibindo qualquer anormalidade, como envolvimento 
+
+de furca, mobilidade dentária, recessão gengival, problemas mucogengivais.">
+            >
+            ["at0011"] = <
+                text = <"Profundidade de sondagem">
+                description = <"É a distância entre a margem gengival até a porção mais coronal do epitélio juncional (fundo de 
+
+sulco/bolsa).">
+            >
+            ["at0012"] = <
+                text = <"Código X">
+                description = <"Sextante com menos de dois dentes aptos ao exame ou edentulos.">
+            >
+            ["at0013"] = <
+                text = <"Código 0">
+                description = <"Marca de referência colorida da sonda totalmente visível. Ausência de sangramento à sondagem, cálculo ou margens defeituosas de restaurações do sextante.">
+            >
+            ["at0014"] = <
+                text = <"Código 1">
+                description = <"Marca de referência colorida da sonda totalmente visível. Presença de sangramento à sondagem, ausência de cálculo ou margens defeituosas de restaurações do sextante.">
+            >
+            ["at0015"] = <
+                text = <"Código 2">
+                description = <"Marca de referência colorida da sonda totalmente visível. Presença de sangramento à sondagem, presença de cálculo e/ou margens defeituosas de restaurações do sextante.">
+            >
+            ["at0016"] = <
+                text = <"Código 3">
+                description = <"Marca de referência colorida da sonda parcialmente visível. Presença de sangramento à sondagem, presença de cálculos, margens defeituosas de restaurações, profundidade de sondagem de 3,5mm a 5,5mm do sextante.">
+            >
+            ["at0017"] = <
+                text = <"Código 4">
+                description = <"Marca de referência colorida da sonda não visível. Presença de sangramento à sondagem, presença de cálculos, margens defeituosas de restaurações, profundidade de sondagem maiores que 5,5mm do sextante.">
+            >
+            ["at0018"] = <
+                text = <"Comentários">
+                description = <"Campo destinado a comentários sobre o código *">
+            >
+            ["at0023"] = <
+                text = <"Detalhes do código *">
+                description = <"O símbolo * é adicionado ao código de um sextante exibindo qualquer anormalidade, como envolvimento 
+
+de furca, mobilidade dentária, recessão gengival, problemas mucogengivais.">
+            >
+            ["at0024"] = <
+                text = <"Envolvimento de furca">
+                description = <"Reabsorção óssea e perda de inserção no espaço inter-radicular.">
+            >
+            ["at0025"] = <
+                text = <"Mobilidade dentária">
+                description = <"Reabsorção do osso alveolar que circunda o dente e também a destruição do ligamento periodontal.">
+            >
+            ["at0026"] = <
+                text = <"Problemas mucogengivais">
+                description = <"Alterações da dimensão e morfologia da relação entre a gengiva e a mucosa alveolar.">
+            >
+            ["at0027"] = <
+                text = <"Recessão gengival">
+                description = <"Deslocamento da gengiva que provoca a exposição da raiz do dente.">
+            >
+            ["ac9008"] = <
+                text = <"Profundidade de sondagem (synthesised)">
+                description = <"É a distância entre a margem gengival até a porção mais coronal do epitélio juncional (fundo de 
+
+sulco/bolsa). (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"*Registro periodontal simplificado(pt)">
+                description = <"*unknown(pt)">
+            >
+            ["at0002"] = <
+                text = <"*Any event(pt)">
+                description = <"**(pt)">
+            >
+            ["at0010"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0011"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0012"] = <
+                text = <"*Código X(pt)">
+                description = <"*Sextante com menos de dois dentes aptos ao exame ou edentulos.(pt)">
+            >
+            ["at0013"] = <
+                text = <"*new ordinal(pt)">
+                description = <"**(pt)">
+            >
+            ["at0014"] = <
+                text = <"*new ordinal(pt)">
+                description = <"**(pt)">
+            >
+            ["at0015"] = <
+                text = <"*new ordinal(pt)">
+                description = <"**(pt)">
+            >
+            ["at0016"] = <
+                text = <"*new ordinal(pt)">
+                description = <"**(pt)">
+            >
+            ["at0017"] = <
+                text = <"*new ordinal(pt)">
+                description = <"**(pt)">
+            >
+            ["at0018"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0023"] = <
+                text = <"*New cluster(pt)">
+                description = <"**(pt)">
+            >
+            ["at0024"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0025"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0026"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["at0027"] = <
+                text = <"*New element(pt)">
+                description = <"**(pt)">
+            >
+            ["ac9008"] = <
+                text = <"*New element(pt) (synthesised)">
+                description = <"**(pt) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Periodontal screening and recording">
+                description = <"The periodontal screening and recording (PSR) system was designed to initiate the promotion, prevention, and early treatment of periodontal diseases.">
+            >
+            ["at0002"] = <
+                text = <"*Any event(pt)">
+                description = <"**(pt)">
+            >
+            ["at0010"] = <
+                text = <"Code *">
+                description = <"The * symbol is added to the code of a sextant exhibiting any abnormalities, like tooth mobility, 
+
+furcation involvement, gingival recession, mucogingival problems.">
+            >
+            ["at0011"] = <
+                text = <"Probing depth">
+                description = <"Distance from the gingival margin to the most coronal portion of the junctional epithelium (base of gigival sulcus / pocket).">
+            >
+            ["at0012"] = <
+                text = <"Code X">
+                description = <"Sextant under two teeth able to take or edentulous.">
+            >
+            ["at0013"] = <
+                text = <"Code 0">
+                description = <"Color-coded reference mark is completely visible. No presence of bleeding on probing, calculus or defective margins on restorations of the sextant.">
+            >
+            ["at0014"] = <
+                text = <"Code 1">
+                description = <"Color-coded reference mark is completely visible. Presence bleeding on probing, without calculus or defective margins on restorations of the sextant.">
+            >
+            ["at0015"] = <
+                text = <"Code 2">
+                description = <"Color-coded reference mark is completely visible. Presence bleeding on probing, calculus and/or defective margins on restorations of the sextant.">
+            >
+            ["at0016"] = <
+                text = <"Code 3">
+                description = <"Color-coded reference mark is partially visible.  Presence of bleeding on probing, presence of calculus, defective margins on restorations, depth pockets of 3,5mm to 5,5mm of the sextant.">
+            >
+            ["at0017"] = <
+                text = <"Code 4">
+                description = <"Color-coded reference mark is not visible. Presence of bleeding on probing, presence of calculus and / or defective margins on restorations, probing depth of
+greater than 5.5 mm in the sextant.">
+            >
+            ["at0018"] = <
+                text = <"Comments">
+                description = <"Field designed for comments about code *">
+            >
+            ["at0023"] = <
+                text = <"Details of Code *">
+                description = <"The * symbol is added to the code of a sextant exhibiting any abnormalities like tooth mobility, 
+
+furcation involvement, gingival recession, mucogingival problems.">
+            >
+            ["at0024"] = <
+                text = <"Furcation involvement">
+                description = <"Bone resorption and insertion loss in the interradicular space.">
+            >
+            ["at0025"] = <
+                text = <"Tooth mobility">
+                description = <"Resorption of the alveolar bone around the tooth and also the destruction of the periodontal 
+
+ligament.">
+            >
+            ["at0026"] = <
+                text = <"Mucogingival problems">
+                description = <"Alterations of the dimension and morphology of the relationship between the gingiva and alveolar 
+
+mucosa.">
+            >
+            ["at0027"] = <
+                text = <"Gingival recession">
+                description = <"Gingiva displacement which causes the exposure in the tooth roots.">
+            >
+            ["ac9008"] = <
+                text = <"Probing depth (synthesised)">
+                description = <"Distance from the gingival margin to the most coronal portion of the junctional epithelium (base of gigival sulcus / pocket). (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0013", "at0014", "at0015", "at0016", "at0017">
+        >
+    >

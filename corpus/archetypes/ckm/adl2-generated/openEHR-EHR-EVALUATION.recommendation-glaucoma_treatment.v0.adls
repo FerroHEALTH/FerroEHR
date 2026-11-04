@@ -1,0 +1,153 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=820d5581-b8a4-464e-8008-b033c2874ad3; build_uid=8e688bb7-2e08-445c-baa3-f4ac4deaa0ed)
+    openEHR-EHR-EVALUATION.recommendation-glaucoma_treatment.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-EVALUATION.recommendation.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2015-07-04">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Bergen Hospital Trust, Norway (openEHR Editor)", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway", "Sam Heard, Ocean Informatics, Australia", "Lars Karlsen, DIPS ASA, Norway", "Shinji Kobayashi, Kyoto University, Japan", "Heather Leslie, Ocean Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Andrej Orel, Marand d.o.o., Slovenia", "José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"- American Academy of Ophthalmology, Glaucoma Panel. Primary open-angle glaucoma.  Preferred Practice Pattern® Guidelines. San Francisco, CA: American Academy of Ophthalmology; 2010.">
+        ["2"] = <"- European Glaucoma Society. Terminology and guidelines for glaucoma. 4th ed. Savona, Italy: Publicomm srl; 2014.">
+    >
+    other_details = <
+        ["current_contact"] = <"Aitor Eguzkitza, Universidad Pública de Navarra - Complejo Hospitalario de Navarra<aitor.eguzkiza@unavarra.es>">
+        ["MD5-CAM-1.0.1"] = <"467D38E1BA19364827E106AF6C346837">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a suggestion, advice or proposal about the most suitable treatment at a specific time, for each patient affected with glaucoma.">
+            keywords = <"advice", "proposal", "suggestion", "glaucoma">
+            use = <"Use to record a suggestion, advice or proposal about the treatment of glaucoma, valid at a specific time of healthcare.
+The statement is considered for the specific point-in-time it is registered, as the therapeutic guidelines may vary according to the context of the disease and the information evaluated in each clinical encounter.
+For example, the treatment can be modified over time depending on the progression of the disease.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000.1] matches {    -- Recommended treatment for glaucoma
+        /data[at0001]/items matches {
+            ELEMENT[at0002.1] matches {    -- Therapeutic recommendation
+                value matches {
+                    DV_CODED_TEXT[at0.9002] matches {
+                        defining_code matches {[ac0.9003; at0.15]}    -- Therapeutic recommendation (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0003.1] matches {    -- Rationale
+                value matches {
+                    DV_CODED_TEXT[at0.9003] matches {
+                        defining_code matches {[ac0.9001; at0.12]}    -- Rationale (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.10"] = <
+                text = <"Laser therapy">
+                description = <"Laser trabeculoplasty lowers IOP by improving aqueous outflow. Presents an alternative for patients who cannot use medications reliably.">
+            >
+            ["at0.11"] = <
+                text = <"Incisional glaucoma surgery">
+                description = <"Generally indicated when medicine or laser therapy is insufficient to control disease.">
+            >
+            ["at0.12"] = <
+                text = <"Glaucoma stable">
+                description = <"No signs of progression identified in glaucoma.">
+            >
+            ["at0.13"] = <
+                text = <"IOP unstable">
+                description = <"Target IOP not reached.">
+            >
+            ["at0.14"] = <
+                text = <"No treatment">
+                description = <"No treatment is needed for the moment.">
+            >
+            ["at0.15"] = <
+                text = <"Maintain treatment">
+                description = <"The patient is already receiving a treatment, to which is responding correctly.">
+            >
+            ["at0.16"] = <
+                text = <"Cyclodestructive surgery">
+                description = <"Procedures that reduce the rate of aqueous production. There are several ways to reduce ciliary body function, such as cyclocryotherapy, transscleral and noncontact Nd:YAG laser, and transscleral and noncontact endodiode laser cyclophotocoagulation.">
+            >
+            ["at0.17"] = <
+                text = <"Other glaucoma surgeries">
+                description = <"Alternative strategies of nonpenetrating glaucoma surgery. The two main types are viscocanalostomy and nonpenetrating deep sclerectomy.">
+            >
+            ["at0.6"] = <
+                text = <"Progressive excavation of the papilla">
+                description = <"Progression of glaucomatous damage at the retinal nerve fiber layer (RNFL) identified on a increase in cupping of the neuroretinal rim.">
+            >
+            ["at0.7"] = <
+                text = <"Visual field loss">
+                description = <"Progressive loss of visual field regarding previous examinations.">
+            >
+            ["at0.9"] = <
+                text = <"Medical treatment">
+                description = <"Unless contraindicated, medical therapy is presently the most common initial intervention to lower IOP.">
+            >
+            ["at0000.1"] = <
+                text = <"Recommended treatment for glaucoma">
+                description = <"A suggestion, advice or proposal toward application of the appropriate therapy for patients diagnosed with glaucoma.">
+            >
+            ["at0002.1"] = <
+                text = <"Therapeutic recommendation">
+                description = <"Narrative description of the most effective treatment based on the assessment of glaucoma.">
+            >
+            ["at0003.1"] = <
+                text = <"Rationale">
+                description = <"Justification for the recommendation.">
+            >
+            ["ac0.9003"] = <
+                text = <"Therapeutic recommendation (synthesised)">
+                description = <"Narrative description of the most effective treatment based on the assessment of glaucoma. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Rationale (synthesised)">
+                description = <"Justification for the recommendation. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0.13"] = <http://snomed.info/id/24075007>
+            ["at0.14"] = <http://snomed.info/id/83905007>
+            ["at0.17"] = <http://snomed.info/id/424150007>
+            ["at0.6"] = <http://snomed.info/id/247224002>
+            ["at0.7"] = <http://snomed.info/id/416626008>
+            ["at0.9"] = <http://snomed.info/id/243121000>
+        >
+    >
+    value_sets = <
+        ["ac0.9003"] = <
+            id = <"ac0.9003">
+            members = <"at0.14", "at0.15", "at0.9", "at0.10", "at0.11", "at0.16", "at0.17">
+        >
+        ["ac0.9001"] = <
+            id = <"ac0.9001">
+            members = <"at0.12", "at0.7", "at0.6", "at0.13">
+        >
+    >

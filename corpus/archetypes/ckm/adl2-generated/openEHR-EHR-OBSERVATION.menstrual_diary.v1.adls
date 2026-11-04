@@ -1,0 +1,458 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=53547e9c-0458-4436-936e-5969248c5300; build_uid=6b994416-c181-44ee-850c-0e505099c99c)
+    openEHR-EHR-OBSERVATION.menstrual_diary.v1.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Marit Alice Venheim, John Tore Valand">
+                ["organisation"] = <"Helse Vest IKT, Helse Bergen">
+                ["email"] = <"marit.alice.venheim@helse-vest-ikt.no, john.tore.valand@helse-vest-ikt.no">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Jan Henk Heilersig">
+                ["organisation"] = <"Nedap Healthcare">
+                ["email"] = <"janhenk.heilersig@nedap.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Marit Alice Venheim">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["email"] = <"marit.alice.venheim@helse-vest-ikt-no">
+        ["date"] = <"2021-08-03">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Sigrid Daae Mæland, Helse Vest IKT, Norway", "Peter Fedorcsak, Oslo universitetssykehus, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Mikkel Johan Gaup Grønmo, Forvaltningssenter EPJ, Helse-Nord, Norway (openEHR Editor)", "Evelyn Hovenga, EJSH Consulting, Australia", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Anna Moore, University of Cambridge, United Kingdom", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"4C6F48B1E36EF19CB4B0045F77AF59C1">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljer om menstruasjonsblødning ved en spesifikk dag.">
+            keywords = <"menstruasjon", "mensen", "syklus", "dysmenoré", "smerte", "oppblåsthet">
+            use = <"Brukes for å registrere detaljer om menstruasjonsblødning ved en spesifikk dag. For eksempel i en menstruasjonskalender eller dagbok.">
+            misuse = <"Brukes ikke for å registrere dato for siste menstruasjon, bruk arketypen EVALUATION.last_menstrual_period for dette formålet.
+
+Brukes ikke for å registrere generell informasjon om menstruasjon eller relaterte symptomer i en syklus, bruk arketypen OBSERVATION.menstruation for dette formålet.
+
+Brukes ikke for å registrere detaljer om menarke eller overgangsalder - bruk arketypen EVALUATION.menstruation_summary for dette formålet.
+
+Brukes ikke for å registrere informasjon om typiske eller vanlige menstruasjonssykluser eller mønstre - bruk arketypen EVALUATION.menstruation_summary for dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about menstrual bleeding and associated symptoms within a specified day.">
+            keywords = <"menstruation", "menses", "cycle", "menstrual", "dysmenorrhoea", "pain", "bloating">
+            use = <"Use to record details about menstrual bleeding and associated symptoms within a specified day. For example in a period tracker or diary.">
+            misuse = <"Not to be used to record the Last menstrual period (LNMP) use the EVALUATION.last_menstrual_period archetype for this purpose.
+
+Not to be used to record overall information about menses or related symptoms in a cycle, use the OBSERVATION.menstruation archetype for this purpose. 
+
+Not to be used to record details about menarche or menopause, use the EVALUATION.menstruation_summary archetype for this purpose.
+
+Not to be used to record information about an individual's menstruation history events or patterns of menstruation over time, use the EVALUATION.menstruation_summary archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"Voor het vastleggen van details over menstruele bloeding en gerelateerde symptomen op een specifieke dag.">
+            keywords = <"menstruatie", "periode", "cyclus", "menstrueel", "dysmenorroe", "pijn", "opgeblazen gevoel">
+            use = <"Te gebruiken voor het vastleggen van details over menstruele bloedingen en gerelateerde symptomen op een specifieke dag. Bijvoorbeeld in een periode volgsysteem of dagboek.">
+            misuse = <"Niet te gebruiken voor het vastleggen van de Laatste Menstruatie Periode, gebruik hiervoor het EVALUATION.last_menstrual_period archetype
+Niet te gebruiken voor het vastleggen van algemene informatie over periodes of gerelateerde symptomen in een cyclus, gebruik hiervoor het OBSERVATION.menstruation archetype
+Niet te gebruiken voor het vastleggen van details over de eerste menstruatie of menopauze, gebruik hiervoor het EVALUATION.menstruation_summary archetype
+Niet te gebruiken voor het vastleggen van informatie over de menstruatie historie van een individu of menstruatie patroon in de loop van de tijd, gebruik hiervoor EVALUATION.menstruation_summary">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Menstrual diary
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Flow
+                                        value matches {
+                                            DV_CODED_TEXT[at9003] matches {
+                                                defining_code matches {[ac9011]}    -- Flow (synthesised)
+                                            }
+                                            DV_TEXT[at9004]
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Volume
+                                        value matches {
+                                            DV_QUANTITY[at9005] matches {
+                                                property matches {[at9001]}    -- Volume
+                                                units matches {"ml"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Blood clots
+                                        value matches {
+                                            DV_CODED_TEXT[at9006] matches {
+                                                defining_code matches {[ac9002]}    -- Blood clots (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Color
+                                        value matches {
+                                            DV_TEXT[at9007]
+                                        }
+                                    }
+                                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at9008]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0020] matches {    -- Additional details
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.symptom_sign(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9009]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    INTERVAL_EVENT[at0012] matches {    -- Per day
+                        data matches {
+                            use_node ITEM_TREE[at9010] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                        width matches {
+                            DV_DURATION[at9011] matches {
+                                value matches {PT24H; PT24H}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0011] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0013] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Menstruasjonsdagbok">
+                description = <"Detaljer om menstruasjonsblødningen og assosierte symptomer ved en spesifikk dag.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Blødningsmengde">
+                description = <"Semikvantitativ estimering av blødningsmengde den aktuelle dagen.">
+            >
+            ["at0005"] = <
+                text = <"Lekkasje">
+                description = <"For eksempel kraftig menstruasjonsblødning som overskred absorpsjonkapasiteten til sanitærbind og andre menstruasjonsprodukter.">
+            >
+            ["at0006"] = <
+                text = <"Kraftig menstruasjonsblødning">
+                description = <"Måtte for eksempel bytte tampong eller bind, med høy absorpsjonsevne, hver time til hver fjerde time.">
+            >
+            ["at0007"] = <
+                text = <"Moderat menstruasjonsblødning">
+                description = <"Måtte for eksempel bytte tampong eller bind, med vanlig absorpsjonsevne, hver tredje til fjerde time.">
+            >
+            ["at0008"] = <
+                text = <"Lett menstruasjonsblødning">
+                description = <"Måtte for eksempel bytte tampong eller bind, med lav eller vanlig absorpsjonsevne, en til tre ganger per dag.">
+            >
+            ["at0009"] = <
+                text = <"Spotting">
+                description = <"For eksempel en bloddråpe eller to, behøver ikke bruke menstruasjonsprodukter.">
+            >
+            ["at0010"] = <
+                text = <"Volum">
+                description = <"Estimert blodtap innenfor en 24 timers periode.">
+                comment = <"For eksempel ved å estimere volumet basert på et piktogram for vurdering av blodtap.">
+            >
+            ["at0012"] = <
+                text = <"Per dag">
+                description = <"For å registrere én bestemt dag i en syklus.">
+            >
+            ["at0013"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0014"] = <
+                text = <"Blodkoagler">
+                description = <"Tilstedeværelse av koagler.">
+            >
+            ["at0015"] = <
+                text = <"Tilstede">
+                description = <"Det forekom blodkoagler i menstruasjonsblødningen.">
+            >
+            ["at0016"] = <
+                text = <"Fraværende">
+                description = <"Det forekom ikke blodkoagler i menstruasjonsblødningen.">
+            >
+            ["at0017"] = <
+                text = <"Farge">
+                description = <"Fargen på blodet.">
+            >
+            ["at0018"] = <
+                text = <"Beskrivelse av spesifikk dag">
+                description = <"Fritekstbeskrivelse av den spesifikke dagen i menstruasjonssyklusen. For eksempel dag 2.">
+            >
+            ["at0020"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere strukturerte detaljer om den spesifikke dagen i menstruasjonssyklusen.">
+                comment = <"For eksempel symptomer eller piktogram for vurdering av blodtap.">
+            >
+            ["at0021"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om den spesifikke dagen i menstruasjonssyklusen som ikke er omfattet av andre felt.">
+            >
+            ["at0022"] = <
+                text = <"Ingen blødning">
+                description = <"Ingen menstruasjonsblødning.">
+            >
+            ["at9001"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["ac9011"] = <
+                text = <"Blødningsmengde (synthesised)">
+                description = <"Semikvantitativ estimering av blødningsmengde den aktuelle dagen. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Blodkoagler (synthesised)">
+                description = <"Tilstedeværelse av koagler. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Menstrual diary">
+                description = <"Details about menstrual bleeding and associated symptoms within a specified day.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Flow">
+                description = <"Semi-quantitative estimation of menstrual flow per day.">
+            >
+            ["at0005"] = <
+                text = <"Flooding">
+                description = <"For example a presence of heavy menstrual flow that exceeded capacity of menstrual products to absorb the flow.">
+            >
+            ["at0006"] = <
+                text = <"Heavy flow">
+                description = <"For example needing to change a high-absorbency tampon or pad every one to four hours.">
+            >
+            ["at0007"] = <
+                text = <"Medium flow">
+                description = <"For example needing to change a regular-absorbency tampon or pad every three to four hours.">
+            >
+            ["at0008"] = <
+                text = <"Light flow">
+                description = <"For example needing to change a low- or regular-absorbency tampon or pad one to three times per day.">
+            >
+            ["at0009"] = <
+                text = <"Spotting">
+                description = <"For example a drop or two of blood, not even requiring menstrual products.">
+            >
+            ["at0010"] = <
+                text = <"Volume">
+                description = <"Estimated volume of menstrual blood loss in any 24hr time period.">
+                comment = <"For example estimating the volume based on a pictorial blood loss assessment chart.">
+            >
+            ["at0012"] = <
+                text = <"Per day">
+                description = <"To record a spesific single day in a cycle.">
+            >
+            ["at0013"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR.">
+            >
+            ["at0014"] = <
+                text = <"Blood clots">
+                description = <"Presence of blood clots.">
+            >
+            ["at0015"] = <
+                text = <"Present">
+                description = <"Blood clots occurred during the menstrual flow.">
+            >
+            ["at0016"] = <
+                text = <"Absent">
+                description = <"Blood clots did not occur during the menstrual flow.">
+            >
+            ["at0017"] = <
+                text = <"Color">
+                description = <"Color of blood.">
+            >
+            ["at0018"] = <
+                text = <"Description">
+                description = <"Narrative description of the menstrual cycle on the day in question. For example day 2.">
+            >
+            ["at0020"] = <
+                text = <"Additional details">
+                description = <"Additional details about the specific day of the menstrual cycle.">
+                comment = <"For example menstrual symptoms or pictorial blood loss assessment charts.">
+            >
+            ["at0021"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the specific day of the menstrual cycle, not captured in other fields.">
+            >
+            ["at0022"] = <
+                text = <"No bleeding">
+                description = <"No menstrual bleeding.">
+            >
+            ["at9001"] = <
+                text = <"Volume">
+                description = <"Volume">
+            >
+            ["ac9011"] = <
+                text = <"Flow (synthesised)">
+                description = <"Semi-quantitative estimation of menstrual flow per day. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Blood clots (synthesised)">
+                description = <"Presence of blood clots. (synthesised)">
+            >
+        >
+        ["nl"] = <
+            ["at0000"] = <
+                text = <"Menstruatie dagboek">
+                description = <"Details over de menstruele bloeding en gerelateerde symptomen op een specifieke dag.">
+            >
+            ["at0002"] = <
+                text = <"Gebeurtenis">
+                description = <"Standaard, niet gespecificeerd tijdstip of gebeurtenis die expliciet kan worden gedefinieerd in een sjabloon of runtime.">
+            >
+            ["at0004"] = <
+                text = <"Vloeiing">
+                description = <"Semi-kwantitatieve schatting van de menstruele vloeiing">
+            >
+            ["at0005"] = <
+                text = <"Doorlekken">
+                description = <"Aanwezigheid van sterke vloeiing die het absorptievermogen van het maandverband of andere menstruatie middelen overschrijdt.">
+            >
+            ["at0006"] = <
+                text = <"Zware vloeiing">
+                description = <"Bijvoorbeeld als het nodig is om elke 1 tot 4 uur een hoog-absorberende tampon of maandverband te vervangen.">
+            >
+            ["at0007"] = <
+                text = <"Gemiddelde vloeiing">
+                description = <"Bijvoorbeeld als het nodig is om elke 3 tot 4 uur een normaal-absorberende tampon of maandverband te vervangen">
+            >
+            ["at0008"] = <
+                text = <"Lichte vloeiing">
+                description = <"Bijvoorbeeld als het nodig is om 1 tot 3 keer per dag een normaal-absorberende tampon of maandverband te vervangen.">
+            >
+            ["at0009"] = <
+                text = <"Lichte vlekken">
+                description = <"Bijvoorbeeld enkele druppels bloed, zonder noodzaak tot het gebruiken van menstruatie producten.">
+            >
+            ["at0010"] = <
+                text = <"Hoeveelheid">
+                description = <"Geschatte hoeveelheid menstrueel bloedverlies in een periode van 24 uur.">
+                comment = <"Bijvoorbeeld een schatting van de hoeveelheid op basis van een visuele beoordelingsschaal voor bloedverlies.">
+            >
+            ["at0012"] = <
+                text = <"Per dag">
+                description = <"Voor het vastleggen van een specifieke dag in een cyclus.">
+            >
+            ["at0013"] = <
+                text = <"Uitbreiding">
+                description = <"Aanvullende informatie nodig voor het vastleggen van lokale informatie of in lijn te zijn met andere referentiemodellen.">
+                comment = <"Bijvoorbeeld: lokale informatie behoefte of aanvullende metadata nodig voor FHIR">
+            >
+            ["at0014"] = <
+                text = <"Bloedproppen">
+                description = <"Aanwezigheid van bloedproppen">
+            >
+            ["at0015"] = <
+                text = <"Aanwezig">
+                description = <"Er was sprake van bloedproppen tijdens de menstruatie.">
+            >
+            ["at0016"] = <
+                text = <"Afwezig">
+                description = <"Er was geen sprake van bloedproppen tijdens de menstruatie.">
+            >
+            ["at0017"] = <
+                text = <"Kleur">
+                description = <"Kleur van het bloed.">
+            >
+            ["at0018"] = <
+                text = <"Beschrijving">
+                description = <"Verhalende beschrijving van de menstruatie cyclus op de betreffende dag. Bijvoorbeeld dag 2.">
+            >
+            ["at0020"] = <
+                text = <"Aanvullingen">
+                description = <"Aanvullende details over de specifieke dag van de menstruatie cyclus.">
+                comment = <"Bijvoorbeeld menstruele symptomen of visuele beoordelingstabel voor bloedverlies.">
+            >
+            ["at0021"] = <
+                text = <"Toelichting">
+                description = <"Aanvullende tekst over de specifieke dag van de menstruatie cyclus, die niet in andere velden is vastgelegd.">
+            >
+            ["at0022"] = <
+                text = <"Geen vloeiing">
+                description = <"Geen menstruele bloeding.">
+            >
+            ["at9001"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["ac9011"] = <
+                text = <"Vloeiing (synthesised)">
+                description = <"Semi-kwantitatieve schatting van de menstruele vloeiing (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Bloedproppen (synthesised)">
+                description = <"Aanwezigheid van bloedproppen (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/129>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0015", "at0016">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009", "at0022">
+        >
+    >

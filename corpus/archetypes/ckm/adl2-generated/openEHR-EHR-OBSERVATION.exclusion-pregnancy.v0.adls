@@ -1,0 +1,59 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ecdabfea-ad62-4f50-a6dd-369bb53aec2b; build_uid=01ba053d-6bf7-4f56-a3fc-ab64ae8d6143)
+    openEHR-EHR-OBSERVATION.exclusion-pregnancy.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-OBSERVATION.exclusion.v0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-08-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: Eksklusjonsutsagn - overordnet, Draft archetype [Internet]. Nasjonal IKT, Nasjonal IKT Clinical Knowledge Manager [cited: 2017-03-17]. Available from: http://arketyper.no/ckm/#showArchetype_1078.36.1650">
+        ["2"] = <"Exclusion statement, Deprecated Archetype [Internet]. openEHR Foundation, openEHR Clinical Knowledge Manager [cited: 2017-02-17]. Available from: http://openehr.org/ckm/#showArchetype_1013.1.617">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"667E2DFE252F79E9FF6EF2C104C9DBC6">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a positive and explicit statement about exclusion of known at the time of recording.">
+            use = <"Use to enable a clinician, at a specified point of time, to record a clear and unambiguous statement about exclusion of known pregnancy at the time of recording. This approach is used in preference to relying on flags or terminology to express negation. 
+
+Please note that exclusion statements should only be considered to be current and accurate at the time of recording, and should not be assumed to be correct at a later date. For example, it is possible (and appropriate from a medico-legal point of view) for a clinician to record, based on best efforts of history-taking and laboratory testing, that an individual is not currently pregnant at a point in time and make clinical decisions based on that assertion, but this assertion should be revisited for each subsequent decision as time passes.">
+            misuse = <"Not to be used to record the exclusion of a specific problem/diagnosis, medication, procedure, family history, adverse reaction or other clinical item - use the EVALUATION.exclusion_specific archetype for this purpose.
+
+Not to be used to record the exclusion of symptoms use the CLUSTER.exclusion_symptom archetype within an appropriate OBSERVATION or CLUSTER archetype.
+
+Not to be used to record the absence of information - use the EVALUATION.absence archetype for this purpose.
+
+Not to be used to record that it is not possible for the patient to become pregnant. For example, after hysterectomy or due to infertility issues. Use appropriate Procedure or Diagnosis archetypes to record these situations.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000.1]    -- Exclusion of pregnancy
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Exclusion of pregnancy">
+                description = <"A positive and explicit statement about the exclusion of pregnancy at the time of recording.">
+            >
+        >
+    >

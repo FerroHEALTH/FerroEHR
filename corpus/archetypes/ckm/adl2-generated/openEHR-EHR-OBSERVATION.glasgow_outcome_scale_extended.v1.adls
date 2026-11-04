@@ -1,0 +1,1378 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b1269152-a930-4c07-9908-380dda296a77; build_uid=600a77e9-24df-458c-81ca-5931e399978c)
+    openEHR-EHR-OBSERVATION.glasgow_outcome_scale_extended.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Hanne Marte Sandal Bårholm">
+        ["organisation"] = <"Helse Vest IKT">
+        ["email"] = <"hanne.marte.sandal.barholm@helse-vest-ikt.no">
+        ["date"] = <"2022-11-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Stein Arne Rimehaug, Sunnaas sykehus, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Anne Brit Øglend, SUS, Norway", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "Heather Grain, Llewelyn Grain Informatics, Australia", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (openEHR Editor)", "Birgitte Heide, Stavanger Universitetssykehus, Norway", "Ylva Hivand Hiorth, sus, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Christine Johansen, Helse Stavanger, Norway", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Terje Sagmyr, Helse Vest IKT, Norway (openEHR Editor)", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Jennett, B, and M Bond. “Assessment of outcome after severe brain damage.” Lancet (London, England) vol. 1,7905 (1975): 480-4. doi:10.1016/s0140-6736(75)92830-5">
+        ["2"] = <"von Steinbuechel N, Rauen K, Krenz U, Wu YJ, Covic A, Plass AM, Cunitz K, Mueller I, Bockhop F, Polinder S, Wilson L, Steyerberg EW, Maas AIR, Menon D, Zeldovich M, The Linguistic Validation Group Of Center-Tbi. Translation and Linguistic Validation of Outcome Instruments for Traumatic Brain Injury Research and Clinical Practice: A Step-by-Step Approach within the Observational CENTER-TBI Study. J Clin Med. 2021 Jun 28;10(13):2863. doi: 10.3390/jcm10132863. PMID: 34203325; PMCID: PMC8269004.">
+        ["3"] = <"Wilson, J T et al. “Structured interviews for the Glasgow Outcome Scale and the extended Glasgow Outcome Scale: guidelines for their use.” Journal of neurotrauma vol. 15,8 (1998): 573-85. doi:10.1089/neu.1998.15.573">
+        ["4"] = <"Wilson L, Boase K, Nelson LD, Temkin NR, Giacino JT, Markowitz AJ, Maas A, Menon DK, Teasdale G, Manley GT. A Manual for the Glasgow Outcome Scale-Extended Interview. J Neurotrauma. 2021 Sep 1;38(17):2435-2446. doi: 10.1089/neu.2020.7527. Epub 2021 Apr 6. PMID: 33740873; PMCID: PMC8390784.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"0891279A5E5716CF57FFA7B31E080CCE">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere resultatene for hver enkelt parameter og deres totale skår for Glasgow Outcome Scale - Extended.">
+            keywords = <"Hodeskade", "traume", "resultat", "funksjon", "aktivitet">
+            use = <"Brukes for å registrere resultatene for hver enkelt parameter og deres totale skår for Glasgow Outcome Scale - Extended.
+
+Et gyldig resultat av en GOSE vurdering er at \"Kategori\" elementet ikke vil ha et resultat. Ordinalen \"99\" i noen elementer skal representere et svaralternativ uten en verdi, og enhver form for kalkulasjon av Kategori bør ta hensyn til dette. \"Kategori\"-elementet bør stå tomt dersom laveste registrerte verdi er \"99\".
+
+">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the result for each component parameter and the total score for Glasgow Outcome Scale - Extended.">
+            keywords = <"Head injury, trauma, outcome, function, activity", ...>
+            use = <"Use to record the result for each component parameter and the total score for Glasgow Outcome Scale - Extended.
+
+A valid outcome of a GOSE assessment is that the 'Category' will have no result. The ordinal '99' in some elements is intended to represent an unscored value, and any Category calculation should take this into account. The 'Category' data element should remain empty if the lowest recorded ordinal value is '99'.">
+            misuse = <"">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Glasgow Outcome Scale - Extended (GOSE)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Date of injury
+                                        value matches {
+                                            DV_DATE[at9024]
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Age at injury
+                                        value matches {
+                                            DV_DURATION[at9025] matches {
+                                                value
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Interval post-injury
+                                        value matches {
+                                            DV_DURATION[at9026] matches {
+                                                value
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0037] occurrences matches {0..1} matches {    -- Respondent
+                                        value matches {
+                                            DV_CODED_TEXT[at9027] matches {
+                                                defining_code matches {[ac9000]}    -- Respondent (synthesised)
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0008] occurrences matches {0..1} matches {    -- Consciousness
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0011] occurrences matches {0..1} matches {    -- 1. Is the head injured person able to obey simple commands, or say any words?
+                                                value matches {
+                                                    DV_ORDINAL[at9028] matches {
+                                                        [value, symbol] matches {
+                                                            [{2}, {[at0041]}],    -- No
+                                                            [{99}, {[at0042]}]    -- Yes
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0010] occurrences matches {0..1} matches {    -- Independence in the home
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0012] occurrences matches {0..1} matches {    -- 2a Is the assistance of another person at home essential every day for some activities of daily living?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9029] matches {
+                                                        defining_code matches {[ac9002]}    -- 2a Is the assistance of another person at home essential every day for some activities of daily living? (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0013] occurrences matches {0..1} matches {    -- 2b Do they need frequent help or someone to be around at home most of the time?
+                                                value matches {
+                                                    DV_ORDINAL[at9030] matches {
+                                                        [value, symbol] matches {
+                                                            [{4}, {[at0045]}],    -- No
+                                                            [{3}, {[at0046]}]    -- Yes
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- 2c Was the assistance at home essential before the injury?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9031] matches {
+                                                        defining_code matches {[ac9004]}    -- 2c Was the assistance at home essential before the injury? (synthesised)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0015] occurrences matches {0..1} matches {    -- Independence outside the home
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0016] occurrences matches {0..1} matches {    -- 3a Are they able to shop without assistance?
+                                                value matches {
+                                                    DV_ORDINAL[at9032] matches {
+                                                        [value, symbol] matches {
+                                                            [{4}, {[at0049]}],    -- No
+                                                            [{99}, {[at0050]}]    -- Yes
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0017] occurrences matches {0..1} matches {    -- 3b Were they able to shop without assistance before the injury?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9033] matches {
+                                                        defining_code matches {[ac9006]}    -- 3b Were they able to shop without assistance before the injury? (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0018] occurrences matches {0..1} matches {    -- 4a Are they able to travel locally without assistance?
+                                                value matches {
+                                                    DV_ORDINAL[at9034] matches {
+                                                        [value, symbol] matches {
+                                                            [{4}, {[at0053]}],    -- No
+                                                            [{99}, {[at0054]}]    -- Yes
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0019] occurrences matches {0..1} matches {    -- 4b Were they able to travel without assistance before the injury?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9035] matches {
+                                                        defining_code matches {[ac9008]}    -- 4b Were they able to travel without assistance before the injury? (synthesised)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0020] occurrences matches {0..1} matches {    -- Work
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0022] occurrences matches {0..1} matches {    -- 5a Are they currently able to work to their previous capacity?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9036] matches {
+                                                        defining_code matches {[ac9009]}    -- 5a Are they currently able to work to their previous capacity? (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0023] occurrences matches {0..1} matches {    -- 5b How restricted are they?
+                                                value matches {
+                                                    DV_ORDINAL[at9037] matches {
+                                                        [value, symbol] matches {
+                                                            [{6}, {[at0059]}],    -- Reduced work capacity.
+                                                            [{5}, {[at0060]}]    -- Able to work only in a sheltered workshop or non-competitive job, or currently unable to work.
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0024] occurrences matches {0..1} matches {    -- 5c Were they either working or seeking employment before the injury (answer 'yes') or were they doing neither (answer 'no')?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9038] matches {
+                                                        defining_code matches {[ac9011]}    -- 5c Were they either working or seeking employment before the injury (answer 'yes') or were they doing neither (answer 'no')? (synthesised)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0025] occurrences matches {0..1} matches {    -- Social & leisure activities
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0026] occurrences matches {0..1} matches {    -- 6a Are they able to resume regular social and leisure activities outside home?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9039] matches {
+                                                        defining_code matches {[ac9012]}    -- 6a Are they able to resume regular social and leisure activities outside home? (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0027] occurrences matches {0..1} matches {    -- 6b What is the extent of restricition on their social and leisure activities?
+                                                value matches {
+                                                    DV_ORDINAL[at9040] matches {
+                                                        [value, symbol] matches {
+                                                            [{7}, {[at0065]}],    -- Participate a bit less: at least half as often as before injury.
+                                                            [{6}, {[at0066]}],    -- Participate much less: less than half as often.
+                                                            [{5}, {[at0067]}]    -- Unable to participate: rarely, if ever, take part.
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0028] occurrences matches {0..1} matches {    -- 6c Did they engage in regular social and leisure activities outside home before the injury?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9041] matches {
+                                                        defining_code matches {[ac9014]}    -- 6c Did they engage in regular social and leisure activities outside home before the injury? (synthesised)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0029] occurrences matches {0..1} matches {    -- Family & friendships
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0030] occurrences matches {0..1} matches {    -- 7a Have there been psychological problems which have resulted in ongoing family disruption or disruption to friendships?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9042] matches {
+                                                        defining_code matches {[ac9015]}    -- 7a Have there been psychological problems which have resulted in ongoing family disruption or disruption to friendships? (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0031] occurrences matches {0..1} matches {    -- 7b What has been the extent of disruption or strain?
+                                                value matches {
+                                                    DV_ORDINAL[at9043] matches {
+                                                        [value, symbol] matches {
+                                                            [{7}, {[at0072]}],    -- Occasional - less than weekly
+                                                            [{6}, {[at0073]}],    -- Frequent - once a week or more, but tolerable.
+                                                            [{5}, {[at0074]}]    -- Constant - daily and intolerable.
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0032] occurrences matches {0..1} matches {    -- 7c Were there problems with family or friends before the injury?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9044] matches {
+                                                        defining_code matches {[ac9017]}    -- 7c Were there problems with family or friends before the injury? (synthesised)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0033] occurrences matches {0..1} matches {    -- Return to normal life
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0034] occurrences matches {0..1} matches {    -- 8a Are there any other current problems relating to the injury which affect daily life?
+                                                value matches {
+                                                    DV_ORDINAL[at9045] matches {
+                                                        [value, symbol] matches {
+                                                            [{8}, {[at0077]}],    -- No
+                                                            [{7}, {[at0078]}]    -- Yes
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0089] occurrences matches {0..1} matches {    -- 8b Were similar problems present before the injury?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9046] matches {
+                                                        defining_code matches {[ac9019]}    -- 8b Were similar problems present before the injury? (synthesised)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0092] occurrences matches {0..1} matches {    -- Since the injury has the head injured person had any epileptic fits?
+                                        value matches {
+                                            DV_CODED_TEXT[at9047] matches {
+                                                defining_code matches {[ac9020]}    -- Since the injury has the head injured person had any epileptic fits? (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0093] occurrences matches {0..1} matches {    -- Have they been told that they are currently at risk of developing epilepsy?
+                                        value matches {
+                                            DV_CODED_TEXT[at9048] matches {
+                                                defining_code matches {[ac9021]}    -- Have they been told that they are currently at risk of developing epilepsy? (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0094] occurrences matches {0..1} matches {    -- What is the most important factor in outcome?
+                                        value matches {
+                                            DV_CODED_TEXT[at9049] matches {
+                                                defining_code matches {[ac9022]}    -- What is the most important factor in outcome? (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0036] occurrences matches {0..1} matches {    -- Category
+                                        value matches {
+                                            DV_ORDINAL[at9050] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0081]}],    -- Dead
+                                                    [{2}, {[at0082]}],    -- Vegetative state
+                                                    [{3}, {[at0083]}],    -- Lower severe disability
+                                                    [{4}, {[at0084]}],    -- Upper severe disability
+                                                    [{5}, {[at0085]}],    -- Lower moderate disability
+                                                    [{6}, {[at0086]}],    -- Upper moderate disability
+                                                    [{7}, {[at0087]}],    -- Lower good recovery
+                                                    [{8}, {[at0088]}]    -- Upper good recovery
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0095]
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Glasgow Outcome Scale - Extended (GOSE)">
+                description = <"En skala for å vurdere resultatet etter hodeskade eller ikke-traumatisk hjerneskade.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard uspesifisert tidspunkt- eller intervallhendelse som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Skadedato">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Alder ved skadetidspunkt">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Tid etter skade">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Bevissthet">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Selvhjulpenhet i hjemmet">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"1. Er personen med hodeskade i stand til å respondere på enkel instruksjon, eller si noen ord?">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"2a Kreves det personhjelp til daglige aktiviteter i hjemmet hver dag?">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"2b Trenger han/hun ofte hjelp eller tilsyn i hjemmet?">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"2c Var det helt nødvendig med personhjelp i daglige aktiviteter i hjemmet før skaden?">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Selvhjulpenhet utenfor hjemmet">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"3a Kan han/hun gjøre innkjøp uten hjelp?">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"3b Kunne han/hun gjøre innkjøp uten hjelp før skaden?">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"4a Kan han/hun reise lokalt uten hjelp?">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"4b Kunne han/hun reise lokalt uten hjelp før skaden?">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Arbeid">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"5a Er han/hun for tiden i stand til å arbeide med samme kapasitet som tidligere?">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"5b Hvor store er hans/hennes begrensninger?">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"5c Var han/hun i arbeid eller arbeidssøkende før skaden (svar \"ja\") eller ingen av delene (svar \"nei\")?">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Sosiale aktiviteter og fritidsaktiviteter">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"6a Kan han/hun gjenoppta regelmessige sosiale aktiviteter og fritidsaktiviteter utenfor hjemmet?">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"6b Hvor omfattende er begrensningene i sosiale aktiviteter og fritidsaktiviteter (utenfor hjemmet)?">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"6c Deltok han/hun jevnlig i sosiale aktiviteter og fritidsaktiviteter utenfor hjemmet før skaden?">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Familie og venner">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"7a Har det vært psykologiske problemer som har resultert i pågående belastninger eller splid i vennskap eller familieforhold?">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"7b Hva har vært omfanget av disse problemene?">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"7c Var det problemer i forhold til familie eller venner før skaden?">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Tilbake til normalt liv">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"8a Er det andre aktuelle problemer relatert til skaden som påvirker dagliglivet?">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Kategori">
+                description = <"Samlet vurdering basert på den laveste skåringskategorien.">
+            >
+            ["at0037"] = <
+                text = <"Respondent">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Pasient alene">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Familie/venn/personale alene">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Pasient + familie/venn/personale">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Redusert arbeidskapasitet">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Mulig å arbeide bare i vernet bedrift eller lignende arbeid (frivillig arbeid, arbeid med bistand); eller er for tiden ikke i stand til å arbeide">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Deltar litt mindre, minst halvparten så ofte som før">
+                description = <"">
+            >
+            ["at0066"] = <
+                text = <"Deltar mye mindre, mindre enn halvparten så ofte">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"Ute av stand til å delta, eventuelt svært sjeldent">
+                description = <"">
+            >
+            ["at0068"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0069"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0070"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0071"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0072"] = <
+                text = <"Av og til - mindre enn ukentlig">
+                description = <"">
+            >
+            ["at0073"] = <
+                text = <"Oftere - en gang i uken eller mer, men til å holde ut">
+                description = <"">
+            >
+            ["at0074"] = <
+                text = <"Hele tiden - daglig og uutholdelig">
+                description = <"">
+            >
+            ["at0075"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0076"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0077"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0078"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0081"] = <
+                text = <"Død">
+                description = <"">
+            >
+            ["at0082"] = <
+                text = <"Vegetativ tilstand">
+                description = <"">
+            >
+            ["at0083"] = <
+                text = <"Alvorlig funksjonshemning nedre nivå">
+                description = <"">
+            >
+            ["at0084"] = <
+                text = <"Alvorlig funksjonshemning øvre nivå">
+                description = <"">
+            >
+            ["at0085"] = <
+                text = <"Moderat funksjonshemning nedre nivå">
+                description = <"">
+            >
+            ["at0086"] = <
+                text = <"Moderat funksjonshemning øvre nivå">
+                description = <"">
+            >
+            ["at0087"] = <
+                text = <"God restitusjon nedre nivå">
+                description = <"">
+            >
+            ["at0088"] = <
+                text = <"God restitusjon øvre nivå">
+                description = <"">
+            >
+            ["at0089"] = <
+                text = <"8b Var de tilsvarende problemene tilstede også før skaden?">
+                description = <"">
+            >
+            ["at0090"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0091"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0092"] = <
+                text = <"Siden skaden, har personen med hodeskade hatt noen epileptiske anfall?">
+                description = <"">
+            >
+            ["at0093"] = <
+                text = <"Har han/hun blitt fortalt at han/hun for tiden har risiko for å utvikle epilepsi?">
+                description = <"">
+            >
+            ["at0094"] = <
+                text = <"Hva er den viktigste utfallsfaktoren?">
+                description = <"">
+            >
+            ["at0096"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0097"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0098"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0099"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0100"] = <
+                text = <"Virkning av hodeskaden">
+                description = <"">
+            >
+            ["at0101"] = <
+                text = <"Virkning av sykdom eller skade i andre deler av kroppen">
+                description = <"">
+            >
+            ["at0102"] = <
+                text = <"En blanding av disse">
+                description = <"">
+            >
+            ["ac9000"] = <
+                text = <"Respondent (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9050"] = <
+                text = <"1. Er personen med hodeskade i stand til å respondere på enkel instruksjon, eller si noen ord? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"2a Kreves det personhjelp til daglige aktiviteter i hjemmet hver dag? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9051"] = <
+                text = <"2b Trenger han/hun ofte hjelp eller tilsyn i hjemmet? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"2c Var det helt nødvendig med personhjelp i daglige aktiviteter i hjemmet før skaden? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9052"] = <
+                text = <"3a Kan han/hun gjøre innkjøp uten hjelp? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"3b Kunne han/hun gjøre innkjøp uten hjelp før skaden? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9053"] = <
+                text = <"4a Kan han/hun reise lokalt uten hjelp? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"4b Kunne han/hun reise lokalt uten hjelp før skaden? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"5a Er han/hun for tiden i stand til å arbeide med samme kapasitet som tidligere? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9054"] = <
+                text = <"5b Hvor store er hans/hennes begrensninger? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"5c Var han/hun i arbeid eller arbeidssøkende før skaden (svar \"ja\") eller ingen av delene (svar \"nei\")? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"6a Kan han/hun gjenoppta regelmessige sosiale aktiviteter og fritidsaktiviteter utenfor hjemmet? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9055"] = <
+                text = <"6b Hvor omfattende er begrensningene i sosiale aktiviteter og fritidsaktiviteter (utenfor hjemmet)? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"6c Deltok han/hun jevnlig i sosiale aktiviteter og fritidsaktiviteter utenfor hjemmet før skaden? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"7a Har det vært psykologiske problemer som har resultert i pågående belastninger eller splid i vennskap eller familieforhold? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9056"] = <
+                text = <"7b Hva har vært omfanget av disse problemene? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"7c Var det problemer i forhold til familie eller venner før skaden? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9057"] = <
+                text = <"8a Er det andre aktuelle problemer relatert til skaden som påvirker dagliglivet? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"8b Var de tilsvarende problemene tilstede også før skaden? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"Siden skaden, har personen med hodeskade hatt noen epileptiske anfall? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Har han/hun blitt fortalt at han/hun for tiden har risiko for å utvikle epilepsi? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"Hva er den viktigste utfallsfaktoren? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9058"] = <
+                text = <"Kategori (synthesised)">
+                description = <"Samlet vurdering basert på den laveste skåringskategorien. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Glasgow Outcome Scale - Extended (GOSE)">
+                description = <"A scale for assessing outcome after head injury and non-traumatic acute brain insults.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which   may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Date of injury">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Age at injury">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Interval post-injury">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Consciousness">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Independence in the home">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"1. Is the head injured person able to obey simple commands, or say any words?">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"2a Is the assistance of another person at home essential every day for some activities of daily living?">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"2b Do they need frequent help or someone to be around at home most of the time?">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"2c Was the assistance at home essential before the injury?">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Independence outside the home">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"3a Are they able to shop without assistance?">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"3b Were they able to shop without assistance before the injury?">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"4a Are they able to travel locally without assistance?">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"4b Were they able to travel without assistance before the injury?">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Work">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"5a Are they currently able to work to their previous capacity?">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"5b How restricted are they?">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"5c Were they either working or seeking employment before the injury (answer 'yes') or were they doing neither (answer 'no')?">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Social & leisure activities">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"6a Are they able to resume regular social and leisure activities outside home?">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"6b What is the extent of restricition on their social and leisure activities?">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"6c Did they engage in regular social and leisure activities outside home before the injury?">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Family & friendships">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"7a Have there been psychological problems which have resulted in ongoing family disruption or disruption to friendships?">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"7b What has been the extent of disruption or strain?">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"7c Were there problems with family or friends before the injury?">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Return to normal life">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"8a Are there any other current problems relating to the injury which affect daily life?">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Category">
+                description = <"The overall rating based on the lowest outcome value indicated on the scale.">
+            >
+            ["at0037"] = <
+                text = <"Respondent">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Patient alone">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Relative/friend/carer alone">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Patient + relative/friend/carer">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Reduced work capacity.">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Able to work only in a sheltered workshop or non-competitive job, or currently unable to work.">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Participate a bit less: at least half as often as before injury.">
+                description = <"">
+            >
+            ["at0066"] = <
+                text = <"Participate much less: less than half as often.">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"Unable to participate: rarely, if ever, take part.">
+                description = <"">
+            >
+            ["at0068"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0069"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0070"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0071"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0072"] = <
+                text = <"Occasional - less than weekly">
+                description = <"">
+            >
+            ["at0073"] = <
+                text = <"Frequent - once a week or more, but tolerable.">
+                description = <"">
+            >
+            ["at0074"] = <
+                text = <"Constant - daily and intolerable.">
+                description = <"">
+            >
+            ["at0075"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0076"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0077"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0078"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0081"] = <
+                text = <"Dead">
+                description = <"">
+            >
+            ["at0082"] = <
+                text = <"Vegetative state">
+                description = <"">
+            >
+            ["at0083"] = <
+                text = <"Lower severe disability">
+                description = <"">
+            >
+            ["at0084"] = <
+                text = <"Upper severe disability">
+                description = <"">
+            >
+            ["at0085"] = <
+                text = <"Lower moderate disability">
+                description = <"">
+            >
+            ["at0086"] = <
+                text = <"Upper moderate disability">
+                description = <"">
+            >
+            ["at0087"] = <
+                text = <"Lower good recovery">
+                description = <"">
+            >
+            ["at0088"] = <
+                text = <"Upper good recovery">
+                description = <"">
+            >
+            ["at0089"] = <
+                text = <"8b Were similar problems present before the injury?">
+                description = <"">
+            >
+            ["at0090"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0091"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0092"] = <
+                text = <"Since the injury has the head injured person had any epileptic fits?">
+                description = <"">
+            >
+            ["at0093"] = <
+                text = <"Have they been told that they are currently at risk of developing epilepsy?">
+                description = <"">
+            >
+            ["at0094"] = <
+                text = <"What is the most important factor in outcome?">
+                description = <"">
+            >
+            ["at0096"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0097"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0098"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0099"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0100"] = <
+                text = <"Effects of head injury">
+                description = <"">
+            >
+            ["at0101"] = <
+                text = <"Effects of illness or injury to another part of the body">
+                description = <"">
+            >
+            ["at0102"] = <
+                text = <"A mixture of these">
+                description = <"">
+            >
+            ["ac9000"] = <
+                text = <"Respondent (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9050"] = <
+                text = <"1. Is the head injured person able to obey simple commands, or say any words? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"2a Is the assistance of another person at home essential every day for some activities of daily living? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9051"] = <
+                text = <"2b Do they need frequent help or someone to be around at home most of the time? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"2c Was the assistance at home essential before the injury? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9052"] = <
+                text = <"3a Are they able to shop without assistance? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"3b Were they able to shop without assistance before the injury? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9053"] = <
+                text = <"4a Are they able to travel locally without assistance? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"4b Were they able to travel without assistance before the injury? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"5a Are they currently able to work to their previous capacity? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9054"] = <
+                text = <"5b How restricted are they? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"5c Were they either working or seeking employment before the injury (answer 'yes') or were they doing neither (answer 'no')? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"6a Are they able to resume regular social and leisure activities outside home? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9055"] = <
+                text = <"6b What is the extent of restricition on their social and leisure activities? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"6c Did they engage in regular social and leisure activities outside home before the injury? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"7a Have there been psychological problems which have resulted in ongoing family disruption or disruption to friendships? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9056"] = <
+                text = <"7b What has been the extent of disruption or strain? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"7c Were there problems with family or friends before the injury? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9057"] = <
+                text = <"8a Are there any other current problems relating to the injury which affect daily life? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"8b Were similar problems present before the injury? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"Since the injury has the head injured person had any epileptic fits? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Have they been told that they are currently at risk of developing epilepsy? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"What is the most important factor in outcome? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9058"] = <
+                text = <"Category (synthesised)">
+                description = <"The overall rating based on the lowest outcome value indicated on the scale. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9053"] = <
+            id = <"ac9053">
+            members = <"at0053", "at0054">
+        >
+        ["ac9052"] = <
+            id = <"ac9052">
+            members = <"at0049", "at0050">
+        >
+        ["ac9051"] = <
+            id = <"ac9051">
+            members = <"at0045", "at0046">
+        >
+        ["ac9050"] = <
+            id = <"ac9050">
+            members = <"at0041", "at0042">
+        >
+        ["ac9057"] = <
+            id = <"ac9057">
+            members = <"at0077", "at0078">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0063", "at0064">
+        >
+        ["ac9056"] = <
+            id = <"ac9056">
+            members = <"at0072", "at0073", "at0074">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0061", "at0062">
+        >
+        ["ac9055"] = <
+            id = <"ac9055">
+            members = <"at0065", "at0066", "at0067">
+        >
+        ["ac9054"] = <
+            id = <"ac9054">
+            members = <"at0059", "at0060">
+        >
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0075", "at0076">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0070", "at0071">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0068", "at0069">
+        >
+        ["ac9058"] = <
+            id = <"ac9058">
+            members = <"at0081", "at0082", "at0083", "at0084", "at0085", "at0086", "at0087", "at0088">
+        >
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0057", "at0058">
+        >
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0055", "at0056">
+        >
+        ["ac9020"] = <
+            id = <"ac9020">
+            members = <"at0096", "at0097">
+        >
+        ["ac9022"] = <
+            id = <"ac9022">
+            members = <"at0100", "at0101", "at0102">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0098", "at0099">
+        >
+        ["ac9019"] = <
+            id = <"ac9019">
+            members = <"at0090", "at0091">
+        >
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0043", "at0044">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0038", "at0039", "at0040">
+        >
+        ["ac9006"] = <
+            id = <"ac9006">
+            members = <"at0051", "at0052">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0047", "at0048">
+        >
+    >

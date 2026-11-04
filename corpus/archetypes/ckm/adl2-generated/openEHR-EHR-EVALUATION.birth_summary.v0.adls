@@ -1,0 +1,391 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=34569352-0a74-4ff9-aebf-8ec9929eb948; build_uid=7b1d37f7-b7fb-4350-86ab-796e93877438)
+    openEHR-EHR-EVALUATION.birth_summary.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen, Grete Hovde Bøe, Elin Kristiansen">
+                ["organisation"] = <"Oslo University Hospital, Sykehuspartner HF">
+                ["email"] = <"varntzen@ous-hf.no, grete.kristin.hovde.boe@sykehuspartner.no, elinkr@sykehuspartner.no">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Julio de Sosa">
+                ["organisation"] = <"Servei Català de la Salut">
+                ["email"] = <"juliodesosa@catsalut.cat">
+            >
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Julio de Sosa">
+                ["organisation"] = <"Servei Català de la Salut">
+                ["email"] = <"juliodesosa@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-04-12">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"BC491CFE30BA4EE011D599F58D86CFCF">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en oversikt eller sammendrag av svangerskapet og fødselen til et individ.">
+            keywords = <"fødsel, fødselsdato, fødested, flerling, svangerskap", ...>
+            use = <"Brukes til å registrere en oversikt eller sammendrag av svangerskapet og fødselen til et individ.">
+            misuse = <"Skal ikke brukes for å registrere informasjon om et svangerskap og fødsel til bruk i mors fødejournal. Bruk EVALUATION.pregnancy_summary (Graviditetssammenfatning) og tiilhørende arketyper for dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record an overview or summary record of the pregnancy and birth of an individual.">
+            keywords = <"birth", "DOB", "birthplace", "plurality">
+            use = <"Use to record an overview or summary record of the pregnancy and birth of an individual.">
+            misuse = <"Not to be used to record information about a pregnancy and birth for use in a maternal health record - use EVALUATION.pregnancy_summary and related archetypes for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar un resumen del embarazo y el nacimiento de un individuo.">
+            keywords = <"nacimiento", "fecha de nacimiento", "lugar de nacimiento", "multiplicidad">
+            use = <"Se utiliza para registrar un resumen del embarazo y el nacimiento de una persona.">
+            misuse = <"No debe utilizarse para registrar información sobre un embarazo y un parto para su uso en un registro de salud materna; para ello, utilice EVALUATION.pregnancy_summary y los arquetipos relacionados.">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Registrar un resum de l'embaràs i el naixement d'un individu.">
+            keywords = <"naixement", "data de naixement", "lloc de naixement", "multiplicitat">
+            use = <"Es fa servir per registrar un resum de l'embaràs i el naixement d'una persona.">
+            misuse = <"No s'ha d'utilitzar per registrar informació sobre un embaràs i un part per utilitzar-lo en un registre de salut materna; per fer-ho, utilitzeu EVALUATION.pregnancy_summary i els arquetips relacionats.">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Birth summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Date/time of birth (DOB)
+                        value matches {
+                            DV_DATE_TIME[at9007]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0003] matches {    -- DOB alternatives
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.dob_alternative(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                    }
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Country of birth
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Place of birth
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0005] matches {    -- Structured place of birth
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.address(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Pregnancy/birth summary
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Birth plurality
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0008] matches {    -- Birth details
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.birth_detail(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                    }
+                    allow_archetype CLUSTER[at0013] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0009] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9005]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0011] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Fødselssammendrag">
+                description = <"Oversikt eller sammendrag av svangerskapet og fødselen til et individ.">
+            >
+            ["at0002"] = <
+                text = <"Fødeland">
+                description = <"Navn på land hvor individet er født.">
+            >
+            ["at0003"] = <
+                text = <"Alternative fødselsdatoer">
+                description = <"Ytterligere detaljer om mulige alternative fødselsdatoer.">
+            >
+            ["at0004"] = <
+                text = <"Fødselsdato">
+                description = <"Dato/tid for når individet ble født.">
+                comment = <"Kan også brukes til å registrere antatt eller avtalt/planlagt fødselsdato/tid for praktiske formål hvis den faktiske fødselsdato/tid ikke er formelt registrert. Mulige alternative fødselsdatoer kan registreres ved å SLOT'e inn arketypen CLUSTER.DOB_alternative. Deldato er tillatt.">
+            >
+            ["at0005"] = <
+                text = <"Strukturert informasjon om fødested">
+                description = <"Strukturerte detaljer om fødestedet.">
+                comment = <"OBS: Det er potensial for duplisering av dataelementet 'Fødeland' hvis CLUSTER.adress (Adresse) brukes.">
+            >
+            ["at0006"] = <
+                text = <"Graviditets-/fødselssammendrag">
+                description = <"Fritekstlig beskrivelse av hele graviditeten og fødselen til individet, inkludert komplikasjoner som oppstår hos moren og barnet under graviditet, fødsel og etter fødsel.">
+                comment = <"Dette dataelementet kan være avledet fra dataelementet 'Graviditetssammenfatning' i arketypen EVALUATION.pregnancy_summary i mors fødejournal.">
+            >
+            ["at0007"] = <
+                text = <"Flerlingfødsel">
+                description = <"Begrep som representerer det totale antall levende fødsler og dødfødsler som følge av graviditeten.">
+                comment = <"Koding av begrepet 'flerlingfødsel' anbefales. For eksempel: enkeltfødsel; tvillinger; trillinger; eller firlinger. Definisjonen av 'dødfødsel' kan variere fra sted til sted.">
+            >
+            ["at0008"] = <
+                text = <"Fødselsdetaljer">
+                description = <"Et utdrag av persistent eller sammendragsinformasjon om graviditeten og fødselen til et spedbarn, valgt for nytteverdi fra både mors og spedbarnets journal.">
+            >
+            ["at0010"] = <
+                text = <"Sist oppdatert">
+                description = <"Datoen da dette sammendraget om et individs fødsel sist ble oppdatert.">
+            >
+            ["at0011"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre   referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0012"] = <
+                text = <"Fødested">
+                description = <"En enkel beskrivelse av fødestedet.">
+                comment = <"Dette dataelementet gir mulighet for ustrukturert informasjon om fødestedet, slik som byen, regionen, tettstedet eller forstaden i Fødelandet. For eksempel: Oslo (Norge); Manhattan (USA); eller Box Hill (Australia).">
+            >
+            ["at0013"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere strukturerte detaljer knyttet til fødselen.">
+            >
+            ["at0014"] = <
+                text = <"Kommentar">
+                description = <"Fritekst om fødselen som ikke er fanget opp i andre felt.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Birth summary">
+                description = <"Overview or summary record of the pregnancy and birth of an individual.">
+            >
+            ["at0002"] = <
+                text = <"Country of birth">
+                description = <"The country of birth of the individual.">
+            >
+            ["at0003"] = <
+                text = <"DOB alternatives">
+                description = <"Additional details about possible alternative dates of birth.">
+            >
+            ["at0004"] = <
+                text = <"Date/time of birth (DOB)">
+                description = <"The date/time of birth of the individual.">
+                comment = <"May also be used to record the assumed or agreed date/time of birth for operational purposes, if the actual date/time is not formally recorded. Possible alternatives for the date/time of birth of the individual can be recorded using the CLUSTER.DOB_alternative archetype 'Date of birth details' SLOT. Partial dates are allowed.">
+            >
+            ["at0005"] = <
+                text = <"Structured place of birth">
+                description = <"Structured details about the place of birth.">
+                comment = <"Please note: there is potential duplication of the 'Country of birth' data element if the CLUSTER.address is used. ">
+            >
+            ["at0006"] = <
+                text = <"Pregnancy/birth summary">
+                description = <"Narrative description about the entire pregnancy, labour and delivery of the individual, including both maternal and infant complications.">
+                comment = <"This data element may be derived from the 'Pregnancy synopsis' data element within the EVALUATION.pregnancy_summary archetype in the maternal health record.">
+            >
+            ["at0007"] = <
+                text = <"Birth plurality">
+                description = <"Term representing the total number of live births and stillbirths resulting from the pregnancy.">
+                comment = <"Coding of the 'birth plurality' term is recommended. For example: singleton; twins; triplets; or quadruplets.The definition of 'stillbirth' may vary in different locations. ">
+            >
+            ["at0008"] = <
+                text = <"Birth details">
+                description = <"A subset of persistent or summary information about the pregnancy and birth of an infant, selected for utility of use within both the maternal and infant health records.">
+            >
+            ["at0010"] = <
+                text = <"Last updated">
+                description = <"The date when the birth summary was last updated.">
+            >
+            ["at0011"] = <
+                text = <"Extension">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Place of birth">
+                description = <"Simple representation about the place of birth.">
+                comment = <"This data element provides the opportunity for simple detail about the place of birth, such as the city, region, town, or suburb within the identified 'Country of birth'. For example: Kingston (Jamaica); Manhattan (USA); or Box Hill (Australia).">
+            >
+            ["at0013"] = <
+                text = <"Additional details">
+                description = <"Additional structured details related to the birth.">
+            >
+            ["at0014"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the birth not captured in other fields.">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Resumen del parto">
+                description = <"Resumen o registro resumido del embarazo y el nacimiento de una persona.">
+            >
+            ["at0002"] = <
+                text = <"País de nacimiento">
+                description = <"El país de nacimiento del individuo.">
+            >
+            ["at0003"] = <
+                text = <"Fechas de nacimiento alternativas">
+                description = <"Detalles adicionales sobre posibles fechas de nacimiento alternativas.">
+            >
+            ["at0004"] = <
+                text = <"Fecha/hora de nacimiento">
+                description = <"La fecha/hora de nacimiento de la persona.">
+                comment = <"También puede utilizarse para registrar la fecha/hora de nacimiento supuesta o acordada con fines operativos, si la fecha/hora real no se registra formalmente. Las posibles alternativas para la fecha/hora de nacimiento del individuo pueden registrarse utilizando el arquetipo CLUSTER.DOB_alternative 'Date of birth details' SLOT. Se permiten fechas parciales.">
+            >
+            ["at0005"] = <
+                text = <"Lugar de nacimiento detallado">
+                description = <"Datos detallados sobre el lugar de nacimiento.">
+                comment = <"Nota: existe una posible duplicidad del dato \"País de nacimiento\" si se utiliza CLUSTER.address.">
+            >
+            ["at0006"] = <
+                text = <"Resumen del embarazo/parto">
+                description = <"Descripción narrativa del embarazo, parto y alumbramiento del individuo, incluidas las complicaciones tanto maternas como infantiles.">
+                comment = <"Este elemento de datos puede derivarse del elemento de datos \"Sinopsis del embarazo\" dentro del arquetipo EVALUATION.pregnancy_summary en el registro de salud materna.">
+            >
+            ["at0007"] = <
+                text = <"Parto múltiple">
+                description = <"Término que representa el número total de nacidos vivos y mortinatos resultantes del embarazo.">
+                comment = <"Se recomienda codificar el término 'parto múltiple'. Por ejemplo: feto único, gemelos, trillizos o cuatrillizos. La definición de \"mortinato\" puede variar en función del lugar.">
+            >
+            ["at0008"] = <
+                text = <"Detalles del parto">
+                description = <"Un subconjunto de información persistente o resumida sobre el embarazo y el nacimiento de un bebé, seleccionada por su utilidad de uso dentro de los historiales médicos materno e infantil.">
+            >
+            ["at0010"] = <
+                text = <"Última actualización">
+                description = <"Fecha de la última actualización del resumen del parto.">
+            >
+            ["at0011"] = <
+                text = <"Extensión">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Lugar de nacimiento">
+                description = <"Representación sencilla del lugar de nacimiento.">
+                comment = <"Este dato ofrece la posibilidad de dar detalles sencillos sobre el lugar de nacimiento, como la ciudad, la región, el pueblo o el suburbio dentro del \"País de nacimiento\" identificado. Por ejemplo: Kingston (Jamaica); Manhattan (EE.UU.); o Box Hill (Australia).">
+            >
+            ["at0013"] = <
+                text = <"Detalles adicionales">
+                description = <"Detalles adicionales estructurados, relacionados con el parto.">
+            >
+            ["at0014"] = <
+                text = <"Comentarios">
+                description = <"Información adicional sobre el parto no recogida en otros campos.">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Resum del part">
+                description = <"Resum o registre resumit de l'embaràs i el naixement d'una persona.">
+            >
+            ["at0002"] = <
+                text = <"País de naixement">
+                description = <"El país de naixement de l'individu.">
+            >
+            ["at0003"] = <
+                text = <"Dates de naixement alternatives">
+                description = <"Detalls addicionals sobre possibles dates de naixement alternatives.">
+            >
+            ["at0004"] = <
+                text = <"Data/hora de naixement">
+                description = <"La data/hora de naixement de la persona.">
+                comment = <"També es pot utilitzar per registrar la data/hora de naixement suposada o acordada amb fins operatius, si la data/hora real no es registra formalment. Les possibles alternatives per a la data/hora de naixement de l'individu es poden registrar utilitzant l'arquetip CLUSTER.DOB_alternative 'Date of birth details' SLOT. Es permeten dates parcials.">
+            >
+            ["at0005"] = <
+                text = <"Lloc de naixement detallat">
+                description = <"Dades detallades sobre el lloc de naixement.">
+                comment = <"Nota: hi ha una possible duplicitat de la dada \"País de naixement\" si utilitzeu CLUSTER.address.">
+            >
+            ["at0006"] = <
+                text = <"Resum de l'embaràs/part">
+                description = <"Descripció narrativa de l'embaràs, el part i l'enllumenament de l'individu, incloses les complicacions tant maternes com infantils.">
+                comment = <"Aquest element de dades pot derivar de l'element de dades \"Sinopsi de l'embaràs\" dins de l'arquetip EVALUATION.pregnancy_summary al registre de salut materna.">
+            >
+            ["at0007"] = <
+                text = <"Part múltiple">
+                description = <"Terme que representa el nombre total de nascuts vius i mortinats resultants de l'embaràs.">
+                comment = <"Es recomana codificar el terme 'part múltiple'. Per exemple: fetus únic, bessons, trigèmins o quadrillis. La definició de \"mortinat\" pot variar en funció del lloc.">
+            >
+            ["at0008"] = <
+                text = <"Detalls del part">
+                description = <"Un subconjunt d'informació persistent o resumida sobre l'embaràs i el naixement d'un nadó, seleccionada per la seva utilitat d'ús dins dels historials mèdics matern i infantil.">
+            >
+            ["at0010"] = <
+                text = <"Última actualització">
+                description = <"Data de la darrera actualització del resum del part.">
+            >
+            ["at0011"] = <
+                text = <"Extensió">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Lloc de naixement">
+                description = <"Representació senzilla del lloc de naixement.">
+                comment = <"Aquesta dada ofereix la possibilitat de donar detalls senzills sobre el lloc de naixement, com la ciutat, la regió, el poble o el suburbi dins del “País de naixement” identificat. Per exemple: Kingston (Jamaica); Manhattan (EUA); o Box Hill (Austràlia).">
+            >
+            ["at0013"] = <
+                text = <"Detalls addicionals">
+                description = <"Detalls addicionals estructurats relacionats amb el part.">
+            >
+            ["at0014"] = <
+                text = <"Comentaris">
+                description = <"Informació addicional sobre el part no recollida a altres camps.">
+            >
+        >
+    >

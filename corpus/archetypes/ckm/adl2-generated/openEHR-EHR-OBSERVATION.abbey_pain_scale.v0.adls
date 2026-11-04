@@ -1,0 +1,421 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=9a49d23a-f16c-4f8e-adc8-49e3d0ccda82; build_uid=4b83c511-3165-401b-8ee1-fea5469dc06d)
+    openEHR-EHR-OBSERVATION.abbey_pain_scale.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Dennis Forslund, Viktor Bäckman, Åsa Skagerhult">
+                ["organisation"] = <"Cambio Healthcare Systems, Linköpings Universitet, Region Östergötland">
+                ["email"] = <"vikba308@student.liu.se, asa.skagerhult@regionostergotland.se">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Syeeda S Farruque">
+        ["organisation"] = <"Cambio Healthcare Systems">
+        ["email"] = <"models@cambiocds.com">
+        ["date"] = <"2017-03-07">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Atomica Informatics, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Abbey J, Piller N, De Bellis A, Esterman A, Parker D, Giles L, Lowcay B. The Abbey pain scale: a 1-minute numerical indicator for people with end-stage dementia. Int J Palliat Nurs. 2004 Jan;10(1):6-13. PubMed PMID: 14966439.">
+        ["2"] = <"Liu JY, Briggs M, Closs SJ. The psychometric qualities of four observational pain tools (OPTs) for the assessment of pain in elderly people with osteoarthritic pain. J Pain Symptom Manage. 2010 Oct;40(4):582-98. doi: 10.1016/j.jpainsymman.2010.02.022. Epub 2010 Aug 8. PubMed PMID: 20692806.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"B1E09466131ED871F3E2EA0C9C0EFF82">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att bedöma och dokumentera allvarlighetsgraden av upplevd smärta hos individer med nedsatta kognitiva funktioner och andra som har svårt att beskriva sin smärta i tal.">
+            keywords = <"demens", "abbey pain scale", "smärtskattning", "smärtskattningsskala", "geriatrik", "palliativ">
+            use = <"Används för att bedöma och dokumentera allvarlighetsgraden av upplevd smärta hos individer med nedsatta kognitiva funktioner och andra som har svårt att beskriva sin smärta i tal.">
+            misuse = <"">
+            copyright = <"© Cambio Healthcare Systems, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To assess and record the severity of pain in cognitively impaired and non-verbal individuals.">
+            keywords = <"dementia", ...>
+            use = <"Use to assess and record the severity of pain in cognitively impaired and non-verbal individuals.">
+            misuse = <"">
+            copyright = <"© Cambio Healthcare Systems, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Abbey pain scale
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Vocalization
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0010]}],    -- Absent
+                                                    [{1}, {[at0011]}],    -- Mild
+                                                    [{2}, {[at0012]}],    -- Moderate
+                                                    [{3}, {[at0013]}]    -- Severe
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Facial expression
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0010]}],    -- Absent
+                                                    [{1}, {[at0011]}],    -- Mild
+                                                    [{2}, {[at0012]}],    -- Moderate
+                                                    [{3}, {[at0013]}]    -- Severe
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Change in body language
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0010]}],    -- Absent
+                                                    [{1}, {[at0011]}],    -- Mild
+                                                    [{2}, {[at0012]}],    -- Moderate
+                                                    [{3}, {[at0013]}]    -- Severe
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Behavioural change
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0010]}],    -- Absent
+                                                    [{1}, {[at0011]}],    -- Mild
+                                                    [{2}, {[at0012]}],    -- Moderate
+                                                    [{3}, {[at0013]}]    -- Severe
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Physiological change
+                                        value matches {
+                                            DV_ORDINAL[at9012] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0010]}],    -- Absent
+                                                    [{1}, {[at0011]}],    -- Mild
+                                                    [{2}, {[at0012]}],    -- Moderate
+                                                    [{3}, {[at0013]}]    -- Severe
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Physical changes
+                                        value matches {
+                                            DV_ORDINAL[at9023] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0010]}],    -- Absent
+                                                    [{1}, {[at0011]}],    -- Mild
+                                                    [{2}, {[at0012]}],    -- Moderate
+                                                    [{3}, {[at0013]}]    -- Severe
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Total pain score
+                                        value matches {
+                                            DV_COUNT[at9024] matches {
+                                                magnitude matches {|0..15|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Pain score category
+                                        value matches {
+                                            DV_CODED_TEXT[at9025] matches {
+                                                defining_code matches {[ac9013]}    -- Pain score category (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Type of pain
+                                        value matches {
+                                            DV_CODED_TEXT[at9018] matches {
+                                                defining_code matches {[ac9014]}    -- Type of pain (synthesised)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0024] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0025] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Smärtskattningsskala enligt Abbey Pain Scale">
+                description = <"Verktyg för att snabbt bedöma och dokumentera graden av upplevd smärta hos individer med nedsatta kognitiva funktioner och andra som har svårt att beskriva sin smärta i tal.">
+            >
+            ["at0002"] = <
+                text = <"Ospecificerad händelse">
+                description = <"Ospecificerad standardhändelse vid en tidpunkt eller inom ett tidsintervall som explicit kan definieras i en mall eller genereras automatiskt av vissa IT-system.">
+            >
+            ["at0004"] = <
+                text = <"Röstuttryck eller ljud">
+                description = <"">
+                comment = <"Exempelvis gnyr, jämrar sig eller gråter.">
+            >
+            ["at0005"] = <
+                text = <"Ansiktsuttryck">
+                description = <"">
+                comment = <"Exempelvis spänd, rynkar näsan, grimaserar eller ser rädd ut.">
+            >
+            ["at0006"] = <
+                text = <"Förändrat kroppsspråk">
+                description = <"">
+                comment = <"Exempelvis rastlös, vaggar, skyddar en kroppsdel eller ihopkrupen.">
+            >
+            ["at0008"] = <
+                text = <"Fysiologisk förändring">
+                description = <"">
+                comment = <"Exempelvis förändrad kroppstemperatur, puls eller blodtryck, svettningar, rodnad eller blekhet i hyn.">
+            >
+            ["at0009"] = <
+                text = <"Kroppsliga förändringar">
+                description = <"">
+                comment = <"Exempelvis rivet skinn, tryckskador, kontrakturer eller andra skador.">
+            >
+            ["at0010"] = <
+                text = <"Inte alls">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"Sällan">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Ibland">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"Ofta">
+                description = <"*">
+            >
+            ["at0014"] = <
+                text = <"Summa">
+                description = <"*The total sum of each component parameter for the Abbey pain scale. (en)">
+            >
+            ["at0025"] = <
+                text = <"Tilläggsinformation">
+                description = <"Plats för att infoga tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.">
+                comment = <"Exempelvis lokala informationskrav eller metadata för anpassning till FHIR- eller CIMI-motsvarigheter.">
+            >
+            ["at0007"] = <
+                text = <"Förändrat beteende">
+                description = <"">
+                comment = <"Exempelvis ökad förvirring, matvägran, ökad eller minskad kroppsaktivitet.">
+            >
+            ["at0015"] = <
+                text = <"Grad av smärta">
+                description = <"Grad av smärta, baserat på den totala poängen.">
+            >
+            ["at0016"] = <
+                text = <"Ingen smärta">
+                description = <"Sammanlagd smärtpoäng 0-2.">
+            >
+            ["at0017"] = <
+                text = <"Mild smärta">
+                description = <"Sammanlagd smärtpoäng 3-7.">
+            >
+            ["at0018"] = <
+                text = <"Måttlig smärta">
+                description = <"Sammanlagd smärtpoäng 8-13.">
+            >
+            ["at0019"] = <
+                text = <"Svår smärta">
+                description = <"Sammanlagd smärtpoäng 14 eller högre.">
+            >
+            ["at0020"] = <
+                text = <"Typ av smärta">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Långvarig">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Akut">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Blandad">
+                description = <"">
+            >
+            ["ac9022"] = <
+                text = <"Röstuttryck eller ljud (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Grad av smärta (synthesised)">
+                description = <"Grad av smärta, baserat på den totala poängen. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Typ av smärta (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Abbey pain scale">
+                description = <"Rapid tool to assess the severity of pain in cognitively impaired and non-verbal individuals.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Vocalization">
+                description = <"">
+                comment = <"For example: whimpering; groaning; crying.">
+            >
+            ["at0005"] = <
+                text = <"Facial expression">
+                description = <"">
+                comment = <"For example: looking tense; frowning; grimacing; looking frightened.">
+            >
+            ["at0006"] = <
+                text = <"Change in body language">
+                description = <"">
+                comment = <"For example: fidgeting; rocking; guarding part of body; withdrawn.">
+            >
+            ["at0008"] = <
+                text = <"Physiological change">
+                description = <"">
+                comment = <"For example: temperature, pulse or blood pressure outside normal limits; perspiring, flushing or pallor.">
+            >
+            ["at0009"] = <
+                text = <"Physical changes">
+                description = <"">
+                comment = <"For example: skin tears; pressure areas; arthritis; contractures; previous injuries.">
+            >
+            ["at0010"] = <
+                text = <"Absent">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Mild">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Moderate">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Severe">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Total pain score">
+                description = <"The total sum of each component parameter for the Abbey pain scale.">
+            >
+            ["at0025"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0007"] = <
+                text = <"Behavioural change">
+                description = <"">
+                comment = <"For example: increased confusion; refusing to eat,; alteration in usual patterns.">
+            >
+            ["at0015"] = <
+                text = <"Pain score category">
+                description = <"Category of pain, based on the total score.">
+            >
+            ["at0016"] = <
+                text = <"No pain">
+                description = <"Total pain score 0-2.">
+            >
+            ["at0017"] = <
+                text = <"Mild pain">
+                description = <"Total pain score 3-7.">
+            >
+            ["at0018"] = <
+                text = <"Moderate pain">
+                description = <"Total pain score 8-13.">
+            >
+            ["at0019"] = <
+                text = <"Severe pain">
+                description = <"Total pain score 14+.">
+            >
+            ["at0020"] = <
+                text = <"Type of pain">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Chronic">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Acute">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Acute on chronic">
+                description = <"">
+            >
+            ["ac9022"] = <
+                text = <"Vocalization (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Pain score category (synthesised)">
+                description = <"Category of pain, based on the total score. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Type of pain (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0016", "at0017", "at0018", "at0019">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0021", "at0022", "at0023">
+        >
+        ["ac9022"] = <
+            id = <"ac9022">
+            members = <"at0010", "at0011", "at0012", "at0013">
+        >
+    >

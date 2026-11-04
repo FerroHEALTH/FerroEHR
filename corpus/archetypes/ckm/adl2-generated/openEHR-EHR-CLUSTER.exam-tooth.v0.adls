@@ -1,0 +1,1213 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=0ccafa67-ad91-4e89-aa5b-443cf0442bd9; build_uid=abe2efa2-dc13-44be-9594-bba2a3a15d55)
+    openEHR-EHR-CLUSTER.exam-tooth.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-CLUSTER.exam.v2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Nina Schewe">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"schewe.nina@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Erik Sundvall">
+                ["organisation"] = <"Region Östergötland + Linköping University">
+                ["email"] = <"erik.sundvall@regionostergotland.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Nasjonal IKT HF">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Adriana Kitajima">
+                ["organisation"] = <"Hospital Alemão Oswaldo Cruz - HAOC">
+                ["email"] = <"adrianakitajima@gmail.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-05-16">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Shahla Foozonkhah, Iran ministry of health and education, Iran", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom (openEHR Editor)", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)", "Ingrid Heitmann, Oslo universitetssykehus HF, Norway", "Hilde Hollås, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Sabine Leh, Haukeland University Hospital, Department of Pathology, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Lars Morgan Karlsen, DIPS ASA, Norway", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Vladimir Pizzo, Hospital Sírio Libanês, Brazil", "Jussara Rotzsch, UNB, Brazil", "Anoop Shah, University College London, United Kingdom", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia (openEHR Editor)", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "Jon Tysdahl, Furst medlab AS, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Periobasics.com [Internet]. Dr Nitin Saroch. The art of history taking in periodontology [cited 2019 May 16]. Available from: https://periobasics.com/the-art-of-taking-case-history.html.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"C8E5958F7ABF215D8946E14DF5B38A5A">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To record the findings observed during the physical examination of a body system or anatomical structure. (en)">
+            use = <"*Use to record the observed findings during the physical examination of a body system or anatomical structure.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the \"Procedure detail\" SLOT within the ACTION.procedure archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. Specialisations of this archetype can be used to record examination findings for identified body systems or anatomical structures. If there is no appropriate specialisation available, use this archetype and identify the system or structure being examined using the 'System or structure examined' data element and the location on the body using the 'Body site' data element or the 'Structured body site' SLOT.
+
+Interpretation of the findings, for example 'No abnormality detected' or 'Moderate inflammation present', can be recorded using the 'Clinical interpretation' data element.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"*Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used for recording the results of an imaging examination - use the CLUSTER.imaging_exam family of archetypes for this purpose. (en)">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"*To record the findings observed during the physical examination of a body system or anatomical structure. (en)">
+            keywords = <"fynd, undersökningsfynd, fysisk undersökning, u.a., utan anmärkning", ...>
+            use = <"*Use to record the observed findings during the physical examination of a body system or anatomical structure.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the \"Procedure detail\" SLOT within the ACTION.procedure archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. Specialisations of this archetype can be used to record examination findings for identified body systems or anatomical structures. If there is no appropriate specialisation available, use this archetype and identify the system or structure being examined using the 'System or structure examined' data element and the location on the body using the 'Body site' data element or the 'Structured body site' SLOT.
+
+Interpretation of the findings, for example 'No abnormality detected' or 'Moderate inflammation present', can be recorded using the 'Clinical interpretation' data element.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"*Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used for recording the results of an imaging examination - use the CLUSTER.imaging_exam family of archetypes for this purpose. (en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en fritekstbeskrivelse og klinisk tolkning av observerte funn ved fysisk undersøkelse av et organsystem eller anatomisk struktur.">
+            use = <"Brukes til å registrere en fritekstbeskrivelse og klinisk tolkning av observerte funn ved fysisk undersøkelse av et spesifisert organsystem eller anatomisk struktur. Denne arketypen består kun av kjerneelementene av mønsteret for undersøkelser, og kan utvides ved hjelp av andre CLUSTER-arketyper eller brukes som grunnlag for undersøkelsesarketyper for spesifikke kroppssystemer eller anatomiske strukturer. 
+
+Eksempler på detaljer som kan beskrives ved hjelp av dette CLUSTER er inspeksjon, palpasjon, auskultasjon, perkusjon og bevegelser i kroppssystemer eller anatomiske strukturer. Undersøkelsen kan støttes av enkle hjelpemidler som stetoskop, otoskop eller reflekshammer. Også funn ved mer avanserte undersøkelser kan registreres her, som ved endoskopi. I de tilfellene vil informasjon om hvilket hjelpemiddel eller utstyr brukt bli registrert i OBSERVATION.exam, elementet \"Detaljer om medisinsk utstyr\", i ACTION.procedure \"Prosedyredetaljer\" eller tilsvarende i egnet ENTRY- eller ACTION-arketype.
+
+Arketypen er laget spesifikt for å brukes i \"Undersøkelsesdetaljer\"-SLOTet i arketypen OBSERVATION.exam, men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende.
+
+Denne arketypen kan benyttes for alle typer undersøkelser, alt fra enkle undersøkelser som undersøkelse av et hudområde, inspeksjon av ører og til artroskopi av et kne.
+
+Kan for eksempel nøstes i SLOTet \"Undersøkelsesdetaljer\" i arketypen OBSERVATION.exam (Norsk Funn ved fysisk undersøkelse) for å registrere ytterligere strukturerte funn ved fysiske undersøkelser.
+
+Arketypen CLUSTER.exclusion_exam kan nøstes i SLOTet \"Undersøkelse ikke utført\" der en har behov for å registrere informasjon om at en undersøkelse ikke ble utført.
+
+Brukes for å videreføre fritekstbeskrivelser av kliniske funn fra tidligere systemer inn i et arketypeformat, ved å bruke elementet \"Klinisk beskrivelse\".">
+            misuse = <"Skal ikke brukes til å ta opp frittstående klinisk observasjoner eller testresultater - bruk spesifikke OBSERVATION arketyper, for eksempel OBSERVATION.head_circumference eller OBSERVATION.glasgow_coma_scale.
+
+Skal ikke brukes til å ta opp anamnese - bruk da spesifikke OBSERVATION og CLUSTER arketyper. For eksempel OBSERVATION.story og CLUSTER.symptom_sign.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*To record the findings observed during the physical examination of a body system or anatomical structure. (en)">
+            use = <"*Use to record the observed findings during the physical examination of a body system or anatomical structure.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the \"Procedure detail\" SLOT within the ACTION.procedure archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. Specialisations of this archetype can be used to record examination findings for identified body systems or anatomical structures. If there is no appropriate specialisation available, use this archetype and identify the system or structure being examined using the 'System or structure examined' data element and the location on the body using the 'Body site' data element or the 'Structured body site' SLOT.
+
+Interpretation of the findings, for example 'No abnormality detected' or 'Moderate inflammation present', can be recorded using the 'Clinical interpretation' data element.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"*Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used for recording the results of an imaging examination - use the CLUSTER.imaging_exam family of archetypes for this purpose. (en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a narrative description and clinical interpretation of the findings observed during the physical examination of a single tooth.">
+            use = <"Use to record a narrative description and clinical interpretation of the findings observed during the physical examination of a single tooth.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.">
+            misuse = <"Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Examination of a tooth
+        items matches {
+            ELEMENT[at0001.1] matches {    -- System or structure examined
+                value matches {
+                    DV_CODED_TEXT[at0.9005] matches {
+                        defining_code matches {[at0.1]}    -- Tooth
+                    }
+                }
+            }
+            ELEMENT[at0012.1] matches {    -- Tooth position
+                value matches {
+                    DV_TEXT[at0.9015]
+                }
+            }
+            ELEMENT[at0.2] occurrences matches {0..1} matches {    -- Tooth label
+                value matches {
+                    DV_TEXT[at0.9018]
+                }
+            }
+            ELEMENT[at0.3] occurrences matches {0..1} matches {    -- Presence
+                value matches {
+                    DV_CODED_TEXT[at0.9019] matches {
+                        defining_code matches {[ac0.9015]}    -- Presence (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.6] occurrences matches {0..1} matches {    -- Condition
+                value matches {
+                    DV_CODED_TEXT[at0.9007] matches {
+                        defining_code matches {[ac0.9001]}    -- Condition (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.9] occurrences matches {0..1} matches {    -- Gum description
+                value matches {
+                    DV_TEXT[at0.9020]
+                }
+            }
+            ELEMENT[at0.10] occurrences matches {0..1} matches {    -- Pocket depth
+                value matches {
+                    DV_QUANTITY[at0.9021] matches {
+                        property matches {[at0.9004]}    -- Length
+                        magnitude matches {|0.0..10.0|}
+                        units matches {"mm"}
+                        precision matches {0}
+                    }
+                }
+            }
+            CLUSTER[at0.11] matches {    -- Findings
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0.12] occurrences matches {0..1} matches {    -- Finding
+                        value matches {
+                            DV_CODED_TEXT[at0.9022] matches {
+                                defining_code matches {[ac0.9016]}    -- Finding (synthesised)
+                            }
+                            DV_TEXT[at0.9023]
+                        }
+                    }
+                    ELEMENT[at0.30] occurrences matches {0..1} matches {    -- Surface
+                        value matches {
+                            DV_CODED_TEXT[at0.9024] matches {
+                                defining_code matches {[ac0.9017]}    -- Surface (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0.37] occurrences matches {0..1} matches {    -- Clinical description
+                        value matches {
+                            DV_TEXT[at0.9025]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"Untersuchungsergebnisse">
+                description = <"Während der körperlichen Untersuchung eines Körpersystems oder einer anatomischen Struktur beobachtete Befunde.">
+            >
+            ["at0001.1"] = <
+                text = <"Untersuchtes System oder untersuchte Struktur">
+                description = <"Identifizierung des untersuchten Körpersystems oder der anatomischen Struktur.">
+                comment = <"Wenn möglich wird die Kodierung des untersuchten Systems oder der untersuchten Struktur mit einer Terminologie bevorzugt.">
+            >
+            ["at0.1"] = <
+                text = <"Tooth">
+                description = <"A hard, bony enamel-coated structure in the jaw used, for biting and chewing.">
+            >
+            ["at0.2"] = <
+                text = <"Tooth label">
+                description = <"Name or nomenclature of the tooth examined.">
+                comment = <"For example: upper right permanent canine can be represented by the label '13' using ISO system; '3' using the Palmer notation; or '6' using the Universal numbering system.">
+            >
+            ["at0.3"] = <
+                text = <"Presence">
+                description = <"Presence or absence of the identified tooth.">
+            >
+            ["at0.4"] = <
+                text = <"Present">
+                description = <"The identified tooth is present.">
+            >
+            ["at0.5"] = <
+                text = <"Absent">
+                description = <"The identified tooth is absent.">
+            >
+            ["at0012.1"] = <
+                text = <"Körperstelle">
+                description = <"Identifizierung des Untersuchungsbereichs.">
+                comment = <"Wenn die Körperstelle im Datenelement \"Untersuchtes System oder untersuchte Struktur\" vollständig identifiziert wurde, wird dieses Datenelement überflüssig.">
+            >
+            ["at0011.1"] = <
+                text = <"Strukturierte Körperstelle">
+                description = <"Eine strukturierte Beschreibung des zu untersuchenden Körperbereichs.">
+                comment = <"Wenn die Körperstelle im Datenelement \"Untersuchtes System oder untersuchte Struktur\" oder im Datenelement \"Körperstelle\" vollständig identifiziert wurde, wird die Verwendung dieses SLOT überflüssig.">
+            >
+            ["at0.6"] = <
+                text = <"Condition">
+                description = <"Has the tooth been restored?">
+            >
+            ["at0.7"] = <
+                text = <"Unrestored">
+                description = <"The tooth has no repairs or restorations observed.">
+            >
+            ["at0.8"] = <
+                text = <"Restored.">
+                description = <"The tooth has repairs or restorations.">
+            >
+            ["at0.9"] = <
+                text = <"Gum description">
+                description = <"Narrative description about the gum of the identified tooth.">
+            >
+            ["at0.10"] = <
+                text = <"Pocket depth">
+                description = <"The depth of the gum pocket.">
+            >
+            ["at0.11"] = <
+                text = <"Findings">
+                description = <"Details about the findings observed.">
+            >
+            ["at0.12"] = <
+                text = <"Finding">
+                description = <"">
+            >
+            ["at0.13"] = <
+                text = <"Cavity">
+                description = <"">
+            >
+            ["at0.14"] = <
+                text = <"Amalgam">
+                description = <"">
+            >
+            ["at0.15"] = <
+                text = <"Gold inlay">
+                description = <"">
+            >
+            ["at0.16"] = <
+                text = <"Gold foil">
+                description = <"">
+            >
+            ["at0.17"] = <
+                text = <"Other metal restoration">
+                description = <"">
+            >
+            ["at0.18"] = <
+                text = <"Composite resin">
+                description = <"">
+            >
+            ["at0.19"] = <
+                text = <"Traumatic avulsion">
+                description = <"">
+            >
+            ["at0.20"] = <
+                text = <"Fractured crown">
+                description = <"">
+            >
+            ["at0.21"] = <
+                text = <"Root tip">
+                description = <"">
+            >
+            ["at0.22"] = <
+                text = <"Rotated">
+                description = <"">
+            >
+            ["at0.23"] = <
+                text = <"Root apical filling">
+                description = <"">
+            >
+            ["at0.24"] = <
+                text = <"Apicoectomy">
+                description = <"">
+            >
+            ["at0.25"] = <
+                text = <"Intermediate restoration">
+                description = <"">
+            >
+            ["at0.26"] = <
+                text = <"Crown - temporary">
+                description = <"">
+            >
+            ["at0.27"] = <
+                text = <"Crown - full">
+                description = <"">
+            >
+            ["at0.28"] = <
+                text = <"Crown - partial">
+                description = <"">
+            >
+            ["at0.29"] = <
+                text = <"Crown veneer">
+                description = <"">
+            >
+            ["at0.30"] = <
+                text = <"Surface">
+                description = <"Surface of the tooth where the finding is observed.">
+            >
+            ["at0.31"] = <
+                text = <"Mesial">
+                description = <"The surface that is closest to the midline of the face.">
+            >
+            ["at0.32"] = <
+                text = <"Distal">
+                description = <"The surface that is furthest from the midline of the face.">
+            >
+            ["at0.33"] = <
+                text = <"Buccal">
+                description = <"The surface that faces towards the cheeks.">
+            >
+            ["at0.34"] = <
+                text = <"Lingual">
+                description = <"The surface that faces towards the tongue.">
+            >
+            ["at0.35"] = <
+                text = <"Incisal">
+                description = <"The biting edge of an anterior tooth.">
+            >
+            ["at0.36"] = <
+                text = <"Occlusal">
+                description = <"The chewing surface of a posterior tooth.">
+            >
+            ["at0.37"] = <
+                text = <"Clinical description">
+                description = <"Narrative description about the finding.">
+            >
+            ["at0.9004"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac0.9015"] = <
+                text = <"Presence (synthesised)">
+                description = <"Presence or absence of the identified tooth. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Condition (synthesised)">
+                description = <"Has the tooth been restored? (synthesised)">
+            >
+            ["ac0.9016"] = <
+                text = <"Finding (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9017"] = <
+                text = <"Surface (synthesised)">
+                description = <"Surface of the tooth where the finding is observed. (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000.1"] = <
+                text = <"Fynd vid undersökning">
+                description = <"Observerade fynd vid fysisk undersökning av system i kroppen, eller av anatomisk struktur">
+            >
+            ["at0001.1"] = <
+                text = <"System eller struktur som undersökts">
+                description = <"Identifiering av systemet eller strukturen som undersökts.">
+                comment = <"Om möjligt, koda systemet eller strukturen med hjälp av ett terminologisystem.">
+            >
+            ["at0.1"] = <
+                text = <"Tooth">
+                description = <"A hard, bony enamel-coated structure in the jaw used, for biting and chewing.">
+            >
+            ["at0.2"] = <
+                text = <"Tooth label">
+                description = <"Name or nomenclature of the tooth examined.">
+                comment = <"For example: upper right permanent canine can be represented by the label '13' using ISO system; '3' using the Palmer notation; or '6' using the Universal numbering system.">
+            >
+            ["at0.3"] = <
+                text = <"Presence">
+                description = <"Presence or absence of the identified tooth.">
+            >
+            ["at0.4"] = <
+                text = <"Present">
+                description = <"The identified tooth is present.">
+            >
+            ["at0.5"] = <
+                text = <"Absent">
+                description = <"The identified tooth is absent.">
+            >
+            ["at0012.1"] = <
+                text = <"Anatomisk plats">
+                description = <"Identifiering av den anatomiska plats som undersökts.
+">
+                comment = <"Om den anatomiska platsen har identifierats fullt ut i \"System eller struktur som undersökts\" så blir detta element redundant.
+
+">
+            >
+            ["at0011.1"] = <
+                text = <"Strukturerad anatomisk plats">
+                description = <"Strukturerad beskrivning av den anatomiska platsen som undersökts.">
+                comment = <"Om den anatomiska platsen kan identifieras helt via dataelementet \"System eller struktur som undersökts\" så blir denna del redundant.">
+            >
+            ["at0.6"] = <
+                text = <"Condition">
+                description = <"Has the tooth been restored?">
+            >
+            ["at0.7"] = <
+                text = <"Unrestored">
+                description = <"The tooth has no repairs or restorations observed.">
+            >
+            ["at0.8"] = <
+                text = <"Restored.">
+                description = <"The tooth has repairs or restorations.">
+            >
+            ["at0.9"] = <
+                text = <"Gum description">
+                description = <"Narrative description about the gum of the identified tooth.">
+            >
+            ["at0.10"] = <
+                text = <"Pocket depth">
+                description = <"The depth of the gum pocket.">
+            >
+            ["at0.11"] = <
+                text = <"Findings">
+                description = <"Details about the findings observed.">
+            >
+            ["at0.12"] = <
+                text = <"Finding">
+                description = <"">
+            >
+            ["at0.13"] = <
+                text = <"Cavity">
+                description = <"">
+            >
+            ["at0.14"] = <
+                text = <"Amalgam">
+                description = <"">
+            >
+            ["at0.15"] = <
+                text = <"Gold inlay">
+                description = <"">
+            >
+            ["at0.16"] = <
+                text = <"Gold foil">
+                description = <"">
+            >
+            ["at0.17"] = <
+                text = <"Other metal restoration">
+                description = <"">
+            >
+            ["at0.18"] = <
+                text = <"Composite resin">
+                description = <"">
+            >
+            ["at0.19"] = <
+                text = <"Traumatic avulsion">
+                description = <"">
+            >
+            ["at0.20"] = <
+                text = <"Fractured crown">
+                description = <"">
+            >
+            ["at0.21"] = <
+                text = <"Root tip">
+                description = <"">
+            >
+            ["at0.22"] = <
+                text = <"Rotated">
+                description = <"">
+            >
+            ["at0.23"] = <
+                text = <"Root apical filling">
+                description = <"">
+            >
+            ["at0.24"] = <
+                text = <"Apicoectomy">
+                description = <"">
+            >
+            ["at0.25"] = <
+                text = <"Intermediate restoration">
+                description = <"">
+            >
+            ["at0.26"] = <
+                text = <"Crown - temporary">
+                description = <"">
+            >
+            ["at0.27"] = <
+                text = <"Crown - full">
+                description = <"">
+            >
+            ["at0.28"] = <
+                text = <"Crown - partial">
+                description = <"">
+            >
+            ["at0.29"] = <
+                text = <"Crown veneer">
+                description = <"">
+            >
+            ["at0.30"] = <
+                text = <"Surface">
+                description = <"Surface of the tooth where the finding is observed.">
+            >
+            ["at0.31"] = <
+                text = <"Mesial">
+                description = <"The surface that is closest to the midline of the face.">
+            >
+            ["at0.32"] = <
+                text = <"Distal">
+                description = <"The surface that is furthest from the midline of the face.">
+            >
+            ["at0.33"] = <
+                text = <"Buccal">
+                description = <"The surface that faces towards the cheeks.">
+            >
+            ["at0.34"] = <
+                text = <"Lingual">
+                description = <"The surface that faces towards the tongue.">
+            >
+            ["at0.35"] = <
+                text = <"Incisal">
+                description = <"The biting edge of an anterior tooth.">
+            >
+            ["at0.36"] = <
+                text = <"Occlusal">
+                description = <"The chewing surface of a posterior tooth.">
+            >
+            ["at0.37"] = <
+                text = <"Clinical description">
+                description = <"Narrative description about the finding.">
+            >
+            ["at0.9004"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac0.9015"] = <
+                text = <"Presence (synthesised)">
+                description = <"Presence or absence of the identified tooth. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Condition (synthesised)">
+                description = <"Has the tooth been restored? (synthesised)">
+            >
+            ["ac0.9016"] = <
+                text = <"Finding (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9017"] = <
+                text = <"Surface (synthesised)">
+                description = <"Surface of the tooth where the finding is observed. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000.1"] = <
+                text = <"*Examination of a tooth (en)">
+                description = <"Funn ved fysisk undersøkelse av et organsystem eller anatomisk struktur.">
+            >
+            ["at0001.1"] = <
+                text = <"Undersøkt organsystem eller struktur">
+                description = <"Identifisering av det undersøkte organsystemet eller anatomiske strukturen.">
+                comment = <"*Coding of the system or structure examined with a terminology is preferred, where possible. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Tooth (en)">
+                description = <"*A hard, bony enamel-coated structure in the jaw used, for biting and chewing. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Tooth label (en)">
+                description = <"*Name or nomenclature of the tooth examined. (en)">
+                comment = <"*For example: upper right permanent canine can be represented by the label '13' using ISO system; '3' using the Palmer notation; or '6' using the Universal numbering system. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Presence (en)">
+                description = <"*Presence or absence of the identified tooth. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Present (en)">
+                description = <"*The identified tooth is present. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Absent (en)">
+                description = <"*The identified tooth is absent. (en)">
+            >
+            ["at0012.1"] = <
+                text = <"*Tooth position (en)">
+                description = <"*Identification of the position of the identified tooth. (en)">
+            >
+            ["at0011.1"] = <
+                text = <"*Structured tooth position (en)">
+                description = <"*A structured description of the position of the identified tooth. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Condition (en)">
+                description = <"*Has the tooth been restored? (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Unrestored (en)">
+                description = <"*The tooth has no repairs or restorations observed. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Restored. (en)">
+                description = <"*The tooth has repairs or restorations. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Gum description (en)">
+                description = <"*Narrative description about the gum of the identified tooth. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*Pocket depth (en)">
+                description = <"*The depth of the gum pocket. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Findings (en)">
+                description = <"*Details about the findings observed. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Finding (en)">
+                description = <"">
+            >
+            ["at0.13"] = <
+                text = <"*Cavity (en)">
+                description = <"">
+            >
+            ["at0.14"] = <
+                text = <"*Amalgam (en)">
+                description = <"">
+            >
+            ["at0.15"] = <
+                text = <"*Gold inlay (en)">
+                description = <"">
+            >
+            ["at0.16"] = <
+                text = <"*Gold foil (en)">
+                description = <"">
+            >
+            ["at0.17"] = <
+                text = <"*Other metal restoration (en)">
+                description = <"">
+            >
+            ["at0.18"] = <
+                text = <"*Composite resin (en)">
+                description = <"">
+            >
+            ["at0.19"] = <
+                text = <"*Traumatic avulsion (en)">
+                description = <"">
+            >
+            ["at0.20"] = <
+                text = <"*Fractured crown (en)">
+                description = <"">
+            >
+            ["at0.21"] = <
+                text = <"*Root tip (en)">
+                description = <"">
+            >
+            ["at0.22"] = <
+                text = <"*Rotated (en)">
+                description = <"">
+            >
+            ["at0.23"] = <
+                text = <"*Root apical filling (en)">
+                description = <"">
+            >
+            ["at0.24"] = <
+                text = <"*Apicoectomy (en)">
+                description = <"">
+            >
+            ["at0.25"] = <
+                text = <"*Intermediate restoration (en)">
+                description = <"">
+            >
+            ["at0.26"] = <
+                text = <"*Crown - temporary (en)">
+                description = <"">
+            >
+            ["at0.27"] = <
+                text = <"*Crown - full (en)">
+                description = <"">
+            >
+            ["at0.28"] = <
+                text = <"*Crown - partial (en)">
+                description = <"">
+            >
+            ["at0.29"] = <
+                text = <"*Crown veneer (en)">
+                description = <"">
+            >
+            ["at0.30"] = <
+                text = <"*Surface (en)">
+                description = <"*Surface of the tooth where the finding is observed. (en)">
+            >
+            ["at0.31"] = <
+                text = <"*Mesial (en)">
+                description = <"*The surface that is closest to the midline of the face. (en)">
+            >
+            ["at0.32"] = <
+                text = <"*Distal (en)">
+                description = <"*The surface that is furthest from the midline of the face. (en)">
+            >
+            ["at0.33"] = <
+                text = <"*Buccal (en)">
+                description = <"*The surface that faces towards the cheeks. (en)">
+            >
+            ["at0.34"] = <
+                text = <"*Lingual (en)">
+                description = <"*The surface that faces towards the tongue. (en)">
+            >
+            ["at0.35"] = <
+                text = <"*Incisal (en)">
+                description = <"*The biting edge of an anterior tooth. (en)">
+            >
+            ["at0.36"] = <
+                text = <"*Occlusal (en)">
+                description = <"*The chewing surface of a posterior tooth. (en)">
+            >
+            ["at0.37"] = <
+                text = <"*Clinical description (en)">
+                description = <"*Narrative description about the finding. (en)">
+            >
+            ["at0.9004"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac0.9015"] = <
+                text = <"*Presence (en) (synthesised)">
+                description = <"*Presence or absence of the identified tooth. (en) (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"*Condition (en) (synthesised)">
+                description = <"*Has the tooth been restored? (en) (synthesised)">
+            >
+            ["ac0.9016"] = <
+                text = <"*Finding (en) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9017"] = <
+                text = <"*Surface (en) (synthesised)">
+                description = <"*Surface of the tooth where the finding is observed. (en) (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000.1"] = <
+                text = <"Resultados do exame">
+                description = <"Constatações observadas durante o exame físico de um sistema corporal ou estrutura anatômica.">
+            >
+            ["at0001.1"] = <
+                text = <"Sistema ou estrutura examinada">
+                description = <"Identificação do sistema do corpo examinado ou da estrutura anatômica.">
+                comment = <"A codificação do sistema ou estrutura examinada com uma terminologia é preferível, sempre que possível.">
+            >
+            ["at0.1"] = <
+                text = <"Tooth">
+                description = <"A hard, bony enamel-coated structure in the jaw used, for biting and chewing.">
+            >
+            ["at0.2"] = <
+                text = <"Tooth label">
+                description = <"Name or nomenclature of the tooth examined.">
+                comment = <"For example: upper right permanent canine can be represented by the label '13' using ISO system; '3' using the Palmer notation; or '6' using the Universal numbering system.">
+            >
+            ["at0.3"] = <
+                text = <"Presence">
+                description = <"Presence or absence of the identified tooth.">
+            >
+            ["at0.4"] = <
+                text = <"Present">
+                description = <"The identified tooth is present.">
+            >
+            ["at0.5"] = <
+                text = <"Absent">
+                description = <"The identified tooth is absent.">
+            >
+            ["at0012.1"] = <
+                text = <"Local do corpo">
+                description = <"Identificação da área do corpo em exame.">
+                comment = <"Se o local do corpo foi totalmente identificado no elemento de dados 'Sistema ou estrutura examinada', esse elemento de dados se torna redundante.">
+            >
+            ["at0011.1"] = <
+                text = <"Local do corpo estruturado">
+                description = <"Uma descrição estruturada da área do corpo em exame.">
+                comment = <"Se o local do corpo tiver sido totalmente identificado no elemento de dados 'Sistema ou estrutura examinada' ou 'Local do corpo', esse SLOT se tornará redundante.">
+            >
+            ["at0.6"] = <
+                text = <"Condition">
+                description = <"Has the tooth been restored?">
+            >
+            ["at0.7"] = <
+                text = <"Unrestored">
+                description = <"The tooth has no repairs or restorations observed.">
+            >
+            ["at0.8"] = <
+                text = <"Restored.">
+                description = <"The tooth has repairs or restorations.">
+            >
+            ["at0.9"] = <
+                text = <"Gum description">
+                description = <"Narrative description about the gum of the identified tooth.">
+            >
+            ["at0.10"] = <
+                text = <"Pocket depth">
+                description = <"The depth of the gum pocket.">
+            >
+            ["at0.11"] = <
+                text = <"Findings">
+                description = <"Details about the findings observed.">
+            >
+            ["at0.12"] = <
+                text = <"Finding">
+                description = <"">
+            >
+            ["at0.13"] = <
+                text = <"Cavity">
+                description = <"">
+            >
+            ["at0.14"] = <
+                text = <"Amalgam">
+                description = <"">
+            >
+            ["at0.15"] = <
+                text = <"Gold inlay">
+                description = <"">
+            >
+            ["at0.16"] = <
+                text = <"Gold foil">
+                description = <"">
+            >
+            ["at0.17"] = <
+                text = <"Other metal restoration">
+                description = <"">
+            >
+            ["at0.18"] = <
+                text = <"Composite resin">
+                description = <"">
+            >
+            ["at0.19"] = <
+                text = <"Traumatic avulsion">
+                description = <"">
+            >
+            ["at0.20"] = <
+                text = <"Fractured crown">
+                description = <"">
+            >
+            ["at0.21"] = <
+                text = <"Root tip">
+                description = <"">
+            >
+            ["at0.22"] = <
+                text = <"Rotated">
+                description = <"">
+            >
+            ["at0.23"] = <
+                text = <"Root apical filling">
+                description = <"">
+            >
+            ["at0.24"] = <
+                text = <"Apicoectomy">
+                description = <"">
+            >
+            ["at0.25"] = <
+                text = <"Intermediate restoration">
+                description = <"">
+            >
+            ["at0.26"] = <
+                text = <"Crown - temporary">
+                description = <"">
+            >
+            ["at0.27"] = <
+                text = <"Crown - full">
+                description = <"">
+            >
+            ["at0.28"] = <
+                text = <"Crown - partial">
+                description = <"">
+            >
+            ["at0.29"] = <
+                text = <"Crown veneer">
+                description = <"">
+            >
+            ["at0.30"] = <
+                text = <"Surface">
+                description = <"Surface of the tooth where the finding is observed.">
+            >
+            ["at0.31"] = <
+                text = <"Mesial">
+                description = <"The surface that is closest to the midline of the face.">
+            >
+            ["at0.32"] = <
+                text = <"Distal">
+                description = <"The surface that is furthest from the midline of the face.">
+            >
+            ["at0.33"] = <
+                text = <"Buccal">
+                description = <"The surface that faces towards the cheeks.">
+            >
+            ["at0.34"] = <
+                text = <"Lingual">
+                description = <"The surface that faces towards the tongue.">
+            >
+            ["at0.35"] = <
+                text = <"Incisal">
+                description = <"The biting edge of an anterior tooth.">
+            >
+            ["at0.36"] = <
+                text = <"Occlusal">
+                description = <"The chewing surface of a posterior tooth.">
+            >
+            ["at0.37"] = <
+                text = <"Clinical description">
+                description = <"Narrative description about the finding.">
+            >
+            ["at0.9004"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["ac0.9015"] = <
+                text = <"Presence (synthesised)">
+                description = <"Presence or absence of the identified tooth. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Condition (synthesised)">
+                description = <"Has the tooth been restored? (synthesised)">
+            >
+            ["ac0.9016"] = <
+                text = <"Finding (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9017"] = <
+                text = <"Surface (synthesised)">
+                description = <"Surface of the tooth where the finding is observed. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Examination of a tooth">
+                description = <"Findings observed during the physical examination of a single tooth.">
+            >
+            ["at0001.1"] = <
+                text = <"System or structure examined">
+                description = <"Identification of the examined body system or anatomical structure.">
+                comment = <"Coding of the system or structure examined with a terminology is preferred, where possible.">
+            >
+            ["at0.1"] = <
+                text = <"Tooth">
+                description = <"A hard, bony enamel-coated structure in the jaw used, for biting and chewing.">
+            >
+            ["at0.2"] = <
+                text = <"Tooth label">
+                description = <"Name or nomenclature of the tooth examined.">
+                comment = <"For example: upper right permanent canine can be represented by the label '13' using ISO system; '3' using the Palmer notation; or '6' using the Universal numbering system.">
+            >
+            ["at0.3"] = <
+                text = <"Presence">
+                description = <"Presence or absence of the identified tooth.">
+            >
+            ["at0.4"] = <
+                text = <"Present">
+                description = <"The identified tooth is present.">
+            >
+            ["at0.5"] = <
+                text = <"Absent">
+                description = <"The identified tooth is absent.">
+            >
+            ["at0012.1"] = <
+                text = <"Tooth position">
+                description = <"Identification of the position of the identified tooth.">
+            >
+            ["at0011.1"] = <
+                text = <"Structured tooth position">
+                description = <"A structured description of the position of the identified tooth.">
+            >
+            ["at0.6"] = <
+                text = <"Condition">
+                description = <"Has the tooth been restored?">
+            >
+            ["at0.7"] = <
+                text = <"Unrestored">
+                description = <"The tooth has no repairs or restorations observed.">
+            >
+            ["at0.8"] = <
+                text = <"Restored.">
+                description = <"The tooth has repairs or restorations.">
+            >
+            ["at0.9"] = <
+                text = <"Gum description">
+                description = <"Narrative description about the gum of the identified tooth.">
+            >
+            ["at0.10"] = <
+                text = <"Pocket depth">
+                description = <"The depth of the gum pocket.">
+            >
+            ["at0.11"] = <
+                text = <"Findings">
+                description = <"Details about the findings observed.">
+            >
+            ["at0.12"] = <
+                text = <"Finding">
+                description = <"">
+            >
+            ["at0.13"] = <
+                text = <"Cavity">
+                description = <"">
+            >
+            ["at0.14"] = <
+                text = <"Amalgam">
+                description = <"">
+            >
+            ["at0.15"] = <
+                text = <"Gold inlay">
+                description = <"">
+            >
+            ["at0.16"] = <
+                text = <"Gold foil">
+                description = <"">
+            >
+            ["at0.17"] = <
+                text = <"Other metal restoration">
+                description = <"">
+            >
+            ["at0.18"] = <
+                text = <"Composite resin">
+                description = <"">
+            >
+            ["at0.19"] = <
+                text = <"Traumatic avulsion">
+                description = <"">
+            >
+            ["at0.20"] = <
+                text = <"Fractured crown">
+                description = <"">
+            >
+            ["at0.21"] = <
+                text = <"Root tip">
+                description = <"">
+            >
+            ["at0.22"] = <
+                text = <"Rotated">
+                description = <"">
+            >
+            ["at0.23"] = <
+                text = <"Root apical filling">
+                description = <"">
+            >
+            ["at0.24"] = <
+                text = <"Apicoectomy">
+                description = <"">
+            >
+            ["at0.25"] = <
+                text = <"Intermediate restoration">
+                description = <"">
+            >
+            ["at0.26"] = <
+                text = <"Crown - temporary">
+                description = <"">
+            >
+            ["at0.27"] = <
+                text = <"Crown - full">
+                description = <"">
+            >
+            ["at0.28"] = <
+                text = <"Crown - partial">
+                description = <"">
+            >
+            ["at0.29"] = <
+                text = <"Crown veneer">
+                description = <"">
+            >
+            ["at0.30"] = <
+                text = <"Surface">
+                description = <"Surface of the tooth where the finding is observed.">
+            >
+            ["at0.31"] = <
+                text = <"Mesial">
+                description = <"The surface that is closest to the midline of the face.">
+            >
+            ["at0.32"] = <
+                text = <"Distal">
+                description = <"The surface that is furthest from the midline of the face.">
+            >
+            ["at0.33"] = <
+                text = <"Buccal">
+                description = <"The surface that faces towards the cheeks.">
+            >
+            ["at0.34"] = <
+                text = <"Lingual">
+                description = <"The surface that faces towards the tongue.">
+            >
+            ["at0.35"] = <
+                text = <"Incisal">
+                description = <"The biting edge of an anterior tooth.">
+            >
+            ["at0.36"] = <
+                text = <"Occlusal">
+                description = <"The chewing surface of a posterior tooth.">
+            >
+            ["at0.37"] = <
+                text = <"Clinical description">
+                description = <"Narrative description about the finding.">
+            >
+            ["at0.9004"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac0.9015"] = <
+                text = <"Presence (synthesised)">
+                description = <"Presence or absence of the identified tooth. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Condition (synthesised)">
+                description = <"Has the tooth been restored? (synthesised)">
+            >
+            ["ac0.9016"] = <
+                text = <"Finding (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9017"] = <
+                text = <"Surface (synthesised)">
+                description = <"Surface of the tooth where the finding is observed. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at0.9004"] = <http://openehr.org/id/122>
+        >
+        ["SNOMED-CT"] = <
+            ["at0.1"] = <http://snomed.info/id/38199008>
+        >
+    >
+    value_sets = <
+        ["ac0.9016"] = <
+            id = <"ac0.9016">
+            members = <"at0.13", "at0.14", "at0.15", "at0.16", "at0.17", "at0.18", "at0.19", "at0.20", "at0.21", "at0.22", "at0.23", "at0.24", "at0.25", "at0.26", "at0.27", "at0.28", "at0.29">
+        >
+        ["ac0.9017"] = <
+            id = <"ac0.9017">
+            members = <"at0.31", "at0.32", "at0.33", "at0.34", "at0.35", "at0.36">
+        >
+        ["ac0.9015"] = <
+            id = <"ac0.9015">
+            members = <"at0.4", "at0.5">
+        >
+        ["ac0.9001"] = <
+            id = <"ac0.9001">
+            members = <"at0.7", "at0.8">
+        >
+    >

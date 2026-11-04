@@ -1,0 +1,305 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=fc8f5701-b885-4afc-b654-1c5a71862561; build_uid=89957b13-dedb-49d0-98b8-76e1de857237)
+    openEHR-EHR-CLUSTER.cessation_attempts.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Lars Bitsch-Larsen">
+                ["organisation"] = <"Haukeland University Hospital of Bergen, Norway">
+            >
+            accreditation = <"MD, DEAA, MBA, spec in anesthesia, spec in tropical medicine.">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2009-06-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"FFC6684ABADEF63B527C44F723E300E4">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For dokumentasjon om enkelt eller multiple forsøk for et individ på at slutte et misbruk (av stoffer).">
+            keywords = <"opphør", "slutte", "stoffer", "Tobakk", "alkohol", "narko", "narkotika", "misbruk", "abstinens">
+            use = <"Anvendes til dokumentasjon om detaljer om forsøk på at slutte bruken av stoffer som alkohol, tobakk eller narkotiske stoffer.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Record information about single, or multiple, attempts of the individual to cease use of a substance.">
+            keywords = <"cessation", "withdrawal", "substance", "tobacco", "alcohol", "drug">
+            use = <"Use to record details about attempts to cease use or consumption of a substance, such as alcohol, tobacco or recreational drugs.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل المعلومات حول محاولة واحدة أو محاولات متعددة يقوم بها الشخص من أجل إيقاف استخدام المادة">
+            keywords = <"إيقاف", "انسحاب", "مادة", "التبغ", "الكحول", "الدواء">
+            use = <"يستخدم لتسجيل التفاصيل حول محاولات إيقاف استخدام أو استهلاك المادة, مثل الكحول, التبغ أو الاستخدام الترفيهي للأدوية">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Cessation attempts
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Location
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Date of attempt
+                value matches {
+                    DV_DATE_TIME[at9001]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            CLUSTER[at0005] matches {    -- Therapeutic intervention
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Agent
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Used optimally
+                        value matches {
+                            DV_BOOLEAN[at9004] matches {
+                                value matches {True, False}
+                            }
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9005]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Outcome
+                value matches {
+                    DV_CODED_TEXT[at9006] matches {
+                        defining_code matches {[ac9000]}    -- Outcome (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Duration of cessation
+                value matches {
+                    DV_DURATION[at9007] matches {
+                        value matches {PYMWD/|>=P0D|}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Avslutnings forsøk">
+                description = <"Opphør med bruken inntaket av vanedannende stoffer.">
+            >
+            ["at0001"] = <
+                text = <"Sted">
+                description = <"Stedet hvor opphørs forsøket skjedde: fx hjemme eller institusjons navn.">
+            >
+            ["at0003"] = <
+                text = <"Dato for forsøk">
+                description = <"Dato da opphørs forsøket startet.">
+            >
+            ["at0004"] = <
+                text = <"Beskrivelse">
+                description = <"Beskrivelse av opphørs forsøket.">
+            >
+            ["at0005"] = <
+                text = <"Terapeutisk intervensjon.">
+                description = <"Detaljer om de terapeutiske midler som ble anvendt.">
+            >
+            ["at0006"] = <
+                text = <"Medikament">
+                description = <"Navnet med den medisin som ble anvendt.">
+            >
+            ["at0008"] = <
+                text = <"Optimal bruk">
+                description = <"Ble midlet brukt optimalt?">
+            >
+            ["at0009"] = <
+                text = <"Kommentar">
+                description = <"Kommentar om virkningen av medikamentet på opphørs prosessen.">
+            >
+            ["at0010"] = <
+                text = <"Utfall">
+                description = <"Resultatet av forsøket.">
+            >
+            ["at0011"] = <
+                text = <"Suksess">
+                description = <"Utfallet var en suksess: Bruken av vanedannende midler opphørte.">
+            >
+            ["at0012"] = <
+                text = <"Suksess men med tilbakefall">
+                description = <"Utfallet var initialt en suksess, men bruken av vanedannende middel ble gjenopptatt.">
+            >
+            ["at0013"] = <
+                text = <"Mislykket">
+                description = <"Utfallet var ikke en suksess: Misbruken forsatte.">
+            >
+            ["at0014"] = <
+                text = <"*Duration of cessation(en)">
+                description = <"*Amount of time activity ceased.(en)">
+            >
+            ["ac9000"] = <
+                text = <"Utfall (synthesised)">
+                description = <"Resultatet av forsøket. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Cessation attempts">
+                description = <"Cease use or consumption of a substance.">
+            >
+            ["at0001"] = <
+                text = <"Location">
+                description = <"Place where attempt to cease use occurred eg home or name of institution.">
+            >
+            ["at0003"] = <
+                text = <"Date of attempt">
+                description = <"Date of commencement of cessation attempt.">
+            >
+            ["at0004"] = <
+                text = <"Description">
+                description = <"Description of the attempt.">
+            >
+            ["at0005"] = <
+                text = <"Therapeutic intervention">
+                description = <"Details of therapeutic agent/s used.">
+            >
+            ["at0006"] = <
+                text = <"Agent">
+                description = <"Name of agent used.">
+            >
+            ["at0008"] = <
+                text = <"Used optimally">
+                description = <"Was the agent used optimally?">
+            >
+            ["at0009"] = <
+                text = <"Comment">
+                description = <"Comment about the effect of the agent on the attempt.">
+            >
+            ["at0010"] = <
+                text = <"Outcome">
+                description = <"Outcome of attempt.">
+            >
+            ["at0011"] = <
+                text = <"Successful">
+                description = <"Outcome was successful; Use/consumption of substance ceased.">
+            >
+            ["at0012"] = <
+                text = <"Successful but relapsed">
+                description = <"Outcome was initially successful but use/consumption of substance was resumed.">
+            >
+            ["at0013"] = <
+                text = <"Failed">
+                description = <"Outcome was not successful; Use/consumption continued.">
+            >
+            ["at0014"] = <
+                text = <"Duration of cessation">
+                description = <"Amount of time activity ceased.">
+            >
+            ["ac9000"] = <
+                text = <"Outcome (synthesised)">
+                description = <"Outcome of attempt. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"محاولات الإيقاف">
+                description = <"إيقاف استخدام أو استهلاك المادة">
+            >
+            ["at0001"] = <
+                text = <"المكان">
+                description = <"المكان حيث حصلت محاولة الإيقاف, مثلا: المنزل أو اسم المؤسسة">
+            >
+            ["at0003"] = <
+                text = <"تاريخ المحاولة">
+                description = <"تاريخ بدء محاولة الإيقاف">
+            >
+            ["at0004"] = <
+                text = <"الوصف">
+                description = <"وصف المحاولة">
+            >
+            ["at0005"] = <
+                text = <"التدخل العلاجي">
+                description = <"تفاصيل العامل/العوامل العلاجية المستخدمة">
+            >
+            ["at0006"] = <
+                text = <"العامل">
+                description = <"اسم العامل الذي يتم استخدامه">
+            >
+            ["at0008"] = <
+                text = <"يستخدم بالشكل الأمثل">
+                description = <"هل تم استخدام العامل بالشكل الأمثل">
+            >
+            ["at0009"] = <
+                text = <"تعليق">
+                description = <"تعليق حول تأثير العامل على المحاولة">
+            >
+            ["at0010"] = <
+                text = <"الناتج">
+                description = <"ناتج المحاولة">
+            >
+            ["at0011"] = <
+                text = <"ناجح">
+                description = <"الناتج هو نجاح المحاولةحيث توقف استخدام/استهلاك المادة">
+            >
+            ["at0012"] = <
+                text = <"ناجح و لكن حدث انتكاس">
+                description = <"الناتج المبدئي هو نجاح المحاولة, و لكن تم استئناف استخدام/استهلاك المادة">
+            >
+            ["at0013"] = <
+                text = <"الفشل">
+                description = <"الناتج هو عدم نجاح المحاولة, حيث استمر الاستخدام/الاستهلاك">
+            >
+            ["at0014"] = <
+                text = <"*Duration of cessation(en)">
+                description = <"*Amount of time activity ceased.(en)">
+            >
+            ["ac9000"] = <
+                text = <"الناتج (synthesised)">
+                description = <"ناتج المحاولة (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0011", "at0012", "at0013">
+        >
+    >

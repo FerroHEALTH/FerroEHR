@@ -1,0 +1,1113 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=2f9ee2f1-9f68-4831-8e72-7732d6628492; build_uid=5bb43d0f-ba6f-4aca-b65e-f968e7226b77)
+    openEHR-EHR-OBSERVATION.guss.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Hanne Marte Sandal Bårholm">
+        ["organisation"] = <"Helse Vest IKT">
+        ["email"] = <"hanne.marte.sandal.barholm@helse-vest-ikt.no">
+        ["date"] = <"2025-02-03">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Stein Arne Rimehaug, Sunnaas sykehus, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Keisha Barwise, openEHR Operations Program, Jamaica", "Ivar Berge, Oslo University Hospital, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Martin Brierley, Lovisenberg Diakonale Sykehus, Norway", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "Aleksander Furnes, Helse Nord IKT, Norway", "Ciprian Gerstenberger, Helse Nord IKT, Norway (openEHR Editor)", "Evelyn Hovenga, EJSH Consulting, Australia", "Matteus Janicki, Akershus Universitetssykehus, Norway", "Ronald Krawec, Alberta Health Services, Canada", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Eli Larsen, UNN, Norway (openEHR Editor)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "June Marie Knappskog, Helse Nord IKT AS, Norway (openEHR Norway redaktør)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Terje Sagmyr, Helse Vest IKT, Norway (openEHR Editor)", "John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Karsten Øvretveit, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Trapl M, Enderle P, Nowotny M, Teuschl Y, Matz K, Dachenhausen A, Brainin M. Dysphagia bedside screening for acute-stroke patients: the Gugging Swallowing Screen. Stroke. 2007 Nov;38(11):2948-52. doi: 10.1161/STROKEAHA.107.483933. Epub 2007 Sep 20. PMID: 17885261.">
+        ["2"] = <"University for Continuing Education Krems. GUSS - Gugging Swallowing Screen [Internet]. [cited 2025 September 05]. Available from: https://www.donau-uni.ac.at/en/university/faculties/health-medicine/departments/clinical-neurosciences-preventive-medicine/research/research-projects/guss.html">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"1C7F3DFDE8F3B9BADEBA19D6FA2283D5">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere resultatene for hver enkelt parameter og totalskår for Gugging Swallowing Screen (GUSS).">
+            keywords = <"dysfagi, aspirasjon, svelging", ...>
+            use = <"Brukes for å registrere resultatene for hver enkelt parameter og totalskår for Gugging Swallowing Screen (GUSS).
+
+openEHR-arketyper er fritt tilgjengelige under en åpen lisens, men det spesifikke innholdet i denne Gugging Swallowing Screen-arketypen er antatt opphavsrettslig beskyttet. All bruk av denne arketypen i implementasjoner må gjøres i henhold til eventuelle vilkår gitt av innehaverne av opphavsretten.
+
+Informasjon om opphavsrett: GUSS - Gugging Swallowing Screen - University for Continuing Education Krems [Internet], available from https://www.donau-uni.ac.at/en/university/faculties/health-medicine/departments/clinical-neurosciences-preventive-medicine/research/research-projects/guss.html.">
+            misuse = <"Skal ikke brukes for å registrere resultatene for Gugging Swallowing Screen for Intensive Care Units (GUSS-ICU). Bruk arketypen OBSERVATION.guss_icu til dette formålet.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the result for each component parameter and the total sum for the Gugging Swallowing Screen (GUSS).">
+            keywords = <"dysphagia, aspiration, swallowing", ...>
+            use = <"Use to record the result for each component parameter and the total sum for the Gugging Swallowing Screen (GUSS).
+
+While openEHR archetypes are all freely available under an open license, the specific content of this Gugging Swallowing Screen archetype is assumed to be copyright protected, although the terms of copyright are not known at the time of publication. Any use of this archetype within implementations must be in compliance with any terms established by the copyright owners.
+
+Copyright information: GUSS - Gugging Swallowing Screen - University for Continuing Education Krems [Internet], available from https://www.donau-uni.ac.at/en/university/faculties/health-medicine/departments/clinical-neurosciences-preventive-medicine/research/research-projects/guss.html.">
+            misuse = <"Not to be used to record the Gugging Swallowing Screen for Intensive Care Units (GUSS-ICU). Use the OBSERVATION.guss_icu archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Gugging Swallowing Screen (GUSS)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    CLUSTER[at0004] occurrences matches {0..1} matches {    -- Preliminary Investigation/Indirect Swallowing Test
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Vigilance
+                                                value matches {
+                                                    DV_ORDINAL[at9018] matches {
+                                                        [value, symbol] matches {
+                                                            [{1}, {[at0006]}],    -- Yes
+                                                            [{0}, {[at0007]}]    -- No
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Coughing and/or throat clearing
+                                                value matches {
+                                                    DV_ORDINAL[at9019] matches {
+                                                        [value, symbol] matches {
+                                                            [{1}, {[at0009]}],    -- Yes
+                                                            [{0}, {[at0010]}]    -- No
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Swallowing successful
+                                                value matches {
+                                                    DV_ORDINAL[at9020] matches {
+                                                        [value, symbol] matches {
+                                                            [{1}, {[at0012]}],    -- Yes
+                                                            [{0}, {[at0013]}]    -- No
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Drooling
+                                                value matches {
+                                                    DV_ORDINAL[at9021] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0015]}],    -- Yes
+                                                            [{1}, {[at0016]}]    -- No
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Voice change
+                                                value matches {
+                                                    DV_ORDINAL[at9022] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0018]}],    -- Yes
+                                                            [{1}, {[at0019]}]    -- No
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0034] occurrences matches {0..1} matches {    -- Sum
+                                                value matches {
+                                                    DV_COUNT[at9023] matches {
+                                                        magnitude matches {|0..5|}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0020] occurrences matches {0..1} matches {    -- Semisolid
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0021] occurrences matches {0..1} matches {    -- Deglutition
+                                                value matches {
+                                                    DV_ORDINAL[at9024] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0022]}],    -- Swallowing not possible
+                                                            [{1}, {[at0023]}],    -- Swallowing delayed
+                                                            [{2}, {[at0024]}]    -- Swallowing successful
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Coughing (involuntary)
+                                                value matches {
+                                                    DV_ORDINAL[at9025] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0026]}],    -- Yes
+                                                            [{1}, {[at0027]}]    -- No
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0028] occurrences matches {0..1} matches {    -- Drooling
+                                                value matches {
+                                                    DV_ORDINAL[at9026] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0029]}],    -- Yes
+                                                            [{1}, {[at0030]}]    -- No
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0031] occurrences matches {0..1} matches {    -- Voice change
+                                                value matches {
+                                                    DV_ORDINAL[at9027] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0032]}],    -- Yes
+                                                            [{1}, {[at0033]}]    -- No
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0035] occurrences matches {0..1} matches {    -- Sum
+                                                value matches {
+                                                    DV_COUNT[at9028] matches {
+                                                        magnitude matches {|0..5|}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0036] occurrences matches {0..1} matches {    -- Liquid
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0037] occurrences matches {0..1} matches {    -- Deglutition
+                                                value matches {
+                                                    DV_ORDINAL[at9029] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0038]}],    -- Swallowing not possible
+                                                            [{1}, {[at0039]}],    -- Swallowing delayed
+                                                            [{2}, {[at0040]}]    -- Swallowing successful
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0041] occurrences matches {0..1} matches {    -- Coughing (involuntary)
+                                                value matches {
+                                                    DV_ORDINAL[at9030] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0042]}],    -- Yes
+                                                            [{1}, {[at0043]}]    -- No
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0044] occurrences matches {0..1} matches {    -- Drooling
+                                                value matches {
+                                                    DV_ORDINAL[at9031] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0045]}],    -- Yes
+                                                            [{1}, {[at0046]}]    -- No
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0047] occurrences matches {0..1} matches {    -- Voice change
+                                                value matches {
+                                                    DV_ORDINAL[at9032] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0048]}],    -- Yes
+                                                            [{1}, {[at0049]}]    -- No
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0050] occurrences matches {0..1} matches {    -- Sum
+                                                value matches {
+                                                    DV_COUNT[at9033] matches {
+                                                        magnitude matches {|0..5|}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0051] occurrences matches {0..1} matches {    -- Solid
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0052] occurrences matches {0..1} matches {    -- Deglutition
+                                                value matches {
+                                                    DV_ORDINAL[at9034] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0053]}],    -- Swallowing not possible
+                                                            [{1}, {[at0054]}],    -- Swallowing delayed
+                                                            [{2}, {[at0055]}]    -- Swallowing successful
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0056] occurrences matches {0..1} matches {    -- Coughing (involuntary)
+                                                value matches {
+                                                    DV_ORDINAL[at9035] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0057]}],    -- Yes
+                                                            [{1}, {[at0058]}]    -- No
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0059] occurrences matches {0..1} matches {    -- Drooling
+                                                value matches {
+                                                    DV_ORDINAL[at9036] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0060]}],    -- Yes
+                                                            [{1}, {[at0061]}]    -- No
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0062] occurrences matches {0..1} matches {    -- Voice change
+                                                value matches {
+                                                    DV_ORDINAL[at9037] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0063]}],    -- Yes
+                                                            [{1}, {[at0064]}]    -- No
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0065] occurrences matches {0..1} matches {    -- Sum
+                                                value matches {
+                                                    DV_COUNT[at9038] matches {
+                                                        magnitude matches {|0..5|}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0066] occurrences matches {0..1} matches {    -- Sum
+                                        value matches {
+                                            DV_COUNT[at9039] matches {
+                                                magnitude matches {|0..20|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0069] occurrences matches {0..1} matches {    -- Results and severity code
+                                        value matches {
+                                            DV_CODED_TEXT[at9040] matches {
+                                                defining_code matches {[ac9017]}    -- Results and severity code (synthesised)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0067] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0068] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Gugging Swallowing Screen (GUSS)">
+                description = <"Et verktøy som brukes for å identifisere dysfagi og aspirasjonsrisiko.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard uspesifisert tidspunkt- eller intervallhendelse som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Forundersøkelse/indirekte svelgtest">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Våkenhet">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Hosting/kremting">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Vellykket svelging">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Sikling">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Stemmeforandring etter svelging">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Tykt">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Svelging">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Ingen svelging">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Forsinket svelging">
+                description = <"tykt, tynt > 2 sek (fast føde > 10 sek).">
+            >
+            ["at0024"] = <
+                text = <"Vellykket svelging">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Hosting (spontant)">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Sikling">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Stemmeforandring">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Sum">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Sum">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Tynt">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Svelging">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Ingen svelging">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Forsinket svelging">
+                description = <"tykt, tynt > 2 sek (fast føde > 10 sek).">
+            >
+            ["at0040"] = <
+                text = <"Vellykket svelging">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Hosting (spontant)">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Sikling">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Stemmeforandring">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Sum">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Fast føde">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Svelging">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Ingen svelging">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Forsinket svelging">
+                description = <"tykt, tynt > 2 sek (fast føde > 10 sek).">
+            >
+            ["at0055"] = <
+                text = <"Vellykket svelging">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"Hosting (spontant)">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Sikling">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"Stemmeforandring">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Sum">
+                description = <"">
+            >
+            ["at0066"] = <
+                text = <"Sum">
+                description = <"Summen av den indirekte svelgtesten og den direkte svelgtesten.">
+            >
+            ["at0068"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0069"] = <
+                text = <"Resultat og alvorlighetsgrad">
+                description = <"">
+            >
+            ["at0070"] = <
+                text = <"Svelging av tykt, tynt og fast føde vellykket. Minimal/ingen dysfagi uten eller med minimal aspirasjonsfare">
+                description = <"">
+            >
+            ["at0071"] = <
+                text = <"Svelging av tykt vellykket, svelging av tynt vellykket, fast føde ikke vellykket. Lettgradelig dysfagi med noen grad av aspirasjonsfare">
+                description = <"">
+            >
+            ["at0072"] = <
+                text = <"Svelging av tykt vellykket, svelging av tynt ikke vellykket. Moderat dysfagi med aspirasjonsfare">
+                description = <"">
+            >
+            ["at0073"] = <
+                text = <"Forundersøkelse ikke vellykket eller svelging av tykt ikke vellykket. Alvorlig dysfagi med høy aspirasjonsfare">
+                description = <"">
+            >
+            ["ac9040"] = <
+                text = <"Våkenhet (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9041"] = <
+                text = <"Hosting/kremting (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9042"] = <
+                text = <"Vellykket svelging (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9043"] = <
+                text = <"Sikling (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9044"] = <
+                text = <"Stemmeforandring etter svelging (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9045"] = <
+                text = <"Svelging (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9046"] = <
+                text = <"Hosting (spontant) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9047"] = <
+                text = <"Sikling (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9048"] = <
+                text = <"Stemmeforandring (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9049"] = <
+                text = <"Svelging (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9050"] = <
+                text = <"Hosting (spontant) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9051"] = <
+                text = <"Sikling (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9052"] = <
+                text = <"Stemmeforandring (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9053"] = <
+                text = <"Svelging (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9054"] = <
+                text = <"Hosting (spontant) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9055"] = <
+                text = <"Sikling (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9056"] = <
+                text = <"Stemmeforandring (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Resultat og alvorlighetsgrad (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Gugging Swallowing Screen (GUSS)">
+                description = <"An assessment score used for the identification of dysphagia and aspiration risk.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which   may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Preliminary Investigation/Indirect Swallowing Test">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Vigilance">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Coughing and/or throat clearing">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Swallowing successful">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Drooling">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Voice change">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Semisolid">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Deglutition">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Swallowing not possible">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Swallowing delayed">
+                description = <"> 2 sec (Solid textures > 10 sec).">
+            >
+            ["at0024"] = <
+                text = <"Swallowing successful">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Coughing (involuntary)">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Drooling">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Voice change">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Sum">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Sum">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Liquid">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Deglutition">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Swallowing not possible">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Swallowing delayed">
+                description = <"> 2 sec (Solid textures > 10 sec).">
+            >
+            ["at0040"] = <
+                text = <"Swallowing successful">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Coughing (involuntary)">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Drooling">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Voice change">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Sum">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Solid">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Deglutition">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Swallowing not possible">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Swallowing delayed">
+                description = <"> 2 sec (Solid textures > 10 sec).">
+            >
+            ["at0055"] = <
+                text = <"Swallowing successful">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"Coughing (involuntary)">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Drooling">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"Voice change">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Sum">
+                description = <"">
+            >
+            ["at0066"] = <
+                text = <"Sum">
+                description = <"The sum of the Indirect Swallowing Test and the Direct Swallowing Test.">
+            >
+            ["at0068"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0069"] = <
+                text = <"Results and severity code">
+                description = <"">
+            >
+            ["at0070"] = <
+                text = <"Swallowing semisolids, liquids and solid textures successful. Slight / No dysphagia with no or minimal risk of aspiration">
+                description = <"">
+            >
+            ["at0071"] = <
+                text = <"Swallowing semisolids successful, swallowing liquids can be deficient, solids can be deficient. Slight dysphagia with aspiration risk">
+                description = <"">
+            >
+            ["at0072"] = <
+                text = <"Swallowing semisolids successful, swallowing liquids deficient. Moderate dysphagia with aspiration risk">
+                description = <"">
+            >
+            ["at0073"] = <
+                text = <"Preliminary investigation unsuccessful or swallowing semisolids unsuccessful. Severe dysphagia with high risk of aspiration">
+                description = <"">
+            >
+            ["ac9040"] = <
+                text = <"Vigilance (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9041"] = <
+                text = <"Coughing and/or throat clearing (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9042"] = <
+                text = <"Swallowing successful (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9043"] = <
+                text = <"Drooling (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9044"] = <
+                text = <"Voice change (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9045"] = <
+                text = <"Deglutition (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9046"] = <
+                text = <"Coughing (involuntary) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9047"] = <
+                text = <"Drooling (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9048"] = <
+                text = <"Voice change (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9049"] = <
+                text = <"Deglutition (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9050"] = <
+                text = <"Coughing (involuntary) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9051"] = <
+                text = <"Drooling (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9052"] = <
+                text = <"Voice change (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9053"] = <
+                text = <"Deglutition (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9054"] = <
+                text = <"Coughing (involuntary) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9055"] = <
+                text = <"Drooling (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9056"] = <
+                text = <"Voice change (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Results and severity code (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9053"] = <
+            id = <"ac9053">
+            members = <"at0053", "at0054", "at0055">
+        >
+        ["ac9052"] = <
+            id = <"ac9052">
+            members = <"at0048", "at0049">
+        >
+        ["ac9051"] = <
+            id = <"ac9051">
+            members = <"at0045", "at0046">
+        >
+        ["ac9050"] = <
+            id = <"ac9050">
+            members = <"at0042", "at0043">
+        >
+        ["ac9056"] = <
+            id = <"ac9056">
+            members = <"at0063", "at0064">
+        >
+        ["ac9055"] = <
+            id = <"ac9055">
+            members = <"at0060", "at0061">
+        >
+        ["ac9054"] = <
+            id = <"ac9054">
+            members = <"at0057", "at0058">
+        >
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0070", "at0071", "at0072", "at0073">
+        >
+        ["ac9042"] = <
+            id = <"ac9042">
+            members = <"at0012", "at0013">
+        >
+        ["ac9041"] = <
+            id = <"ac9041">
+            members = <"at0009", "at0010">
+        >
+        ["ac9040"] = <
+            id = <"ac9040">
+            members = <"at0006", "at0007">
+        >
+        ["ac9046"] = <
+            id = <"ac9046">
+            members = <"at0026", "at0027">
+        >
+        ["ac9045"] = <
+            id = <"ac9045">
+            members = <"at0022", "at0023", "at0024">
+        >
+        ["ac9044"] = <
+            id = <"ac9044">
+            members = <"at0018", "at0019">
+        >
+        ["ac9043"] = <
+            id = <"ac9043">
+            members = <"at0015", "at0016">
+        >
+        ["ac9049"] = <
+            id = <"ac9049">
+            members = <"at0038", "at0039", "at0040">
+        >
+        ["ac9048"] = <
+            id = <"ac9048">
+            members = <"at0032", "at0033">
+        >
+        ["ac9047"] = <
+            id = <"ac9047">
+            members = <"at0029", "at0030">
+        >
+    >

@@ -1,0 +1,261 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=9f283a6d-77de-4452-a62b-8bd02e83ce44; build_uid=909de4c8-b1af-4c0b-ae95-d49b60beb754)
+    openEHR-EHR-CLUSTER.muscle_power.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Thomas Weikert, Alina Rehberg">
+                ["organisation"] = <"USB, Medizinische Hochschule Hannover">
+                ["email"] = <"t.weikert@usb.ch, rehberg.alina@mh-hannover.de">
+            >
+            accreditation = <"USB">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2023-05-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"5EA85CF8412DC05172722A7515B2ED89">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung der Befunde, die bei der körperlichen Untersuchung der Muskelkraft einer Muskelgruppe oder Gliedmaße beobachtet wurden.">
+            use = <"Zur Darstellung der beobachteten Befunde bei der körperlichen Untersuchung der Muskelkraft einer Muskelgruppe oder Gliedmaße.
+
+Dieses Archetyp wurde speziell dafür entwickelt, im SLOT „Examination detail“ innerhalb des OBSERVATION.exam- oder des CLUSTER.exam-nervous_system-Archetyps verwendet zu werden. Es kann auch innerhalb anderer relevanter OBSERVATION- oder körperlicher Untersuchungs-CLUSTER-Archetypen verschachtelt werden, sofern dies klinisch sinnvoll ist.
+
+In klinischen Situationen, in denen mehr als eine Kraftreaktion dokumentiert werden muss, sollte für jede Muskelgruppe oder Gliedmaße eine separate Instanz dieses Archetyps verwendet werden.">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the findings observed during the physical examination of power in a muscle group or a limb.">
+            use = <"Use to record the observed findings during the physical examination of power in a muscle group or a limb.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the CLUSTER.exam-nervous_system archetype. It can also be nested within any other relevant OBSERVATION or Physical examination-related family of CLUSTER archetypes, where clinically appropriate. 
+
+In clinical scenarios requiring the documentation of more than one strength response, use a separate instance of this archetype for each muscle group or limb.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Muscle power finding
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- Body site
+                value matches {
+                    DV_CODED_TEXT[at9002] matches {
+                        defining_code matches {[ac9000]}    -- Body site (synthesised)
+                    }
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Clinical description
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Strength
+                value matches {
+                    DV_TEXT[at9005]
+                    DV_ORDINAL[at9006] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0008]}],    -- No visible muscle contraction
+                            [{1}, {[at0009]}],    -- Visible muscle contraction with no or trace movement
+                            [{2}, {[at0010]}],    -- Limb movement, but not against gravity
+                            [{3}, {[at0011]}],    -- Movement against gravity but not resistance
+                            [{4}, {[at0012]}],    -- Movement against at least some resistance supplied by the examiner
+                            [{5}, {[at0013]}]    -- Full strength
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9007]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Befund zur Muskelkraft">
+                description = <"Befunde, die bei der körperlichen Untersuchung der Muskelkraft einer Muskelgruppe oder Gliedmaße beobachtet wurden.">
+            >
+            ["at0001"] = <
+                text = <"Körperstelle">
+                description = <"Kennzeichnung der untersuchten Gliedmaße oder Muskelgruppe.">
+            >
+            ["at0002"] = <
+                text = <"Rechter Arm">
+                description = <"">
+            >
+            ["at0003"] = <
+                text = <"Linker Arm">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Rechtes Bein">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Linkes Bein">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Klinische Beschreibung">
+                description = <"Beschreibung der beobachteten Muskelkraft an der angegebenen Körperstelle.
+">
+            >
+            ["at0007"] = <
+                text = <"Kraft">
+                description = <"Beobachtetes Kraftniveau in der angegebenen Gliedmaße oder Muskelgruppe.
+">
+            >
+            ["at0008"] = <
+                text = <"Keine sichtbare Muskelkontraktion">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Sichtbare Muskelkontraktion ohne oder mit minimaler Bewegung">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Gliedmaßenbewegung, jedoch nicht gegen die Schwerkraft">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Bewegung gegen die Schwerkraft, jedoch ohne Widerstand">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Bewegung gegen mindestens einen vom Untersucher ausgeübten Widerstand">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Volle Kraft">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Kommentar">
+                description = <"Zusätzlicher Freitext zu den Befunden des Muskeltonus, der nicht in anderen Felder erfasst werden konnte.">
+            >
+            ["ac9000"] = <
+                text = <"Körperstelle (synthesised)">
+                description = <"Kennzeichnung der untersuchten Gliedmaße oder Muskelgruppe. (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"Kraft (synthesised)">
+                description = <"Beobachtetes Kraftniveau in der angegebenen Gliedmaße oder Muskelgruppe.
+ (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Muscle power finding">
+                description = <"Findings observed during the physical examination of power in a muscle group or a limb.">
+            >
+            ["at0014"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the muscle tone findings, not captured in other fields.">
+            >
+            ["at0001"] = <
+                text = <"Body site">
+                description = <"Identification of the limb or muscle group tested.">
+            >
+            ["at0007"] = <
+                text = <"Strength">
+                description = <"Observed level of power in the identified limb or muscle group.">
+            >
+            ["at0003"] = <
+                text = <"Left arm">
+                description = <"">
+            >
+            ["at0002"] = <
+                text = <"Right arm">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Left leg">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Right leg">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"No visible muscle contraction">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Visible muscle contraction with no or trace movement">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Limb movement, but not against gravity">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Movement against gravity but not resistance">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Movement against at least some resistance supplied by the examiner">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Full strength">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Clinical description">
+                description = <"Narrative description about the observed muscle power at the identified body site.">
+            >
+            ["ac9000"] = <
+                text = <"Body site (synthesised)">
+                description = <"Identification of the limb or muscle group tested. (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"Strength (synthesised)">
+                description = <"Observed level of power in the identified limb or muscle group. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0000"] = <http://snomed.info/id/366725004>
+        >
+    >
+    value_sets = <
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at0008", "at0009", "at0010", "at0011", "at0012", "at0013">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0003", "at0002", "at0005", "at0004">
+        >
+    >

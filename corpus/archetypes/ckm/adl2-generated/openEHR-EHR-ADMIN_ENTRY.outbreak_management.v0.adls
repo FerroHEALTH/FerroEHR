@@ -1,0 +1,212 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d7ed5a80-f0b4-4ba9-b589-db8d1fac6df9; build_uid=f856d186-b850-4c4c-a659-5e0d3299999d)
+    openEHR-EHR-ADMIN_ENTRY.outbreak_management.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-10-31">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"6570E3D47EB2CB3ABFB9E247BF6DF493">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about the management of an outbreak of an infectious disease.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ADMIN_ENTRY[at0000] matches {    -- Outbreak management
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Index disease
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Ring vaccination?
+                        value matches {
+                            DV_CODED_TEXT[at9004] matches {
+                                defining_code matches {[ac9000]}    -- Ring vaccination? (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Ring vaccination started
+                        value matches {
+                            DV_DATE_TIME[at9005]
+                        }
+                    }
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Ring vaccination stopped
+                        value matches {
+                            DV_DATE_TIME[at9006]
+                        }
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Ring vaccination doses
+                        value matches {
+                            DV_COUNT[at9007]
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Rapid coverage monitoring?
+                        value matches {
+                            DV_CODED_TEXT[at9008] matches {
+                                defining_code matches {[ac9001]}    -- Rapid coverage monitoring? (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Vaccinated %
+                        value matches {
+                            DV_PROPORTION[at9009] matches {
+                                numerator matches {|0.0..100.0|}
+                                type matches {2}
+                            }
+                        }
+                    }
+                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Contact follow-up
+                        value matches {
+                            DV_CODED_TEXT[at9010] matches {
+                                defining_code matches {[ac9002]}    -- Contact follow-up (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Last day of follow-up
+                        value matches {
+                            DV_DATE_TIME[at9011]
+                        }
+                    }
+                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9012]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Outbreak management">
+                description = <"Details about the management of an outbreak of an infectious disease.">
+            >
+            ["at0002"] = <
+                text = <"Ring vaccination?">
+                description = <"Was ring vaccination carried out?">
+            >
+            ["at0003"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Ring vaccination started">
+                description = <"The date when ring vaccination commenced.">
+            >
+            ["at0007"] = <
+                text = <"Ring vaccination stopped">
+                description = <"The date when ring vaccination was completed.">
+            >
+            ["at0008"] = <
+                text = <"Ring vaccination doses">
+                description = <"The number of doses administered during ring vaccination.">
+            >
+            ["at0009"] = <
+                text = <"Rapid coverage monitoring?">
+                description = <"Was rapid coverage monitoring carried out?">
+            >
+            ["at0010"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Vaccinated %">
+                description = <"The percentage of vaccinated persons found on rapid coverage monitoring.">
+            >
+            ["at0014"] = <
+                text = <"Contact follow-up">
+                description = <"Were contacts followed up?">
+            >
+            ["at0015"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Last day of follow-up">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Comment">
+                description = <"Narrative description about the outbreak management, not captured in other data elements.">
+            >
+            ["at0020"] = <
+                text = <"Index disease">
+                description = <"Name of the index infectious disease causing the outbreak.">
+            >
+            ["ac9000"] = <
+                text = <"Ring vaccination? (synthesised)">
+                description = <"Was ring vaccination carried out? (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Rapid coverage monitoring? (synthesised)">
+                description = <"Was rapid coverage monitoring carried out? (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Contact follow-up (synthesised)">
+                description = <"Were contacts followed up? (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0015", "at0016", "at0017">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0010", "at0011", "at0012">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0003", "at0004", "at0005">
+        >
+    >

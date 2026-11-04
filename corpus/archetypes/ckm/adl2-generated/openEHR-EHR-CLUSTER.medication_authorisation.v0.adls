@@ -1,0 +1,274 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=073360e3-7a26-48ea-bf09-000665ec3e69; build_uid=1faf213a-f52f-4048-b352-ed3f6a154962)
+    openEHR-EHR-CLUSTER.medication_authorisation.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Beatriz de Faria Leao">
+                ["organisation"] = <"BLEAO INFORMÁTICA EM SAÚDE">
+                ["email"] = <"bfleao@terra.com.br">
+            >
+            accreditation = <"MD. PhD">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"NEHTA">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2010-11-08">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Silje Ljosland Bakke, Helse Bergen HF, Norway (Editor)", "John Bennett, NEHTA, Australia", "Sharmila Biswas, Australia", "Stephen Chu, NEHTA, Australia (Editor)", "Matthew Cordell, NEHTA, Australia", "Gail Easterbrook, Flinders Medical Centre, Australia", "David Evans, Queensland Health, Australia", "Sarah Gaunt, NEHTA, Australia", "Trina Gregory, cpc, Australia", "Sam Heard, Ocean Informatics, Australia (Editor)", "Mary Kelaher, NEHTA, Australia", "Robert L'egan, NEHTA, Australia", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Susan McIndoe, Royal District Nursing Service, Australia", "David McKillop, NEHTA, Australia", "Chris Mitchell, RACGP, Australia", "Stewart Morrison, NEHTA, Australia", "Chris Pearce, Melbourne East GP Network, Australia", "Camilla Preeston, Royal Australian College of General Practitioners, Australia", "Margaret Prichard, NEHTA, Australia", "Cathy Richardson, NEHTA, Australia", "Robyn Richards, NEHTA - Clinical Terminology, Australia", "John Taylor, NEHTA, Australia", "Richard Townley-O'Neill, NEHTA, Australia (Editor)", "Kylie Young, The Royal Australian College of General Practitioners, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"openEHR Foundation Medication archetypes http://www.openehr.org/knowledge">
+        ["2"] = <"NEHTA's Therapeutic Good Use Data Group from the NEHTA Website http://www.nehta.gov.au">
+        ["3"] = <"Intermountain Healthcare Medication order model, Personal Communication to Sam Heard by Dr Stan Huff.">
+        ["4"] = <"Royal Australian College of General Practitioners. Fact Sheet: Medicines List. 2010.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"0368944C92A220B9835A3272699B7877">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details of authorisation of a medication, which may be of the original prescription, or of re-authorisation of a repeat refill.">
+            keywords = <"medication", "order", "prescribe", "therapy", "substance", "drug", "therapeutic", "otc", "therapeutic good", "repeat">
+            use = <"Use in the content of a medication order INSTRUCTION to specify the original authorisation, or in the context of a Medication action ACTION to record details of a re-authorisation or authorisation of a re-issue.
+
+This archetype covers the common, universal requirements for authorisation of medication but other local archetypes may be required to cover national or regional variants e.g special contractual arrangements or requirements for further attestation by a secondary clinician.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Para registrar detalhes da autorização de um medicamento, que pode ser da receita original, ou de reautorização de uma recarga da receita.">
+            keywords = <"medicamentos", "prescrição", "prescrever", "terapia", "substância", "droga", "terapêutico", "etc", "produto terapêutico", "repetir">
+            use = <"Utilize no conteúdo da INSTRUCTION referente a uma prescrição de medicamentos para especificar a autorização original, ou no contexto de ACTION de Medicamentos para registrar detalhes de uma nova autorização ou autorização de uma re-emissão.
+
+Este arquétipo cobre os requisitos comuns e universais para a autorização de medicação, mas outros arquétipos locais podem ser necessários para cobrir variantes nacionais ou regionais, por exemplo, acordos contratuais especiais ou requisitos para atestado adicional por um clínico secundário.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Medication authorisation
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0073] occurrences matches {0..1} matches {    -- Authorisation type
+                value matches {
+                    DV_CODED_TEXT[at9001] matches {
+                        defining_code matches {[ac9000]}    -- Authorisation type (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Maximum number of refills
+                value matches {
+                    DV_COUNT[at9002] matches {
+                        magnitude matches {|>=0|}
+                    }
+                }
+            }
+            ELEMENT[at0078] occurrences matches {0..1} matches {    -- Number of refills issued
+                value matches {
+                    DV_COUNT[at9003] matches {
+                        magnitude matches {|>=0|}
+                    }
+                }
+            }
+            ELEMENT[at0079] occurrences matches {0..1} matches {    -- Number of refills remaining
+                value matches {
+                    DV_COUNT[at9004] matches {
+                        magnitude matches {|>=0|}
+                    }
+                }
+            }
+            ELEMENT[at0046] occurrences matches {0..1} matches {    -- Minimum interval between refills
+                value matches {
+                    DV_DURATION[at9005]
+                }
+            }
+            ELEMENT[at0072] occurrences matches {0..1} matches {    -- Authorisation expiry date
+                value matches {
+                    DV_DATE_TIME[at9006]
+                }
+            }
+            ELEMENT[at0080] matches {    -- Prescriber endorsement
+                value matches {
+                    DV_TEXT[at9007]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Autorização de Medicamentos">
+                description = <"Detalhes da autorização do medicamento, vacina ou outro produto terapêutico.">
+            >
+            ["at0025"] = <
+                text = <"Número máximo de recargas">
+                description = <"O número de vezes que a quantidade especificada de medicamentos, vacinas ou outro produto terapêutico pode ter recarga ou repetição da dispensação sem uma nova receita médica.">
+            >
+            ["at0046"] = <
+                text = <"Intervalo mínimo entre as recargas">
+                description = <"O tempo mínimo de fornecimento de recargas de medicamento, vacina ou produto terapêutico. Nota: Isto é especificado pelo médico prescritor, por um motivo específico, como segurança ou melhores práticas.">
+            >
+            ["at0072"] = <
+                text = <"Data de validade da autorização">
+                description = <"Data de validade, após a qual, a autorização de recarga não tem mais validade.">
+            >
+            ["at0073"] = <
+                text = <"Tipo de Autorização">
+                description = <"Informa o medicamento só é entregue uma vez ou pode ser re-reentregue e dispensado após a autorização do prescritor.">
+            >
+            ["at0074"] = <
+                text = <"Não repetir">
+                description = <"Repetição da entrega não é autorizada.">
+            >
+            ["at0075"] = <
+                text = <"Repetir a prescrição">
+                description = <"O prescritor pode fornecer várias recargas da receita.">
+            >
+            ["at0076"] = <
+                text = <"Repetir a dispensarão">
+                description = <"Múltiplas recargas da receita podem ser obtidas a partir do dispensador.">
+            >
+            ["at0078"] = <
+                text = <"Número de recargas emitidas">
+                description = <"O número de recargas que foram emitidas ou dispensadas para este período de autorização.">
+            >
+            ["at0079"] = <
+                text = <"Número de recargas restantes">
+                description = <"O número de recargas que permanecem válidos para este período de autorização.">
+            >
+            ["at0080"] = <
+                text = <"Aval do prescritor">
+                description = <"Endosso do prescritor de que o medicamento pode ser fornecida através de um acordo específico contratual.">
+                comment = <"por exemplo. Alguns medicamentos podem ser fornecidos apenas a certos pacientes em circunstâncias específicas, ou podem ser disponibilizados de forma gratuita. É comum que os prescritores endossem as receita nestes casos.">
+            >
+            ["ac9000"] = <
+                text = <"Tipo de Autorização (synthesised)">
+                description = <"Informa o medicamento só é entregue uma vez ou pode ser re-reentregue e dispensado após a autorização do prescritor. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Medication authorisation">
+                description = <"Details of the authorisation of a medicine, vaccine or other therapeutic good.">
+            >
+            ["at0025"] = <
+                text = <"Maximum number of refills">
+                description = <"The number of times the expressed quantity of medicine, vaccine or other therapeutic good may be refilled or redispensed without a new prescription.">
+            >
+            ["at0046"] = <
+                text = <"Minimum interval between refills">
+                description = <"The minimum time between repeat supply of the medicine, vaccine or therapeutic good. Note: This is specified by the ordering clinician for a specific reason such as safety or best practice.">
+            >
+            ["at0072"] = <
+                text = <"Authorisation expiry date">
+                description = <"The repeat supply authorisation has expired after this date.">
+            >
+            ["at0073"] = <
+                text = <"Authorisation type">
+                description = <"Whether the medication is only issued once or may re-issued and dispensed 're-filled' after authorisation by the prescriber.">
+            >
+            ["at0074"] = <
+                text = <"No repeat supply">
+                description = <"Repeat supply has not been authorised.">
+            >
+            ["at0075"] = <
+                text = <"Repeat prescribing">
+                description = <"Multiple refills of the prescription may be obtained from the prescriber.">
+            >
+            ["at0076"] = <
+                text = <"Repeat dispensing">
+                description = <"Multiple refills of the prescription may be obtained from the dispenser.">
+            >
+            ["at0078"] = <
+                text = <"Number of refills issued">
+                description = <"The number of refills which have been issued or dispensed for this period of authorisation.">
+            >
+            ["at0079"] = <
+                text = <"Number of refills remaining">
+                description = <"The number of re-fills or re-issues that remain valid for this authorisation period.">
+            >
+            ["at0080"] = <
+                text = <"Prescriber endorsement">
+                description = <"An endorsement by the prescriber that the medication may be supplied under a specific contractual arrangement.">
+                comment = <"e.g. Some medications may be supplied only to certain patients in specifc circumstances, or may be made avaialble free-of-charge. It is common for prescribers to be asked to endorse the prescription to that effect. ">
+            >
+            ["ac9000"] = <
+                text = <"Authorisation type (synthesised)">
+                description = <"Whether the medication is only issued once or may re-issued and dispensed 're-filled' after authorisation by the prescriber. (synthesised)">
+            >
+        >
+        ["sl"] = <
+            ["at0000"] = <
+                text = <"*Medication authorisation(en)">
+                description = <"*Details of the authorisation of a medicine, vaccine or other therapeutic good.(en)">
+            >
+            ["at0025"] = <
+                text = <"*Maximum number of refills(en)">
+                description = <"*The number of times the expressed quantity of medicine, vaccine or other therapeutic good may be refilled or redispensed without a new prescription.(en)">
+            >
+            ["at0046"] = <
+                text = <"*Minimum interval between refills(en)">
+                description = <"*The minimum time between repeat supply of the medicine, vaccine or therapeutic good. Note: This is specified by the ordering clinician for a specific reason such as safety or best practice.(en)">
+            >
+            ["at0072"] = <
+                text = <"*Authorisation expiry date(en)">
+                description = <"*The repeat supply authorisation has expired after this date.(en)">
+            >
+            ["at0073"] = <
+                text = <"*Authorisation type(en)">
+                description = <"*Whether the medication is only issued once or may re-issued and dispensed 're-filled' after authorisation by the prescriber.(en)">
+            >
+            ["at0074"] = <
+                text = <"*No repeat supply(en)">
+                description = <"*Repeat supply has not been authorised.(en)">
+            >
+            ["at0075"] = <
+                text = <"*Repeat prescribing(en)">
+                description = <"*Multiple refills of the prescription may be obtained from the prescriber.(en)">
+            >
+            ["at0076"] = <
+                text = <"*Repeat dispensing(en)">
+                description = <"*Multiple refills of the prescription may be obtained from the dispenser.(en)">
+            >
+            ["at0078"] = <
+                text = <"*Number of refills issued(en)">
+                description = <"*The number of refills which have been issued or dispensed for this period of authorisation.(en)">
+            >
+            ["at0079"] = <
+                text = <"*Number of refills remaining(en)">
+                description = <"*The number of re-fills or re-issues that remain valid for this authorisation period.(en)">
+            >
+            ["at0080"] = <
+                text = <"*Prescriber endorsement(en)">
+                description = <"*An endorsement by the prescriber that the medication may be supplied under a specific contractual arrangement. (en)">
+                comment = <"*e.g. Some medications may be supplied only to certain patients in specifc circumstances, or may be made avaialble free-of-charge. It is common for prescribers to be asked to endorse the prescription to that effect. (en)">
+            >
+            ["ac9000"] = <
+                text = <"*Authorisation type(en) (synthesised)">
+                description = <"*Whether the medication is only issued once or may re-issued and dispensed 're-filled' after authorisation by the prescriber.(en) (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0074", "at0075", "at0076">
+        >
+    >

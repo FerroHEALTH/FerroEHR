@@ -1,0 +1,1496 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ddb13dc5-5227-48f7-93f5-1b6825ace295; build_uid=9d10164a-ce95-45a6-b8ac-0d00e0f68b4b)
+    openEHR-EHR-CLUSTER.genomic_variant_result.v1.1.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Aurelie Tomczak, Natalia Strauch">
+                ["organisation"] = <"Institute of Pathology, University Hospital Heidelberg, Medizinische Hochschule Hannover">
+                ["email"] = <"au.tomczak@yahoo.com, Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen / Liv Laugen">
+                ["organisation"] = <"​Oslo University Hospital, Norway">
+                ["email"] = <"varntzen@ous-hf.no, liv.laugen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Cecilia Mascia">
+        ["organisation"] = <"CRS4, Italy">
+        ["email"] = <"cecilia.mascia@crs4.it">
+        ["date"] = <"2019-01-15">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Shahla Foozonkhah, Iran ministry of health and education, Iran", "Francesca Frexia, CRS4 - Center for advanced studies, research and development in Sardinia, Italy", "Gideon Giacomelli, Charité Berlin, Germany", "Sjur Gjerald, Oslo University Hospital, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Evelyn Hovenga, EJSH Consulting, Australia", "Christina Jaeger-Schmidt, Heidelberg University Hospital, Germany", "Florian Kaercher, Charité Berlin, Germany", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Cecilia Mascia, CRS4, Italy (openEHR Editor)", "Shane McKee, Belfast Health & Social Care Trust, United Kingdom", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Andrej Orel, Marand d.o.o., Slovenia", "Niklas Reimer, Institut für Medizinische Informatik / Universität zu Lübeck, Germany", "Simon Schumacher, HiGHmed, Germany", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Nyree Taylor, Ocean Informatics, Australia", "Aurelie Tomczak, Uniklinikum Heidelberg, Germany (openEHR Editor)", "Paolo Uva, CRS4, Italy", "John Tore Valand, Helse Bergen, Norway", "Gianluigi Zanetti, CRS4, Italy">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"den Dunnen JT, Dalgleish R, Maglott DR, Hart RK, Greenblatt MS, McGowan-Jordan J, Roux AF, Smith T, Antonarakis SE, Taschner PE. HGVS Recommendations for the Description of Sequence Variants: 2016 Update. Hum Mutat. 2016 Jun;37(6):564-9. doi: 10.1002/humu.22981. Epub 2016 Mar 25. PubMed PMID: 26931183. Sequence variants available from: https://varnomen.hgvs.org/.">
+        ["2"] = <"HL7 FHIR R4 [Internet]. HL7 International; 2018. Genomic Implementation Guidance; 2018 [cited 2019 05 23]. Available from: https://www.hl7.org/fhir/genomics.html.">
+        ["3"] = <"Rehm HL, Bale SJ, Bayrak-Toydemir P, Berg JS, Brown KK, Deignan JL, Friez MJ, Funke BH, Hegde MR, Lyon E. ACMG clinical laboratory standards for next-generation sequencing. Genet Med. 2013 Sep;15(9):733-47. doi: 10.1038/gim.2013.92. Epub 2013 Jul 25. PubMed PMID: 23887774; PubMed Central PMCID: PMC4098820.">
+        ["4"] = <"Richards S, Aziz N, Bale S, Bick D, Das S, Gastier-Foster J, Grody WW, Hegde M, Lyon E, Spector E, Voelkerding K, Rehm HL. Standards and guidelines for the interpretation of sequence variants: a joint consensus recommendation of the American College of Medical Genetics and Genomics and the Association for Molecular Pathology. Genet Med. 2015 May;17(5):405-24. doi: 10.1038/gim.2015.30. Epub 2015 Mar 5. PubMed PMID: 25741868; PubMed Central PMCID: PMC4544753.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"3EE3E8241CADF78346B218FF137A2167">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Wird verwendet, um Ergebnisse und Annotationen zu einer im Genom durch einen Sequenzierungstest gefundenen Variante zu berichten.">
+            keywords = <"Variation", "VCF", "genetisch", "genomisch", "Variantebenennung", "Sequenz", "Mutation", "Allel", "Genotyp">
+            use = <"*Use to report findings and annotations related to one variant found in the genome by a sequencing test. 
+
+This archetype has been designed to be nested in the 'Test result' SLOT within the OBSERVATION.laboratory_test_result archetype. It is intended to provide a consistent framework for nesting any specific genomic variant CLUSTER archetype within the 'Structured variant' SLOT.
+
+The archetype may also contain some key information about the methodology, such as the reference genome assembly and the bioinformatics pipeline used, to ensure proper interpretability and consistency of the results. However, when more details about the test method are to be reported, this archetype should be used in conjunction with the archetype
+openEHR-EHR-CLUSTER.sequencing_assay.v0. In that case, it is recommended to report all information about the method used, using the sequencing assay, and be cautious not to duplicate the information.
+
+This archetype allows the recording of genomic variants in both the HGVS syntax in an inline parsable element, and an atomic, structured form through the use of a nested CLUSTER archetype for specific variant types. If both of those representations are used simultaneously, they need to represent identical data.
+
+Note that in the case of a multiallelic variant, it is required to instantiate the archetype as many times as the number of alternative alleles whose data are to be reported for that position in the genome. (en)">
+            misuse = <"Nicht zur Darstellung von Informationen über den Vergleich mehrerer Proben verwenden. Verwenden Sie zu diesem Zweck einen spezifischen Archetyp.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere resultater og annoteringer relatert til en enkelt variant funnet i en genomisk sekvens.">
+            keywords = <"allel", "aminosyre", "basepar", "baserekkefølge", "DNA", "DNA-sekvens", "framshift", "gen", "genetikk", "genetisk", "genfeil", "genom", "genotype", "hetrozygot", "homozygoy", "kopitall", "kromosom", "lesedybde", "leseramme", "mutasjon", "nukleinsyrer", "nukleotid", "polymorfisme", "proteinkjede", "proteinsekvens", "sekvens", "variant", "variasjon", "VCF">
+            use = <"Brukes for å registrere resultater og annoteringer relatert til en enkelt variant funnet i en genomisk sekvens.
+
+Denne arketypen er ment å bli nøstet og brukt i elementet \"Testresultat\" SLOTet i arketypen \"OBSERVATION.laboratory_test_result (Laboratorieresultat)\".
+Arketypen \"Genetisk variant resultat\" er ment å gi et konsistent rammeverk for å nøste enhver spesifikk genetisk variant CLUSTER-arketype i SLOTet \"Strukturert variantbeskrivelse\".
+
+Arketypen kan også inneholde noe nøkkelinformasjon om metodikken, det vil si referansegenomets sammensetning og den bioinformatiske arbeidsflyten (pipline) som er brukt, for å sikre korrekt tolkning og konsistens i resultatene. Dersom det skal rapporteres mer detaljerte opplysninger om testmetoden, bør denne arketypen brukes sammen med arketypen CLUSTER.sequencing_assay. I så fall anbefales det å rapportere all informasjon om metoden som er brukt i CLUSTER.sequencing_assay, og være nøye med å unngå duplisering av informasjonen.
+
+Denne arketypen gjør det mulig å registrere genomiske varianter i en HGVS-syntaks både som et integrert strukturert element (inline parseable) og i en egen enkeltstående strukturert form ved bruk av en nøstet CLUSTER-arketype for den spesifikke varianttypen. Hvis man bruker begge disse metodene å registrere en varianttype på, må disse representere identiske data.
+
+Merk at ved multiallelik variant benyttes en instans av arketypen for hvert alternative allel på den aktuelle genomposisjonen som det rapporteres data for på.">
+            misuse = <"Brukes ikke for å registrere sammenlikninger av genetiske varianter fra flere prøver, bruk spesifikke arketyper for dette.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To report findings and annotations related to one variant found in the genome by a sequencing test.">
+            keywords = <"variation, VCF,  variant, genetic, genomic, variant calling, sequence, mutation, allele, genotype", ...>
+            use = <"Use to report findings and annotations related to one variant found in the genome by a sequencing test. 
+
+This archetype has been designed to be nested in the 'Test result' SLOT within the OBSERVATION.laboratory_test_result archetype. It is intended to provide a consistent framework for nesting any specific genomic variant CLUSTER archetype within the 'Structured variant' SLOT.
+
+The archetype may also contain some key information about the methodology, i.e., the reference genome assembly and the bioinformatics pipeline used, to ensure proper interpretability and consistency of the results. However, when more details about the test method are to be reported, this archetype should be used in conjunction with the archetype CLUSTER.sequencing_assay. In that case, it is recommended to report all information about the method used, using the sequencing assay, and be cautious not to duplicate the information.
+
+This archetype allows the recording of genomic variants in both the HGVS syntax in an inline parsable element, and an atomic, structured form through the use of a nested CLUSTER archetype for specific variant types. If both of those representations are used simultaneously, they need to represent identical data.
+
+Note that in the case of a multiallelic variant, it is required to instantiate the archetype as many times as the number of alternative alleles whose data are to be reported for that position in the genome.">
+            misuse = <"Not to be used for recording information about the comparison of several samples. Use a specific archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Genomic variant result
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype CLUSTER[at0001] occurrences matches {0..1} matches {    -- Bioinformatic analysis workflow
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.knowledge_base_reference(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0002] occurrences matches {0..1} matches {    -- Reference genome
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.reference_sequence(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0102] matches {    -- Variant identification
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.knowledge_base_reference(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0101] occurrences matches {0..1} matches {    -- Variant
+                value matches {
+                    DV_PARSABLE[at9009]
+                }
+            }
+            allow_archetype CLUSTER[at0045] matches {    -- Structured variant
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.genomic_deletion_insertion_variant(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.genomic_duplication_variant(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.genomic_inversion_variant(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.genomic_insertion_variant(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.genomic_conversion_variant(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.genomic_substitution_variant(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.genomic_copy_number_variant(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.genomic_repeated_sequence_variant(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.genomic_deletion_variant(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            CLUSTER[at0008] matches {    -- Transcript
+                items cardinality matches {1..*; unordered} matches {
+                    allow_archetype CLUSTER[at0009] occurrences matches {0..1} matches {    -- Transcript reference sequence
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.reference_sequence(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0010] matches {    -- DNA region name
+                        value matches {
+                            DV_TEXT[at9010]
+                        }
+                    }
+                    ELEMENT[at0099] occurrences matches {0..1} matches {    -- Distance from splicing site
+                        value matches {
+                            DV_COUNT[at9011]
+                        }
+                    }
+                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- DNA change
+                        value matches {
+                            DV_PARSABLE[at9012]
+                        }
+                    }
+                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Amino acid change
+                        value matches {
+                            DV_PARSABLE[at9013]
+                        }
+                    }
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Amino acid change type
+                        value matches {
+                            DV_CODED_TEXT[at9014] matches {
+                                defining_code matches {[ac9000]}    -- Amino acid change type (synthesised)
+                            }
+                            DV_TEXT[at9015]
+                        }
+                    }
+                    ELEMENT[at0100] occurrences matches {0..1} matches {    -- RNA change
+                        value matches {
+                            DV_PARSABLE[at9016]
+                        }
+                    }
+                    CLUSTER[at0015] matches {    -- Predicted impact
+                        items cardinality matches {1..*; unordered} matches {
+                            allow_archetype CLUSTER[at0016] occurrences matches {0..1} matches {    -- Predicted impact knowledge base
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.knowledge_base_reference(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                            }
+                            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Score
+                                value matches {
+                                    DV_QUANTITY[at9017] matches {
+                                        property matches {[at9001]}    -- Qualified real
+                                        units matches {"1"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0018] occurrences matches {0..1} matches {    -- Qualitative prediction
+                                value matches {
+                                    DV_TEXT[at9018]
+                                }
+                            }
+                        }
+                    }
+                    CLUSTER[at0052] matches {    -- Functional impact
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0054] occurrences matches {1} matches {    -- Impact
+                                value matches {
+                                    DV_TEXT[at9019]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0053] matches {    -- Source
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.citation(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                            }
+                        }
+                    }
+                    CLUSTER[at0019] occurrences matches {0..1} matches {    -- Gene
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0020] occurrences matches {1} matches {    -- Gene symbol
+                                value matches {
+                                    DV_TEXT[at9020]
+                                }
+                            }
+                            ELEMENT[at0021] occurrences matches {0..1} matches {    -- Gene name
+                                value matches {
+                                    DV_TEXT[at9021]
+                                }
+                            }
+                            ELEMENT[at0056] occurrences matches {0..1} matches {    -- Copy number overlap
+                                value matches {
+                                    DV_PROPORTION[at9022]
+                                }
+                            }
+                            ELEMENT[at0057] occurrences matches {0..1} matches {    -- Part of fusion
+                                value matches {
+                                    DV_CODED_TEXT[at9023] matches {
+                                        defining_code matches {[ac9002]}    -- Part of fusion (synthesised)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0058] occurrences matches {0..1} matches {    -- ACMG classification
+                        value matches {
+                            DV_CODED_TEXT[at9024] matches {
+                                defining_code matches {[ac9003]}    -- ACMG classification (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0059] occurrences matches {0..1} matches {    -- Fusion exon
+                        value matches {
+                            DV_COUNT[at9044] matches {
+                                magnitude matches {|>0|}
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Best transcript candidate
+                value matches {
+                    DV_TEXT[at9026]
+                }
+            }
+            CLUSTER[at0024] matches {    -- Conservation
+                items cardinality matches {1..*; unordered} matches {
+                    allow_archetype CLUSTER[at0025] occurrences matches {0..1} matches {    -- Conservation score knowledge base
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.knowledge_base_reference(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0026] occurrences matches {1} matches {    -- Score
+                        value matches {
+                            DV_QUANTITY[at9027] matches {
+                                property matches {[at9001]}    -- Qualified real
+                                units matches {"1"}
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0060] occurrences matches {0..1} matches {    -- Read depth
+                value matches {
+                    DV_COUNT[at9028] matches {
+                        magnitude matches {|>=0|}
+                    }
+                }
+            }
+            ELEMENT[at0028] occurrences matches {0..1} matches {    -- Allele depth
+                value matches {
+                    DV_COUNT[at9029] matches {
+                        magnitude matches {|>=0|}
+                    }
+                }
+            }
+            ELEMENT[at0047] occurrences matches {0..1} matches {    -- Allele frequency
+                value matches {
+                    DV_QUANTITY[at9030] matches {
+                        property matches {[at9001]}    -- Qualified real
+                        magnitude matches {|0.0..1.0|}
+                        units matches {"1"}
+                    }
+                }
+            }
+            CLUSTER[at0029] matches {    -- Population allele frequency details
+                items cardinality matches {1..*; unordered} matches {
+                    allow_archetype CLUSTER[at0030] occurrences matches {0..1} matches {    -- Population allele frequency knowledge base
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.knowledge_base_reference(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0031] occurrences matches {1} matches {    -- Population allele frequency
+                        value matches {
+                            DV_QUANTITY[at9031] matches {
+                                property matches {[at9001]}    -- Qualified real
+                                magnitude matches {|0.0..1.0|}
+                                units matches {"1"}
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0061] matches {    -- VCF quality filter
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0062] occurrences matches {0..1} matches {    -- Filter name
+                        value matches {
+                            DV_TEXT[at9032]
+                        }
+                    }
+                    ELEMENT[at0063] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9033]
+                        }
+                    }
+                    ELEMENT[at0064] occurrences matches {0..1} matches {    -- Filter passed
+                        value matches {
+                            DV_BOOLEAN[at9034]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0067] occurrences matches {0..1} matches {    -- Strand bias ratio
+                value matches {
+                    DV_QUANTITY[at9035] matches {
+                        property matches {[at9001]}    -- Qualified real
+                        units matches {"1"}
+                    }
+                }
+            }
+            ELEMENT[at0068] occurrences matches {0..1} matches {    -- Strand bias p-value
+                value matches {
+                    DV_QUANTITY[at9036] matches {
+                        property matches {[at9001]}    -- Qualified real
+                        units matches {"1"}
+                    }
+                }
+            }
+            ELEMENT[at0039] occurrences matches {0..1} matches {    -- Genotype
+                value matches {
+                    DV_TEXT[at9037]
+                }
+            }
+            ELEMENT[at0040] occurrences matches {0..1} matches {    -- Allelic state
+                value matches {
+                    DV_CODED_TEXT[at9038] matches {
+                        defining_code matches {[ac9004]}    -- Allelic state (synthesised)
+                    }
+                    DV_TEXT[at9039]
+                }
+            }
+            ELEMENT[at0041] occurrences matches {0..1} matches {    -- Genotype quality
+                value matches {
+                    DV_COUNT[at9040] matches {
+                        magnitude matches {|>=0|}
+                    }
+                }
+            }
+            ELEMENT[at0069] occurrences matches {0..1} matches {    -- Genotype probability
+                value matches {
+                    DV_TEXT[at9041]
+                }
+            }
+            ELEMENT[at0070] occurrences matches {0..1} matches {    -- Specimen identifier
+                value matches {
+                    DV_IDENTIFIER[at9042]
+                    DV_URI[at9043]
+                }
+            }
+            allow_archetype CLUSTER[at0098] matches {    -- Additional details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Genomic variant result">
+                description = <"Ergebnisse und Annotationen zu einer Variante, die durch einen Sequenzierungstest bei einem Menschen gefunden wurde.">
+            >
+            ["at0001"] = <
+                text = <"Bioinformatic analysis workflow">
+                description = <"Structured details about the bioinformatic analysis workflow or the protocol that is used.">
+            >
+            ["at0002"] = <
+                text = <"Reference genome">
+                description = <"Structured details about the specific version of the human sequence assembly used for annotation.">
+                comment = <"For example, \"GCF_000001405.38\" 
+
+Source name: NCBI
+Accession number: GCF_000001405
+Version number: GCF_000001405.38
+URL: https://www.ncbi.nlm.nih.gov/assembly/GCF_000001405.38/">
+            >
+            ["at0008"] = <
+                text = <"Transcript">
+                description = <"Structured details about the transcript which is potentially affected by the variant.">
+            >
+            ["at0009"] = <
+                text = <"Transcript reference sequence">
+                description = <"Structured details about the transcribed reference sequence.">
+                comment = <"For example: 
+Source name: NCBI
+Accession number: NM_015557
+Version number: NM_015557.2
+URL: https://www.ncbi.nlm.nih.gov/nuccore/304361774">
+            >
+            ["at0010"] = <
+                text = <"DNA region name">
+                description = <"A human readable name for the region of interest.">
+                comment = <"For example: Exon number, intron number, splice site or other.">
+            >
+            ["at0011"] = <
+                text = <"DNA change">
+                description = <"Description of the variation at the DNA level following the HGVS nomenclature.">
+                comment = <"For example: \"c.5249C>T\".">
+            >
+            ["at0012"] = <
+                text = <"Amino acid change">
+                description = <"Description of the variation at the protein level following the HGVS nomenclature.">
+                comment = <"For example: \"p.T1750M\".">
+            >
+            ["at0013"] = <
+                text = <"Amino acid change type">
+                description = <"Codified type for associated Amino Acid Marker.">
+            >
+            ["at0015"] = <
+                text = <"Predicted impact">
+                description = <"Estimate of the effects that the variant may have on the transcript.">
+            >
+            ["at0016"] = <
+                text = <"Predicted impact knowledge base">
+                description = <"Structured details about the reference used to calculate the predicted impact.">
+                comment = <"For example \"CADD\", \"SIFT\", etc.">
+            >
+            ["at0017"] = <
+                text = <"Score">
+                description = <"The calculated value.">
+                comment = <"For example: \"30.2\".">
+            >
+            ["at0018"] = <
+                text = <"Qualitative prediction">
+                description = <"Human readable version of the predicted impact.">
+                comment = <"For example: \"probably damaging\".">
+            >
+            ["at0019"] = <
+                text = <"Gene">
+                description = <"Structured details about the gene carrying the variant.">
+            >
+            ["at0020"] = <
+                text = <"Gene symbol">
+                description = <"The official gene symbol approved by the HGNC, which is a short abbreviated form of the gene name.">
+                comment = <"For example \"CHD5\".">
+            >
+            ["at0021"] = <
+                text = <"Gene name">
+                description = <"The full gene name approved by the HGNC that convey the character or function of the gene.">
+                comment = <"For example \"Chromodomain helicase DNA binding protein 5\".">
+            >
+            ["at0023"] = <
+                text = <"Best transcript candidate">
+                description = <"The ID of the transcript with the highest predicted impact.">
+                comment = <"For example: \"ENST00000413998.7\".">
+            >
+            ["at0024"] = <
+                text = <"Conservation">
+                description = <"Structured details about the evolutionary conservation.">
+            >
+            ["at0025"] = <
+                text = <"Conservation score knowledge base">
+                description = <"Structured details about the reference used to calculate the conservation score.">
+                comment = <"For example \"PhastCons7-way\".">
+            >
+            ["at0026"] = <
+                text = <"Score">
+                description = <"The conservation score.">
+            >
+            ["at0028"] = <
+                text = <"Allele depth">
+                description = <"The number of reads that support the reported variant.">
+            >
+            ["at0029"] = <
+                text = <"Population allele frequency details">
+                description = <"The relative frequency of a particular allele in the population.">
+            >
+            ["at0030"] = <
+                text = <"Population allele frequency knowledge base">
+                description = <"Structured details about the database used to calculate the allele frequency.">
+            >
+            ["at0031"] = <
+                text = <"Population allele frequency">
+                description = <"The population allele frequency.">
+                comment = <"For example: \"0.43\".">
+            >
+            ["at0039"] = <
+                text = <"Genotype">
+                description = <"Genotype encoded as allele values.">
+                comment = <"The format for the genotype should be value separated by either of / or | (0 for the reference allele, 1 for the first alternate, etc.). For example: \"1 | 0\" or \"0/0/1\".">
+            >
+            ["at0040"] = <
+                text = <"Allelic state">
+                description = <"The level of occurrence of a single DNA Marker within a set of chromosomes.">
+                comment = <"This is the human readable version of genotype, e.g.: \"Heterozygous\", \"Homozygous\".">
+            >
+            ["at0041"] = <
+                text = <"Genotype quality">
+                description = <"Conditional genotype quality, encoded as a Phred quality.">
+            >
+            ["at0045"] = <
+                text = <"Structured variant">
+                description = <"Structured description of the genomic variant.">
+                comment = <"This element is set to multiple occurrence to allow templates to be built with several different variant types allowed. However, when storing data, there should never be more than one CLUSTER archetype inserted here.
+
+If both this SLOT and the \"Variant\" data element are used simultaneously, they need to represent identical data.">
+            >
+            ["at0047"] = <
+                text = <"Allele frequency">
+                description = <"The relative frequency of an allele at a particular locus.">
+                comment = <"For example: \"0.63\".">
+            >
+            ["at0052"] = <
+                text = <"Functional impact">
+                description = <"Interpretation of the variation linked to a specific paper.">
+            >
+            ["at0053"] = <
+                text = <"Source">
+                description = <"The reference to the specific research paper.">
+            >
+            ["at0054"] = <
+                text = <"Impact">
+                description = <"Single word or phrase describing the reported impact of the specific variant.">
+                comment = <"For example: \"activating\", \"deactivating\", \"dysfunction\", \"gain of function\". Coding with a terminology is preferred, where possible.">
+            >
+            ["at0056"] = <
+                text = <"Copy number overlap">
+                description = <"The fraction of gene region covered by copy number.">
+            >
+            ["at0057"] = <
+                text = <"Part of fusion">
+                description = <"States if the Gene is part of a Fusion Gene and if it is the first or second part of the Fusion Gene.">
+            >
+            ["at0058"] = <
+                text = <"ACMG classification">
+                description = <"The clinical significance according to the ACMG recommendations.">
+            >
+            ["at0059"] = <
+                text = <"Fusion exon">
+                description = <"The number of the exon which is part of the fusion.">
+            >
+            ["at0060"] = <
+                text = <"Read depth">
+                description = <"The total number of reads mapped at this specific location.">
+            >
+            ["at0061"] = <
+                text = <"VCF quality filter">
+                description = <"Structured details about the quality filters that have been applied to the data.">
+                comment = <"This field is derived from the FILTER column of VCF.
+">
+            >
+            ["at0062"] = <
+                text = <"Filter name">
+                description = <"Name of the quality filter.">
+                comment = <"For example \"q10\".">
+            >
+            ["at0063"] = <
+                text = <"Description">
+                description = <"Quality filter extended description.">
+                comment = <"For example \"at this site the quality is below 10\".">
+            >
+            ["at0064"] = <
+                text = <"Filter passed">
+                description = <"Did the variant pass the quality filter?">
+                comment = <"Record as \"True\" if the filter was passed.">
+            >
+            ["at0067"] = <
+                text = <"Strand bias ratio">
+                description = <"The ratio of the strand bias.">
+            >
+            ["at0068"] = <
+                text = <"Strand bias p-value">
+                description = <"The Phred-scaled p-value of the strand bias.">
+            >
+            ["at0069"] = <
+                text = <"Genotype probability">
+                description = <"A comma separated list of the log10-scaled genotype likelihoods for all possible genotypes, given the reference and the alternate alleles.">
+            >
+            ["at0070"] = <
+                text = <"Specimen identifier">
+                description = <"Identification of the specimen used for the genomic result.">
+                comment = <"In some situations, a single OBSERVATION.laboratory_test_result archetype will contain multiple CLUSTER.specimen archetypes and multiple CLUSTER.genomic_variant_result archetypes. In these situations, this \"Specimen identifier\" data element is needed to be able to connect the results with the correct specimens.">
+            >
+            ["at0071"] = <
+                text = <"Pathogenic">
+                description = <"Pathogenic variant.">
+            >
+            ["at0072"] = <
+                text = <"Likely pathogenic">
+                description = <"Likely pathogenic variant.">
+            >
+            ["at0073"] = <
+                text = <"Uncertain significance">
+                description = <"Variant of uncertain significance.">
+            >
+            ["at0074"] = <
+                text = <"Likely benign">
+                description = <"Likely benign variant.">
+            >
+            ["at0075"] = <
+                text = <"Benign">
+                description = <"Benign variant.">
+            >
+            ["at0076"] = <
+                text = <"Heteroplasmic">
+                description = <"Heteroplasmic.">
+            >
+            ["at0077"] = <
+                text = <"Homoplasmic">
+                description = <"Homoplasmic.">
+            >
+            ["at0078"] = <
+                text = <"Homozygous">
+                description = <"Homozygous.">
+            >
+            ["at0079"] = <
+                text = <"Heterozygous">
+                description = <"Heterozygous.">
+            >
+            ["at0080"] = <
+                text = <"Hemizygous">
+                description = <"Hemizygous.">
+            >
+            ["at0085"] = <
+                text = <"Wild type">
+                description = <"The sequence at a given position is identical to the reference sequence.">
+            >
+            ["at0086"] = <
+                text = <"Deletion">
+                description = <"A deletion in the amino acid sequence.">
+            >
+            ["at0087"] = <
+                text = <"Duplication">
+                description = <"A duplication in the amino acid sequence.">
+            >
+            ["at0088"] = <
+                text = <"Frameshift">
+                description = <"A frameshift in the amino acid sequence.">
+            >
+            ["at0089"] = <
+                text = <"Initiating methionine">
+                description = <"A variant in a sequence affecting the translation initiation codon.">
+            >
+            ["at0090"] = <
+                text = <"Insertion">
+                description = <"An insertion in the amino acid sequence.">
+            >
+            ["at0091"] = <
+                text = <"Insertion and deletion">
+                description = <"An insertion/deletion in the amino acid sequence.">
+            >
+            ["at0092"] = <
+                text = <"Missense">
+                description = <"One amino acid is replaced by another amino acid.">
+            >
+            ["at0093"] = <
+                text = <"Nonsense">
+                description = <"An amino acid is replaced by a translational stop codon (termination codon).">
+            >
+            ["at0094"] = <
+                text = <"Silent">
+                description = <"A variant in a DNA sequence that does not change the amino acid sequence of the encoded protein.">
+            >
+            ["at0095"] = <
+                text = <"Stop codon mutation">
+                description = <"A variant in a sequence affecting the translational stop codon.">
+            >
+            ["at0096"] = <
+                text = <"First">
+                description = <"First part of a fusion gene.">
+            >
+            ["at0097"] = <
+                text = <"Second">
+                description = <"Second part of a fusion gene.">
+            >
+            ["at0098"] = <
+                text = <"Additional details">
+                description = <"Additional details to be captured.">
+                comment = <"*For example, there may be a need to attach a file that contains a representation of the variant description in different recognised format, such as GA4GH VRS or HL7 FHIR. In such cases, the archetype openEHR-EHR-CLUSTER.media_file.v1, or other relevant one, can be included in this slot for this purpose. (en)">
+            >
+            ["at0099"] = <
+                text = <"Distance from splicing site">
+                description = <"Distance in nucleotides between mutation and exon–intron junction.">
+            >
+            ["at0100"] = <
+                text = <"RNA change">
+                description = <"Description of the variation at the RNA level following the HGVS nomenclature.">
+                comment = <"For example: \"r.76a>u\".">
+            >
+            ["at0101"] = <
+                text = <"Variant">
+                description = <"Description of the variation at the genomic level following the HGVS nomenclature.">
+                comment = <"For example: \"g.33038255C>A\".
+
+If both this element and the \"Structured variant\" SLOT are used simultaneously, they need to represent identical data.">
+            >
+            ["at0102"] = <
+                text = <"Variant identification">
+                description = <"A reference to a specific variation recorded into an external biological variation database.">
+                comment = <"For example: rs123456 (Item name) from dbSNP (Knowledge base name) version 151 (Knowledge base version). This CLUSTER.knowledge_base_reference archetype is repeatable to allow several different IDs from different databases for the same variant.">
+            >
+            ["at9001"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9000"] = <
+                text = <"Amino acid change type (synthesised)">
+                description = <"Codified type for associated Amino Acid Marker. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Part of fusion (synthesised)">
+                description = <"States if the Gene is part of a Fusion Gene and if it is the first or second part of the Fusion Gene. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"ACMG classification (synthesised)">
+                description = <"The clinical significance according to the ACMG recommendations. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Allelic state (synthesised)">
+                description = <"The level of occurrence of a single DNA Marker within a set of chromosomes. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Genetisk variant resultat">
+                description = <"Funn og annotasjon av en enkelt variant, funnet ved hjelp av en genetisk undersøkelse, hos et menneskelig individ.">
+            >
+            ["at0001"] = <
+                text = <"Bioinformatisk pipeline">
+                description = <"Strukturerte detaljer om den bioinformatiske pipeline (Bioinformatics analysis workflow) som er brukt i analysen eller hvilken protokoll som er brukt.">
+            >
+            ["at0002"] = <
+                text = <"Referansegenom">
+                description = <"Strukturerte detaljer om den spesifikke versjonen av det humane referansegenomet brukt for annoteringen.">
+                comment = <"For eksempel: \"GCF_000001405.38\" 
+
+Source name: NCBI
+Accession number: GCF_000001405
+Version number: GCF_000001405.38
+URL: https://www.ncbi.nlm.nih.gov/assembly/GCF_000001405.38/">
+            >
+            ["at0008"] = <
+                text = <"Transkript">
+                description = <"Strukturerte detaljer om transkriptet som potensielt påvirker varianten.">
+            >
+            ["at0009"] = <
+                text = <"Transkriptreferansesekvens">
+                description = <"Strukturerte detaljer om den transkriberte referansesekvensen.">
+                comment = <"For eksempel: 
+Source name: NCBI
+Accession number: NM_015557
+Version number: NM_015557.2
+URL: https://www.ncbi.nlm.nih.gov/nuccore/304361774">
+            >
+            ["at0010"] = <
+                text = <"DNA regionnavn">
+                description = <"Et menneskelig lesbart navn for den aktuelle DNA regionen.">
+                comment = <"For eksempel: Exon nummer (#), intron nummer (#), spleisesete (splice site) eller annet.">
+            >
+            ["at0011"] = <
+                text = <"DNA-endring">
+                description = <"Beskrivelse av DNA varianten i henhold til HGVS nomenklaturen.">
+                comment = <"For eksempel: \"c.5249C>T\".">
+            >
+            ["at0012"] = <
+                text = <"Aminosyre-endring">
+                description = <"Beskrivelse av varianten i proteinet (aminosyreendringen) i henhold til HGVS nomenklaturen.">
+                comment = <"For eksempel: \"p.T1750M\".">
+            >
+            ["at0013"] = <
+                text = <"Type aminosyreendring">
+                description = <"Kodet verdi for aminosyreendringen.">
+            >
+            ["at0015"] = <
+                text = <"Predikert betydning">
+                description = <"Antatt betydning varianten kan ha på transkripsjonen.">
+            >
+            ["at0016"] = <
+                text = <"Prediksjons kunnskapsbase">
+                description = <"Strukturert detaljer om kunnskapbasen som er brukt til å kalkulere den predikerte betydningen.">
+                comment = <"For eksempel: \"CADD\", \"SIFT\", m.fl.">
+            >
+            ["at0017"] = <
+                text = <"Prediksjonsskår">
+                description = <"Den beregnede prediksjonsverdien.">
+                comment = <"For eksempel: '30.2'.">
+            >
+            ["at0018"] = <
+                text = <"Kvalitativ prediksjon">
+                description = <"Menneskelig lesbar versjon av den predikerte betydningen.">
+                comment = <"For eksempel: 'sannsynlig skadelig'.">
+            >
+            ["at0019"] = <
+                text = <"Gen">
+                description = <"Detaljer om genet som inneholder varianten.">
+            >
+            ["at0020"] = <
+                text = <"Gensymbol">
+                description = <"Det offisielle nomenklaturen til genet godkjent av HGNC, som er en kortversjon av det genetiske navnet.">
+                comment = <"For eksempel: \"CHD5\".">
+            >
+            ["at0021"] = <
+                text = <"Gen navn">
+                description = <"Det fullstendige navnet på genet, godkjent av HGNC, som beskriver karakteren eller funksjonen til genet.
+">
+                comment = <"For eksempel: \"Chromodomain helicase DNA binding protein 5\".">
+            >
+            ["at0023"] = <
+                text = <"Beste transkriptkandidat">
+                description = <"ID til det transkriptet med den høyeste predikerte betydningen.">
+                comment = <"For eksempel: 'ENST00000413998.7'.">
+            >
+            ["at0024"] = <
+                text = <"Bevaring">
+                description = <"Strukturerte detaljer om den evolusjonære bevaringen. Engelsk: Conservation.">
+            >
+            ["at0025"] = <
+                text = <"Bevaringspoeng kunnskapsbase">
+                description = <"Detaljer om verktøyet brukt til å kalkulere bevaringspoeng. Engelsk: conservation score.">
+                comment = <"For eksempel: \"PhastCons7-way\".">
+            >
+            ["at0026"] = <
+                text = <"Poeng">
+                description = <"Det tildelte bevaringspoenget. Engelsk: conservation score.">
+            >
+            ["at0028"] = <
+                text = <"Allel dybde">
+                description = <"Antall avlesninger (\"reads\") for hvert allel som støtter den rapporterte varianten. På engelsk: Allele depth.">
+            >
+            ["at0029"] = <
+                text = <"Populasjonsallelfrekvens detaljer">
+                description = <"Den relative frekvensen av et bestemt allel i befolkningen.">
+            >
+            ["at0030"] = <
+                text = <"Populasjonsallelfrekvens kunnskapsbase">
+                description = <"Strukturert detaljer om kunnskapsbasen som er brukt til å kalkulere allelefrekvensen i populasjonen.">
+            >
+            ["at0031"] = <
+                text = <"Poulasjonens allelfrekvens">
+                description = <"Populasjonenens allelfrekvens.">
+                comment = <"For eksempel: '0.43'.">
+            >
+            ["at0039"] = <
+                text = <"Genotype">
+                description = <"Genotype kodet som allelverdier.">
+                comment = <"Genotypen kodet som en allelverdi separert med enten \"/\" eller \"|\" (0 for referanseallelet, 1 for det første allelet, osv.). For eksempel '1 | 0' or '0/0/1'.">
+            >
+            ["at0040"] = <
+                text = <"Allel-tilstand">
+                description = <"Nivået på forekomst av en enkelt DNA-markør i et sett med kromosomer.">
+                comment = <"Dette er den menneskelige lesbare versjonen av en genotype, f.eks. \"heterozygot\", \"homozygot\".">
+            >
+            ["at0041"] = <
+                text = <"Genotypekvalitet">
+                description = <"Genotypekvalitet angitt som Phred-kvalitet skår.">
+            >
+            ["at0045"] = <
+                text = <"Strukturert variantbeskrivelse">
+                description = <"Strukturert beskrivelse av genvarianten.">
+                comment = <"Dette elementet kan ha multiple forekomster slik at man i et templat eller brukergrensesnitt kan tilby registrering av flere forskjellige varianttyper. Ved lagring av dataen skal det allikevel ikke brukes mer enn en CLUSTER-arketype her.
+
+Hvis både dette SLOTet og \"Variant\" dataelementet brukes samtidig, må disse representere det samme.">
+            >
+            ["at0047"] = <
+                text = <"Allelfrekvens">
+                description = <"Den relative frekvensen av et allel i et bestemt lokus Engelsk: Allele frequency.
+
+">
+                comment = <"For eksempel: '0.63'.">
+            >
+            ["at0052"] = <
+                text = <"Funksjonell betydning">
+                description = <"Tolkning av mutasjonen knyttet til en bestemt publikasjon.">
+            >
+            ["at0053"] = <
+                text = <"Kilde">
+                description = <"Referanse til den spesifikke publikasjonen.">
+            >
+            ["at0054"] = <
+                text = <"Betydning">
+                description = <"Et enkelt ord eller frase som beskriver den rapporterte innvirkning av den spesifikke varianten.">
+                comment = <"For eksempel: 'aktivering', 'deaktivering', 'dysfunksjon', 'økt funksjon'. Koding med termonologi er foretrukket om mulig.">
+            >
+            ["at0056"] = <
+                text = <"Kopitalloverlapp">
+                description = <"Andelen av genregionen som er dekket av kopitall.">
+            >
+            ["at0057"] = <
+                text = <"Fusjonsgen-del">
+                description = <"Oppgir om dette genet er en del av et fusjonsgen, og om dette er den første eller andre delen av det fusjonerte genet.">
+            >
+            ["at0058"] = <
+                text = <"ACMG klassifikasjon">
+                description = <"Klassifisering av genetiske sekvensvarianter med hensyn til patogenitet i henhold til ACMGs anbefalinger.">
+            >
+            ["at0059"] = <
+                text = <"Fusjonsekson">
+                description = <"Nummeret til eksonet som enten er slutten eller begynnelsen av fusjonen.">
+            >
+            ["at0060"] = <
+                text = <"Lesedybde">
+                description = <"Lesedybden for det spesifikke området.">
+            >
+            ["at0061"] = <
+                text = <"VCF kvalitetsfilter">
+                description = <"Detaljer om kvalitetfilteret som har blitt brukt på dataene.">
+                comment = <"Dette feltet er avledet fra FILTER-kolonnen til VCF (Variant Call Format).">
+            >
+            ["at0062"] = <
+                text = <"Filternavn">
+                description = <"Navnet på kvalitetfilteret.">
+                comment = <"For eksempel: \"q10\".">
+            >
+            ["at0063"] = <
+                text = <"Filterbeskrivelse">
+                description = <"Ytterligere beskrivelse av kvalitetfilteret.">
+                comment = <"Fot eksempel: \"på dette filteret er kvaliteten under 10\".">
+            >
+            ["at0064"] = <
+                text = <"Filter passert">
+                description = <"Passerte varianten kvalitetsfilter?">
+                comment = <"Registrer som \"sann\" (true) hvis varianten oppfyller (passerer) kvalitetsfilteret.">
+            >
+            ["at0067"] = <
+                text = <"Strand bias ratio">
+                description = <"Ratioen til strand bias (skjevhet/metodefeil).">
+            >
+            ["at0068"] = <
+                text = <"Strand bias p-verdi">
+                description = <"Phred-skalaens p-verdi for strand bias.">
+            >
+            ["at0069"] = <
+                text = <"Genotypesannsynlighet">
+                description = <"Alle mulig sannsynlige genotyper listet opp i en kommaseparert log10 sannsynlighetsskala.">
+            >
+            ["at0070"] = <
+                text = <"Prøvemateriale identifikator">
+                description = <"Identifikator for prøvematerialet som brukes til den genetiske testen.">
+                comment = <"I enkelte tilfeller vil en enkel Laboratorieresultat-arketype inneholde multiple Prøvemateriale-arketyper og multiple Genetisk variant resultat-arketyper. I disse tilfellene trenger man dette \"Prøvemateriale\" dataelementet for å kunne koble disse resultatene til det riktige prøvematerialet.">
+            >
+            ["at0071"] = <
+                text = <"Ikke sykdomsgivende">
+                description = <"Ikke sykdomsgivende/patogen variant.">
+            >
+            ["at0072"] = <
+                text = <"Sannsynlig sykdomsgivende">
+                description = <"Sannsynlig sykdomsgivende/patogen variant.">
+            >
+            ["at0073"] = <
+                text = <"Usikker klinisk betydning (VUS)">
+                description = <"En variant med usikker klinisk betydning (VUS).">
+            >
+            ["at0074"] = <
+                text = <"Sannsynlig ikke sykdomsgivende">
+                description = <"Sannsynligvis en ikke sykdomsgivende/benign variant.">
+            >
+            ["at0075"] = <
+                text = <"Ikke sykdomsgivende">
+                description = <"En ikke sykdomsgivende/benign variant.">
+            >
+            ["at0076"] = <
+                text = <"Heteroplasmisk">
+                description = <"Heteroplasmisk.">
+            >
+            ["at0077"] = <
+                text = <"Homoplasmisk">
+                description = <"Homoplasmisk.">
+            >
+            ["at0078"] = <
+                text = <"Homozygot">
+                description = <"Homozygot.">
+            >
+            ["at0079"] = <
+                text = <"Heterozygot">
+                description = <"Heterozygot.">
+            >
+            ["at0080"] = <
+                text = <"Hemizygot">
+                description = <"Hemizygot.">
+            >
+            ["at0085"] = <
+                text = <"Villtype">
+                description = <"Sekvensen på en gitt posisjon er identisk med referansesekvensen. Engelsk: Wild Type.">
+            >
+            ["at0086"] = <
+                text = <"Delesjon">
+                description = <"En delesjon (fjerning/sletting) i aminosyresekvensen. Engelsk: Deletion.">
+            >
+            ["at0087"] = <
+                text = <"Duplikasjon">
+                description = <"En duplikasjon i aminosyresekvensen. Engelsk: Duplication.">
+            >
+            ["at0088"] = <
+                text = <"Leserammeskift">
+                description = <"Endring i leserammen til en aminosyresekvens. Engelsk: Frameshift.">
+            >
+            ["at0089"] = <
+                text = <"Initierende metionin">
+                description = <"En variant i en sekvens som påvirker kodonet som initierer (igangsetter) translasjonen. Engelsk: Initiating Methionine.">
+            >
+            ["at0090"] = <
+                text = <"Insersjon">
+                description = <"En insersjon (insetting) i aminosyresekvensen. Engelsk: Insertion.">
+            >
+            ["at0091"] = <
+                text = <"Insersjon og delesjon">
+                description = <"En insersjon og delesjon (delin) i aminosyresekvensen. Engelsk: Insertion and deletion.">
+            >
+            ["at0092"] = <
+                text = <"Missense">
+                description = <"En aminosyre er erstattet av en annen aminosyre.">
+            >
+            ["at0093"] = <
+                text = <"Nonsense">
+                description = <"En aminosyre er erstattet av et translasjon stopp-kodon (termineringskodon).">
+            >
+            ["at0094"] = <
+                text = <"Synonym">
+                description = <"En variant i DNA sekvensen som ikke gir noen endring i aminosyresekvensen i genproduktet. Også kalt \"stille endring/mutasjon\". Engelsk: Silent.">
+            >
+            ["at0095"] = <
+                text = <"Stoppkodon mutasjon">
+                description = <"En variant i en sekvens som påvirker translasjonens stopp-kodon (termineringskodon). Engelsk: Stop Codon Mutation.">
+            >
+            ["at0096"] = <
+                text = <"Første">
+                description = <"Første del av et fusjonsgen.">
+            >
+            ["at0097"] = <
+                text = <"Andre">
+                description = <"Andre del av et fusjonsgen.">
+            >
+            ["at0098"] = <
+                text = <"Ytterlig informasjon">
+                description = <"Ytterligere informasjon som ikke er registrert andre steder.">
+                comment = <"For eksempel kan det være behov for å legge ved en fil som inneholder en gjengivelse av variantbeskrivelsen i et annet anerkjent format, for eksempel GA4GH VRS eller HL7 FHIR. I slike tilfeller kan arketypen openEHR-EHR-CLUSTER.media_file, eller en annen relevant arketype, inkluderes i dette SLOTet for dette formålet.">
+            >
+            ["at0099"] = <
+                text = <"Avstand fra spleisesetet">
+                description = <"Avstanden i nuklotider mellom mutasjonen og exon-intron overgangen (spleisesetet). Engelsk: splicing site.">
+            >
+            ["at0100"] = <
+                text = <"RNA endring">
+                description = <"Beskrivelse av varianten i RNA i henhold til HGVS nomenklaturen.">
+                comment = <"For eksempel: \"r.76a>u\".">
+            >
+            ["at0101"] = <
+                text = <"Variant">
+                description = <"Beskrivelse av genvarianten i henhold til HGVS-nomenklaturen.">
+                comment = <"For eksempel: \"g.33038255C>A\".
+
+Hvis man bruker både dette dataelementet og SLOTet \"Strukturert variantbeskrivelse\" samtidig, må disse bety det samme (representere de samme dataene).">
+            >
+            ["at0102"] = <
+                text = <"Variant identifikasjon">
+                description = <"En referanse til en spesifikk variant registrert i en ekstern biologisk variantdatabase.">
+                comment = <"For eksempel: rs123456 (variant ID) fra dbSNP (Kildenavn/kunnskapsbase) version 151 (Kildeversjon). Dette kunnskapsbase/kildehenvisnings CLUSTERet kan repeteres slik at det er mulig å registrere flere variant IDer fra forskjellige databaser for den samme varianten.">
+            >
+            ["at9001"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9000"] = <
+                text = <"Type aminosyreendring (synthesised)">
+                description = <"Kodet verdi for aminosyreendringen. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Fusjonsgen-del (synthesised)">
+                description = <"Oppgir om dette genet er en del av et fusjonsgen, og om dette er den første eller andre delen av det fusjonerte genet. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"ACMG klassifikasjon (synthesised)">
+                description = <"Klassifisering av genetiske sekvensvarianter med hensyn til patogenitet i henhold til ACMGs anbefalinger. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Allel-tilstand (synthesised)">
+                description = <"Nivået på forekomst av en enkelt DNA-markør i et sett med kromosomer. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Genomic variant result">
+                description = <"Findings and annotations related to one variant found in a human individual by a sequencing test.">
+            >
+            ["at0001"] = <
+                text = <"Bioinformatic analysis workflow">
+                description = <"Structured details about the bioinformatic analysis workflow or the protocol that is used.">
+            >
+            ["at0002"] = <
+                text = <"Reference genome">
+                description = <"Structured details about the specific version of the human sequence assembly used for annotation.">
+                comment = <"For example: 'GCF_000001405.38'.
+
+Source name: 'NCBI'.
+Accession number: 'GCF_000001405'.
+Version number: 'GCF_000001405.38'.
+URL: 'https://www.ncbi.nlm.nih.gov/assembly/GCF_000001405.38/'.">
+            >
+            ["at0008"] = <
+                text = <"Transcript">
+                description = <"Structured details about the transcript which is potentially affected by the variant.">
+            >
+            ["at0009"] = <
+                text = <"Transcript reference sequence">
+                description = <"Structured details about the transcribed reference sequence.">
+                comment = <"For example: 
+Source name: 'NCBI'.
+Accession number: 'NM_015557'.
+Version number: 'NM_015557.2'.
+URL: 'https://www.ncbi.nlm.nih.gov/nuccore/304361774'.">
+            >
+            ["at0010"] = <
+                text = <"DNA region name">
+                description = <"The human readable name for the region of interest.">
+                comment = <"For example: 'exon number', 'intron number', 'splice site' or other.">
+            >
+            ["at0011"] = <
+                text = <"DNA change">
+                description = <"Description of the variation at the DNA level following the HGVS nomenclature.">
+                comment = <"For example: 'c.5249C>T'.">
+            >
+            ["at0012"] = <
+                text = <"Amino acid change">
+                description = <"Description of the variation at the protein level following the HGVS nomenclature.">
+                comment = <"For example: 'p.T1750M'.">
+            >
+            ["at0013"] = <
+                text = <"Amino acid change type">
+                description = <"Codified type for associated amino acid marker.">
+            >
+            ["at0015"] = <
+                text = <"Predicted impact">
+                description = <"Estimate of the effects that the variant may have on the transcript.">
+            >
+            ["at0016"] = <
+                text = <"Predicted impact knowledge base">
+                description = <"Structured details about the reference used to calculate the predicted impact.">
+                comment = <"For example 'CADD', 'SIFT', etc.">
+            >
+            ["at0017"] = <
+                text = <"Score">
+                description = <"The calculated value.">
+                comment = <"For example: '30.2'.">
+            >
+            ["at0018"] = <
+                text = <"Qualitative prediction">
+                description = <"Human readable version of the predicted impact.">
+                comment = <"For example: 'probably damaging'.">
+            >
+            ["at0019"] = <
+                text = <"Gene">
+                description = <"Structured details about the gene carrying the variant.">
+            >
+            ["at0020"] = <
+                text = <"Gene symbol">
+                description = <"The official gene symbol approved by the HGNC, which is a short abbreviated form of the gene name.">
+                comment = <"For example 'CHD5'.">
+            >
+            ["at0021"] = <
+                text = <"Gene name">
+                description = <"The full gene name approved by the HGNC that conveys the character or function of the gene.">
+                comment = <"For example 'Chromodomain helicase DNA binding protein 5'.">
+            >
+            ["at0023"] = <
+                text = <"Best transcript candidate">
+                description = <"The ID of the transcript with the highest predicted impact.">
+                comment = <"For example: 'ENST00000413998.7'.">
+            >
+            ["at0024"] = <
+                text = <"Conservation">
+                description = <"Structured details about the evolutionary conservation.">
+            >
+            ["at0025"] = <
+                text = <"Conservation score knowledge base">
+                description = <"Structured details about the reference used to calculate the conservation score.">
+                comment = <"For example 'PhastCons7-way'.">
+            >
+            ["at0026"] = <
+                text = <"Score">
+                description = <"The conservation score.">
+            >
+            ["at0028"] = <
+                text = <"Allele depth">
+                description = <"The number of reads that support the reported variant.">
+            >
+            ["at0029"] = <
+                text = <"Population allele frequency details">
+                description = <"The relative frequency of a particular allele in the population.">
+            >
+            ["at0030"] = <
+                text = <"Population allele frequency knowledge base">
+                description = <"Structured details about the database used to calculate the allele frequency.">
+            >
+            ["at0031"] = <
+                text = <"Population allele frequency">
+                description = <"The population allele frequency.">
+                comment = <"For example: '0.43'.">
+            >
+            ["at0039"] = <
+                text = <"Genotype">
+                description = <"Genotype encoded as allele values.">
+                comment = <"The format for the genotype should be value separated by either of / or | (0 for the reference allele, 1 for the first alternate, etc.). For example: '1 | 0' or '0/0/1'.">
+            >
+            ["at0040"] = <
+                text = <"Allelic state">
+                description = <"The level of occurrence of a single DNA marker within a set of chromosomes.">
+                comment = <"This is the human readable version of genotype, e.g.: 'Heterozygous', 'Homozygous'.">
+            >
+            ["at0041"] = <
+                text = <"Genotype quality">
+                description = <"Conditional genotype quality, encoded as a Phred quality.">
+            >
+            ["at0045"] = <
+                text = <"Structured variant">
+                description = <"Structured description of the genomic variant.">
+                comment = <"This element is set to multiple occurrence to allow templates to be built with several different variant types allowed. However, when storing data, there should never be more than one CLUSTER archetype inserted here.
+
+If both this SLOT and the 'Variant' data element are used simultaneously, they need to represent identical data.">
+            >
+            ["at0047"] = <
+                text = <"Allele frequency">
+                description = <"The relative frequency of an allele at a particular locus.">
+                comment = <"For example: '0.63'.">
+            >
+            ["at0052"] = <
+                text = <"Functional impact">
+                description = <"Interpretation of the variation linked to a specific paper.">
+            >
+            ["at0053"] = <
+                text = <"Source">
+                description = <"The reference to the specific research paper.">
+            >
+            ["at0054"] = <
+                text = <"Impact">
+                description = <"Single word or phrase describing the reported impact of the specific variant.">
+                comment = <"For example: 'activating', 'deactivating', 'dysfunction', 'gain of function'. Coding with a terminology is preferred, where possible.">
+            >
+            ["at0056"] = <
+                text = <"Copy number overlap">
+                description = <"The fraction of gene region covered by copy number.">
+            >
+            ["at0057"] = <
+                text = <"Part of fusion">
+                description = <"States if the gene is part of a fusion gene and if it is the first or second part of the fusion gene.">
+            >
+            ["at0058"] = <
+                text = <"ACMG classification">
+                description = <"The clinical significance according to the ACMG recommendations.">
+            >
+            ["at0059"] = <
+                text = <"Fusion exon">
+                description = <"The number of the exon which is part of the fusion.">
+            >
+            ["at0060"] = <
+                text = <"Read depth">
+                description = <"The total number of reads mapped at this specific location.">
+            >
+            ["at0061"] = <
+                text = <"VCF quality filter">
+                description = <"Structured details about the quality filters that have been applied to the data.">
+                comment = <"This field is derived from the FILTER column of VCF.
+">
+            >
+            ["at0062"] = <
+                text = <"Filter name">
+                description = <"Name of the quality filter.">
+                comment = <"For example: 'q10'.">
+            >
+            ["at0063"] = <
+                text = <"Description">
+                description = <"Quality filter extended description.">
+                comment = <"For example: 'at this site the quality is below 10'.">
+            >
+            ["at0064"] = <
+                text = <"Filter passed">
+                description = <"Did the variant pass the quality filter?">
+                comment = <"Record as 'True' if the filter was passed.">
+            >
+            ["at0067"] = <
+                text = <"Strand bias ratio">
+                description = <"The ratio of the strand bias.">
+            >
+            ["at0068"] = <
+                text = <"Strand bias p-value">
+                description = <"The Phred-scaled p-value of the strand bias.">
+            >
+            ["at0069"] = <
+                text = <"Genotype probability">
+                description = <"A comma separated list of the log10-scaled genotype likelihoods for all possible genotypes, given the reference and the alternate alleles.">
+            >
+            ["at0070"] = <
+                text = <"Specimen identifier">
+                description = <"Identification of the specimen used for the genomic result.">
+                comment = <"In some situations, a single OBSERVATION.laboratory_test_result archetype will contain multiple CLUSTER.specimen archetypes and multiple CLUSTER.genomic_variant_result archetypes. In these situations, this 'Specimen identifier' data element is needed to be able to connect the results with the correct specimens.">
+            >
+            ["at0071"] = <
+                text = <"Pathogenic">
+                description = <"Pathogenic variant.">
+            >
+            ["at0072"] = <
+                text = <"Likely pathogenic">
+                description = <"Likely pathogenic variant.">
+            >
+            ["at0073"] = <
+                text = <"Uncertain significance">
+                description = <"Variant of uncertain significance.">
+            >
+            ["at0074"] = <
+                text = <"Likely benign">
+                description = <"Likely benign variant.">
+            >
+            ["at0075"] = <
+                text = <"Benign">
+                description = <"Benign variant.">
+            >
+            ["at0076"] = <
+                text = <"Heteroplasmic">
+                description = <"Heteroplasmic.">
+            >
+            ["at0077"] = <
+                text = <"Homoplasmic">
+                description = <"Homoplasmic.">
+            >
+            ["at0078"] = <
+                text = <"Homozygous">
+                description = <"Homozygous.">
+            >
+            ["at0079"] = <
+                text = <"Heterozygous">
+                description = <"Heterozygous.">
+            >
+            ["at0080"] = <
+                text = <"Hemizygous">
+                description = <"Hemizygous.">
+            >
+            ["at0085"] = <
+                text = <"Wild type">
+                description = <"The sequence at a given position is identical to the reference sequence.">
+            >
+            ["at0086"] = <
+                text = <"Deletion">
+                description = <"A deletion in the amino acid sequence.">
+            >
+            ["at0087"] = <
+                text = <"Duplication">
+                description = <"A duplication in the amino acid sequence.">
+            >
+            ["at0088"] = <
+                text = <"Frameshift">
+                description = <"A frameshift in the amino acid sequence.">
+            >
+            ["at0089"] = <
+                text = <"Initiating methionine">
+                description = <"A variant in a sequence affecting the translation initiation codon.">
+            >
+            ["at0090"] = <
+                text = <"Insertion">
+                description = <"An insertion in the amino acid sequence.">
+            >
+            ["at0091"] = <
+                text = <"Insertion and deletion">
+                description = <"An insertion/deletion in the amino acid sequence.">
+            >
+            ["at0092"] = <
+                text = <"Missense">
+                description = <"One amino acid is replaced by another amino acid.">
+            >
+            ["at0093"] = <
+                text = <"Nonsense">
+                description = <"An amino acid is replaced by a translational stop codon (termination codon).">
+            >
+            ["at0094"] = <
+                text = <"Silent">
+                description = <"A variant in a DNA sequence that does not change the amino acid sequence of the encoded protein.">
+            >
+            ["at0095"] = <
+                text = <"Stop codon mutation">
+                description = <"A variant in a sequence affecting the translational stop codon.">
+            >
+            ["at0096"] = <
+                text = <"First">
+                description = <"First part of a fusion gene.">
+            >
+            ["at0097"] = <
+                text = <"Second">
+                description = <"Second part of a fusion gene.">
+            >
+            ["at0098"] = <
+                text = <"Additional details">
+                description = <"Additional details to be captured.">
+                comment = <"For example, there may be a need to attach a file that contains a representation of the variant description in different recognised format, such as GA4GH VRS or HL7 FHIR. In such cases, the archetype CLUSTER.media_file, or other relevant one, can be included in this slot for this purpose.">
+            >
+            ["at0099"] = <
+                text = <"Distance from splicing site">
+                description = <"Distance in nucleotides between mutation and exon–intron junction.">
+            >
+            ["at0100"] = <
+                text = <"RNA change">
+                description = <"Description of the variation at the RNA level following the HGVS nomenclature.">
+                comment = <"For example: 'r.76a>u'.">
+            >
+            ["at0101"] = <
+                text = <"Variant">
+                description = <"Description of the variation at the genomic level following the HGVS nomenclature.">
+                comment = <"For example: 'g.33038255C>A'.
+
+If both this element and the 'Structured variant' SLOT are used simultaneously, they need to represent identical data.">
+            >
+            ["at0102"] = <
+                text = <"Variant identification">
+                description = <"A reference to a specific variation recorded into an external biological variation database.">
+                comment = <"For example: 'rs123456' (Item name) from 'dbSNP' (Knowledge base name) 'version 151' (Knowledge base version). This CLUSTER.knowledge_base_reference archetype is repeatable to allow several different IDs from different databases for the same variant.">
+            >
+            ["at9001"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+            ["ac9000"] = <
+                text = <"Amino acid change type (synthesised)">
+                description = <"Codified type for associated amino acid marker. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Part of fusion (synthesised)">
+                description = <"States if the gene is part of a fusion gene and if it is the first or second part of the fusion gene. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"ACMG classification (synthesised)">
+                description = <"The clinical significance according to the ACMG recommendations. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Allelic state (synthesised)">
+                description = <"The level of occurrence of a single DNA marker within a set of chromosomes. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/380>
+        >
+        ["LOINC"] = <
+            ["at0009"] = <http://loinc.org/id/51958-7>
+            ["at0010"] = <http://loinc.org/id/47999-8>
+            ["at0011"] = <http://loinc.org/id/48004-6>
+            ["at0013"] = <http://loinc.org/id/48006-1>
+            ["at0058"] = <http://loinc.org/id/53037-8>
+            ["at0040"] = <http://loinc.org/id/53034-5>
+            ["at0012"] = <http://loinc.org/id/48005-3>
+            ["at0071"] = <http://loinc.org/id/LA6668-3>
+            ["at0072"] = <http://loinc.org/id/LA26332-9>
+            ["at0073"] = <http://loinc.org/id/LA26333-7>
+            ["at0074"] = <http://loinc.org/id/LA26334-5>
+            ["at0075"] = <http://loinc.org/id/LA6675-8>
+            ["at0076"] = <http://loinc.org/id/LA6703-8>
+            ["at0077"] = <http://loinc.org/id/LA6704-6>
+            ["at0078"] = <http://loinc.org/id/LA6705-3>
+            ["at0079"] = <http://loinc.org/id/LA6706-1>
+            ["at0080"] = <http://loinc.org/id/LA6707-9>
+            ["at0085"] = <http://loinc.org/id/LA9658-1>
+            ["at0086"] = <http://loinc.org/id/LA6692-3>
+            ["at0087"] = <http://loinc.org/id/LA6686-5>
+            ["at0088"] = <http://loinc.org/id/LA6694-9>
+            ["at0089"] = <http://loinc.org/id/LA6695-6>
+            ["at0090"] = <http://loinc.org/id/LA6687-3>
+            ["at0091"] = <http://loinc.org/id/LA9659-9>
+            ["at0092"] = <http://loinc.org/id/LA6698-0>
+            ["at0093"] = <http://loinc.org/id/LA6699-8>
+            ["at0094"] = <http://loinc.org/id/LA6700-4>
+            ["at0095"] = <http://loinc.org/id/LA6701-2>
+            ["at0031"] = <http://loinc.org/id/81258-6>
+            ["at0047"] = <http://loinc.org/id/81258-6>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0096", "at0097">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0085", "at0086", "at0087", "at0088", "at0089", "at0090", "at0091", "at0092", "at0093", "at0094", "at0095">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0076", "at0077", "at0078", "at0079", "at0080">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0071", "at0072", "at0073", "at0074", "at0075">
+        >
+    >

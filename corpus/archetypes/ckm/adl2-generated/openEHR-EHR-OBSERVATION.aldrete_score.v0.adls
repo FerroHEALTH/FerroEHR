@@ -1,0 +1,273 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=43410df5-1ea5-47fb-849e-6040f8f207a6; build_uid=b2cec21d-f4a4-45ea-bff7-e7318d6137ab)
+    openEHR-EHR-OBSERVATION.aldrete_score.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Konstantinos Kalliamvakos">
+        ["organisation"] = <"Cambio CDS">
+        ["email"] = <"konstantinos.kalliamvakos@cambio.se">
+        ["date"] = <"2021-02-19">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Atomica Informatics, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Aldrete JA, Kroulik D. A postanesthetic recovery score. Anesth Analg. 1970 Nov-Dec;49(6):924-34. PMID: 5534693.">
+    >
+    other_details = <
+        ["current_contact"] = <"Konstantinos Kalliamvakos, Cambio CDS<konstantinos.kalliamvakos@cambio.se>">
+        ["MD5-CAM-1.0.1"] = <"FEB715F979F8F91CE8FE499D9B6D0779">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter and their total sum for the Aldrete score.">
+            keywords = <"Aldrete", "score", "recovery", "anesthesia", "PACU", "post-anesthesia", "care", "unit", "discharge">
+            use = <"Use to record the results for each component parameter and their total sum for the Aldrete score.">
+            misuse = <"">
+            copyright = <"© Cambio CDS, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Aldrete score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Activity
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- Unable to move extremities voluntarily or on command
+                                                    [{1}, {[at0006]}],    -- Able to move 2 extremities voluntarily or on command
+                                                    [{2}, {[at0007]}]    -- Able to move 4 extremities voluntarily or on command
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Respiration
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0009]}],    -- Apnoeic
+                                                    [{1}, {[at0010]}],    -- Dyspnoea or limited breathing
+                                                    [{2}, {[at0011]}]    -- Able to breathe deeply and cough freely
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Circulation
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0013]}],    -- BP ±50% of pre-anaesthetic level
+                                                    [{1}, {[at0014]}],    -- BP between 20-49% of pre-anaesthetic level
+                                                    [{2}, {[at0015]}]    -- BP ±20% of pre-anaesthetic level
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Consciousness
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- Not responding
+                                                    [{1}, {[at0018]}],    -- Arousable on calling
+                                                    [{2}, {[at0019]}]    -- Fully awake
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Colour
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0021]}],    -- Cyanotic
+                                                    [{1}, {[at0022]}],    -- Pale, dusky, blotchy, jaundiced, or other
+                                                    [{2}, {[at0023]}]    -- Normal
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9010] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0025] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0026] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Aldrete score">
+                description = <"An assessment score used to evaluate recovery after anaesthesia and patient readiness to be discharged from a post-anaesthesia care unit (PACU).">
+                comment = <"Original version, c 1970">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Activity">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Unable to move extremities voluntarily or on command">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Able to move 2 extremities voluntarily or on command">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Able to move 4 extremities voluntarily or on command">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Respiration">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Apnoeic">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Dyspnoea or limited breathing">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Able to breathe deeply and cough freely">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Circulation">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"BP ±50% of pre-anaesthetic level">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"BP between 20-49% of pre-anaesthetic level">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"BP ±20% of pre-anaesthetic level">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Consciousness">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Not responding">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Arousable on calling">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Fully awake">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Colour">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Cyanotic">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Pale, dusky, blotchy, jaundiced, or other">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Normal">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Total score">
+                description = <"The total sum of each component parameter for the Aldrete score.">
+            >
+            ["at0026"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9010"] = <
+                text = <"Activity (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Respiration (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Circulation (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Consciousness (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Colour (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0017", "at0018", "at0019">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0013", "at0014", "at0015">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0009", "at0010", "at0011">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0005", "at0006", "at0007">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0021", "at0022", "at0023">
+        >
+    >

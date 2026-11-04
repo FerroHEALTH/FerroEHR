@@ -1,0 +1,898 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=2e902458-f7f3-4a71-9c92-c69c5fe5a91c; build_uid=a70bd585-da6c-44db-815c-e1ddededa2b5)
+    openEHR-EHR-OBSERVATION.neurologic_assessment_in_neuro_oncology_scale.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Ivar Berge, Vebjørn Arntzen">
+                ["organisation"] = <"Oslo University Hospital">
+                ["email"] = <"iberge@ous-hf.no, varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Bjørn Næss">
+        ["organisation"] = <"DIPS AS">
+        ["email"] = <"bna@dips.no">
+        ["date"] = <"2023-04-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Nayak L, DeAngelis LM, Brandes AA, Peereboom DM, Galanis E, Lin NU, Soffietti R, Macdonald DR, Chamberlain M, Perry J, Jaeckle K, Mehta M, Stupp R, Muzikansky A, Pentsova E, Cloughesy T, Iwamoto FM, Tonn JC, Vogelbaum MA, Wen PY, van den Bent MJ, Reardon DA. The Neurologic Assessment in Neuro-Oncology (NANO) scale: a tool to assess neurologic function for integration into the Response Assessment in Neuro-Oncology (RANO) criteria. Neuro Oncol. 2017 May 1;19(5):625-635. doi: 10.1093/neuonc/nox029. Review. PubMed PMID: 28453751; PubMed Central PMCID: PMC5464449.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"1044FB2044026CFFD8E6DCF6C8B0F0B7">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere resultatet for hver enkelt parameter i NANO-skalaen og \"Overordnet NANO skår\".">
+            keywords = <"nevrologisk funksjon, NANO, hjernesvulst, CNS, sentralnervesystemet, vurdering, nevro-onkologi, nevroonkologi, resultat", ...>
+            use = <"For å registrere resultatet for hver enkelt parameter i NANO-skalaen og \"Overordnet NANO skår\".
+
+Ordinalverdien \"98\" er tatt med for å kunne representere den ikke-numeriske verdien \"Ikke vurdert\" og \"99\" for å representere \"Ikke vurderbar\". Per nå tillater ikke verken modelleringsverktøyer eller ferdige openEHR journalsystemer å bruke en kombinasjon av numeriske og ikke-numeriske verdier innen ett enkelt verdisett.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation, openEHR Norway">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the result for each component parameter for the NANO-scale and Overall NANO score.">
+            keywords = <"neurologic function, NANO, brain tumor, assessment, CNS, neuro-oncology, outcome", ...>
+            use = <"Use to record the result for each component parameter for the NANO-scale and the Overall NANO score.
+
+The ordinal value '98' is included to represent the non-numerical value 'Not assessed' and value '99' to represent 'Not evaluable'. Neither current modelling tools nor any current implementations allow using a combination of numerical and non-numerical values within a single value set.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation, openEHR Norway">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Neurologic Assessment in Neuro-Oncology (NANO) scale
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Gait
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- Normal
+                                                    [{1}, {[at0006]}],    -- Abnormal but walks without assistance
+                                                    [{2}, {[at0007]}],    -- Abnormal and requires assistance (companion, cane, walker, etc.)
+                                                    [{3}, {[at0008]}],    -- Unable to walk
+                                                    [{98}, {[at0047]}],    -- Not assessed
+                                                    [{99}, {[at0048]}]    -- Not evaluable
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Strength
+                                        value matches {
+                                            DV_ORDINAL[at9010] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0010]}],    -- Normal
+                                                    [{1}, {[at0011]}],    -- Movement present but decreased against resistance
+                                                    [{2}, {[at0012]}],    -- Movement present but none against resistance
+                                                    [{3}, {[at0013]}],    -- No movement
+                                                    [{98}, {[at0049]}],    -- Not assessed
+                                                    [{99}, {[at0050]}]    -- Not evaluable
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Ataxia (upper extremity)
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0015]}],    -- Able to finger to nose touch without difficulty
+                                                    [{1}, {[at0016]}],    -- Able to finger to nose touch but difficult
+                                                    [{2}, {[at0017]}],    -- Unable to finger to nose touch
+                                                    [{98}, {[at0051]}],    -- Not assessed
+                                                    [{99}, {[at0052]}]    -- Not evaluable
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Sensation
+                                        value matches {
+                                            DV_ORDINAL[at9012] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0019]}],    -- Normal
+                                                    [{1}, {[at0020]}],    -- Decreased but aware of sensory modality
+                                                    [{2}, {[at0021]}],    -- Unaware of sensory modality
+                                                    [{98}, {[at0053]}],    -- Not assessed
+                                                    [{99}, {[at0054]}]    -- Not evaluable
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Visual fields
+                                        value matches {
+                                            DV_ORDINAL[at9013] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0023]}],    -- Normal
+                                                    [{1}, {[at0024]}],    -- Inconsistent or equivocal partial hemianopsia (≥ quadrantopsia)
+                                                    [{2}, {[at0025]}],    -- Consistent or unequivocal partial hemianopsia (≥ quadrantopsia)
+                                                    [{3}, {[at0026]}],    -- Complete hemianopsia
+                                                    [{98}, {[at0055]}],    -- Not assessed
+                                                    [{99}, {[at0056]}]    -- Not evaluable
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Facial strength
+                                        value matches {
+                                            DV_ORDINAL[at9014] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0028]}],    -- Normal
+                                                    [{1}, {[at0029]}],    -- Mild/moderate weakness
+                                                    [{2}, {[at0030]}],    -- Severe facial weakness
+                                                    [{98}, {[at0057]}],    -- Not assessed
+                                                    [{99}, {[at0058]}]    -- Not evaluable
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0031] occurrences matches {0..1} matches {    -- Language
+                                        value matches {
+                                            DV_ORDINAL[at9015] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0032]}],    -- Normal
+                                                    [{1}, {[at0033]}],    -- Abnormal but easily conveys meaning to examiner
+                                                    [{2}, {[at0034]}],    -- Abnormal and difficulty conveying meaning to examiner
+                                                    [{3}, {[at0035]}],    -- Abnormal. If verbal, unable to convey meaning to the examiner OR non-verbal (mute/global aphasia)
+                                                    [{98}, {[at0059]}],    -- Not assessed
+                                                    [{99}, {[at0060]}]    -- Not evaluable
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0036] occurrences matches {0..1} matches {    -- Level of consciousness
+                                        value matches {
+                                            DV_ORDINAL[at9016] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0037]}],    -- Normal
+                                                    [{1}, {[at0038]}],    -- Drowsy (easily arousable)
+                                                    [{2}, {[at0039]}],    -- Somnolent (difficult to arouse)
+                                                    [{3}, {[at0040]}],    -- Unarousable/coma
+                                                    [{98}, {[at0061]}],    -- Not assessed
+                                                    [{99}, {[at0062]}]    -- Not evaluable
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0041] occurrences matches {0..1} matches {    -- Behavior
+                                        value matches {
+                                            DV_ORDINAL[at9017] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0042]}],    -- Normal
+                                                    [{1}, {[at0043]}],    -- Mild/moderate alteration
+                                                    [{2}, {[at0044]}],    -- Severe alteration
+                                                    [{98}, {[at0063]}],    -- Not assessed
+                                                    [{99}, {[at0064]}]    -- Not evaluable
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0066] occurrences matches {0..1} matches {    -- Overall NANO score
+                                        value matches {
+                                            DV_CODED_TEXT[at9027] matches {
+                                                defining_code matches {[ac9026]}    -- Overall NANO score (synthesised)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0046] matches {    -- ITEM_TREE
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0065] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Neurologic Assessment in Neuro-Oncology (NANO) scale">
+                description = <"NANO-skalaen er en skåring for å vurdere nevrologisk funksjon hos pasienter med svulst i sentralnervesystemet.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard uspesifisert tidspunkt- eller intervallhendelse som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Gange">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Normal">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Unormal, men går uten hjelp">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Unormal og trenger hjelp til å gå">
+                description = <"For eksempel hjelp fra/via person, stokk, rullator eller lignende.">
+            >
+            ["at0008"] = <
+                text = <"Ikke i stand til å gå">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Styrke">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Normal">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Bevegelse til stede, men svekket styrke ved motstand">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Bevegelse til stede, men ingen styrke ved motstand">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Ingen bevegelse">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Ataksi (overekstremiteter)">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"I stand til å utføre finger-nese-prøve uten vanskeligheter">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"I stand til å utføre finger-nese-prøve med vanskeligheter">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Ikke i stand til å utføre finger-nese-prøve">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Sensibilitet">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Normal">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Svekket, men klar over sansemodalitet">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Ikke klar over sansemodalitet">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Synsfelt">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Normalt">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Inkonsistent eller usikker delvis hemianopsi (≥kvadrantanopsi)">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Konsistent eller sikker delvis hemianopsi (≥kvadrantanopsi)">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Fullstendig hemianopsi">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Muskelstyrke i ansikt">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Normal">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Mild/moderat svekkelse">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Alvorlig svekkelse i ansiktet">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Språk">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Normalt">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Unormalt, men formidler enkelt mening til undersøker">
+                description = <"Inkludert ordletingsvansker, noen parafasiske feil/neologismer/ordbyttingsfeil, men i stand til å forme fullstendige/ufullstendige setninger.">
+            >
+            ["at0034"] = <
+                text = <"Unormalt og vansker med å formidle mening til undersøker">
+                description = <"Inkludert manglende evne til å danne setninger (<4 ord per setning), begrenset ordproduksjon, flytende, men uten mening (\"ordsalat\").">
+            >
+            ["at0035"] = <
+                text = <"Unormalt. Hvis i stand til å prate, er pasienten likevel ikke i stand til å formidle mening til undersøker, ELLER ikke-verbal (stum/global afasi)">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Bevissthetsnivå">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Normalt">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Søvnig (enkel å vekke)">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Somnolent (vanskelig å vekke)">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Ikke mulig å vekke/komatøs">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Atferd">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Normal">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Mild/moderat endring">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Alvorlig endring">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"ITEM_TREE">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Ikke vurdert">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Ikke vurderbar">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Ikke vurdert">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Ikke vurderbar">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Ikke vurdert">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Ikke vurderbar">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Ikke vurdert">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Ikke vurderbar">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"Ikke vurdert">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"Ikke vurderbar">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"Ikke vurdert">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"Ikke vurderbar">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Ikke vurdert">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Ikke vurderbar">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Ikke vurdert">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"Ikke vurderbar">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"Ikke vurdert">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"Ikke vurderbar">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller eller formalismer.">
+                comment = <"For eksempel: lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0066"] = <
+                text = <"Overordnet NANO skår">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"Nevrologisk respons">
+                description = <"≥2 nivåforbedring i minst ett domene uten forverring i andre domener fra baseline, eller beste funksjonsnivå og som ikke kan tilskrives endring i samtidige medisiner eller bedring fra en komorbid hendelse.">
+            >
+            ["at0068"] = <
+                text = <"Nevrologisk forverring">
+                description = <"≥2 nivå forverring fra baseline eller beste funksjonsnivå innenfor ≥1 domene, eller forverring til høyeste skår innenfor ≥1 domene som anses å være relatert til underliggende tumorprogresjon og ikke kan tilskrives en komorbid hendelse eller endring i samtidig medisinering.">
+            >
+            ["at0069"] = <
+                text = <"Nevrologisk stabilitet">
+                description = <"Skår som ikke oppfyller kriterier for nevrologisk respons, nevrologisk forverring, ikke vurdert eller ikke vurderbar.">
+            >
+            ["at0070"] = <
+                text = <"Ikke vurdert">
+                description = <"Dersom klinikeren utelater vurdering av det bestemte domenet under hans/hennes undersøkelse.">
+            >
+            ["at0071"] = <
+                text = <"Ikke vurderbar">
+                description = <"Dersom det er mer sannsynlig enn ikke at en annen faktor enn underliggende tumoraktivitet bidro til en observert endring i nevrologisk funksjon.">
+            >
+            ["ac9036"] = <
+                text = <"Gange (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9037"] = <
+                text = <"Styrke (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9038"] = <
+                text = <"Ataksi (overekstremiteter) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9039"] = <
+                text = <"Sensibilitet (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9040"] = <
+                text = <"Synsfelt (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9041"] = <
+                text = <"Muskelstyrke i ansikt (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9042"] = <
+                text = <"Språk (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9043"] = <
+                text = <"Bevissthetsnivå (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9044"] = <
+                text = <"Atferd (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"Overordnet NANO skår (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Neurologic Assessment in Neuro-Oncology (NANO) scale">
+                description = <"The NANO scale is a tool for assessing neurologic function in patients with brain tumor.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Gait">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Normal">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Abnormal but walks without assistance">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Abnormal and requires assistance (companion, cane, walker, etc.)">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Unable to walk">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Strength">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Normal">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Movement present but decreased against resistance">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Movement present but none against resistance">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"No movement">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Ataxia (upper extremity)">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Able to finger to nose touch without difficulty">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Able to finger to nose touch but difficult">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Unable to finger to nose touch">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Sensation">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Normal">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Decreased but aware of sensory modality">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Unaware of sensory modality">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Visual fields">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Normal">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Inconsistent or equivocal partial hemianopsia (≥ quadrantopsia)">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Consistent or unequivocal partial hemianopsia (≥ quadrantopsia)">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Complete hemianopsia">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Facial strength">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Normal">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Mild/moderate weakness">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Severe facial weakness">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Language">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Normal">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Abnormal but easily conveys meaning to examiner">
+                description = <"Includes word finding difficulty; few paraphasic errors/neologisms/word substitutions; but able to form sentences (full/broken).">
+            >
+            ["at0034"] = <
+                text = <"Abnormal and difficulty conveying meaning to examiner">
+                description = <"Includes inability to form sentences (<4 words per phrase/sentence); limited word output; fluent but \"empty\" speech.">
+            >
+            ["at0035"] = <
+                text = <"Abnormal. If verbal, unable to convey meaning to the examiner OR non-verbal (mute/global aphasia)">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Level of consciousness">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Normal">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Drowsy (easily arousable)">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Somnolent (difficult to arouse)">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Unarousable/coma">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Behavior">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Normal">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Mild/moderate alteration">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Severe alteration">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"ITEM_TREE">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Not assessed">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Not evaluable">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Not assessed">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Not evaluable">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Not assessed">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Not evaluable">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Not assessed">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Not evaluable">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"Not assessed">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"Not evaluable">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"Not assessed">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"Not evaluable">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Not assessed">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Not evaluable">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Not assessed">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"Not evaluable">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"Not assessed">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"Not evaluable">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Additional details">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0066"] = <
+                text = <"Overall NANO score">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"Neurological response">
+                description = <"≥2 level improvement in at least one domain without worsening in other domains from baseline or best level of function that is not attributable to change in concurrent medications or recovery from a comorbid event.">
+            >
+            ["at0068"] = <
+                text = <"Neurological progression">
+                description = <"≥2 level worsening from baseline or best level of function within ≥1 domain or worsening to the highest score within ≥1 domain that is felt to be related to underlying tumor progression and not attributable to a comorbid event or change in concurrent medication.">
+            >
+            ["at0069"] = <
+                text = <"Neurological stability">
+                description = <"Neurologic function that does not meet criteria for neurologic response, neurologic progression, non-evaluable, or not assessed.">
+            >
+            ["at0070"] = <
+                text = <"Not assessed">
+                description = <"If the clinician omits evaluation of that particular domain during his/her examination.">
+            >
+            ["at0071"] = <
+                text = <"Non-evaluable">
+                description = <"If it is more likely than not that a factor other than underlying tumor activity contributed to an observed change in neurologic function.">
+            >
+            ["ac9036"] = <
+                text = <"Gait (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9037"] = <
+                text = <"Strength (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9038"] = <
+                text = <"Ataxia (upper extremity) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9039"] = <
+                text = <"Sensation (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9040"] = <
+                text = <"Visual fields (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9041"] = <
+                text = <"Facial strength (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9042"] = <
+                text = <"Language (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9043"] = <
+                text = <"Level of consciousness (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9044"] = <
+                text = <"Behavior (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"Overall NANO score (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9026"] = <
+            id = <"ac9026">
+            members = <"at0067", "at0069", "at0068", "at0070", "at0071">
+        >
+        ["ac9039"] = <
+            id = <"ac9039">
+            members = <"at0019", "at0020", "at0021", "at0053", "at0054">
+        >
+        ["ac9038"] = <
+            id = <"ac9038">
+            members = <"at0015", "at0016", "at0017", "at0051", "at0052">
+        >
+        ["ac9037"] = <
+            id = <"ac9037">
+            members = <"at0010", "at0011", "at0012", "at0013", "at0049", "at0050">
+        >
+        ["ac9036"] = <
+            id = <"ac9036">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0047", "at0048">
+        >
+        ["ac9042"] = <
+            id = <"ac9042">
+            members = <"at0032", "at0033", "at0034", "at0035", "at0059", "at0060">
+        >
+        ["ac9041"] = <
+            id = <"ac9041">
+            members = <"at0028", "at0029", "at0030", "at0057", "at0058">
+        >
+        ["ac9040"] = <
+            id = <"ac9040">
+            members = <"at0023", "at0024", "at0025", "at0026", "at0055", "at0056">
+        >
+        ["ac9044"] = <
+            id = <"ac9044">
+            members = <"at0042", "at0043", "at0044", "at0063", "at0064">
+        >
+        ["ac9043"] = <
+            id = <"ac9043">
+            members = <"at0037", "at0038", "at0039", "at0040", "at0061", "at0062">
+        >
+    >

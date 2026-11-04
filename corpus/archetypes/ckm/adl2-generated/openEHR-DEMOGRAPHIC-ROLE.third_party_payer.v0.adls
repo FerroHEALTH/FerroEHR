@@ -1,0 +1,145 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=5f1a2399-8382-4be6-80d6-ce5930197fea; build_uid=e4c57195-ac47-4576-ac08-5c44f73b633f)
+    openEHR-DEMOGRAPHIC-ROLE.third_party_payer.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            author = <
+                ["name"] = <"Seung-Jong Yu">
+                ["organisation"] = <"NOUSCO Co.,Ltd.">
+            >
+            accreditation = <"Certified Board of Family Medicine in South Korea">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Sergio Miranda Freire">
+                ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+                ["email"] = <"sergio@lampada.uerj.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sergio Miranda Freire & Rigoleta Dutra Mediano Dias">
+        ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+        ["email"] = <"sergio@lampada.uerj.br">
+        ["date"] = <"2009-05-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Rigoleta Dutra, Ministry of Defense, Brazil (openEHR Editor)", "Sergio Freire, State University of Rio de Janeiro, Brazil (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"07032613106DEAA7F635AD238FFEC582">
+    >
+    details = <
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            purpose = <"보험지불자 인적 데이터의 표현.">
+            keywords = <"*인적정보 서비스(ko)", "*보험지불자(ko)">
+            use = <"보험지불자의 역할에서 기관에 대한 인적 데이터를 수집하는 인적정보 서비스에서 사용됨.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Representação dos dados de uma Organização quando atua como uma fonte pagadora (SUS, seguradora de planos de saúde, etc)">
+            keywords = <"serviço demográfico", "fonte pagadora">
+            use = <"Usado em serviços de demografia para coletar dados demográficos sobre uma organização que atua como fonte pagadora">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Representation of a third-party payer demographic data">
+            keywords = <"demographic service", "third-party payer">
+            use = <"Used in demographic service to collect demographic data about an organisation in the role of a third-party payer">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ROLE[at0000] matches {    -- Third-party payer
+        details matches {
+            ITEM_TREE[at0001] matches {    -- Identifiers
+                items cardinality matches {1..*; unique} matches {
+                    allow_archetype CLUSTER[at0010] occurrences matches {1..*} matches {    -- Identifier
+                        include
+                            archetype_id/value matches {/openEHR-DEMOGRAPHIC-CLUSTER\.provider_identifier[a-zA-Z0-9_-]*\.v0\..*/}
+                    }
+                }
+            }
+        }
+        identities matches {
+            allow_archetype PARTY_IDENTITY[at0002] occurrences matches {1..*} matches {    -- Name
+                include
+                    archetype_id/value matches {/openEHR-DEMOGRAPHIC-PARTY_IDENTITY\.organisation_name[a-zA-Z0-9_-]*\.v0\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["ko"] = <
+            ["at0000"] = <
+                text = <"보험지불자">
+                description = <"보험지불자의 역할을 하는 기관.">
+            >
+            ["at0001"] = <
+                text = <"식별자">
+                description = <"보험지불자의 역할을 하는 기관에의해 사용되는 식별자.">
+            >
+            ["at0002"] = <
+                text = <"이름">
+                description = <"어떻게 보험지불자가 알려지는지를 나타냄.">
+            >
+            ["at0010"] = <
+                text = <"식별자">
+                description = <"보험지불자의 역할을 하는 기관에서 사용되는 식별자.">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Fonte pagadora">
+                description = <"Organização no papel de uma fonta pagadora">
+            >
+            ["at0001"] = <
+                text = <"Documentos de Identificação">
+                description = <"Documentos utilizados pela organização quando atua como fonte pagadora">
+            >
+            ["at0002"] = <
+                text = <"Nome">
+                description = <"Especifica como a fonte pagadora é conhecida">
+            >
+            ["at0010"] = <
+                text = <"Documento de Identificação">
+                description = <"Documento de identificação utilizado pela organização quando atua como fonte pagadora">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Third-party payer">
+                description = <"Organisation in the role of a third-party payer">
+            >
+            ["at0001"] = <
+                text = <"Identifiers">
+                description = <"The identifiers used by the organisation in the role of a third-party payer">
+            >
+            ["at0002"] = <
+                text = <"Name">
+                description = <"Indicates how the third-party payer is known by">
+            >
+            ["at0010"] = <
+                text = <"Identifier">
+                description = <"The identifier used by the organisation in the role of a third-party payer">
+            >
+        >
+    >

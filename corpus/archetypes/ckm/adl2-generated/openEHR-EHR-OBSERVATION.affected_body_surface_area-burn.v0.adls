@@ -1,0 +1,93 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b188108d-128e-4221-9cc8-1b459d31690b; build_uid=25bb1107-42ed-48f8-aaa2-37f79d99df85)
+    openEHR-EHR-OBSERVATION.affected_body_surface_area-burn.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-OBSERVATION.affected_body_surface_area.v0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-10-06">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Åsa Skagerhult, Region Östergötland, Sweden (openEHR Editor)", "Erik Sundvall, Region Östergötland + Linköping University, Sweden (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Burn Management Guidelines [Internet]. Melbourne: Alfred Health. Paediatric Burn Assessment Ruler; 2007 [updated 2012 May 08; cited 2021 07 16]; Available from: https://www.vicburns.org.au/wp-content/uploads/2016/06/poster4-paediatric-burns-assessment-ruler.pdf.">
+        ["2"] = <"Hettiaratchy S, Papini R. Initial management of a major burn: II--assessment and resuscitation. BMJ. 2004 Jul 10;329(7457):101-3. doi: 10.1136/bmj.329.7457.101. PMID: 15242917; PMCID: PMC449823. Available from https://www.ncbi.nlm.nih.gov/pmc/articles/PMC449823/.">
+        ["3"] = <"Radiation Emergency Medical Management [Internet]. U.S. Department of Health & Human Services. Burn triage and treatment of thermal injuries in a radiation emergency; [updated 2021 May 14; cited 2021 Jul 16]. Available from: https://www.remm.nlm.gov/burns.htm.">
+        ["4"] = <"Rhodes J, Clay C, Phillips M. The surface area of the hand and the palm for estimating percentage of total body surface area: results of a meta-analysis. Br J Dermatol. 2013 Jul;169(1):76-84. doi: 10.1111/bjd.12290. PMID: 23448271.">
+        ["5"] = <"Scarisbrick JJ, Morris S. How big is your hand and should you use it to score skin in cutaneous T-cell lymphoma? Br J Dermatol. 2013 Aug;169(2):260-5. doi: 10.1111/bjd.12403. PMID: 23621659.">
+        ["6"] = <"The Royal Children's Hospital Melbourne [Internet]. Melbourne: The Royal Children's Hospital. Burns unit: Clinical information; [cited 2021 07 16]. Available from: ">
+        ["7"] = <"https://www.rch.org.au/burns/clinical_information/#Lund_and_Browder_chart">
+        ["8"] = <"Wikipedia [Internet]. Wikimedia Foundation, Inc. Lund and Browder chart; [updated 2021 Mar 23; cited 2021 Jul 16]; Available from: https://en.wikipedia.org/wiki/Lund_and_Browder_chart.">
+        ["9"] = <"Wikipedia [Internet]. Wikimedia Foundation, Inc. Total body surface area; [updated 2018 Jul 06; cited 2021 Jul 16]; Available from: https://en.wikipedia.org/wiki/Total_body_surface_area.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"8F4DBE7C7F8924D18DC5EC1629F0FB68">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about the estimated proportion of body surface area affected by a burn injury.">
+            keywords = <"TBSA", "BSA", "burn", "surface", "area", "burns", "assessment", "Lund-Browder", "skin", "rule", "nines", "palmar", "method", "TBSA%">
+            use = <"Use to record details about the estimated proportion of body surface area affected by a burn injury, including the total body surface area affected, the body surface area affected per body site and the body surface area affected per severity.
+
+This archetype has been designed as a component of a templated full burn assessment which may comprise a range of ENTRY archetypes and nested CLUSTERs, describing the history, physical examination findings, and other measurements.">
+            misuse = <"Not to be used to record the measured or calculated body surface area of an individual - use the OBSERVATION.body_surface_area for this purpose.
+
+Not to be used to record the estimated proportion of body surface area affected by other conditions of the skin - use the parent archetype OBSERVATION.affected_body_surface_area for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000.1] matches {    -- Burn-affected body surface area
+        /data[at0001]/events[at0002]/data[at0003]/items matches {
+            ELEMENT[at0004.1] matches {    -- Condition name
+                value matches {
+                    DV_CODED_TEXT[at0.9000] matches {
+                        defining_code matches {[at0.1]}    -- Burn
+                    }
+                }
+            }
+            ELEMENT[at0.2] occurrences matches {0..1} matches {    -- Cause of burn
+                value matches {
+                    DV_TEXT[at0.9001]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Burn-affected body surface area">
+                description = <"Estimation of the proportion of body surface area affected by a burn.">
+            >
+            ["at0004.1"] = <
+                text = <"Condition name">
+                description = <"The name of the injury or disease affected the skin.">
+                comment = <"For example: burn; or psoriasis. Coding of the condition name with an external terminology is preferred, where possible. ">
+            >
+            ["at0.1"] = <
+                text = <"Burn">
+                description = <"The condition is a burn.">
+            >
+            ["at0.2"] = <
+                text = <"Cause of burn">
+                description = <"The aetiology of the burn.">
+                comment = <"For example: thermal; cold; radiation; chemical; or electrical.">
+            >
+        >
+    >

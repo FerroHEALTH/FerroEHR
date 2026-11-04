@@ -1,0 +1,530 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=bb71694d-167a-46df-a5e1-67fd5a5e2034; build_uid=226a229d-7171-45d4-a522-12480d44e326)
+    openEHR-EHR-OBSERVATION.air_score.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Dennis Forslund">
+                ["organisation"] = <"Cambio Healthcare Systems">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Dennis Forslund">
+        ["organisation"] = <"Cambio Healthcare Systems">
+        ["email"] = <"models@cambiocds.com">
+        ["date"] = <"2016-07-19">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Atomica Informatics, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Andersson M, Andersson RE. The appendicitis inflammatory response score: a tool for the diagnosis of acute appendicitis that outperforms the Alvarado score. World J Surg. 2008 Aug;32(8):1843-9. doi: 10.1007/s00268-008-9649-y. PubMed PMID: 18553045.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"E52637F5012886D13DBA590947C8FC4D">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att ge objektivt kliniskt understöd i bedömning av prognos och lämplig vårdnivå för patienter med misstänkt akut appendicit.">
+            keywords = <"AIR Score", "air inflammatory response score", "appendicit", "kirurgi", "akut buk">
+            use = <"Använd som objektivt kliniskt understöd i bedömning av prognos och lämplig vårdnivå för patienter med misstänkt akut appendicit.
+
+AIR är en akronym för Appendicitis Inflammatory Response och består av sju faktorer som vardera bidrar till totala poängen (max.12) enligt; 
+- Förekomst av kräkning 0-1
+- Smärta i höger fossa 0-1
+- Släppömhet eller muskelförsvar 0-3
+- Kroppstemperatur ≥38,5 0-1
+- Leukocyter 0-2
+- Andel neutrofiler 0-2 
+- CRP 0-2
+
+Resultatet används för att generera en uppskattad sannolikhet för att appendicit föreligger, samt en rekommendation kring vidare åtgärd: 
+0-4 poäng - låg sannolikhet. Överväg uppföljning polikliniskt om opåverkat allmäntillstånd.
+5-8 poäng - intermediär sannolikhet. Överväg aktiv observation med upprepad bedömning och/eller vidare undersökning i enlighet med lokal tradition.
+9-12 poäng - hög sannolikhet. Överväg kirurgisk exploration.
+
+">
+            misuse = <"">
+            copyright = <"© Cambio Healthcare Systems, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To assist the diagnosis and prediction of severity of suspected acute appendicitis.">
+            keywords = <"AIR Score", "appendicitis inflammatory response score", "appendicitis", "surgery">
+            use = <"Use to assist the diagnosis and prediction of severity of suspected acute appendicitis.
+
+AIR is an acronym for Appendicitis Inflammatory Response and consists of seven components, each contributing points to the total score generating an estimated probability as well as a recommendation based on the risk level; 
+- Vomiting 0-1
+- Pain in right inferior fossa 0-1
+- Rebound tenderness or muscular defense 0-3
+- Body temperature ≥38.5 0-1
+- Neutrophils 0-2
+- White blood cell count 0-2
+- CRP 0-2
+
+The tool has a maximum score of 12 points, and the result is associated with one of three categories estimating probability along with a recommendation on appropriate action;
+Sum 0-4 - low probability. Consider outpatient follow-up if unaltered general condition.
+Sum 5-8 - indeterminate group. Consider in-hospital active observation with rescoring and/or further examination in accordance with local tradition.
+Sum 9-12 - high probability. Consider surgical exploration.">
+            misuse = <"">
+            copyright = <"© Cambio Healthcare Systems, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Appendicitis Inflammatory Response (AIR) Score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Vomiting
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0008]}],    -- No
+                                                    [{1}, {[at0009]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Pain in right inferior fossa
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0010]}],    -- No
+                                                    [{1}, {[at0011]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Rebound tenderness or muscular defense
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0012]}],    -- None
+                                                    [{1}, {[at0013]}],    -- Light
+                                                    [{2}, {[at0014]}],    -- Medium
+                                                    [{3}, {[at0015]}]    -- Strong
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Body temperature ≥38.5 C
+                                        value matches {
+                                            DV_ORDINAL[at9010] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0016]}],    -- No
+                                                    [{1}, {[at0017]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Neutrophils, %
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0028]}],    -- <70%
+                                                    [{1}, {[at0029]}],    -- 70-84%
+                                                    [{2}, {[at0030]}]    -- ≥85%
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- WBC count, x10^9/L
+                                        value matches {
+                                            DV_ORDINAL[at9012] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0031]}],    -- <10
+                                                    [{1}, {[at0032]}],    -- 10-14,9
+                                                    [{2}, {[at0033]}]    -- ≥15
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- CRP level, mg/L
+                                        value matches {
+                                            DV_ORDINAL[at9013] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0034]}],    -- <10
+                                                    [{1}, {[at0035]}],    -- 10-49
+                                                    [{2}, {[at0036]}]    -- ≥50
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9014] matches {
+                                                magnitude matches {|0..12|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0037] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0038] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"AIR Score">
+                description = <"AIR Score används som kliniskt understöd i bedömning av prognos och lämplig vårdnivå för patienter med misstänkt akut appendicit. AIR är en akronym för Appendicitis Inflammatory Response och består av sju faktorer som vardera bidrar till poängsumman (max.12); förekomst av kräkning, smärta i höger fossa, släppömhet eller muskelförsvar, kroppstemperatur ≥38,5, leukocyter, andel neutrofiler och CRP. Resultatet genererar en uppskattad sannolikhet för att appendicit föreligger, samt en rekommendation kring vidare åtgärd.">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"**(en)">
+            >
+            ["at0004"] = <
+                text = <"Kräkning">
+                description = <"Kräkning utgör ett av symtomen">
+            >
+            ["at0005"] = <
+                text = <"Smärta höger fossa">
+                description = <"Patienten upplever smärta i höger fossa">
+            >
+            ["at0006"] = <
+                text = <"Släppömhet eller muskelförsvar">
+                description = <"Släppömhet eller muskelförsvar påvisas i status">
+            >
+            ["at0007"] = <
+                text = <"Kroppstemperatur ≥38.5">
+                description = <"Kroppstemperatur över 38,5 grader">
+            >
+            ["at0008"] = <
+                text = <"Nej">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"Ja">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Nej">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"Ja">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Nej">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"Lätt">
+                description = <"*">
+            >
+            ["at0014"] = <
+                text = <"Måttlig">
+                description = <"*">
+            >
+            ["at0015"] = <
+                text = <"Kraftig">
+                description = <"*">
+            >
+            ["at0016"] = <
+                text = <"Nej">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"Ja">
+                description = <"*">
+            >
+            ["at0021"] = <
+                text = <"Total poäng">
+                description = <"Summan av samtliga faktorer">
+            >
+            ["at0025"] = <
+                text = <"Neutrofiler">
+                description = <"Provsvar - antal neutrofiler per liter">
+            >
+            ["at0026"] = <
+                text = <"Leukocyter">
+                description = <"Provsvar - antal leukocyter per liter">
+            >
+            ["at0027"] = <
+                text = <"CRP">
+                description = <"Provsvar - C-Reaktivt Protein">
+            >
+            ["at0028"] = <
+                text = <"<70%">
+                description = <"*">
+            >
+            ["at0029"] = <
+                text = <"70-84%">
+                description = <"*">
+            >
+            ["at0030"] = <
+                text = <"≥85%">
+                description = <"*">
+            >
+            ["at0031"] = <
+                text = <"<10">
+                description = <"*">
+            >
+            ["at0032"] = <
+                text = <"10-14,9">
+                description = <"*">
+            >
+            ["at0033"] = <
+                text = <"≥15">
+                description = <"*">
+            >
+            ["at0034"] = <
+                text = <"<10">
+                description = <"*">
+            >
+            ["at0035"] = <
+                text = <"10-49">
+                description = <"*">
+            >
+            ["at0036"] = <
+                text = <"≥50">
+                description = <"*">
+            >
+            ["at0038"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+            ["ac9014"] = <
+                text = <"Kräkning (synthesised)">
+                description = <"Kräkning utgör ett av symtomen (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Smärta höger fossa (synthesised)">
+                description = <"Patienten upplever smärta i höger fossa (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Släppömhet eller muskelförsvar (synthesised)">
+                description = <"Släppömhet eller muskelförsvar påvisas i status (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Kroppstemperatur ≥38.5 (synthesised)">
+                description = <"Kroppstemperatur över 38,5 grader (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"Neutrofiler (synthesised)">
+                description = <"Provsvar - antal neutrofiler per liter (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"Leukocyter (synthesised)">
+                description = <"Provsvar - antal leukocyter per liter (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"CRP (synthesised)">
+                description = <"Provsvar - C-Reaktivt Protein (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Appendicitis Inflammatory Response (AIR) Score ">
+                description = <"Tool to assist the diagnosis and prediction of severity of suspected acute appendicitis.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Vomiting">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"Pain in right inferior fossa">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"Rebound tenderness or muscular defense">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Body temperature ≥38.5 C">
+                description = <"*">
+            >
+            ["at0008"] = <
+                text = <"No">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"Yes">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"No">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"Yes">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"None">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"Light">
+                description = <"*">
+            >
+            ["at0014"] = <
+                text = <"Medium">
+                description = <"*">
+            >
+            ["at0015"] = <
+                text = <"Strong">
+                description = <"*">
+            >
+            ["at0016"] = <
+                text = <"No">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"Yes">
+                description = <"*">
+            >
+            ["at0021"] = <
+                text = <"Total score">
+                description = <"The sum of each ordinal score recorded for each of the seven component responses.">
+            >
+            ["at0025"] = <
+                text = <"Neutrophils, %">
+                description = <"*">
+            >
+            ["at0026"] = <
+                text = <"WBC count, x10^9/L">
+                description = <"*">
+            >
+            ["at0027"] = <
+                text = <"CRP level, mg/L">
+                description = <"*">
+            >
+            ["at0028"] = <
+                text = <"<70%">
+                description = <"*">
+            >
+            ["at0029"] = <
+                text = <"70-84%">
+                description = <"*">
+            >
+            ["at0030"] = <
+                text = <"≥85%">
+                description = <"*">
+            >
+            ["at0031"] = <
+                text = <"<10">
+                description = <"*">
+            >
+            ["at0032"] = <
+                text = <"10-14,9">
+                description = <"*">
+            >
+            ["at0033"] = <
+                text = <"≥15">
+                description = <"*">
+            >
+            ["at0034"] = <
+                text = <"<10">
+                description = <"*">
+            >
+            ["at0035"] = <
+                text = <"10-49">
+                description = <"*">
+            >
+            ["at0036"] = <
+                text = <"≥50">
+                description = <"*">
+            >
+            ["at0038"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9014"] = <
+                text = <"Vomiting (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Pain in right inferior fossa (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Rebound tenderness or muscular defense (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Body temperature ≥38.5 C (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"Neutrophils, % (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"WBC count, x10^9/L (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"CRP level, mg/L (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0016", "at0017">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0012", "at0013", "at0014", "at0015">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0010", "at0011">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0008", "at0009">
+        >
+        ["ac9020"] = <
+            id = <"ac9020">
+            members = <"at0034", "at0035", "at0036">
+        >
+        ["ac9019"] = <
+            id = <"ac9019">
+            members = <"at0031", "at0032", "at0033">
+        >
+        ["ac9018"] = <
+            id = <"ac9018">
+            members = <"at0028", "at0029", "at0030">
+        >
+    >

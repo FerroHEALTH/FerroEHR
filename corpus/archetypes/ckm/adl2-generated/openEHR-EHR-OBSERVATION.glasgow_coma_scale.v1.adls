@@ -1,0 +1,1088 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=2b50f15c-f3c9-473b-8e9c-f57c00507561; build_uid=661d7a86-424d-403e-8040-d2db2d8bee42)
+    openEHR-EHR-OBSERVATION.glasgow_coma_scale.v1.2.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Sarah Ballout">
+                ["organisation"] = <"MHH-Hannover">
+                ["email"] = <"ballout.sarah@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Kirsi Poikela">
+                ["organisation"] = <"Tieto Sweden Healthcare & Welfare AB">
+                ["email"] = <"ext.kirsi.poikela@tieto.com">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand/Silje Ljosland Bakke">
+                ["organisation"] = <"Helse Bergen HF/Nasjonal IKT HF">
+            >
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Alan March">
+                ["organisation"] = <"Hospital Universitario Austral, Pilar, Buenos Aires, Argentina">
+                ["email"] = <"alandmarch@gmail.com">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Vladimir Pizzo">
+                ["organisation"] = <"Hospital Sirio Libanes, Brazil">
+                ["email"] = <"vladimir.pizzo@hsl.org.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2007-03-13">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Tomas Alme, DIPS, Norway", "Nadim Anani, Karolinska Institutet, Sweden", "Vebjoern Arntzen, Oslo university hospital, Norway", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Bergen Hospital Trust, Norway", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Martin Boeker, Medical Center - University of Freiburg, Germany", "Marja Buur, Medisch Centrum Alkmaar/ Code24, Netherlands", "Margaret Campbell, Queensland Health, Australia", "Rong Chen, Cambio Healthcare Systems, Sweden", "Stephen Chu, Queensland Health, Australia", "Tamsin Cockayne, Australia", "Marc Cotran, identity vision systems, Canada", "Angela de Zwart, Orion Health, New Zealand", "Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway", "Sebastian Garde, Ocean Informatics, Germany", "Christian Ghan, The Chris O'Brien Lifehouse at RPA, Australia", "William Goossen, Results 4 Care, Netherlands", "Heather Grain, Llewelyn Grain Informatics, Australia", "Birger Haarbrandt, Hannover Medical School, Germany", "Sam Heard, Ocean Informatics, Australia", "Oliver Hosking, Remote Health NT, Australia", "Evelyn Hovenga, EJSH Consulting, Australia", "Eugene Igras, IRIS Systems, Inc., Canada", "Sundaresan Jagannathan, Scottish NHS, United Kingdom", "Konstantinos Kalliamvakos, Cambio Healthcare Systems, Sweden", "Lars Karlsen, DIPS ASA, Norway", "Shinji Kobayashi, Kyoto University, Japan", "Sergey Kovalenko, Chelyabinsk Regional Children Hospital, Russia", "Heather Leslie, Atomica Informatics, Australia (Editor)", "Hallvard Lærum, Oslo University Hospital, Norway", "Luis Marco Ruiz, Norwegian Center for Integrated Care and Telemedicine, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (Editor)", "Jeroen Meintjens, Medisch Centrum Alkmaar, Netherlands", "Andrej Orel, Marand d.o.o., Slovenia", "Michael Reynolds, Great Lakes Pediatric Associates, PLLC, United States", "Hossein Riazi, Iran", "Arturo Romero, SESCAM, Spain", "Jussara Rotzsch, UNB, Brazil", "Anoop Shah, University College London, United Kingdom", "Tony Shannon, NHS, United Kingdom", "Gary Sinclair, NT DoH, Australia", "Tim Sturgill, United States", "Soon Ghee Yap, Singapore General Hospital, Singapore">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Crippen DW. Head Trauma - Presentation: Medscape Reference: Drugs, Diseases & Procedures [Internet]. WebMD LLC: c1994-2013; [updated 2012 Jun 21; accessed 2015 Mar 05]. Available from: http://emedicine.medscape.com/article/433855-overview#a0112.">
+        ["2"] = <"Glasgow Coma Scale, draft archetype, NEHTA Clinical Knowledge Manager [Internet]. Australia: National eHealth Transition Authority. Authored: 2007 Mar 13. Available at: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.1160 (no longer available).">
+        ["3"] = <"Teasdale G. Glasgow Coma Scale: The Glasgow structured approach to Assessment of the Glasgow Coma Scale [Internet]. Sir Graham Teasdale; 2014 [accessed 2019 Oct 08]. Available from: http://www.glasgowcomascale.org/ and http://www.glasgowcomascale.org/downloads/GCS-Assessment-Aid.pdf.">
+        ["4"] = <"Teasdale G, Jennett B. Assessment of coma and impaired consciousness. A practical scale. Lancet. 1974 Jul 13;2(7872):81-4. doi: 10.1016/s0140-6736(74)91639-0. PubMed PMID: 4136544.">
+        ["5"] = <"Teasdale GM, Murray L. Revisiting the Glasgow Coma Scale and Coma Score. Intensive Care Med. 2000 Feb;26(2):153-4. doi: 10.1007/s001340050037. PubMed PMID: 10784300.">
+        ["6"] = <"V3 DCModels R1 I1 2010 Sep - Glasgow Coma Scale v0.75 [Internet]. Health Level Seven International. Published Jan 2014 [accessed 2019 Oct 08]. Available at: https://github.com/DetailedClinicalModels/Detailed-Clinical-Models/blob/master/Glasgow%20Coma%20Scale%20(GCS)/org.hl7.GlasgowComaScale(15pointversion)English-v0.75.pdf.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"6C9DE7307EE72E4041258332EA705382">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Repräsentation klinischer Reaktionen des Pflegebedürftigen auf definierte Impulse als eine objektive Bewertung des Bewusstseinsniveaus.">
+            keywords = <"Reaktion", "Motorik", "verbal", "Auge", "Anreiz", "Glasgow", "Koma", "Skala", "neurologisch", "Reaktionsfähigkeit", "EMV", "bewusst", "GCS", "Trauma", "Zentralnervensystem", "Bewusstsein">
+            use = <"Zur Repräsentation der klinischen Reaktionen eines erwachsenen Pflegebedürftigen auf Reize. Die Methode wird häufig verwendet, um den bewussten Ausgangszustand und die neurologische Funktion zu beurteilen und/oder um Patienten zu erkennen, die möglicherweise eine sofortige medizinische Intervention erfordern.
+
+Die Glasgower Komaskala hat drei Unterskalen E (Auge), V (verbal) und M (motorisch). In der klinischen Praxis werden alle drei Subskalen einzeln und ggf. mit der Gesamtbewertung\" angegeben.
+
+Eine protokollierte Rückmeldung für E, V und M ist verpflichtend. Wenn eine Reaktion nicht getestet werden kann, sollte der Nullwert \"Nicht zutreffend\" protokolliert werden; Verwenden Sie nicht den Ordinal Wert 'Keine Angaben', um eine fehlende Komponente zu erfassen. Einzelheiten über den Grund, warum eine Reaktion nicht getestet werden kann, können im Datenelement 'Störfaktoren' protokolliert werden.
+
+Die \"Gesamtbewertung\" kann als Summe der erfassten Augen-, motorischen und verbalen Reaktionswerte abgeleitet werden. Es ist nicht angebracht, eine \"Gesamtbewertung\" zu melden, wenn eine oder mehrere Komponenten nicht testbar sind, weil die Bewertung automatisch zu niedrig ist - in dieser Situation sollte stattdessen das EVM-Profil erfasst werden.
+
+Die drei Antwortvorgaben werden sowohl separat als auch in ihrer Gesamtheit betrachtet. Das 'EVM-Profil' kann als eine Verkettung der erfassten Augen-, motorischen und verbalen Antwort-Scores abgeleitet werden. E3 V4 M2 repräsentiert beispielsweise den Bewusstseinszustand eines Probanden, der die Augen für Sprache öffnet, unverständliche Laute ausstößt und eine Streckreaktion auf die Stimulation hat.
+
+Der minimal mögliche Wert der Gesamtbewertung beträgt 3 (entspricht E1 V1 M1) und der maximal mögliche Wert 15 (entspricht E4 V5 M6).
+
+In der Praxis wird die Glasgow-Koma-Skala als eine Komponente der klinischen Überwachung unter Verwendung von sequentiellen und wiederholten Punkt-im-Zeit-Messungen erfasst. Für jede Messung sollten Datum und Uhrzeit sowie alle Faktoren, die die Interpretation von Veränderungen beeinflussen können, protokolliert werden. Änderungen des \"Gesamtergebnisses\" oder der E-, V- oder M-Werte können ebenso viel klinische Bedeutung haben wie der ursprünglich gespeicherte Wert.
+
+">
+            misuse = <"Nicht zur Repräsentation von Säuglingen und Kleinkindern verwenden. Es wird ein Archetyp für die pädiatrische Glasgow-Koma-Skala benötigt, um zu gewährleisten, dass die Entscheidung für die Augen, die Motorik und die verbale Reaktion dem Alter und den Fähigkeiten des Kindes angemessen ist.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att mäta patientens kliniska reaktion till definierad stimuli som en objektiv bedömning av medvetandegrad.">
+            keywords = <"reaktion", "motorisk", "verbal", "ögon", "stimulans", "glasgow", "koma", "skala", "neurologisk", "reaktionsförmåga", "EMV", "vid medvetande", "GCS", "trauma", "centrala nervsystemet", "medvetandegrad">
+            use = <"Används för att registrera vuxna patienters kliniska reaktioner på stimuli. Det används vanligtvis för att fastställa medvetandegrad och neurologisk funktionsbedömning och/eller för att upptäcka patienter som kan kräva omedelbara medicinska insatser.
+
+GCS-skalan (Glasgow coma scale) har tre komponenter E (ögon), V (verbal) och M (motorisk). I klinisk praxis rapporteras alla tre komponenterna individuellt plus \"Totalpoäng\", om det är tillämpligt.
+
+Ett registrerat värde för varje E, V och är obligatorisk. Om ett värde inte kan testas, bör \"Ej tillämpligt\" registreras som nollvärde; använd inte värdet \"Ingen\" för att registrera en saknat värde. Detaljer om orsaken till att du inte kan testa ett svar kan registreras i fältet \"Påverkande faktorer\".
+
+Totalpoängen kan härledas som summan av mätta ögon-, motoriska- och verbala resultat. Det är inte lämpligt att rapportera \"Totalpoäng\" när en eller flera komponenter inte kan testas, eftersom poängen blir felaktigt låg - i sådana fall registrerar du EVM-profilen istället.
+
+De tre svarsvärdena betraktas separat såväl som deras summa. \"EVM-profilen\" kan härledas som en sammanlänkning av varje registrerat ögon-, motorisk- och verbala responsresultat. E3 V4 M2 beskriver t.ex. ett medvetande tillstånd hos en patient som öppnar ögon för tal, uttalar obegripliga ljud och har en extensorreflex på stimulans.
+
+Minsta möjliga \"Totalpoäng\" -värde är 3 (motsvarar E1 V1 M1) och högsta möjliga är 15 (ekvivalent med E4 V5 M6).
+
+I praktisk användning registreras GCS-skalan som en del av den klinisk övervakning. Den använder sig av sekvensmätningar och upprepade tidpunkts mätningar. Datum och tid bör registreras för varje mätning, liksom eventuella faktorer som kan påverka tolkningen av förändringar. Förändringar i \"Totalpoäng\" eller E, V eller M-värden kan ha lika mycket klinisk signifikans som det värde som ursprungligen registrerades.
+">
+            misuse = <"Används inte för att bedöma spädbarn och småbarn. En Pediatrisk Glasgow koma-skala arketyp kommer att krävas för att säkerställa att ögon- motoriska- och verbala reaktionen är lämpliga för barnets ålder och förmåga.">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Para el registro de las respuestas clínicas a estímulos definidos por parte de un sujeto de cuidados, como evaluación objetiva del nivel de conciencia.">
+            keywords = <"respuesta", "motora", "verbal", "ocular", "estímulo", "Glasgow", "coma", "escala", "neurológica", "respuesta", "OVM", "EVM", "conciente", "GCS", "trauma", "sistema nervioso central", "consciencia">
+            use = <"Utilizar para registrar respuestas clínicas a estímulos por parte de un adulto sujeto de cuidados. Se utiliza comunmente para establecer un nivel de conciencia y una evaluación de la función neurológico basales y/o para la detección de pacientes que puedan requerir una intervención médica inmediata.
+La escala de Glasgow tiene tres subescalas O (ocular), V (Verbal) y M (motora). En la práctica clínica todas las subclases son informadas individualmente junto con el \"Puntaje total\", si corresponde.
+El registro de cada respuesta O, V y M es obligatorio. Si una respuesta no puede ser evaluada, el valor nulo \"No aplica\" debe ser registrado; no utilizar el valor ordidnal \"Ninguna\" para registrar un componente ausente. Los detalles acerca de la razón por la cual no se pudo evaluar una respuesta puede ser registrada en el elemento \"Factores de confusión\".
+El \"Puntaje total\" puede ser derivado de la suma de los puntajes registrados para las respuestas ocular, verbal y motora. No es apropiado registrar un \"Puntaje total\" toda vez que uno o mas componentes no son evaluables ya que eso determinaría un puntaje artificialmente bajo. Es este caso debe registrarse el perfil OVM.
+Los valores para las tres respuestas deben ser considerados separadamente, al igual que como suma. El \"perfil OVM\" puede obtenerse mediante la concatenación de cada una de las respuestas ocular, verbal y motora registradas. Por ejemplo, O3 V4 M2 representa el estado consciente de un individuo que abre los ojos antes el estímulo verbal, emite sonidos incomprensibles y tiene una respuesta extensora al estímulo.
+El \"Puntaje total\" mínimo posible es de 3 (equivalente a O1 V1 M1) y el máximo posible es 15 (equivalente a O4 V5 M6).
+En el uso práctico, la escala del coma de Glasgow es registrada como uno de los componentes del monitoreo clínico, utilizando mediciones puntuales en el tiempo, secuenciales y repetidas. La fecha y la hora deben ser registradas en cada evaluación, al igual que cualquier factor que pueda influenciar la interpretación de los cambios. Los cambios en el \"Puntaje total\" o en cualquiera de los valores O, V o M pueden tener tanto significado clínico como el valor inicialmente registrado.">
+            misuse = <"No debe ser utilizada en niños - el arquetipo para la Escala del Coma de Glasgow Pediátrica se requerirá para asegurar que las respuestas ocular, verbal y motora sean las apropiadas para la edad y capacidades del niño.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere klinisk respons på spesifikk stimuli, som en objektiv vurdering av bevissthetsnivået til en pasient.">
+            keywords = <"respons", "motorikk", "verbal", "øye", "stimuli", "koma", "skala", "nevrologisk", "responsitivitet", "ØVM", "ØMV", "Bevisst", "GCS", "traume", "sentralnervesystemet", "bevisstløs", "CNS">
+            use = <"Brukes for å registrere den kliniske responsen på spesifikk stimuli hos en voksen pasient. Brukes vanligvis for å etablere en basis for bevissthetsnivå og nevrologisk funksjonsnivå og/eller for å fange opp pasienter som trenger en øyeblikkelig medisinsk intervensjon.
+
+Glasgow coma scale har tre subskalaer Ø (øye), V (Verbal) og M (Motorisk). I klinisk praksis rapporteres alle de tre subskalaene individuelt, samt \"Totalskår\" dersom aktuelt.
+
+En registrert respons på Ø, V og M er obligatorisk. I tilfeller der en respons ikke kan testes, skal null-verdien \"Not applicable\" registreres. Bruk ikke ordinalverdien \"Ingen\" for å registrere en manglende komponent. Detaljer om hvorfor en ikke var i stand til å utføre en eller flere av testene kan registreres i dataelementet \"Konfunderende faktorer\".
+
+\"Totalskår\" beregnes som en sum av verdiene registrert i datelementene for \"Åpning av øynene\", \"Verbal respons\" og \"Motorisk respons\". En skal ikke rapportere \"Totalskår\" når en eller flere komponenter ikke lar seg teste da skåringen vil bli kunstig lav - i slike situasjoner benyttes ØVM-profilen i stedet.
+
+De tre responsverdiene vurderes separat og som en totalskår. \"ØVM-profilen\" kan utledes som en sammensetning av hver enkelt av de registrerte skåringene for \"Åpning av øynene\", \"Verbal respons\" og \"Motorisk respons\". For eksempel vil Ø3 V4 M2 representere bevissthetstilstanden til et individ som åpner øyne ved tiltale, har en usammehengende tale, og reagerer med ekstensjon ved smertestimulering.
+
+En totalskår kan som et minimum ha verdien 3 (Tilsvarer Ø1, V1, M1) og en maksimumsverdi på 15 (Ø4, V5, M6).
+
+I praksis registreres Glasgow coma scale som en del av klinisk monitorering, målingene utføres sekvensielt og som gjentagende tidspunktmålinger. Dato og tid bør registreres for hver enkelt måling, på samme måte som faktorer som kan påvirke tolkning av målingen. Endringer i \"Totalskår\" eller verdiene Ø, V eller M har vanligvis en like stor klinisk betydning som verdien som først ble registrert.">
+            misuse = <"Brukes ikke for å vurdere spedbarn og små barn - en vil da måtte bruke en arketype for Paediatric Glasgow Coma Scale for å sikre at valgene knyttet til øyne, motorikk og verbal respons valg er best tilpasset barnets alder og evner.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Para registar informações clínicas sobre a resposta de um sujeito a estímulos como uma avaliação objetiva do estado de consciência de um sujeito.
+A escala de coma de Glasgow (ECG) é uma escala neurológica que parece constituir-se num método confiável e objetivo de registrar o nível de consciência de uma pessoa, para avaliação inicial e contínua após um traumatismo craniano.">
+            keywords = <"resposta", "motora", "verbal", "visual", "estímulo", "glasgow", "coma", "escala", "neurológicas", "responsividade", "OVM", "consciência", "ECG", "trauma", "sistema nervoso central", "inconsciente">
+            use = <"Use para registrar observações clínicas relacionadas a responsividade a estímulos de um indivíduo adulto. É utilizada comumente para estabelecer um nível de consciência basal e avaliação neurológica funcional e ou para detectar pacientes que possam necessitar intervenções médicas imediatas.
+
+Em termos práticos, a Escala de Coma de Glasgow é frequentemente calculada como variável de monitoramento, utilizando reavaliações sequenciais. Data e hora devem ser registradas para cada medida assim como fatores que possam influenciar na interpretação do score. Modificações no score total ou nos valores O, V ou M podem ter maior significado clínico que os valores registrados inicialmente.
+
+O Score Total é obtido como o somatório das respostas ocular, verbal e motora.
+
+Os três valores de resposta são considerados, bem como sua soma.
+
+O Score OVM é obtido da concatenação de cada score registrado para cada resposta (ocular, verbal e motora). Por exemplo, O3 V2 M2 representa indivíduo que abre os olhos ao chamado, emite sons incompreensíveis e apresenta padrão de extensão frente a estímulo doloroso.
+
+O menor valor possível do score é 3 (equivalente a O1 V1 M1) e o máximo possível é 15 (equivalente a O4 V5 M6).
+
+Um registro de resposta para cada O, V e M é mandatório. Se a resposta não puder ser determinada então a opção \"não se aplica\" é o registro apropriado. Se uma das respostas não puder ser acessada - por exemplo o indivíduo está entubado e não é capaz de responder verbalmente, ou paralisado e não é esperada resposta motora - o score registrado para esta resposta é 1 e um detalhe é registrado. Se um indivíduo está entubado o componente de resposta verbal pode ser representado como V1t, em que t = tubo, ou V1entubado. Se o indivíduo tem um edema facial ou periorbitário intenso ou lesões que o impeçam de abrir os olhos, o componente de resposta ocular pode ser representado como O1f, em que f=fechado. Ás vezes o valor numérico pode ser omitido, neste caso o componente de resposta ocular deve ser expresso como Of - por exemplo, Of V4 M2. O motivo de não ser possível acessar a resposta pode ser registrado no campo ´comentários´.
+
+Suporte a decisão clínica pode ser baseado em registros específicos para cada um dos padrões de respostas O, V e M em detrimento dos valores derivados do score composto.">
+            misuse = <"Não deve ser utilizado para avaliar recém nascidos e e crianças de colo - para tal, utilizar OBSERVATION.glasgow_coma-paediatric.v1.adl para garantir respostas apropriados para a idade e capacidade da criança.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record clinical responses of an adult to defined stimuli as an objective assessment of the level of consciousness.">
+            keywords = <"response", "motor", "verbal", "eye", "stimulus", "glasgow", "coma", "scale", "neurological", "responsiveness", "EMV", "conscious", "GCS", "trauma", "central nervous system", "consciousness">
+            use = <"Use to record clinical responses of an adult to defined stimuli as an objective assessment of the level of consciousness. It is commonly used to establish a baseline conscious state and neurological function assessment and/or to detect patients who may require immediate medical intervention.
+
+The Glasgow coma scale has three subscales E (eye), V (verbal) and M (motor). In clinical practice all three subscales are reported individually plus the 'Total score', if applicable.
+
+A recorded response for each of E, V and M is mandatory. If a response cannot be tested, then the 'Not Applicable' null flavour should be recorded; do not use the 'None' ordinal value to record a missing component. Details about the reason for not being able to test a response can be recorded in the 'Confounding factors' data element.
+
+The 'Total score' can be derived as the sum of the recorded eye, motor and verbal response scores. It is not appropriate to report a 'Total score' when one or more components are not testable because the score will be artificially low - in this situation record the EVM profile instead.
+
+The three response values are considered separately as well as their sum. The 'EVM profile' can be derived as a concatenation of each of the recorded eye, motor and verbal response scores. For example, E3 V4 M2 represents the conscious state of a subject who opens eyes to speech, utters incomprehensible sounds and has an extensor response to stimulation.
+
+The minimum possible 'Total score' value is 3 (equivalent to E1 V1 M1) and the maximum possible is 15 (equivalent to E4 V5 M6).
+
+In practical use, Glasgow coma scale is recorded as one component of clinical monitoring, using sequential and repeated point-in-time measurements. Date and time should be recorded for each measurement, as well as any factors that may influence interpretation of changes. Changes in 'Total score' or any E, V or M values may have as much clinical significance as the value recorded initially.">
+            misuse = <"Not to be used for assessing infants and young children - use OBSERVATION.glasgow_coma_scale_paediatric for this purpose to ensure that the eye, motor and verbal response choices are appropriate for the age and ability of the child.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Glasgow Coma Scale (GCS)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {3..*; unordered} matches {
+                                    ELEMENT[at0009] occurrences matches {1} matches {    -- Best eye response (E)
+                                        value matches {
+                                            DV_ORDINAL[at9004] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0010]}],    -- None
+                                                    [{2}, {[at0011]}],    -- To pressure
+                                                    [{3}, {[at0012]}],    -- To sound
+                                                    [{4}, {[at0013]}]    -- Spontaneous
+                                                }
+                                            }
+                                        }
+                                        null_flavour matches {
+                                            DV_CODED_TEXT[at9005] matches {
+                                                defining_code matches {[at9001]}    -- not applicable
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {1} matches {    -- Best verbal response (V)
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0014]}],    -- None
+                                                    [{2}, {[at0015]}],    -- Sounds
+                                                    [{3}, {[at0016]}],    -- Words
+                                                    [{4}, {[at0017]}],    -- Confused
+                                                    [{5}, {[at0018]}]    -- Orientated
+                                                }
+                                            }
+                                        }
+                                        null_flavour matches {
+                                            DV_CODED_TEXT[at9009] matches {
+                                                defining_code matches {[at9001]}    -- not applicable
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {1} matches {    -- Best motor response (M)
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0019]}],    -- None
+                                                    [{2}, {[at0020]}],    -- Extension
+                                                    [{3}, {[at0021]}],    -- Abnormal flexion
+                                                    [{4}, {[at0022]}],    -- Normal flexion
+                                                    [{5}, {[at0023]}],    -- Localising
+                                                    [{6}, {[at0024]}]    -- Obeys commands
+                                                }
+                                            }
+                                        }
+                                        null_flavour matches {
+                                            DV_CODED_TEXT[at9007] matches {
+                                                defining_code matches {[at9001]}    -- not applicable
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9010] matches {
+                                                magnitude matches {|3..15|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- EVM profile
+                                        value matches {
+                                            DV_TEXT[at9011]
+                                        }
+                                    }
+                                    ELEMENT[at0037] matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9012]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0040] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0041] matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9013]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0038] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0039] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Glasgow-Koma-Skala">
+                description = <"Fünfzehn-Punkte-Skala zur Beurteilung von Bewusstseinsbeeinträchtigungen als Reaktion auf definierte Stimulationen. Genauer bekannt als die Modifizierte Glasgow-Koma-Skala.">
+                comment = <"*More correctly known as the Modified Glasgow coma scale.(en)">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardmäßiger, nicht näher beschriebener Zeitpunkt oder Intervall Ereignis welches in einem Template oder bei der Anwendung genauer definiert werden kann.">
+            >
+            ["at0007"] = <
+                text = <"Beste verbale Reaktion (V)">
+                description = <"Beste verbale Reaktion auf den Test Reiz.">
+                comment = <"In den meisten Fällen wird der Wert für die verbale Reaktion aus einem der Ordinal Werte ausgewählt. Wenn jedoch eine Reaktion nicht getestet werden kann, z.B. wenn die betroffene Person intubiert wurde, sollte der \"Nicht zutreffende\" Nullwert protokolliert werden.">
+            >
+            ["at0008"] = <
+                text = <"Beste motorische Reaktion (M)">
+                description = <"Beste motorische Reaktion auf den Test Reiz.">
+                comment = <"In den meisten Fällen wird der Wert für die motorische Reaktion aus einem der Ordinal Werte ausgewählt. Wenn jedoch eine Reaktion nicht getestet werden kann, z.B. wenn die zu versorgende Person ihre Gliedmaßen aufgrund einer Verletzung oder Lähmung nicht bewegen kann, dann sollte der Nullwert \"Nicht zutreffend\" erfasst werden.">
+            >
+            ["at0009"] = <
+                text = <"Beste Augenreaktion (E)">
+                description = <"Beste Reaktion der Augen auf den Test Reiz.">
+                comment = <"In den meisten Fällen wird der Wert für die Augenreaktion aus einem der Ordinal Werte ausgewählt. Wenn jedoch eine Reaktion nicht getestet werden kann, z.B. wenn die zu behandelnde Person aufgrund anderer Verletzungen die Augen nicht physisch öffnen kann, sollte der Nullwert \"Nicht zutreffend\" protokolliert werden.">
+            >
+            ["at0010"] = <
+                text = <"Keine">
+                description = <"Zu keinem Zeitpunkt wird das Auge geöffnet, kein störender Faktor. Zum Beispiel: Augen durch lokale Schwellung geschlossen.">
+            >
+            ["at0011"] = <
+                text = <"Auf Druck">
+                description = <"Die Augen öffnen sich nach einem Stimulus mit den Fingerspitzen.">
+            >
+            ["at0012"] = <
+                text = <"Tonfall">
+                description = <"Nach gesprochener oder geschriener Aufforderung, öffnen sich die Augen. Nicht zu verwechseln mit dem Erwachen einer schlafenden Person.">
+            >
+            ["at0013"] = <
+                text = <"Spontan">
+                description = <"Die Augen sind vor der Stimulation geöffnet.">
+            >
+            ["at0014"] = <
+                text = <"Keine Angabe">
+                description = <"Keine hörbare Reaktion, kein störender Faktor. Zum Beispiel: Intubation; starke Schwerhörigkeit.">
+            >
+            ["at0015"] = <
+                text = <"Töne">
+                description = <"Nur Stöhnen/Grunzen.">
+            >
+            ["at0016"] = <
+                text = <"Worte">
+                description = <"Einzelne Wörter sind verständlich.">
+            >
+            ["at0017"] = <
+                text = <"Verwirrt">
+                description = <"Nicht orientiert, sondern schlüssig kommuniziert.">
+            >
+            ["at0018"] = <
+                text = <"Orientiert">
+                description = <"Korrekte Angabe von Name, Ort und Datum.">
+            >
+            ["at0019"] = <
+                text = <"Keine Angabe">
+                description = <"Keine Bewegung der Arme/Beine, kein störender Faktor. Zum Beispiel: gelähmt.">
+            >
+            ["at0020"] = <
+                text = <"Erweiterung">
+                description = <"Dezerebration der Streckung von Armen und/oder Beinen als Reaktion auf Reize. Zum Beispiel: streckt den Arm am Ellenbogen aus.">
+            >
+            ["at0021"] = <
+                text = <"Abnormale Beugung">
+                description = <"Langsame, schwach ausgeprägte Beugung der Arme und/oder Beine. Zum Beispiel: beugt den Arm am Ellenbogen, weist aber überwiegend abnorme Funktionen auf.">
+            >
+            ["at0022"] = <
+                text = <"Normale Beugung">
+                description = <"Die schnelle Beugung als Reaktion auf Reize, ist aber überwiegend normal. Zum Beispiel: Beugung des Handgelenks bei supra-orbitalem Druck; zieht einen Teil des Körpers weg, wenn das Nagelbett eingeklemmt ist.">
+            >
+            ["at0023"] = <
+                text = <"Lokalisierung">
+                description = <"Zielgerichtete Beugung in Richtung schmerzhafter Reize. Zum Beispiel: bringt die Hand über das Schlüsselbein, wenn supra-orbitaler Druck ausgeübt wird.">
+            >
+            ["at0024"] = <
+                text = <"Anweisungen folgen">
+                description = <"Folgt der mündlichen Aufforderung zur Bewegung.">
+            >
+            ["at0026"] = <
+                text = <"Gesamtauswertung">
+                description = <"Dies ist die Summe der für jede der drei Antwortkomponenten erfassten Ordinal Werte.">
+                comment = <"Die Gesamtauswertung kann als Summe der drei Antwortdatenelemente abgeleitet werden und ist in diesem Fall durch das klinische Informationssystem anhand der vom Kliniker eingegebenen Einzelwerte zu validieren, um zu gewährleisten, dass es keinen Konflikt oder eine Inkonsistenz gibt. Melden Sie keine Gesamtergebnisse, wenn einzelne oder mehrere Komponenten nicht prüfbar sind, weil das Ergebnis dadurch technisch zu niedrig ausfällt - in diesem Fall ist das EVM-Profil anzugeben.">
+            >
+            ["at0030"] = <
+                text = <"EVM-Profil">
+                description = <"Eine alternative Bewertung zum 'Total Score', bei der das Profil der Augenmotorik in drei diskreten Komponenten ausgedrückt wird.">
+                comment = <"Der EMV-Score lässt sich automatisch als eine Verkettung der drei Antwortdatenelemente ableiten und sollte, sofern dies der Fall ist, durch das klinische Informationssystem gegen die vom Kliniker eingegebenen individuellen Scores validiert werden, um zu gewährleisten, dass es keinen Konflikt oder eine Inkonsistenz gibt. Der Nullwert für \"Nicht zutreffend\" sollte als \"NT\" und für \"nicht getestet\" gemäß http://www.glasgowcomascale.org/ erfasst werden.">
+            >
+            ["at0037"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Beschreibung der Bemessung der Skala, die in anderen Bereichen nicht erfasst wurde.">
+                comment = <"Protokollieren Sie im Datenelement \"Störfaktoren\" die Gründe für die fehlende Testmöglichkeit.">
+            >
+            ["at0039"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen, die zur Erfassung lokaler Inhalte oder zur Anpassung an andere Referenzmodelle/Formalismen erforderlich sind.">
+                comment = <"Zum Beispiel: Lokale Informationsanforderungen oder zusätzliche Metadaten, um Verknüpfungen mit FHIR oder CIMI Äquivalenten herzustellen.
+">
+            >
+            ["at0041"] = <
+                text = <"Störfaktoren">
+                description = <"Beschreibung der Faktoren, die zur Bewertung des GCS beigetragen haben könnten.">
+                comment = <"Zum Beispiel: Taubheit, Aphasie, Sprachprobleme, Gebrauch von Beruhigungsmitteln, Unterkühlung; oder Lähmung, schwere Gesichts-/Augenschwellung oder Trachealintubation als Ursache für die Unfähigkeit, eine der normalen E-, V- oder M-Bewertungen zu erfassen.">
+            >
+            ["at9001"] = <
+                text = <"* not applicable (en)">
+                description = <"* not applicable (en)">
+            >
+            ["ac9013"] = <
+                text = <"Beste Augenreaktion (E) (synthesised)">
+                description = <"Beste Reaktion der Augen auf den Test Reiz. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Beste verbale Reaktion (V) (synthesised)">
+                description = <"Beste verbale Reaktion auf den Test Reiz. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Beste motorische Reaktion (M) (synthesised)">
+                description = <"Beste motorische Reaktion auf den Test Reiz. (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Glasgow Coma Scale (GCS)">
+                description = <"Femton poängs-skala som används för att bedöma nedsatt medvetandegrad av reaktion på definierade stimuli.">
+                comment = <"Mer korrekt känd som den Modifierade Glasgow koma-skalan.">
+            >
+            ["at0002"] = <
+                text = <"Tidpunkt">
+                description = <"Ospecificerad tidpunkt som tydligt kan definieras i en mall eller vid körning av program.">
+            >
+            ["at0007"] = <
+                text = <"Bästa verbala reaktion">
+                description = <"Bästa verbala reaktion till stimulanstest.">
+                comment = <"Oftast kommer poängen för verbal reaktion att väljas från ett av klassificeringstalen, men om en reaktion inte kan undersökas, t.ex. om patienten är intuberad, bör \"Ej tillämpligt\" registreras som nollvärde.">
+            >
+            ["at0008"] = <
+                text = <"Bästa motoriska reaktion">
+                description = <"Bästa motoriska reaktion på stimuleringstest.">
+                comment = <"Vanligtvis kommer poängen för motorisk reaktion att väljas från ett av klassificeringsvärdena, men om en reaktion inte kan testas, t.ex. om patienten inte kan flytta sina ben pga. skada eller förlamning, då bör nollvärdet \"Ej tillämpligt\" registreras.">
+            >
+            ["at0009"] = <
+                text = <"Bästa förmåga att öppna ögonen">
+                description = <"Bäst ögonreaktion efter stimulansundersökning.">
+                comment = <"Oftast kommer poängen för ögonreaktion att väljas från ett av klassificeringsvärdena, men om en reaktion inte kan undersökas, t.ex. om patienten inte fysiskt kan öppna sina ögon på grund av andra skador, bör \"Ej tillämpligt\" registreras som nollvärde.">
+            >
+            ["at0010"] = <
+                text = <"Ingen">
+                description = <"Ingen ögonöppning vid någon tidpunkt, ingen störande faktor, t.ex. stängda ögon p.g.a. lokal svullnad.">
+            >
+            ["at0011"] = <
+                text = <"Till tryck">
+                description = <"Ögonöppning efter fingertoppstimulans.">
+            >
+            ["at0012"] = <
+                text = <"Till ljud">
+                description = <"Ögonöppning efter talad eller ropad uppmaning. Bör inte förväxlas med väckning av en sovande person.">
+            >
+            ["at0013"] = <
+                text = <"Spontan">
+                description = <"Ögonöppning före stimulans.">
+            >
+            ["at0014"] = <
+                text = <"Ingen">
+                description = <"Ingen hörbar reaktion, ingen störande faktor, t.ex. intubation eller total dövhet.">
+            >
+            ["at0015"] = <
+                text = <"Ljud">
+                description = <"Bara stönar/jämrar sig.">
+            >
+            ["at0016"] = <
+                text = <"Ord">
+                description = <"Uttrycker enstaka begripliga ord.">
+            >
+            ["at0017"] = <
+                text = <"Desorienterad">
+                description = <"Desorienterad men kommunicerar sammanhängande.">
+            >
+            ["at0018"] = <
+                text = <"Fullt orienterad">
+                description = <"Återger namn, plats och datum korrekt.">
+            >
+            ["at0019"] = <
+                text = <"Ingen">
+                description = <"Ingen rörelse i armar/ben, ingen störande faktor, t.ex. förlamad.">
+            >
+            ["at0020"] = <
+                text = <"Utsträckning">
+                description = <"Decerebrat utsträckning av armar och/eller ben som reaktion på stimulering, t.ex. sträcker ut armen från armbågen.">
+            >
+            ["at0021"] = <
+                text = <"Onormal böjning">
+                description = <"Långsam, dekortikeringsstelhet vid böjning av armar och/eller ben, t.ex. böjer armen i armbågen, men funktionen är huvudsakligen onormal.">
+            >
+            ["at0022"] = <
+                text = <"Normal böjning">
+                description = <"Snabb böjning som reaktion på stimulering, men som har ett övervägande normalt utseende. T.ex.: böjning av handleden vid tillämpning av supra-orbitaltryck: drar sig undan när fingernagelbädden nyps.">
+            >
+            ["at0023"] = <
+                text = <"Lokalisering">
+                description = <"Ändamålsenlig böjning efter smärtstimulering, t.ex. lägger handen över nyckelbenet vid supra-orbitaltryck.">
+            >
+            ["at0024"] = <
+                text = <"Lyder kommando">
+                description = <"Lyder uppmaning om rörelse.">
+            >
+            ["at0026"] = <
+                text = <"Totalpoäng">
+                description = <"Poängsumman av klassificeringstalen som registrerats av reaktionen för var och en av de tre komponenterna.">
+                comment = <"Totalpoängen kan härledas som summan av de tre svarskomponenterna och i så fall bör det valideras av det kliniska informationssystemet mot de individuella poängen som matats in av behandlande läkare för att säkerställa att det inte finns någon konflikt eller inkonsekvens. Rapportera inte en totalpoäng när en eller flera komponenter inte kan testas eftersom poängen blir artificiellt låg – om så är fallet, registrera EVM-profilen.">
+            >
+            ["at0030"] = <
+                text = <"EVM-profil">
+                description = <"Alternativ bedömning till \"Totalpoäng\" där Ögon-, Verbala- och Motoriska- profilen uttrycks som tre separata komponenter.">
+                comment = <"EMV-poängen kan automatiskt härledas som en sammanlänkning av de tre svarskomponenterna och om så är fallet, bör valideras av det kliniska informationssystemet mot de individuella poängen som matats in av behandlande läkare för att säkerställa att det inte finns någon konflikt eller inkonsekvens. \"Ej tillämpligt\" nollvärdet bör registreras som \"NT\", för \"ej testat\" enligt http://www.glasgowcomascale.org/.">
+            >
+            ["at0037"] = <
+                text = <"Kommentarer">
+                description = <"Ytterligare beskrivning om mätningen av skalan som inte beskrivits i andra fält.">
+                comment = <"Beskriv orsakerna till oförmåga att undersöka i fältet \"Påverkande faktorer\".">
+            >
+            ["at0039"] = <
+                text = <"Övrig information">
+                description = <"Ytterligare information krävs för att fånga upp lokalt innehåll eller att anpassa sig till andra referensmodeller/formalismer.">
+                comment = <"T.ex. lokala informationskrav eller ytterligare metadata för att anpassa sig till FHIR- eller CIMI-ekvivalenter.">
+            >
+            ["at0041"] = <
+                text = <"Påverkande faktorer">
+                description = <"Beskrivning av faktorer som kan ha påverkat till GCS-poängen under mätningen.">
+                comment = <"Exempelvis: dövhet, afasi, språkproblem, användning av lugnande medel, hypotermi, eller förlamning, svår ansikts-/ögonsvullnad eller trakeal intubation som orsaker till oförmåga att registrera något av klassificeringstalen från E-, V- eller M-bedömningarna.">
+            >
+            ["at9001"] = <
+                text = <"* not applicable (en)">
+                description = <"* not applicable (en)">
+            >
+            ["ac9013"] = <
+                text = <"Bästa förmåga att öppna ögonen (synthesised)">
+                description = <"Bäst ögonreaktion efter stimulansundersökning. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Bästa verbala reaktion (synthesised)">
+                description = <"Bästa verbala reaktion till stimulanstest. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Bästa motoriska reaktion (synthesised)">
+                description = <"Bästa motoriska reaktion på stimuleringstest. (synthesised)">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"Escala del coma de Glasgow">
+                description = <"Escala de quince puntos para la evaluación del la consciencia en respuesta a estímulos definidos.">
+                comment = <"Mejor conocida como la escala del coma de Glasgow modificada.">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"*Default, unspecified event which may be explicitly defined in a template or at run-time.(en)">
+            >
+            ["at0007"] = <
+                text = <"Mejor respuesta verbal (V)">
+                description = <"Mejor respuesta verbal al estímulo de prueba.">
+                comment = <"En el caso mas común, el puntaje de la respuesta verbal será seleccionado como uno entre los valores ordinales. No obstante, si no se puede obtener una respuesta (si por ejemplo el sujeto se encuentra intubado) se registrará la opción de \"No aplicable\" para valor nulo.">
+            >
+            ["at0008"] = <
+                text = <"Mejor respuesta motora (M)">
+                description = <"Mejor respuesta motora al estímulo de prueba.">
+                comment = <"En el caso mas común, el puntaje de la respuesta motora será seleccionado como uno entre los valores ordinales. No obstante, si no se puede obtener una respuesta (si por ejemplo el sujeto no puede mover sus miembros por lesiones o parálisis) se registrará la opción de \"No aplicable\" para valor nulo.">
+            >
+            ["at0009"] = <
+                text = <"Mejor respuesta ocular (O)">
+                description = <"Mejor respuesta ocular a la prueba de estímulo.">
+                comment = <"En el caso mas común, el puntaje de la respuesta ocular será seleccionado como uno entre los valores ordinales. No obstante, si no se puede obtener una respuesta (si por ejemplo el sujeto es incapaz de abrir sus ojos debido a lesiones) se registrará la opción de \"No aplicable\" para valor nulo.">
+            >
+            ["at0010"] = <
+                text = <"Ninguna">
+                description = <"Sin apertura ocular en momento alguno, siempre y cuando no existan factores de interferencia (por ejemplo, ojos cerrados por inflamación local)">
+            >
+            ["at0011"] = <
+                text = <"A la presión">
+                description = <"Apertura ocular como respuesta al estimulo utilizando las puntas de los dedos del operador.">
+            >
+            ["at0012"] = <
+                text = <"Al sonido">
+                description = <"Apertura ocular como respuesta al habla o grito del operador. No debe confundirse con el despertar de una persona dormida.">
+            >
+            ["at0013"] = <
+                text = <"Espontanea">
+                description = <"Ojos abiertos sin necesidad de estímulos.">
+            >
+            ["at0014"] = <
+                text = <"Ninguna">
+                description = <"Sin respuesta audible, siempre y cuando no existan factores de interferencia (por ejemplo, intubación o sordera profunda).">
+            >
+            ["at0015"] = <
+                text = <"Sonidos">
+                description = <"Solo lamentos o gruñidos.">
+            >
+            ["at0016"] = <
+                text = <"Palabras">
+                description = <"Palabras simples e inteligibles.">
+            >
+            ["at0017"] = <
+                text = <"Confuso">
+                description = <"Desorientado pero se comunica en forma coherente.">
+            >
+            ["at0018"] = <
+                text = <"Orientado">
+                description = <"Proporciona correctamente su nombre, el lugar y la fecha.">
+            >
+            ["at0019"] = <
+                text = <"Ninguna">
+                description = <"Sin movimientos de brazos o piernas, siempre y cuando no existan factores de interferencia (por ejemplo, parálisis).">
+            >
+            ["at0020"] = <
+                text = <"Extensión">
+                description = <"Respuesta extensora de descerebración en piernas y/o brazos en respuesta al estímulo. Por ejemplo: extiende el brazo a nivel del codo.">
+            >
+            ["at0021"] = <
+                text = <"Flexión anormal">
+                description = <"Flexión de brazos y/o piernas en forma lenta con patrón de decorticación. Por ejemplo, flexiona el brazo a nivel del codo pero de modo predominantemente anormal.">
+            >
+            ["at0022"] = <
+                text = <"Flexión normal">
+                description = <"Flexión rápida en respuesta a estímulo pero de características predominantemente normales. Por ejemplo: flexión de la muñeca cuando se aplica presión supraorbitaria; retira parte del cuerpo ante un pinchazo.">
+            >
+            ["at0023"] = <
+                text = <"Localización">
+                description = <"Flexión volitiva frente al estímulo doloroso. Por ejemplo: acerca el brazo a la clavícula ante la aplicación de presión supraorbitaria.">
+            >
+            ["at0024"] = <
+                text = <"Obedece órdenes">
+                description = <"Realiza movimientos en respuesta a órdenes verbales.">
+            >
+            ["at0026"] = <
+                text = <"Puntaje total">
+                description = <"La suma de los puntajes ordinales registradas para cada una de las respuestas a los tres componentes.">
+                comment = <"El Puntaje Total puede ser calculado como la suma de las elementos de las tres respuestas y, si así fuera, debe ser validado por la información clínica del sistema frente a los puntajes individuales anotados por el clínico de modo que se pueda segurar la ausencia de conflictos o inconsistencias. No se debe registrar un puntaje total cuando uno o más componentes no pudo ser evaluado dado que el puntaje resultante sería artificialmente bajo. En esta situación se debe registrar el perfil OVM.">
+            >
+            ["at0030"] = <
+                text = <"Perfil OVM">
+                description = <"Evaluación alternativa al \"Puntaje total\", donde el perfil Ocular Verbal Motor es expresado como tres componentes discretos.">
+                comment = <"El puntaje OVM puede ser calculado automáticamente como la concatenación de los elementos de las tres respuestas y, si así fuera, debe ser validado por la información clínica del sistema frente a los puntajes individuales anotados por el clínico de modo que se pueda segurar la ausencia de conflictos o inconsistencias. El valor nulo \"No aplicable\" debería ser registrado como NT (por \"No testeado\") según se indica en http://www.glasgowcomascale.org/.">
+            >
+            ["at0037"] = <
+                text = <"Comentario">
+                description = <"Narrativa adicional acerca de la medición del puntaje que nu fué capturado en otros campos.">
+                comment = <"Registrar las razones para la imposibilidad de obtener una respuesta en el elemento \"Factores de confusión\".">
+            >
+            ["at0039"] = <
+                text = <"Extensión">
+                description = <"Información adicional requerida para contemplar contenidos locales o para alinear con otros modelos o formalismos de referencia.">
+                comment = <"Por ejemplo: requerimientos locales de información o metadatos adicionales necesarios para el alineamiento con FHIR o equivalentes de CIMI.">
+            >
+            ["at0041"] = <
+                text = <"Factores de confusión">
+                description = <"Registro narrativo de los factores que pueden haber contribuido a los puntajes de la escala de coma de Glasgow.">
+                comment = <"Por ejemplo: sordera; afasia; problemas de lenguaje; uso de sedantes; hiptermia; parálisis; inflamación facial u ocular severas o intubación traqueal como razones para ma imposibildad para resitrar cualquiera de los parámetros ordinales O, V o M.">
+            >
+            ["at9001"] = <
+                text = <"* not applicable (en)">
+                description = <"* not applicable (en)">
+            >
+            ["ac9013"] = <
+                text = <"Mejor respuesta ocular (O) (synthesised)">
+                description = <"Mejor respuesta ocular a la prueba de estímulo. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Mejor respuesta verbal (V) (synthesised)">
+                description = <"Mejor respuesta verbal al estímulo de prueba. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Mejor respuesta motora (M) (synthesised)">
+                description = <"Mejor respuesta motora al estímulo de prueba. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Glasgow Coma Scale">
+                description = <"En femtenpoengs skala som brukes for å anslå svekkelse av bevissthetsnivå ut fra et definert stimuli.">
+                comment = <"Skalaen er mer korrekt kalt Modified Glasgow Coma Scale.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i en template eller i en applikasjon.">
+            >
+            ["at0007"] = <
+                text = <"Verbal respons (V)">
+                description = <"Beste verbal respons på stimuli.">
+                comment = <"Vanligvis vil skår for verbalrespons velges fra en av ordinalverdiene, men i tilfeller hvor verbalrespons ikke kan testes for eksempel om pasienten er intubert, skal null-verdien \"Not Applicable\" registreres.">
+            >
+            ["at0008"] = <
+                text = <"Motorisk respons (M)">
+                description = <"Beste motoriske respons på stimuli.">
+                comment = <"Vanligvis vil skår for motorisk respons velges fra en av ordinalverdiene, men i tilfeller hvor en respons ikke kan testes for eksempel om pasienten ikke kan bevege lemmene som følge av skade eller lammelse skal null-verdien \"Not Applicable\" registreres.">
+            >
+            ["at0009"] = <
+                text = <"Åpning av øynene (Ø)">
+                description = <"Beste øyerespons ved stimuli.">
+                comment = <"Vanligvis vil skår for øyerespons velges fra en av ordinalverdiene, men i tilfeller hvor øyerespons ikke kan testes, for eksempel om pasienten ikke fysisk kan åpne øynene grunnet skade, skal null-verdien \"Not Applicable\" registreres.">
+            >
+            ["at0010"] = <
+                text = <"Ingen reaksjon">
+                description = <"Øynene åpnes ikke, ingen forstyrrende faktorer som for eksempel lukkede øyne på grunn av lokal hevelse.">
+            >
+            ["at0011"] = <
+                text = <"Ved smertestimulering">
+                description = <"Åpner øynene etter stimulering av fingertuppen.">
+            >
+            ["at0012"] = <
+                text = <"Ved tiltale">
+                description = <"Øynene åpnes ved tiltale eller ved roping. Må ikke forveksles med vekking av en sovende person.">
+            >
+            ["at0013"] = <
+                text = <"Spontant">
+                description = <"Øyne åpnes spontant uten stimuli.">
+            >
+            ["at0014"] = <
+                text = <"Ingen reaksjon">
+                description = <"Ingen hørbar respons og ingen forstyrrende faktorer, som for eksempel intubasjon eller døvhet.">
+            >
+            ["at0015"] = <
+                text = <"Uforståelige lyder">
+                description = <"Bare stønning/jamring.">
+            >
+            ["at0016"] = <
+                text = <"Usammenhengende tale">
+                description = <"Forståelige enkeltord.">
+            >
+            ["at0017"] = <
+                text = <"Forvirret, desorientert">
+                description = <"Ikke orientert men kommuniserer sammenhengende.">
+            >
+            ["at0018"] = <
+                text = <"Orientert">
+                description = <"Oppgir riktig navn, sted og dato.">
+            >
+            ["at0019"] = <
+                text = <"Ingen reaksjon">
+                description = <"Ingen bevegelse i armer/bein, ingen forstyrrende faktorer som for eksempel lammelser.">
+            >
+            ["at0020"] = <
+                text = <"Ekstensjon ved smerte">
+                description = <"Decerebrert ekstensjon av armer og/eller bein som respons på stimuli. For eksempel kan armen ekstenderes ved albuen.">
+            >
+            ["at0021"] = <
+                text = <"Abnormal fleksjon">
+                description = <"Sakte, decortikert fleksjon av armer og/eller bein. For eksempel kan armen bøyes ved albuen, men trekkene er hovedsakelig abnormale.">
+            >
+            ["at0022"] = <
+                text = <"Normal fleksjon">
+                description = <"Hurtig fleksjon som respons på stimuli, men trekkene er hovedsakelig normale. For eksempel kan håndleddet bøyes når det utføres supraorbitalt trykk, eller lemmet trekkes til seg ved trykk på negleroten.">
+            >
+            ["at0023"] = <
+                text = <"Lokaliserer smerte">
+                description = <"Målrettet fleksjon mot smertestimuli. For eksempel kan hånden løftes til over kragebeinet når det utføres supraorbitalt trykk.">
+            >
+            ["at0024"] = <
+                text = <"Følger oppfordringer">
+                description = <"Følger verbal oppfordring for bevegelse.">
+            >
+            ["at0026"] = <
+                text = <"Totalskår">
+                description = <"Sum av verdiene som er registrert for hver enkelt av de tre undersøkelsesdelene.">
+                comment = <"Totalskåren kan regnes ut ved å summere de tre undersøkelsesdelene. Totalskår skal ikke regnes ut når en eller flere undersøkelsesdeler ikke er mulig å gjennomføre, fordi skåren da vil bli kunstig lav. I disse situasjonene skal ØVM-profilen registreres.">
+            >
+            ["at0030"] = <
+                text = <"ØVM-profil">
+                description = <"Alternativ til Totalskår der responsen til Øye, Verbal og Motorisk er uttrykt som tre separate verdier.">
+                comment = <"ØVM-profilen kan genereres automatisk ved å sette sammen de tre undersøkelsesdelene. Hvis dette gjøres bør resultatet sammenlignes mellom det som det som det kliniske informasjonssystemet presenterer og det som klinikere har registrert for å utelukke konflikter eller inkonsistens. Nullverdien \"Not applicable\" registreres som \"IT\", for \"ikke testet\", som beskrevet på http://www.glasgowcomascale.org/.">
+            >
+            ["at0037"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om målingen som ikke er fanget i andre felt.">
+                comment = <"Registrer årsaker for at testen ikke var gjennomførbar i dataelementet \"Konfunderende faktorer\".">
+            >
+            ["at0039"] = <
+                text = <"Utvidelse">
+                description = <"Ytterligere informasjon som er nødvendig for å sammenstille med andre referansemodeller/formalismer.
+">
+                comment = <"For eksempel: lokale informasjonskrav eller ekstra metadata for å samsvare med FHIR eller CIMI ekvivalenter.">
+            >
+            ["at0041"] = <
+                text = <"Konfunderende faktorer">
+                description = <"Fritekst om faktorer som kan ha bidratt til GCS-skåringene.">
+                comment = <"For eksempel: Døvhet, afasi, språkproblemer, bruk av beroligende medisin, hypotermi eller paralyser, alvorlige hevelser i ansikt/øyne, trakeal intubasjon som årsaker til at en ikke kunne registrere en eller flere av ordinalene i Ø-, V- eller M-vurderingene.">
+            >
+            ["at9001"] = <
+                text = <"* not applicable (en)">
+                description = <"* not applicable (en)">
+            >
+            ["ac9013"] = <
+                text = <"Åpning av øynene (Ø) (synthesised)">
+                description = <"Beste øyerespons ved stimuli. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Verbal respons (V) (synthesised)">
+                description = <"Beste verbal respons på stimuli. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Motorisk respons (M) (synthesised)">
+                description = <"Beste motoriske respons på stimuli. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Escala de Coma de Glasgow">
+                description = <"Escala de 15 pontos utilizada para avaliar alterações de consciência relacionadas a determinados estímulos.">
+                comment = <"Melhor descrita como Escala de Coma de Glasgow modificada.">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"*Default, unspecified event which may be explicitly defined in a template or at run-time.(en)">
+            >
+            ["at0007"] = <
+                text = <"Melhor Resposta Verbal (V)">
+                description = <"Melhor resposta verbal ao estímulo-teste.">
+                comment = <"Mais comumente, o score da resposta verbal é selecionado entre valores ordinais, entretanto se uma resposta não puder ser testada, por exemplo se o sujeito do cuidado estiver intubado, então o valor nulo \"Não Aplicável\" deve ser registrado.">
+            >
+            ["at0008"] = <
+                text = <"Melhor Resposta Motora (M)">
+                description = <"Melhor resposta motora ao estímulo-teste.">
+                comment = <"Mais comumente, o score da resposta verbal é selecionado entre valores ordinais, entretanto se uma resposta não puder ser testada, por exemplo se o sujeito do cuidado não puder mexer as pernas em decorrência de uma lesão ou paralisia, então o valor nulo \"Não Aplicável\" deve ser registrado.">
+            >
+            ["at0009"] = <
+                text = <"Melhor Resposta Ocular (O)">
+                description = <"Melhor resposta ocular ao estímulo-teste.">
+                comment = <"Mais comumente, o score da resposta ocular é selecionado entre valores ordinais, entretanto se uma resposta não puder ser testada, por exemplo se o sujeito do cuidado estiver impossibilitado de abrir os olhos por outras lesões, então o valor nulo \"Não Aplicável\" deve ser registrado.">
+            >
+            ["at0010"] = <
+                text = <"Ausente">
+                description = <"Ausência de abertura ocular em qualquer momento, na ausência de fatores interferentes. Por exemplo: olhos fechados por edema local.">
+            >
+            ["at0011"] = <
+                text = <"À pressão">
+                description = <"Abertura ocular após estímulo digital.">
+            >
+            ["at0012"] = <
+                text = <"A sons">
+                description = <"Abertura ocular após solicitação oral. Não confundir com despertar de uma pessoa dormindo.">
+            >
+            ["at0013"] = <
+                text = <"Espontânea">
+                description = <"Olhos abertos mesmo antes de qualquer estímulo.">
+            >
+            ["at0014"] = <
+                text = <"Ausente">
+                description = <"Ausência de resposta audível na ausência de fatores interferentes. Por exemplo: intubação orotraqueal ou surdez.">
+            >
+            ["at0015"] = <
+                text = <"Sons">
+                description = <"Apenas gemidos, grunhidos, sons incompreensíveis.">
+            >
+            ["at0016"] = <
+                text = <"Palavras">
+                description = <"Palavras inteligíveis.">
+            >
+            ["at0017"] = <
+                text = <"Confuso">
+                description = <"Desorientado mas comunica-se coerentemente.">
+            >
+            ["at0018"] = <
+                text = <"Orientado">
+                description = <"Diz o nome, local e data corretamente.">
+            >
+            ["at0019"] = <
+                text = <"Ausente">
+                description = <"Ausência de movimento de braços e pernas na ausência de fatores interferentes. Por exemplo: paralisia.">
+            >
+            ["at0020"] = <
+                text = <"Extensão">
+                description = <"Postura em descerebração de braços e pernas em resposta ao estímulo. Extensão do antebraço e cotovelo.">
+            >
+            ["at0021"] = <
+                text = <"Flexão anormal">
+                description = <"Postura em decorticação, lenta, de braços e/ou pernas. Por exemplo: flexão do cotovelo porém predominantemente anormal.">
+            >
+            ["at0022"] = <
+                text = <"Flexão normal">
+                description = <"Flexão rápida em resposta ao estímulo, normal. Por exemplo: retirada da mão quando estimulado o leito ungueal.">
+            >
+            ["at0023"] = <
+                text = <"Localiza">
+                description = <"Flexão organizada em resposta a estímulo doloroso. Por exemplo: traz a mão para tentar retirar a fonte do estímulo.">
+            >
+            ["at0024"] = <
+                text = <"Obedece comandos">
+                description = <"Segue uma ordem para movimento.">
+            >
+            ["at0026"] = <
+                text = <"Score Total">
+                description = <"A soma dos pontos referentes a cada componente testado.">
+                comment = <"O Score Total pode ser obtido através da soma da resposta dos três elementos, como também, pode ser validado pelos sistemas de informações clínicas contra scores registrados por clínicos para garantir ausência de conflitos ou inconsistências. Não relatar um score total quando um ou mais dos componentes não forem testados porque o score ficará artificialmente baixo - nesta situação registrar o perfil OVM.">
+            >
+            ["at0030"] = <
+                text = <"Perfil OVM">
+                description = <"Alternativa ao 'Score Total' em que o perfil Ocular Verbal Motor é expresso em três componentes.">
+                comment = <"O Score OVM pode ser derivado automaticamente através da concatenação das respostas de cada elemento; neste contexto deve ser validado pelos sistemas de informações clínicas contra scores registrados por clínicos para garantir ausência de conflitos ou inconsistências. O valor nulo 'Não Aplicável' deve ser registrado como 'NT', para 'não testado' como sugerido em http://www.glasgowcomascale.org/.">
+            >
+            ["at0037"] = <
+                text = <"Comentários">
+                description = <"Narrativa adicional sobre a aquisição do score não pertinente a outros campos.">
+                comment = <"Registrar as razões para a impossibilidade de testar no elemento 'Fatores de confusão'.">
+            >
+            ["at0039"] = <
+                text = <"Extensão">
+                description = <"Informações adicionais necessárias para alinhar com outros modelos/formalismo de referência.">
+                comment = <"Por exemplo: informações requeridas localmente ou metadados adicionais para alinhar com equivalentes a FHIR ou CIMI.">
+            >
+            ["at0041"] = <
+                text = <"Fatores de confusão">
+                description = <"Relato de fatores que podem ter contribuído para o score.">
+                comment = <"Por exemplo: surdez, afasia, questões de linguagem, uso de sedativos, hipotermia, paralisia, edema facial ou periorbitário grave ou intubação oro-traqueal como razões de impossibilidade de registrar um dos valores ordinais nos domínios O, V ou M.">
+            >
+            ["at9001"] = <
+                text = <"* not applicable (en)">
+                description = <"* not applicable (en)">
+            >
+            ["ac9013"] = <
+                text = <"Melhor Resposta Ocular (O) (synthesised)">
+                description = <"Melhor resposta ocular ao estímulo-teste. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Melhor Resposta Verbal (V) (synthesised)">
+                description = <"Melhor resposta verbal ao estímulo-teste. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Melhor Resposta Motora (M) (synthesised)">
+                description = <"Melhor resposta motora ao estímulo-teste. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Glasgow Coma Scale (GCS)">
+                description = <"Fifteen point scale used to assess impairment of consciousness in response to defined stimuli.">
+                comment = <"More correctly known as the Modified Glasgow coma scale.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0007"] = <
+                text = <"Best verbal response (V)">
+                description = <"Best verbal response to test stimulus.">
+                comment = <"Most commonly, the score for verbal response will be selected from one of the ordinal values, however if a response cannot be tested, for example if the subject of care is intubated, then the \"Not Applicable\" null flavour should be recorded.">
+            >
+            ["at0008"] = <
+                text = <"Best motor response (M)">
+                description = <"Best motor response to test stimulus.">
+                comment = <"Most commonly, the score for motor response will be selected from one of the ordinal values, however if a response cannot be tested, for example if the subject of care cannot move their limbs due to injury or paralysis, then the \"Not Applicable\" null flavour should be recorded.">
+            >
+            ["at0009"] = <
+                text = <"Best eye response (E)">
+                description = <"Best response of eyes to test stimulus.">
+                comment = <"Most commonly, the score for eye response will be selected from one of the ordinal values, however if a response cannot be tested, for example if the subject of care cannot physically open their eyes due to other injuries, then the \"Not Applicable\" null flavour should be recorded.">
+            >
+            ["at0010"] = <
+                text = <"None">
+                description = <"No eye opening at any time, no interfering factor. For example: eyes closed by local swelling.">
+            >
+            ["at0011"] = <
+                text = <"To pressure">
+                description = <"Eyes opening after finger tip stimulus.">
+            >
+            ["at0012"] = <
+                text = <"To sound">
+                description = <"Eyes opening after spoken or shouted request. Not to be confused with wakening of a sleeping person.">
+            >
+            ["at0013"] = <
+                text = <"Spontaneous">
+                description = <"Eyes open before stimulus.">
+            >
+            ["at0014"] = <
+                text = <"None">
+                description = <"No audible response, no interfering factor. For example: intubation; profound deafness.">
+            >
+            ["at0015"] = <
+                text = <"Sounds">
+                description = <"Only moans/groans.">
+            >
+            ["at0016"] = <
+                text = <"Words">
+                description = <"Intelligible single words.">
+            >
+            ["at0017"] = <
+                text = <"Confused">
+                description = <"Not orientated but communicates coherently.">
+            >
+            ["at0018"] = <
+                text = <"Orientated">
+                description = <"Correctly gives name, place and date.">
+            >
+            ["at0019"] = <
+                text = <"None">
+                description = <"No movement in arms/legs, no interfering factor. For example: paralysed.">
+            >
+            ["at0020"] = <
+                text = <"Extension">
+                description = <"Decerebrate extension of arms and/or legs in response to stimuli. For example: extends arm at elbow.">
+            >
+            ["at0021"] = <
+                text = <"Abnormal flexion">
+                description = <"Slow, decorticate flexion of arms and/or legs. For example: bends arm at elbow, but features predominantly abnormal.">
+            >
+            ["at0022"] = <
+                text = <"Normal flexion">
+                description = <"Rapid flexion in response to stimuli but features predominantly normal. For example: flexion of wrist when supra-orbital pressure applied; pulls part of body away when nailbed pinched.">
+            >
+            ["at0023"] = <
+                text = <"Localising">
+                description = <"Purposeful flexion towards painful stimuli. For example: brings hand above the clavicle when supra-orbital pressure is applied.">
+            >
+            ["at0024"] = <
+                text = <"Obeys commands">
+                description = <"Follows verbal request for movement.">
+            >
+            ["at0026"] = <
+                text = <"Total score">
+                description = <"The sum of the ordinal scores recorded for each of the three component responses.">
+                comment = <"The Total Score may be derived as the sum of the three response data elements and, if so, should be validated by the clinical information system against the individual scores entered by the clinician to ensure there is no conflict or inconsistency. Do not report a total score when one or more components are not testable because the score will be artificially low - in this situation record the EVM profile.">
+            >
+            ["at0030"] = <
+                text = <"EVM profile">
+                description = <"Alternative assessment to 'Total Score' where the Eye Verbal Motor profile is expressed as three discrete components.">
+                comment = <"The EMV Score may be automatically derived as a concatenation of the three response data elements and, if so, should be validated by the clinical information system against the individual scores entered by the clinician to ensure there is no conflict or inconsistency. The 'Not applicable' null flavour value should be recorded as 'NT', for 'not tested' as per http://www.glasgowcomascale.org/.">
+            >
+            ["at0037"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the measurement of the scale not captured in other fields.">
+                comment = <"Record the reasons for inability to test in the 'Confounding factors' data element.">
+            >
+            ["at0039"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0041"] = <
+                text = <"Confounding factors">
+                description = <"Narrative record of factors that may have contributed to the GCS scores.">
+                comment = <"For example: deafness; aphasia; language issues; use of sedatives; hypothermia; or paralysis, severe facial/eye swelling or tracheal intubation as reasons for inability to record any one of the ordinal E, V or M assessments.">
+            >
+            ["at9001"] = <
+                text = <"not applicable">
+                description = <"not applicable">
+            >
+            ["ac9013"] = <
+                text = <"Best eye response (E) (synthesised)">
+                description = <"Best response of eyes to test stimulus. (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Best verbal response (V) (synthesised)">
+                description = <"Best verbal response to test stimulus. (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Best motor response (M) (synthesised)">
+                description = <"Best motor response to test stimulus. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/273>
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0010", "at0011", "at0012", "at0013">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0014", "at0015", "at0016", "at0017", "at0018">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0019", "at0020", "at0021", "at0022", "at0023", "at0024">
+        >
+    >

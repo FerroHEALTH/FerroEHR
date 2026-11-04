@@ -1,0 +1,540 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d2d359f9-6672-4209-9940-c2f6474efbaa; build_uid=c82c3694-831f-4a81-aa54-3f40fc15205b)
+    openEHR-EHR-INSTRUCTION.service_request-imaging_examination.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-INSTRUCTION.service_request.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Alina Rehberg, Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"rehberg.alina@mh-hannover.de, Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Sofia Janstad">
+                ["organisation"] = <"SLL">
+                ["email"] = <"sofia.lang-janstad@sll.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke, Marit Alice Venheim">
+                ["organisation"] = <"Nasjonal IKT HF, Norway, Helse Vest IKT">
+                ["email"] = <"marit.alice.venheim@helse-vest-ikt.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Vladimir Pizzo">
+                ["organisation"] = <"Clínica Parente Pizzo">
+                ["email"] = <"vrppizzo@gmail.com">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            author = <
+                ["name"] = <"Francesca Frexia">
+                ["organisation"] = <"CRS4 - Center for advanced studies, research and development in Sardinia, Pula (Cagliari), Italy">
+                ["email"] = <"francesca.frexia@crs4.it">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Mattijs Kuhlmann, Joost Holslag">
+                ["organisation"] = <"Nedap">
+                ["email"] = <"mattijs.kuhlmann@nedap.com, joost.holslag@nedap.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Dr Heather Leslie">
+        ["organisation"] = <"Atomica Informatics, Australia">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2024-04-04">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Fatima Almeida, Critical SW, Portugal", "Tomas Alme, DIPS ASA, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Anita Bjørnnes, Helse Bergen, Norway", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Einar Fosse, UNN HF, Norwegian Centre for Integrated Care and Telemedicine, Norway", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom", "Heather Grain, Llewelyn Grain Informatics, Australia", "Knut Harboe, Stavanger Universitetssjukehus, Norway", "Sam Heard, Ocean Informatics, Australia", "Ingrid Heitmann, Oslo universitetssykehus HF, Norway", "Andreas Hering, Helse Bergen HF, Haukeland universitetssjukehus, Norway", "Anca Heyd, DIPS ASA, Norway", "Hilde Hollås, DIPS AS, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Shinji Kobayashi, Kyoto University, Japan", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hallvard Lærum, Direktoratet for e-helse, Norway", "Rose Mari Eikås, Helse Bergen, Norway", "Ole Martin Sand, DIPS ASA, Norway", "Hildegard McNicoll, freshEHR Clinical Informatics Ltd., United Kingdom", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Anne Pauline Anderssen, Helse Nord RHF, Norway", "Pablo Pazos, CaboLabs.com Health Informatics, Uruguay", "Rune Pedersen, Universitetssykehuset i Nord Norge, Norway", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Line Sæle, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Richard Townley-O'Neill, Australian Digital Health Agency, Australia", "Gro-Hilde Ulriksen, Norwegian center for ehealthresearch, Norway">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Anecdotal evidence provided by existing imaging service request forms.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"6C82B1DE8CA556BE461E24C6F3EE765C">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To record a request for an imaging examination service. (en)">
+            keywords = <"Anfrage", "Bestellung", "Dienst", "Bereitstellung", "Empfehlung", "Überweisung">
+            use = <"*Use to record a request for an imaging examination service.
+
+The archetype has been designed to represent a request for one or more imaging examination services, in one of two ways:
+- If multiple services need to be requested but the information recorded in the 'protocol' (for example 'Receiver') is the same - use a separate 'Activity' instance within this archetype for each request. The user interface in the clinical system may be able to support duplication of request details such as 'Clinical Indication', 'Reason for request', and 'Service due') where these are identical for each activity.
+- If multiple services need to be requested and the information recorded in the 'protocol' (for example 'Receiver') is different - use a separate instance of this archetype for each request.
+
+The 'Service due' data element supports common use cases for stipulating the simple timing for delivery of the request/s on a single occasion. For situations with more complicated timing requirements or a series of services, use the CLUSTER.service_direction archetype within the 'Complex timing' SLOT.
+
+Implementation examples:
+- Consider a clinician ordering an ultrasound of the left leg to exclude a deep venous thrombosis - the 'Service name' will be 'Ultrasound left lower leg'; the 'Clinical indication' may be 'swollen left ankle'; the 'Reason for request' may be 'exclude DVT'; the 'Clinical context' may be 'gradually increasing pitting oedema to mid-calf in the left leg over the past 3 days'. The 'Service name' may be a precoordinated term, which can be deconstructed and stored in its' component data elements - 'Modality' as 'Ultrasound'; 'Target body site' as 'Left lower leg'.
+- Consider a clinician ordering a barium enema - the 'Service name' will be 'Barium enema'; the 'Clinical indication' may be 'Ulcerative colitis'; the 'Reason for request' may be 'Assess progression of stricture'.
+- A clinical system user interface may provide the clinician with separate data elements for 'Modality' and 'Target body site', each with searchable specific value sets, and concatenate them into the 'Test name' field.
+
+In many situations, it will be possible to record the steps that occur as part of this request being carried out using the corresponding generic ACTION.service. However, there will be many occasions where the required ACTION archetype will be very specific for purpose, as the data requirements for recording provision of many health-related services will need quite unique data elements, recording patterns or pathway steps. For example: ACTION.screening or ACTION.health_education. (en)">
+            misuse = <"*Not to be used to record details about the activities that document how an order or request has been carried out - use an ACTION archetype for this purpose. For example ACTION.service archetype or a more purpose-specific archetype from the ACTION class for this purpose.
+
+Not to be used to record an Imaging examination result - use the OBSERVATION.imaging_examination_result for this purpose. (en)">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"*To record a request for an imaging examination service. (en)">
+            keywords = <"remiss", "förfrågan", "beställning", "tjänst", "tillhandahålla", "patientremittering">
+            use = <"*Use to record a request for an imaging examination service.
+
+The archetype has been designed to represent a request for one or more imaging examination services, in one of two ways:
+- If multiple services need to be requested but the information recorded in the 'protocol' (for example 'Receiver') is the same - use a separate 'Activity' instance within this archetype for each request. The user interface in the clinical system may be able to support duplication of request details such as 'Clinical Indication', 'Reason for request', and 'Service due') where these are identical for each activity.
+- If multiple services need to be requested and the information recorded in the 'protocol' (for example 'Receiver') is different - use a separate instance of this archetype for each request.
+
+The 'Service due' data element supports common use cases for stipulating the simple timing for delivery of the request/s on a single occasion. For situations with more complicated timing requirements or a series of services, use the CLUSTER.service_direction archetype within the 'Complex timing' SLOT.
+
+Implementation examples:
+- Consider a clinician ordering an ultrasound of the left leg to exclude a deep venous thrombosis - the 'Service name' will be 'Ultrasound left lower leg'; the 'Clinical indication' may be 'swollen left ankle'; the 'Reason for request' may be 'exclude DVT'; the 'Clinical context' may be 'gradually increasing pitting oedema to mid-calf in the left leg over the past 3 days'. The 'Service name' may be a precoordinated term, which can be deconstructed and stored in its' component data elements - 'Modality' as 'Ultrasound'; 'Target body site' as 'Left lower leg'.
+- Consider a clinician ordering a barium enema - the 'Service name' will be 'Barium enema'; the 'Clinical indication' may be 'Ulcerative colitis'; the 'Reason for request' may be 'Assess progression of stricture'.
+- A clinical system user interface may provide the clinician with separate data elements for 'Modality' and 'Target body site', each with searchable specific value sets, and concatenate them into the 'Test name' field.
+
+In many situations, it will be possible to record the steps that occur as part of this request being carried out using the corresponding generic ACTION.service. However, there will be many occasions where the required ACTION archetype will be very specific for purpose, as the data requirements for recording provision of many health-related services will need quite unique data elements, recording patterns or pathway steps. For example: ACTION.screening or ACTION.health_education. (en)">
+            misuse = <"*Not to be used to record details about the activities that document how an order or request has been carried out - use an ACTION archetype for this purpose. For example ACTION.service archetype or a more purpose-specific archetype from the ACTION class for this purpose.
+
+Not to be used to record an Imaging examination result - use the OBSERVATION.imaging_examination_result for this purpose. (en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"*To record a request for an imaging examination service. (en)">
+            keywords = <"rekvisisjon", "bestilling", "foreskriving", "tjeneste", "tjenesteyter", "rekvirere", "bestille", "anmodning", "forespørre", "forespørsel", "anmode", "tilsyn">
+            use = <"*Use to record a request for an imaging examination service.
+
+The archetype has been designed to represent a request for one or more imaging examination services, in one of two ways:
+- If multiple services need to be requested but the information recorded in the 'protocol' (for example 'Receiver') is the same - use a separate 'Activity' instance within this archetype for each request. The user interface in the clinical system may be able to support duplication of request details such as 'Clinical Indication', 'Reason for request', and 'Service due') where these are identical for each activity.
+- If multiple services need to be requested and the information recorded in the 'protocol' (for example 'Receiver') is different - use a separate instance of this archetype for each request.
+
+The 'Service due' data element supports common use cases for stipulating the simple timing for delivery of the request/s on a single occasion. For situations with more complicated timing requirements or a series of services, use the CLUSTER.service_direction archetype within the 'Complex timing' SLOT.
+
+Implementation examples:
+- Consider a clinician ordering an ultrasound of the left leg to exclude a deep venous thrombosis - the 'Service name' will be 'Ultrasound left lower leg'; the 'Clinical indication' may be 'swollen left ankle'; the 'Reason for request' may be 'exclude DVT'; the 'Clinical context' may be 'gradually increasing pitting oedema to mid-calf in the left leg over the past 3 days'. The 'Service name' may be a precoordinated term, which can be deconstructed and stored in its' component data elements - 'Modality' as 'Ultrasound'; 'Target body site' as 'Left lower leg'.
+- Consider a clinician ordering a barium enema - the 'Service name' will be 'Barium enema'; the 'Clinical indication' may be 'Ulcerative colitis'; the 'Reason for request' may be 'Assess progression of stricture'.
+- A clinical system user interface may provide the clinician with separate data elements for 'Modality' and 'Target body site', each with searchable specific value sets, and concatenate them into the 'Test name' field.
+
+In many situations, it will be possible to record the steps that occur as part of this request being carried out using the corresponding generic ACTION.service. However, there will be many occasions where the required ACTION archetype will be very specific for purpose, as the data requirements for recording provision of many health-related services will need quite unique data elements, recording patterns or pathway steps. For example: ACTION.screening or ACTION.health_education. (en)">
+            misuse = <"*Not to be used to record details about the activities that document how an order or request has been carried out - use an ACTION archetype for this purpose. For example ACTION.service archetype or a more purpose-specific archetype from the ACTION class for this purpose.
+
+Not to be used to record an Imaging examination result - use the OBSERVATION.imaging_examination_result for this purpose. (en)">
+            copyright = <"© openEHR Foundation, Nasjonal IKT HF">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*To record a request for an imaging examination service. (en)">
+            keywords = <"solicitação", "requisição", "ordem", "pedido", "serviço", "referência", "encaminhamento">
+            use = <"*Use to record a request for an imaging examination service.
+
+The archetype has been designed to represent a request for one or more imaging examination services, in one of two ways:
+- If multiple services need to be requested but the information recorded in the 'protocol' (for example 'Receiver') is the same - use a separate 'Activity' instance within this archetype for each request. The user interface in the clinical system may be able to support duplication of request details such as 'Clinical Indication', 'Reason for request', and 'Service due') where these are identical for each activity.
+- If multiple services need to be requested and the information recorded in the 'protocol' (for example 'Receiver') is different - use a separate instance of this archetype for each request.
+
+The 'Service due' data element supports common use cases for stipulating the simple timing for delivery of the request/s on a single occasion. For situations with more complicated timing requirements or a series of services, use the CLUSTER.service_direction archetype within the 'Complex timing' SLOT.
+
+Implementation examples:
+- Consider a clinician ordering an ultrasound of the left leg to exclude a deep venous thrombosis - the 'Service name' will be 'Ultrasound left lower leg'; the 'Clinical indication' may be 'swollen left ankle'; the 'Reason for request' may be 'exclude DVT'; the 'Clinical context' may be 'gradually increasing pitting oedema to mid-calf in the left leg over the past 3 days'. The 'Service name' may be a precoordinated term, which can be deconstructed and stored in its' component data elements - 'Modality' as 'Ultrasound'; 'Target body site' as 'Left lower leg'.
+- Consider a clinician ordering a barium enema - the 'Service name' will be 'Barium enema'; the 'Clinical indication' may be 'Ulcerative colitis'; the 'Reason for request' may be 'Assess progression of stricture'.
+- A clinical system user interface may provide the clinician with separate data elements for 'Modality' and 'Target body site', each with searchable specific value sets, and concatenate them into the 'Test name' field.
+
+In many situations, it will be possible to record the steps that occur as part of this request being carried out using the corresponding generic ACTION.service. However, there will be many occasions where the required ACTION archetype will be very specific for purpose, as the data requirements for recording provision of many health-related services will need quite unique data elements, recording patterns or pathway steps. For example: ACTION.screening or ACTION.health_education. (en)">
+            misuse = <"*Not to be used to record details about the activities that document how an order or request has been carried out - use an ACTION archetype for this purpose. For example ACTION.service archetype or a more purpose-specific archetype from the ACTION class for this purpose.
+
+Not to be used to record an Imaging examination result - use the OBSERVATION.imaging_examination_result for this purpose. (en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a request for an imaging examination service.">
+            keywords = <"request", "order", "service", "provide", "referral">
+            use = <"Use to record a request for an imaging examination service.
+
+The archetype has been designed to represent a request for one or more imaging examination services, in one of two ways:
+- If multiple services need to be requested but the information recorded in the 'protocol' (for example 'Receiver') is the same - use a separate 'Activity' instance within this archetype for each request. The user interface in the clinical system may be able to support duplication of request details such as 'Clinical Indication', 'Reason for request', and 'Service due') where these are identical for each activity.
+- If multiple services need to be requested and the information recorded in the 'protocol' (for example 'Receiver') is different - use a separate instance of this archetype for each request.
+
+The 'Service due' data element supports common use cases for stipulating the simple timing for delivery of the request/s on a single occasion. For situations with more complicated timing requirements or a series of services, use the CLUSTER.service_direction archetype within the 'Complex timing' SLOT.
+
+Implementation examples:
+- Consider a clinician ordering an ultrasound of the left leg to exclude a deep venous thrombosis - the 'Service name' will be 'Ultrasound left lower leg'; the 'Clinical indication' may be 'swollen left ankle'; the 'Reason for request' may be 'exclude DVT'; the 'Clinical context' may be 'gradually increasing pitting oedema to mid-calf in the left leg over the past 3 days'. The 'Service name' may be a precoordinated term, which can be deconstructed and stored in its' component data elements - 'Modality' as 'Ultrasound'; 'Target body site' as 'Left lower leg'.
+- Consider a clinician ordering a barium enema - the 'Service name' will be 'Barium enema'; the 'Clinical indication' may be 'Ulcerative colitis'; the 'Reason for request' may be 'Assess progression of stricture'.
+- A clinical system user interface may provide the clinician with separate data elements for 'Modality' and 'Target body site', each with searchable specific value sets, and concatenate them into the 'Test name' field.
+
+In many situations, it will be possible to record the steps that occur as part of this request being carried out using the corresponding generic ACTION.service. However, there will be many occasions where the required ACTION archetype will be very specific for purpose, as the data requirements for recording provision of many health-related services will need quite unique data elements, recording patterns or pathway steps. For example: ACTION.screening or ACTION.health_education.">
+            misuse = <"Not to be used to record details about the activities that document how an order or request has been carried out - use an ACTION archetype for this purpose. For example ACTION.service archetype or a more purpose-specific archetype from the ACTION class for this purpose.
+
+Not to be used to record an Imaging examination result - use the OBSERVATION.imaging_examination_result for this purpose.">
+            copyright = <"© openEHR Foundation, Nasjonal IKT HF">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"*To record a request for an imaging examination service. (en)">
+            keywords = <"richiesta, ordine, servizio, fornire, indirizzamento", ...>
+            use = <"*Use to record a request for an imaging examination service.
+
+The archetype has been designed to represent a request for one or more imaging examination services, in one of two ways:
+- If multiple services need to be requested but the information recorded in the 'protocol' (for example 'Receiver') is the same - use a separate 'Activity' instance within this archetype for each request. The user interface in the clinical system may be able to support duplication of request details such as 'Clinical Indication', 'Reason for request', and 'Service due') where these are identical for each activity.
+- If multiple services need to be requested and the information recorded in the 'protocol' (for example 'Receiver') is different - use a separate instance of this archetype for each request.
+
+The 'Service due' data element supports common use cases for stipulating the simple timing for delivery of the request/s on a single occasion. For situations with more complicated timing requirements or a series of services, use the CLUSTER.service_direction archetype within the 'Complex timing' SLOT.
+
+Implementation examples:
+- Consider a clinician ordering an ultrasound of the left leg to exclude a deep venous thrombosis - the 'Service name' will be 'Ultrasound left lower leg'; the 'Clinical indication' may be 'swollen left ankle'; the 'Reason for request' may be 'exclude DVT'; the 'Clinical context' may be 'gradually increasing pitting oedema to mid-calf in the left leg over the past 3 days'. The 'Service name' may be a precoordinated term, which can be deconstructed and stored in its' component data elements - 'Modality' as 'Ultrasound'; 'Target body site' as 'Left lower leg'.
+- Consider a clinician ordering a barium enema - the 'Service name' will be 'Barium enema'; the 'Clinical indication' may be 'Ulcerative colitis'; the 'Reason for request' may be 'Assess progression of stricture'.
+- A clinical system user interface may provide the clinician with separate data elements for 'Modality' and 'Target body site', each with searchable specific value sets, and concatenate them into the 'Test name' field.
+
+In many situations, it will be possible to record the steps that occur as part of this request being carried out using the corresponding generic ACTION.service. However, there will be many occasions where the required ACTION archetype will be very specific for purpose, as the data requirements for recording provision of many health-related services will need quite unique data elements, recording patterns or pathway steps. For example: ACTION.screening or ACTION.health_education. (en)">
+            misuse = <"*Not to be used to record details about the activities that document how an order or request has been carried out - use an ACTION archetype for this purpose. For example ACTION.service archetype or a more purpose-specific archetype from the ACTION class for this purpose.
+
+Not to be used to record an Imaging examination result - use the OBSERVATION.imaging_examination_result for this purpose. (en)">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"*To record a request for an imaging examination service. (en)">
+            keywords = <"verzoek", "opdracht", "dienst", "voorschrift", "verwijzing">
+            use = <"*Use to record a request for an imaging examination service.
+
+The archetype has been designed to represent a request for one or more imaging examination services, in one of two ways:
+- If multiple services need to be requested but the information recorded in the 'protocol' (for example 'Receiver') is the same - use a separate 'Activity' instance within this archetype for each request. The user interface in the clinical system may be able to support duplication of request details such as 'Clinical Indication', 'Reason for request', and 'Service due') where these are identical for each activity.
+- If multiple services need to be requested and the information recorded in the 'protocol' (for example 'Receiver') is different - use a separate instance of this archetype for each request.
+
+The 'Service due' data element supports common use cases for stipulating the simple timing for delivery of the request/s on a single occasion. For situations with more complicated timing requirements or a series of services, use the CLUSTER.service_direction archetype within the 'Complex timing' SLOT.
+
+Implementation examples:
+- Consider a clinician ordering an ultrasound of the left leg to exclude a deep venous thrombosis - the 'Service name' will be 'Ultrasound left lower leg'; the 'Clinical indication' may be 'swollen left ankle'; the 'Reason for request' may be 'exclude DVT'; the 'Clinical context' may be 'gradually increasing pitting oedema to mid-calf in the left leg over the past 3 days'. The 'Service name' may be a precoordinated term, which can be deconstructed and stored in its' component data elements - 'Modality' as 'Ultrasound'; 'Target body site' as 'Left lower leg'.
+- Consider a clinician ordering a barium enema - the 'Service name' will be 'Barium enema'; the 'Clinical indication' may be 'Ulcerative colitis'; the 'Reason for request' may be 'Assess progression of stricture'.
+- A clinical system user interface may provide the clinician with separate data elements for 'Modality' and 'Target body site', each with searchable specific value sets, and concatenate them into the 'Test name' field.
+
+In many situations, it will be possible to record the steps that occur as part of this request being carried out using the corresponding generic ACTION.service. However, there will be many occasions where the required ACTION archetype will be very specific for purpose, as the data requirements for recording provision of many health-related services will need quite unique data elements, recording patterns or pathway steps. For example: ACTION.screening or ACTION.health_education. (en)">
+            misuse = <"*Not to be used to record details about the activities that document how an order or request has been carried out - use an ACTION archetype for this purpose. For example ACTION.service archetype or a more purpose-specific archetype from the ACTION class for this purpose.
+
+Not to be used to record an Imaging examination result - use the OBSERVATION.imaging_examination_result for this purpose. (en)">
+        >
+    >
+
+definition
+    INSTRUCTION[at0000.1] matches {    -- Imaging examination request
+        /activities[at0001]/description[at0009]/items matches {
+            ELEMENT[at0154] matches {
+                value matches {
+                    DV_TEXT[at0.9001]
+                }
+            }
+            ELEMENT[at0.1] occurrences matches {0..1} matches {    -- Modality
+                value matches {
+                    DV_TEXT[at0.9002]
+                }
+            }
+            ELEMENT[at0.2] occurrences matches {0..1} matches {    -- Target body site
+                value matches {
+                    DV_TEXT[at0.9003]
+                }
+            }
+            allow_archetype CLUSTER[at0.3] matches {    -- Structured target body site
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_relative(-[a-zA-Z0-9_]+)*\.v2\..*|openEHR-EHR-CLUSTER\.anatomical_location_circle(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0.4] occurrences matches {0..1} matches {    -- Contrast use
+                value matches {
+                    DV_CODED_TEXT[at0.9004] matches {
+                        defining_code matches {[ac0.9000]}    -- Contrast use (synthesised)
+                    }
+                    DV_TEXT[at0.9005]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"*Imaging examination request (en)">
+                description = <"*An order or instruction for a medical or diagnostic imaging service. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Modality (en)">
+                description = <"*The type of device, process or method used to acquire or produce the image or data. (en)">
+                comment = <"*Coding of the 'Modality' with an external terminology is recommended, if available. This data element allows multiple occurrences to enable the user to record a multiple responses, if required. For example: 'X-Ray'; 'Ultrasound'; 'Medical Resonance Imaging (MRI)'; 'Positron Emission Tomography (PET)'; 'Mammography'; 'Fluoroscopy'; or 'Digital Subtraction Angiography (DSA)'. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Target body site (en)">
+                description = <"*Identification of the area of the body targeted for the imaging examination. (en)">
+                comment = <"*Coding of the 'Target body site' with an external terminology is desirable, if available. This data element allows multiple occurrences to enable the user to record a multiple responses, if required. For example: 'heart'; 'both lungs'; 'right breast'; and 'left lower limb'. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Structured target body site (en)">
+                description = <"*A structured description of the area of the body targeted for examination. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Contrast use (en)">
+                description = <"*Specific stipulation by the requestor about the use of contrast as part of the imaging examination. (en)">
+                comment = <"*For example: a clinician may need to specify whether contrast is required in this clinical scenario, especially in situations where contrast use is optional and not typically administrered; or a clinician may need to clearly state that contrast should be avoided, to highlight a known risk of adverse reaction to the contrast, which will be fully detailed elsewhere in the health record or in supplementary information accompanying the request. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*With contrast (en)">
+                description = <"*The test should be carried out using contrast. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Without contrast (en)">
+                description = <"*The test should be carried out with NO contrast. (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Contrast use (en) (synthesised)">
+                description = <"*Specific stipulation by the requestor about the use of contrast as part of the imaging examination. (en) (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000.1"] = <
+                text = <"*Imaging examination request (en)">
+                description = <"*An order or instruction for a medical or diagnostic imaging service. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Modality (en)">
+                description = <"*The type of device, process or method used to acquire or produce the image or data. (en)">
+                comment = <"*Coding of the 'Modality' with an external terminology is recommended, if available. This data element allows multiple occurrences to enable the user to record a multiple responses, if required. For example: 'X-Ray'; 'Ultrasound'; 'Medical Resonance Imaging (MRI)'; 'Positron Emission Tomography (PET)'; 'Mammography'; 'Fluoroscopy'; or 'Digital Subtraction Angiography (DSA)'. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Target body site (en)">
+                description = <"*Identification of the area of the body targeted for the imaging examination. (en)">
+                comment = <"*Coding of the 'Target body site' with an external terminology is desirable, if available. This data element allows multiple occurrences to enable the user to record a multiple responses, if required. For example: 'heart'; 'both lungs'; 'right breast'; and 'left lower limb'. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Structured target body site (en)">
+                description = <"*A structured description of the area of the body targeted for examination. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Contrast use (en)">
+                description = <"*Specific stipulation by the requestor about the use of contrast as part of the imaging examination. (en)">
+                comment = <"*For example: a clinician may need to specify whether contrast is required in this clinical scenario, especially in situations where contrast use is optional and not typically administrered; or a clinician may need to clearly state that contrast should be avoided, to highlight a known risk of adverse reaction to the contrast, which will be fully detailed elsewhere in the health record or in supplementary information accompanying the request. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*With contrast (en)">
+                description = <"*The test should be carried out using contrast. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Without contrast (en)">
+                description = <"*The test should be carried out with NO contrast. (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Contrast use (en) (synthesised)">
+                description = <"*Specific stipulation by the requestor about the use of contrast as part of the imaging examination. (en) (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000.1"] = <
+                text = <"*Imaging examination request (en)">
+                description = <"*An order or instruction for a medical or diagnostic imaging service. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Modality (en)">
+                description = <"*The type of device, process or method used to acquire or produce the image or data. (en)">
+                comment = <"*Coding of the 'Modality' with an external terminology is recommended, if available. This data element allows multiple occurrences to enable the user to record a multiple responses, if required. For example: 'X-Ray'; 'Ultrasound'; 'Medical Resonance Imaging (MRI)'; 'Positron Emission Tomography (PET)'; 'Mammography'; 'Fluoroscopy'; or 'Digital Subtraction Angiography (DSA)'. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Target body site (en)">
+                description = <"*Identification of the area of the body targeted for the imaging examination. (en)">
+                comment = <"*Coding of the 'Target body site' with an external terminology is desirable, if available. This data element allows multiple occurrences to enable the user to record a multiple responses, if required. For example: 'heart'; 'both lungs'; 'right breast'; and 'left lower limb'. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Structured target body site (en)">
+                description = <"*A structured description of the area of the body targeted for examination. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Contrast use (en)">
+                description = <"*Specific stipulation by the requestor about the use of contrast as part of the imaging examination. (en)">
+                comment = <"*For example: a clinician may need to specify whether contrast is required in this clinical scenario, especially in situations where contrast use is optional and not typically administrered; or a clinician may need to clearly state that contrast should be avoided, to highlight a known risk of adverse reaction to the contrast, which will be fully detailed elsewhere in the health record or in supplementary information accompanying the request. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*With contrast (en)">
+                description = <"*The test should be carried out using contrast. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Without contrast (en)">
+                description = <"*The test should be carried out with NO contrast. (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Contrast use (en) (synthesised)">
+                description = <"*Specific stipulation by the requestor about the use of contrast as part of the imaging examination. (en) (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000.1"] = <
+                text = <"*Imaging examination request (en)">
+                description = <"*An order or instruction for a medical or diagnostic imaging service. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Modality (en)">
+                description = <"*The type of device, process or method used to acquire or produce the image or data. (en)">
+                comment = <"*Coding of the 'Modality' with an external terminology is recommended, if available. This data element allows multiple occurrences to enable the user to record a multiple responses, if required. For example: 'X-Ray'; 'Ultrasound'; 'Medical Resonance Imaging (MRI)'; 'Positron Emission Tomography (PET)'; 'Mammography'; 'Fluoroscopy'; or 'Digital Subtraction Angiography (DSA)'. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Target body site (en)">
+                description = <"*Identification of the area of the body targeted for the imaging examination. (en)">
+                comment = <"*Coding of the 'Target body site' with an external terminology is desirable, if available. This data element allows multiple occurrences to enable the user to record a multiple responses, if required. For example: 'heart'; 'both lungs'; 'right breast'; and 'left lower limb'. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Structured target body site (en)">
+                description = <"*A structured description of the area of the body targeted for examination. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Contrast use (en)">
+                description = <"*Specific stipulation by the requestor about the use of contrast as part of the imaging examination. (en)">
+                comment = <"*For example: a clinician may need to specify whether contrast is required in this clinical scenario, especially in situations where contrast use is optional and not typically administrered; or a clinician may need to clearly state that contrast should be avoided, to highlight a known risk of adverse reaction to the contrast, which will be fully detailed elsewhere in the health record or in supplementary information accompanying the request. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*With contrast (en)">
+                description = <"*The test should be carried out using contrast. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Without contrast (en)">
+                description = <"*The test should be carried out with NO contrast. (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Contrast use (en) (synthesised)">
+                description = <"*Specific stipulation by the requestor about the use of contrast as part of the imaging examination. (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Imaging examination request">
+                description = <"An order or instruction for a medical or diagnostic imaging service.">
+            >
+            ["at0.1"] = <
+                text = <"Modality">
+                description = <"The type of device, process or method used to acquire or produce the image or data.">
+                comment = <"Coding of the 'Modality' with an external terminology is recommended, if available. This data element allows multiple occurrences to enable the user to record a multiple responses, if required. For example: 'X-Ray'; 'Ultrasound'; 'Medical Resonance Imaging (MRI)'; 'Positron Emission Tomography (PET)'; 'Mammography'; 'Fluoroscopy'; or 'Digital Subtraction Angiography (DSA)'.">
+            >
+            ["at0.2"] = <
+                text = <"Target body site">
+                description = <"Identification of the area of the body targeted for the imaging examination.">
+                comment = <"Coding of the 'Target body site' with an external terminology is desirable, if available. This data element allows multiple occurrences to enable the user to record a multiple responses, if required. For example: 'heart'; 'both lungs'; 'right breast'; and 'left lower limb'.">
+            >
+            ["at0.3"] = <
+                text = <"Structured target body site">
+                description = <"A structured description of the area of the body targeted for examination.">
+            >
+            ["at0.4"] = <
+                text = <"Contrast use">
+                description = <"Specific stipulation by the requestor about the use of contrast as part of the imaging examination.">
+                comment = <"For example: a clinician may need to specify whether contrast is required in this clinical scenario, especially in situations where contrast use is optional and not typically administrered; or a clinician may need to clearly state that contrast should be avoided, to highlight a known risk of adverse reaction to the contrast, which will be fully detailed elsewhere in the health record or in supplementary information accompanying the request.">
+            >
+            ["at0.5"] = <
+                text = <"With contrast">
+                description = <"The test should be carried out using contrast.">
+            >
+            ["at0.6"] = <
+                text = <"Without contrast">
+                description = <"The test should be carried out with NO contrast.">
+            >
+            ["ac0.9000"] = <
+                text = <"Contrast use (synthesised)">
+                description = <"Specific stipulation by the requestor about the use of contrast as part of the imaging examination. (synthesised)">
+            >
+        >
+        ["it"] = <
+            ["at0000.1"] = <
+                text = <"*Imaging examination request (en)">
+                description = <"*An order or instruction for a medical or diagnostic imaging service. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Modality (en)">
+                description = <"*The type of device, process or method used to acquire or produce the image or data. (en)">
+                comment = <"*Coding of the 'Modality' with an external terminology is recommended, if available. This data element allows multiple occurrences to enable the user to record a multiple responses, if required. For example: 'X-Ray'; 'Ultrasound'; 'Medical Resonance Imaging (MRI)'; 'Positron Emission Tomography (PET)'; 'Mammography'; 'Fluoroscopy'; or 'Digital Subtraction Angiography (DSA)'. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Target body site (en)">
+                description = <"*Identification of the area of the body targeted for the imaging examination. (en)">
+                comment = <"*Coding of the 'Target body site' with an external terminology is desirable, if available. This data element allows multiple occurrences to enable the user to record a multiple responses, if required. For example: 'heart'; 'both lungs'; 'right breast'; and 'left lower limb'. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Structured target body site (en)">
+                description = <"*A structured description of the area of the body targeted for examination. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Contrast use (en)">
+                description = <"*Specific stipulation by the requestor about the use of contrast as part of the imaging examination. (en)">
+                comment = <"*For example: a clinician may need to specify whether contrast is required in this clinical scenario, especially in situations where contrast use is optional and not typically administrered; or a clinician may need to clearly state that contrast should be avoided, to highlight a known risk of adverse reaction to the contrast, which will be fully detailed elsewhere in the health record or in supplementary information accompanying the request. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*With contrast (en)">
+                description = <"*The test should be carried out using contrast. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Without contrast (en)">
+                description = <"*The test should be carried out with NO contrast. (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Contrast use (en) (synthesised)">
+                description = <"*Specific stipulation by the requestor about the use of contrast as part of the imaging examination. (en) (synthesised)">
+            >
+        >
+        ["nl"] = <
+            ["at0000.1"] = <
+                text = <"*Imaging examination request (en)">
+                description = <"*An order or instruction for a medical or diagnostic imaging service. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Modality (en)">
+                description = <"*The type of device, process or method used to acquire or produce the image or data. (en)">
+                comment = <"*Coding of the 'Modality' with an external terminology is recommended, if available. This data element allows multiple occurrences to enable the user to record a multiple responses, if required. For example: 'X-Ray'; 'Ultrasound'; 'Medical Resonance Imaging (MRI)'; 'Positron Emission Tomography (PET)'; 'Mammography'; 'Fluoroscopy'; or 'Digital Subtraction Angiography (DSA)'. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Target body site (en)">
+                description = <"*Identification of the area of the body targeted for the imaging examination. (en)">
+                comment = <"*Coding of the 'Target body site' with an external terminology is desirable, if available. This data element allows multiple occurrences to enable the user to record a multiple responses, if required. For example: 'heart'; 'both lungs'; 'right breast'; and 'left lower limb'. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Structured target body site (en)">
+                description = <"*A structured description of the area of the body targeted for examination. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Contrast use (en)">
+                description = <"*Specific stipulation by the requestor about the use of contrast as part of the imaging examination. (en)">
+                comment = <"*For example: a clinician may need to specify whether contrast is required in this clinical scenario, especially in situations where contrast use is optional and not typically administrered; or a clinician may need to clearly state that contrast should be avoided, to highlight a known risk of adverse reaction to the contrast, which will be fully detailed elsewhere in the health record or in supplementary information accompanying the request. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*With contrast (en)">
+                description = <"*The test should be carried out using contrast. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Without contrast (en)">
+                description = <"*The test should be carried out with NO contrast. (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Contrast use (en) (synthesised)">
+                description = <"*Specific stipulation by the requestor about the use of contrast as part of the imaging examination. (en) (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.5", "at0.6">
+        >
+    >

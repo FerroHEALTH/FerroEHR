@@ -1,0 +1,191 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ed556a67-1b51-4cfe-b2ee-0917b6abacdb; build_uid=9de68cb1-348d-4648-9d32-6f82472fdc5f)
+    openEHR-DEMOGRAPHIC-ORGANISATION.organisation.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Sergio Miranda Freire">
+                ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+                ["email"] = <"sergio@lampada.uerj.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sergio Miranda Freire & Rigoleta Dutra Mediano Dias">
+        ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+        ["email"] = <"sergio@lampada.uerj.br">
+        ["date"] = <"2009-05-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Rigoleta Dutra, Ministry of Defense, Brazil (openEHR Editor)", "Sergio Freire, State University of Rio de Janeiro, Brazil (openEHR Editor)", "Sebastian Garde, Ocean Informatics, Germany (Editor)", "Omer Hotomaroglu, Turkey (Editor)", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"ISO/DTS 27527:2007(E) - Provider Identification - Draft Technnical Specification - International Organization for Standardization">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"CD0D7EDD910466019E8A4E69E284E23C">
+    >
+    details = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Representação dos dados de uma Organização.">
+            keywords = <"serviço demográfico", "organização">
+            use = <"Usado em serviços de demografia para coletar dados demográficos sobre uma organização.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Representation of an organisation's demographic data.">
+            keywords = <"demographic service", "organisation's data">
+            use = <"Used in demographic service to collect demographic data about an organisation.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ORGANISATION[at0000] matches {    -- Organisation
+        details matches {
+            ITEM_TREE[at0001] matches {    -- Identifiers
+                items cardinality matches {1..*} matches {
+                    allow_archetype CLUSTER[at0010] occurrences matches {1} matches {    -- Identifier
+                        include
+                            archetype_id/value matches {/openEHR-DEMOGRAPHIC-CLUSTER\.provider_identifier[a-zA-Z0-9_-]*\.v0\..*/}
+                    }
+                }
+            }
+        }
+        identities matches {
+            allow_archetype PARTY_IDENTITY[at0002] occurrences matches {1..*} matches {    -- Name
+                include
+                    archetype_id/value matches {/openEHR-DEMOGRAPHIC-PARTY_IDENTITY\.organisation_name[a-zA-Z0-9_-]*\.v0\..*/}
+            }
+        }
+        contacts matches {
+            CONTACT[at0003] occurrences matches {1} matches {    -- Contacts
+                addresses matches {
+                    allow_archetype ADDRESS[at0030] occurrences matches {1} matches {    -- Address
+                        include
+                            archetype_id/value matches {/openEHR-DEMOGRAPHIC-ADDRESS\.address[a-zA-Z0-9_-]*\.v0\..*/}
+                            archetype_id/value matches {/openEHR-DEMOGRAPHIC-ADDRESS\.electronic_communication[a-zA-Z0-9_-]*\.v0\..*/}
+                    }
+                }
+            }
+        }
+        relationships matches {
+            PARTY_RELATIONSHIP[at0004] occurrences matches {1} matches {    -- Relationship
+                details matches {
+                    ITEM_TREE[at0040] matches {    -- Details
+                        items cardinality matches {1..*} matches {
+                            ELEMENT[at0041] occurrences matches {0..1} matches {    -- Type of relationship
+                                value matches {
+                                    DV_TEXT[at9001]
+                                    DV_CODED_TEXT[at9000] matches {
+                                        defining_code matches {[ac1]}    -- Codes for type of relationship
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Organização">
+                description = <"Organização.">
+            >
+            ["at0001"] = <
+                text = <"Documentos">
+                description = <"Documentos de Identificação da organização.">
+            >
+            ["at0002"] = <
+                text = <"Nome">
+                description = <"Identificação da organização - os nomes pelos quais ela é conhecida.">
+            >
+            ["at0003"] = <
+                text = <"Contatos">
+                description = <"Formas de contactar a organização.">
+            >
+            ["at0004"] = <
+                text = <"Relacionamentos">
+                description = <"Relacionamentos entre uma organização com outra ou entre uma organização e uma de suas divisões/departamentos, etc.">
+            >
+            ["at0010"] = <
+                text = <"Documento">
+                description = <"Um documento da organização.">
+            >
+            ["at0030"] = <
+                text = <"Endereço">
+                description = <"Endereço de contato da organização.">
+            >
+            ["at0040"] = <
+                text = <"Detalhes">
+                description = <"Detalhes do relacionamento.">
+            >
+            ["at0041"] = <
+                text = <"Type of relationship">
+                description = <"Tipo de relacionamento entre as duas organizações.">
+            >
+            ["ac1"] = <
+                text = <"Códigos do tipo de relacionamento">
+                description = <"códigos válidos para o tipo de relacionamento entre duas organizações.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Organisation">
+                description = <"Organisation demographic data.">
+            >
+            ["at0001"] = <
+                text = <"Identifiers">
+                description = <"Organisation identifiers.">
+            >
+            ["at0002"] = <
+                text = <"Name">
+                description = <"Identification - the names the organisation is known by.">
+            >
+            ["at0003"] = <
+                text = <"Contacts">
+                description = <"Organisation contacts.">
+            >
+            ["at0004"] = <
+                text = <"Relationship">
+                description = <"Relationship between two organisations or between an organization and one of its division/department, etc.">
+            >
+            ["at0010"] = <
+                text = <"Identifier">
+                description = <"An organisation identifier.">
+            >
+            ["at0030"] = <
+                text = <"Address">
+                description = <"An organisation contact address.">
+            >
+            ["at0040"] = <
+                text = <"Details">
+                description = <"Relationship details.">
+            >
+            ["at0041"] = <
+                text = <"Type of relationship">
+                description = <"Type of relationship between two organisations.">
+            >
+            ["ac1"] = <
+                text = <"Codes for type of relationship">
+                description = <"valid codes for the type or relationship between two organisations.">
+            >
+        >
+    >

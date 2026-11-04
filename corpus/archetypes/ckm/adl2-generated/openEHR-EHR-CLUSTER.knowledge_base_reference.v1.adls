@@ -1,0 +1,244 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=27420a13-59df-4961-b390-a5848dd5eb92; build_uid=536c2967-1de3-4ef3-a591-d7d59238cc4f)
+    openEHR-EHR-CLUSTER.knowledge_base_reference.v1.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Aurelie Tomczak, Natalia Strauch">
+                ["organisation"] = <"Institute of Pathology, University Hospital Heidelberg, Medizinische Hochschule Hannover">
+                ["email"] = <"au.tomczak@yahoo.com, Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Liv Laugen">
+                ["organisation"] = <"​Oslo University Hospital, Norway">
+                ["email"] = <"liv.laugen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Cecilia Mascia">
+        ["organisation"] = <"CRS4, Italy">
+        ["email"] = <"cecilia.mascia@crs4.it">
+        ["date"] = <"2019-03-19">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Francesca Frexia, CRS4 - Center for advanced studies, research and development in Sardinia, Italy", "Gideon Giacomelli, Charité Berlin, Germany", "Heather Grain, Llewelyn Grain Informatics, Australia", "Evelyn Hovenga, EJSH Consulting, Australia", "Christina Jaeger-Schmidt, Heidelberg University Hospital, Germany", "Florian Kaercher, Charité Berlin, Germany", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Cecilia Mascia, CRS4, Italy (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Andrej Orel, Marand d.o.o., Slovenia", "Simon Schumacher, HiGHmed, Germany", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Nyree Taylor, Ocean Informatics, Australia", "Aurelie Tomczak, Uniklinikum Heidelberg, Germany (openEHR Editor)", "Paolo Uva, CRS4, Italy", "Gianluigi Zanetti, CRS4, Italy">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"F575F2A1D95C3F61355D0B99753647AD">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung einer Referenz auf eine Wissensdatenbank und / oder auf in der Wissensdatenbank enthaltene Elemente in Bezug auf bestimmte Informationen zu Gesundheitsakten, die diese Wissensdatenbanken verwenden.">
+            keywords = <"Pipeline, Datenbank, Analysetool, Software, Wissensdatenbank, Bibliothek", ...>
+            use = <"Verwenden Sie diesen Archetyp, um einen Verweis auf eine Wissensdatenbank und / oder auf in der Wissensdatenbank enthaltene Elemente in Bezug auf bestimmte Informationen zu Gesundheitsakten aufzuzeichnen, die diese Wissensdatenbank verwenden.
+
+Dieser Archetyp soll, wenn klinisch angemessen, in andere ENTRY- oder CLUSTER-Archetypen verschachtelt werden. Beispielsweise kann er innerhalb des Archetyps CLUSTER.genomic_variant_result an einer von drei Stellen verwendet werden, um Details zum \"Bioinformatics analysis workflow\",\"Predicted impact analysis\" und \"Population allele frequency\" darzustellen.">
+            misuse = <"Darf nicht verwendet werden, um tatsächliche Informationen zu replizieren, die in einer Wissensdatenbank enthalten sind.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en referanse til en kunnskapsbase, og/eller til elementer som finnes i kunnskapsbasen, og der innholdet i kunnskapsbasen er relevant for informasjonen som er registrert i pasientjournalen.">
+            keywords = <"kunnskapsdatabase", "pipeline", "database", "analyse verktøy", "software", "programvare", "arbeidsflytverktøy", "bioinformatikk", "knowledgebase">
+            use = <"Brukes for å registrere en referanse til en kunnskapsbase, og/eller til elementer som finnes i kunnskapsbasen, og der innholdet i kunnskapsbasen er relevant for informasjonen som er registrert i pasientjournalen.
+
+Denne arketypen er ment å være nøstet i andre ENTRY- eller CLUSTER-arketyper hvor det er klinisk hensiktsmessig. For eksempel kan den brukes i i arketypen CLUSTER.genomic_variant_result (Genetisk variant resultat) flere steder - for eksempel: for å registrere detaljer om arbeidsflyten for 'Bioinformatisk pipeline (Bioinformatics analysis workflow); 'Predikert betydning (Predicted impact analysis)'; og 'Populasjonsallelfrekvens detaljer (Population allele frequency details)'.">
+            misuse = <"Skal ikke brukes til å gjengi faktisk informasjon i en kunnskapsbase.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a reference to a knowledge base, and/or to items contained within the knowledge base, in relation to specific health record information which uses that knowledge base.">
+            keywords = <"pipeline, database, analysis tool, software, knowledgebase, library", ...>
+            use = <"Use to record a reference to a knowledge base, and/or to items contained within the knowledge base, in relation to specific health record information which uses that knowledge base.
+
+This archetype is intended to be nested within other ENTRY or CLUSTER archetypes, as clinically appropriate. For example, it may be used within the CLUSTER.genomic_variant_result archetype in one of three places - to record details about the 'Bioinformatics analysis workflow'; 'Predicted impact analysis'; and 'Population allele frequency'.">
+            misuse = <"Not to be used to replicate actual information contained within a knowledge base.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Knowledge base reference
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- Knowledge base name
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Knowledge base version
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Knowledge base URI
+                value matches {
+                    DV_URI[at9002]
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Item name
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Item version
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Item publication
+                value matches {
+                    DV_DATE_TIME[at9005]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Item URI
+                value matches {
+                    DV_URI[at9006]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9007]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Knowledge base reference">
+                description = <"Eine Zitierung einer digitalen Ressource, die als Quelle für maßgebliche oder fachliche Informationen und / oder für in der Ressource enthaltene Elemente verwendet wird.">
+                comment = <"For example: a genomics pipeline history, a database of genomic variants, or a database of healthcare procedure guidelines.">
+            >
+            ["at0001"] = <
+                text = <"Knowledge base name">
+                description = <"The name of the knowledge base.">
+                comment = <"For example: Galaxy/Snakemake; dbSNP; or CADD.">
+            >
+            ["at0002"] = <
+                text = <"Item version">
+                description = <"The version of the referenced item within the knowledge base.">
+            >
+            ["at0003"] = <
+                text = <"Item URI">
+                description = <"The hyperlink to the referenced item within the knowledge base.">
+            >
+            ["at0004"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the knowledge base, not captured in other fields.">
+            >
+            ["at0005"] = <
+                text = <"Item name">
+                description = <"The name of the referenced item within the knowledge base.">
+                comment = <"For example: rs139581412.">
+            >
+            ["at0006"] = <
+                text = <"Knowledge base version">
+                description = <"The version of the referenced knowledge base.">
+            >
+            ["at0007"] = <
+                text = <"Item publication">
+                description = <"Date and/or time when the item within the database was published.">
+            >
+            ["at0008"] = <
+                text = <"Knowledge base URI">
+                description = <"The hyperlink to the referenced knowledge base.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Kunnskapsbase referanse">
+                description = <"En referanse til en digital ressurs, og/eller elementer i ressursen, som brukes som en kilde til autoritativ, eller ekspertinformasjon.">
+                comment = <"For eksempel: en tidligere publisert genomisk pipeline, en databaseoppføring med genomiske varianter eller en database med retningslinjer/prosedyrer for/i helsevesenet.">
+            >
+            ["at0001"] = <
+                text = <"Kunnskapsbasenavn">
+                description = <"Navnet til kunnskapsbasen.">
+                comment = <"For eksempel: Galaxy/Snakemake; dbSNP; eller CADD.">
+            >
+            ["at0002"] = <
+                text = <"Element versjon">
+                description = <"Versjonen til det refererte elementet i kunnskapsbasen.">
+            >
+            ["at0003"] = <
+                text = <"Element URL">
+                description = <"Hyperlinken til det refererte elementet i kunnskapsbasen.">
+            >
+            ["at0004"] = <
+                text = <"Kommentar">
+                description = <"Tekstlig tilleggsinformasjon om kunnskapsbasen som ikke er fanget opp i andre felter.">
+            >
+            ["at0005"] = <
+                text = <"Elementnavn">
+                description = <"Navnet på det refererte elementet i kunnskapsbasen.">
+                comment = <"For eksempel: rs139581412.">
+            >
+            ["at0006"] = <
+                text = <"Kunnskapsbasens versjon">
+                description = <"Versjonen til kunnskapsbasen/ressursen.">
+            >
+            ["at0007"] = <
+                text = <"Element publikasjon">
+                description = <"Dato og/eller klokkeslett da elementet i databasen ble publisert.">
+            >
+            ["at0008"] = <
+                text = <"Kunnskapsbase URL">
+                description = <"En hyperlink til den refererte kunnskapsbasen.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Knowledge base reference">
+                description = <"A citation of a digital resource used as an source of authoritative or expert information, and/or to items contained within the resource.">
+                comment = <"For example: a genomics pipeline history, a database of genomic variants, or a database of healthcare procedure guidelines.">
+            >
+            ["at0001"] = <
+                text = <"Knowledge base name">
+                description = <"The name of the knowledge base.">
+                comment = <"For example: Galaxy/Snakemake; dbSNP; or CADD.">
+            >
+            ["at0002"] = <
+                text = <"Item version">
+                description = <"The version of the referenced item within the knowledge base.">
+            >
+            ["at0003"] = <
+                text = <"Item URI">
+                description = <"The hyperlink to the referenced item within the knowledge base.">
+            >
+            ["at0004"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the knowledge base, not captured in other fields.">
+            >
+            ["at0005"] = <
+                text = <"Item name">
+                description = <"The name of the referenced item within the knowledge base.">
+                comment = <"For example: rs139581412.">
+            >
+            ["at0006"] = <
+                text = <"Knowledge base version">
+                description = <"The version of the referenced knowledge base.">
+            >
+            ["at0007"] = <
+                text = <"Item publication">
+                description = <"Date and/or time when the item within the database was published.">
+            >
+            ["at0008"] = <
+                text = <"Knowledge base URI">
+                description = <"The hyperlink to the referenced knowledge base.">
+            >
+        >
+    >

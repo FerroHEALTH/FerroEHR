@@ -1,0 +1,727 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=938dd9db-f631-4df2-9221-07aeadac7917; build_uid=673dfd30-fb11-4c55-92c3-5023241a841e)
+    openEHR-EHR-CLUSTER.dosage.v2.0.3
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Nazli Soltani, Natalia Strauch, Alexander Bachmeier">
+                ["organisation"] = <"UMG, Medizinische Schule Hannover (MHH), Medizinische Hochschule Hannover, Heidelberg University Hospital">
+                ["email"] = <"nazli.soltani@med.uni-goettingen.de, strauch.natalia@mh-hannover.de, Strauch.Natalia@mh-hannover.de, alexander.bachmeier@med.uni-heidelberg.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Therese Lindberg">
+                ["organisation"] = <"Cambio CDS">
+                ["email"] = <"therese.lindberg@cambio.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Nasjonal IKT HF, Helse Vest IKT AS">
+                ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Debora Farage, Fernanda Maia, Laíse Figueiredo">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"contato@coreconsulting.com.br">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+        ["sk"] = <
+            language = <[ISO_639-1::sk]>
+            author = <
+                ["name"] = <"Alica Ciglanska">
+                ["organisation"] = <"Prosoft Košice, a.s.">
+                ["email"] = <"ciglanska.alica@prosoftke.sk">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Julio de Sosa">
+                ["organisation"] = <"Servei Català de la Salut">
+                ["email"] = <"juliodesosa@catsalut.cat">
+            >
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Manuel José Zafra Doménech">
+                ["organisation"] = <"TRADCREA, S.L.">
+                ["email"] = <"mzafra@tradcrea.com">
+            >
+            other_details = <
+                ["other_contributors"] = <"Servei Català de la Salut">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics">
+        ["email"] = <"ian@freshehr.com">
+        ["date"] = <"2017-03-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Tomas Alme, DIPS ASA, Norway", "Paula Anderson, UCLH, United Kingdom", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Marcus Baw, openGPSoC / BawMedical Ltd, United Kingdom", "John Bennett, NEHTA, Australia", "SBhusan Bhattacharyya, Sudisa Consultancy Services, India", "Sharmila Biswas, Australia", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Laila Bruun, Oslo universitetssykehus HF, Norway", "Ruth Caudwell, retired, United Kingdom", "Bjørn Christensen, Helse Bergen HF, Norway", "Stephen Chu, NEHTA, Australia (Editor)", "Matthew Cordell, NEHTA, Australia", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Robert Eager, Healthways, Australia", "Gail Easterbrook, Flinders Medical Centre, Australia", "David Evans, Queensland Health, Australia", "Samuel Frade, Marand, Portugal", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom", "Sarah Gaunt, NEHTA, Australia", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Trina Gregory, cpc, Australia", "Robert Hausam, Hausam Consulting LLC, United States", "Sam Heard, Ocean Informatics, Australia (Editor)", "Teresa Highway, Alberta Health Services, Canada", "Annette Hole Sjøborg, DIPS ASA, Norway", "Hilde Hollås, DIPS ASA, Norway", "Alfred Honore, Haukeland, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Mary Kelaher, NEHTA, Australia", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Robert L'egan, NEHTA, Australia", "Russell Leftwich, Russell B Leftwich MD, United States", "Heather Leslie, Ocean Health Systems, Australia (openEHR Editor)", "Marit Ludvigsen, St Olavs Hospital, Norway", "Colin Macfarlane, Elsevier, United Kingdom", "Siv Marie Lien, DIPS ASA, Norway", "Olof Mattsson, Region Skane, Sweden", "Susan McIndoe, Royal District Nursing Service, Australia", "David McKillop, NEHTA, Australia", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Chris Mitchell, RACGP, Australia", "Stewart Morrison, NEHTA, Australia", "Andrej Orel, Marand d.o.o., Slovenia", "Chris Pearce, Melbourne East GP Network, Australia", "Vladimir Pizzo, Hospital Sírio Libanês, Brazil", "Camilla Preeston, Royal Australian College of General Practitioners, Australia", "Margaret Prichard, NEHTA, Australia", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Cathy Richardson, NEHTA, Australia", "Robyn Richards, NEHTA - Clinical Terminology, Australia", "Anoop Shah, University College London, United Kingdom", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Sam Stokes, Citizen Scientist, United States", "Iztok Stotl, UKCLJ, Slovenia", "John Taylor, NEHTA, Australia", "Nyree Taylor, Ocean Informatics, Australia", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "Richard Townley-O'Neill, NEHTA, Australia", "Gro-Hilde Ulriksen, Norwegian center for ehealthresearch, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Ines Vaz, UFN, Portugal", "Soon Ghee Yap, Singapore General Hospital, Singapore", "Kylie Young, The Royal Australian College of General Practitioners, Australia">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Medication statement, [Internet]. Intermountain Healthcare. Available from http://www.opencem.org/#/20170613/Intermountain/MedicationStatement">
+        ["2"] = <"Messaging Implementation Manual (GP2GP messages) [Internet], NHS Digital England. Available from: https://data.developer.nhs.uk/dms/mim/6.3.01/Domains/GP2GP/Document%20files/GP2GP%20IM.htm#_Toc_Section_7.2">
+        ["3"] = <"Standards for the clinical structure and content of patient records (Complete document) [Internet]. PRSB London. [cited 2017 Aug 29]. Available from: http://theprsb.org/download/document/7-standards-for-the-clinical-structure-and-content-of-patient-records\"">
+    >
+    other_details = <
+        ["current_contact"] = <"Ian McNicoll, freshEHR Clinical Informatics, UK <ian@freshehr.com>">
+        ["MD5-CAM-1.0.1"] = <"7642B7C6FD3E445EA35DA32279728164">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung der Kombination von Medikamentendosis und Verabreichungszeit an einem Tag im Kontext einer Medikamentenverordnung oder der Arzneimittelverwaltung oder gegebenenfalls für andere therapeutische/verschreibungspflichtige Produkte.">
+            keywords = <"Medikation", "Verordnung", "verschreiben", "verordnen", "Therapie", "Substanz", "Wirkstoff", "Arzneimittel", "Medikament", "therapeutisch", "therapeutisches Erzeugnis", "Pharmazeutikum", "Produkt", "Posologie", "Dosierung", "Behandlung", "Fluid", "Flüssigkeit", "Ernährung", "Timing", "Zeitplan", "Verabreichung", "Applikation", "Dosis">
+            use = <"Wird verwendet, um die Kombination einer Medikamentendosis und der Verabreichungszeiten innerhalb eines Tages, als Teil einer Medikamentenverordnung oder der Arzneimittelverwaltung oder gegebenenfalls für andere verschriebene therapeutische Produkte darzustellen.
+Das Zeitmuster für einen einzelnen Tag kann einfach eine einzelne Verabreichungszeit oder mehrere Verabreichungszeiten mit unterschiedlichem Komplexitätsgrad sein.
+
+Timing-Details, die nicht innerhalb eines Tages liegen, z. B. wöchentlicher oder monatlicher Rhythmus, werden im CLUSTER-Archetyp \"Verabreichungszeitpunkte - nicht täglich\" aufgeführt, der im CLUSTER-Archetyp \"Therapeutische Anweisungen\" (CLUSTER.therapeutic_direction) enthalten ist.
+
+Im Kontext einer therapeutischen INSTRUCTION kann dieser Archetyp in den SLOT \"Strukturierte Dosis- und Zeitangaben\" im CLUSTER \"Therapeutische Anweisung\" (CLUSTER.therapeutic_direction) eingefügt werden, um die Dosis und Details zum Zeitmuster der einzelnen beabsichtigten Verabreichungen eines therapeutischen Produktes darzustellen.
+
+Im Kontext eines ACTION-Archetyps fügen Sie diesen Archetyp direkt in den SLOT \"Dosis\" ein, um die Dosis und den Zeitpunkt der tatsächlichen Verabreichung eines therapeutischen Produktes darzustellen.
+
+Spezifische Start- / Stoppzeiten der Verabreichung sollten in einem CLUSTER-Archetyp \"Verabreichungszeitpunkte - täglich\" angegeben werden.">
+            misuse = <"">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera kombinationen av läkemedelsmängd och administrationstid för en enda dag, som en del av en läkemedelsorder eller läkemedelshantering eller för andra lämpliga terapeutiska / förskrivningsbara föremål.">
+            keywords = <"medicinering", "beställa", "ordinera", "terapi", "ämne", "läkemedel", "terapeutisk", "terapeutiskt bra", "läkemedel", "produkt", "dosering", "behandling", "vätska", "näring", "timing", "administration", "dos">
+            use = <"Används för att registrera kombinationen av läkemedelsmängd och administreringstid för en enda dag, som en del av en läkemedelsorder eller läkemedelshantering eller för andra lämpliga terapeutiska / förskrivningsbara föremål.
+Tidmönstret för en dag kan vara så enkelt som en enda administreringstid eller flera administreringstider med varierande nivåer av komplexitet.
+
+Tidsuppgifter som inte ligger inom en enda dag, t.ex. vecko- eller månatliga tider, tas i CLUSTER 'Timing - non-daily' arketypen, inom CLUSTER 'Therapeutic direction' arketypen.
+
+I samband med en terapeutisk INSTRUCTION kan den här arketypen införas i 'Strukturerad dos och tidsriktning' SLOT i 'Therapeutic direction' CLUSTER för att registrera dos- och tidsdetaljer för mönstret för enstaka avsedda administrationer av en terapeutisk artikel.
+
+I samband med en ACTION-arketyp, sätt in den här arketypen direkt i 'Amount' SLOT för att registrera dosen och tidpunkten för den faktiska administreringen av ett terapeutisk objekt
+
+Specifika administrationsstart / stopptider bör anges inom en innesluten CLUSTER 'Timing - daily' arketyp.">
+            misuse = <"">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere kombinasjonen av en legemiddeldose og administrasjonstidspunkter innenfor en dag, som del av en legemiddelordinering eller legemiddelhåndtering, eller for andre ordinerte produkter der det er passende.">
+            keywords = <"legemiddel", "ordinering", "foreskrive", "terapi", "substans", "medisin", "terapeutisk", "farmasøytisk", "produkt", "behandling", "væske", "ernæring", "timing", "administrering", "administrasjon", "dose">
+            use = <"Brukes for å registrere kombinasjonen av en legemiddeldose og administrasjonstidspunkter innenfor en dag, som del av en legemiddelordinering eller legemiddelhåndtering, eller for andre ordinerte produkter der det er passende. Mønsteret for administrasjonstidspunkter innenfor en dag kan være så enkelt som ett administrasjonstidspunkt, eller flere administrasjonstidspunkter med forskjellige nivåer av kompleksitet.
+
+Timingdetaljer som ikke er innenfor én dag, f.eks. ukentlig eller månedlige timinger, håndteres av CLUSTER-arketypen \"Timing - repetering\" som benyttes i CLUSTER-arketypen \"Terapeutisk anvisning\".
+
+Innenfor en INSTRUCTION og i den igjen innenfor CLUSTER-arketypen \"Terapeutisk anvisning\" (CLUSTER.therapeutic_direction) for å registrere dose og timing av et ordinert produkt, som f.eks. et legemiddel.
+
+Innenfor en ACTION-arketype kan denne arketypen brukes for å registrere dosen og timing for den faktiske administreringen av det ordinerte produktet.
+
+Spesifikke tidspunkter for administrering og start/stopp-tidspunkter spesifiseres i CLUSTER-arketypen \"Timing - daglig\".">
+            misuse = <"">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Para gravar a combinação de uma quantidade de medicamento e o tempo de administração diário, como parte de uma solicitação ou gestão de medicamentos ou para outros itens terapêuticos/prescritos apropriados.
+">
+            keywords = <"medicamento", "solicitação", "prescrever", "terapia", "substância", "fármaco", "terapêutico", "item terapêutico", "farmacêutico", "produto", "posologia", "tratamento", "fluido", "nutrição", "tempo", "administração", "dose">
+            use = <"Usado para gravar a combinação de uma quantidade de medicamento e o tempo de administração diário, como parte de uma solicitação ou gestão de medicamentos ou para outros itens terapêuticos/prescritos apropriados.
+O padrão de tempo diário pode ser simples como uma administração única ou múltiplas administrações com níveis variados de complexidade.
+
+Os detalhes de tempo que não estão dentro de um mesmo dia p.e. semanalmente ou mensalmente são incluídos dentro do arquétipo CLUSTER \"Timing repetition\" carregado dentro do arquétipo CLUSTER \"Therapeutic direction\".
+
+No contexto de uma INSTRUÇÃO terapêutica este arquétipo pode ser inserido dentro do SLOT \"Dosage administration\" no CLUSTER \"Therapeutic direction\" para gravar a dose e detalhes de tempo do padrão de uma administração única de um item terapêutico.
+
+No contexto de um arquétipo tipo ACTION insira este arquétipo diretamente no SLOT \"Amount\" para gravar a dose e tempo da administração de um item terapêutico.
+
+Tempos específicos de início e parada de administração devem ser especificados dentro do arquétipo CLUSTER \"Timing - daily\".
+">
+            misuse = <"">
+        >
+        ["sk"] = <
+            language = <[ISO_639-1::sk]>
+            purpose = <"Slúži pre záznam množstva dávky a časov podania za jeden deň - ako časť preskripcie alebo medikácie alebo pre iné terapeutické/preskribovateľné položky.">
+            keywords = <"medikácia", "objendávka", "preskricpia", "terapia", "účinná látka", "liek", "terapeutický", "farmaceutický", "produkt", "liečba", "tekutina", "výživa", "časový rozpis", "podanie", "dávka">
+            use = <"Slúži pre záznam množstva dávky a časov podania za jeden deň - ako časť preskripcie alebo medikácie alebo pre iné terapeutické/preskribovateľné položky.
+Časový rozpis pre jeden deň môže byť jednoduchý - ako napr. jeden konkrétny čas podania alebo viacej časov podania - v závislosti od úrovne komplexity
+Časový rozpis, ktorý sa netýka iba jedného dňa napr. týždenný alebo mesačný rozpis, je potrebné zadať v CLUSTER 'Timing - non-daily' archetype , ktorý má byť vnorený v rámci CLUSTER 'Therapeutic direction' archetype.
+
+V kontexte INSTRUCTION tento archetyp má byť vložený v SLOTe \"Štrukturované dávkovanie a časy podania\" v rámci CLUSTER 'Therapeutic direction' archetypu - aby bolo možné zadať dávku a časový rozpis pre jednotlivé požadované podanie preskribovanej položky
+V kontexte ACTION tento archetyp má byť vložený priamo do SLOTu \"Množstvo\" - aby bolo možné zadať dávku a čas pre aktuálne podanie položky
+
+Špecifické časy pre začiatok podávania a koniec podávania majú byť špecifikované vo vloženom CLUSTER 'Timing - daily' archetype.
+">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the combination of a medication amount and the administration timing within a single day, as part of a medication order or medication management or for other appropriate therapeutic/prescribable items.">
+            keywords = <"medication", "order", "prescribe", "therapy", "substance", "drug", "therapeutic", "therapeutic good", "pharmaceutical", "product", "posology", "treatment", "fluid", "nutrition", "timing", "administration", "dose">
+            use = <"Use to record the combination of a medication amount and the administration timing for a single day, as part of a medication order or medication management or for other appropriate therapeutic/prescribable items. 
+The timing pattern for a single day can be as simple as a single administration time, or multiple administration times with varying levels of complexity.
+
+Timing details which are not within a single day, for example, weekly or monthly timings, are carried in the CLUSTER 'Timing - non-daily' archetype carried within the CLUSTER 'Therapeutic direction' archetype.
+
+In the context of a therapeutic INSTRUCTION, this archetype may be inserted into the 'Structured dose and timing directions' SLOT in the 'Therapeutic direction' CLUSTER to record the dose and timing details of the pattern of single intended administrations of a therapeutic item. 
+
+In the context of an ACTION archetype insert this archetype directly into the 'Amount' SLOT to record the dose and timing of the actual administration of a therapeutic item.
+
+Specific administration start/stop times should be specified within a contained CLUSTER 'Timing - daily' archetype.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar la combinación de una cantidad de medicación y el momento de administración en un mismo día, como parte de una prescripción o gestión de medicación, o para otros elementos terapéuticos/prescribibles apropiados.">
+            keywords = <"medicación", "orden", "prescribir", "terapia", "sustancia", "medicamento", "terapéutico", "bien terapéutico", "farmacéutico", "producto", "posología", "tratamiento", "fluido", "nutrición", "timing", "administración", "dosis">
+            use = <"Se utiliza para registrar la combinación de una cantidad de medicación y el momento de administración para un solo día, como parte de una prescripción o gestión de medicación, o para otros elementos terapéuticos/prescribibles apropiados. 
+
+La pauta temporal de un único día puede ser tan simple como una sola hora de administración, o varias horas de administración con distintos niveles de complejidad.
+
+Los detalles de temporización que no correspondan a un único día, por ejemplo, temporizaciones semanales o mensuales, han de llevarse a cabo en el arquetipo de tipo CLUSTER 'Temporización - no diaria', dentro del arquetipo CLUSTER 'Dirección terapéutica'.
+
+En el contexto de una INSTRUCTION terapéutica, este arquetipo puede insertarse en el SLOT \"Direcciones estructuradas de dosis y timing\", dentro del CLUSTER \"Dirección terapéutica\", para registrar los detalles de dosis y timing del patrón de administraciones únicas previstas de un elemento terapéutico. 
+
+En el contexto de un arquetipo de tipo ACTION, inserte este arquetipo directamente en el SLOT \"Cantidad\" para registrar la dosis y el momento de la administración real de un elemento terapéutico.
+
+Las horas específicas de inicio y finalización de la administración deben especificarse dentro de un arquetipo CLUSTER \"Timing - diario\".
+">
+            misuse = <"">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Registrar la combinació d’una quantitat de medicació i el moment d’administració en un mateix dia, com a part d’una prescripció o gestió de medicació o per a altres elements terapèutics/prescriptibles apropiats.">
+            keywords = <"medicació", "encàrrec", "prescriure", "teràpia", "substància", "medicament", "terapèutic", "producte terapèutic", "fàrmac", "producte", "posologia", "tractament", "fluid", "nutrició", "temporització", "administració", "dosi">
+            use = <"Utilitzar per a registrar la combinació d’una quantitat de medicació i el moment d’administració en un mateix dia, com a part d’una prescripció o gestió de medicació o per a altres elements terapèutics/prescriptibles apropiats.
+La pauta horària d’un únic dia pot ser tan simple com una sola hora d’administració o diverses hores d’administració amb diversos nivells de complexitat.
+
+Les dades de temporització que no corresponguin a un únic dia; per exemple, temporitzacions setmanals o mensuals, estan contingudes en l’arquetip de tipus CLUSTER «Temporització – no diària», que es troba dins de l’arquetip de tipus CLUSTER «Instruccions terapèutiques».
+
+En el context d’una INSTRUCTION terapèutica, aquest arquetip es pot inserir al SLOT «Instruccions estructurals de dosi i temporització» dins del CLUSTER «Instruccions terapèutiques» per a registrar les dades de dosi i temporalització de les pautes d’administracions úniques previstes d’un element terapèutic.
+
+En el context d’un arquetip de tipus ACTION, aquest arquetip s’ha d’inserir directament al SLOT «Quantitat» per a registrar la dosi i el moment d’una administració concreta d’un element terapèutic.
+
+Els moments específics d’inici i de finalització s’han d’especificar dins d’un arquetip «Temporització – diària» de tipus CLUSTER.">
+            misuse = <"">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Dosage
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0164] occurrences matches {0..1} matches {    -- Dosage sequence
+                value matches {
+                    DV_COUNT[at9002] matches {
+                        magnitude matches {|>=1|}
+                    }
+                }
+            }
+            ELEMENT[at0144] occurrences matches {0..1} matches {    -- Dose
+                value matches {
+                    DV_QUANTITY[at9003]
+                    DV_INTERVAL<DV_QUANTITY>[at9004]
+                }
+            }
+            ELEMENT[at0135] occurrences matches {0..1} matches {    -- Dose formula
+                value matches {
+                    DV_TEXT[at9008]
+                    DV_QUANTITY[at9009]
+                }
+            }
+            ELEMENT[at0178] occurrences matches {0..1} matches {    -- Dose description
+                value matches {
+                    DV_TEXT[at9018]
+                }
+            }
+            allow_archetype CLUSTER[at0037] matches {    -- Daily timing
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.timing_daily(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0134] occurrences matches {0..1} matches {    -- Administration rate
+                value matches {
+                    DV_QUANTITY[at9010] matches {
+                        property matches {[at9001]}    -- Flow rate, volume
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"l/h"}],
+                            [{|>=0.0|}, {"ml/min"}],
+                            [{|>=0.0|}, {"ml/s"}],
+                            [{|>=0.0|}, {"ml/h"}]
+                        }
+                    }
+                    DV_TEXT[at9011]
+                }
+            }
+            ELEMENT[at0102] occurrences matches {0..1} matches {    -- Administration duration
+                value matches {
+                    DV_DURATION[at9012] matches {
+                        value matches {PDTHMS/|>=PT0S|}
+                    }
+                    DV_INTERVAL<DV_DURATION>[at9019] matches {
+                        lower matches {
+                            DV_DURATION[at9020] matches {
+                                value matches {PDTHMS/|>=PT0S|}
+                            }
+                        }
+                        upper matches {
+                            DV_DURATION[at9021] matches {
+                                value matches {PDTHMS/|>=PT0S|}
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0176] occurrences matches {0..1} matches {    -- Alternate dose
+                value matches {
+                    DV_QUANTITY[at9013]
+                    DV_INTERVAL<DV_QUANTITY>[at9014] matches {
+                        upper matches {
+                            DV_QUANTITY[at9015]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Dosierung">
+                description = <"Kombination von Medikamentendosis und Verabreichungszeit an einem Tag im Kontext einer Medikamentenverordnung oder der Arzneimittelverwaltung.">
+                comment = <"Zum Beispiel: \"2 Tabletten um 18 Uhr\" oder \"20 mg dreimal täglich\". Bitte beachten Sie: Dieser Cluster kann mehrfach vorkommen, um einen vollständigen Satz von Dosismustern für eine einzelne Dosisanweisung darzustellen.">
+            >
+            ["at0037"] = <
+                text = <"Tägliche Verabreichungszeiten">
+                description = <"Strukturierte Details des Musters für Verabreichungszeiten innerhalb eines Tages.">
+                comment = <"Zum Beispiel: \"Morgens\", \"Um 06:00, 14:00, 21:00\".">
+            >
+            ["at0102"] = <
+                text = <"Verabreichungsdauer">
+                description = <"Der Zeitraum, in dem eine Einzeldosis des Medikaments oder Impfstoffs verabreicht werden soll.">
+                comment = <"Zum Beispiel: \"Über 10 Minuten verabreichen\".">
+            >
+            ["at0134"] = <
+                text = <"Verabreichungsrate">
+                description = <"Die Rate, mit der das Medikament, beispielsweise eine Infusion, verabreicht werden soll.">
+                comment = <"Zum Beispiel: \"200 ml/h\". Verwenden Sie den Datentyp Text, um nicht- oder nur teilweise quantifizierbare Anweisungen aufzuzeichnen.">
+            >
+            ["at0135"] = <
+                text = <"Dosisformel">
+                description = <"Die Formel zur Berechnung der Dosismenge oder der Verabreichungsrate, wenn dies von einem anderen Faktor abhängt, wie z. B. dem Körpergewicht oder der Hautoberfläche.">
+                comment = <"Zum Beispiel: \"10mg/kg/Tag\". Das Ergebnis der Formel würde üblicherweise in Dosierung oder Verabreichungsrate/-dauer gehalten werden. Wenn klinische Maße, wie das Körpergewicht, bei der Berechnung der Dosis verwendet werden, sollte ein LINK-Attribut genutzt werden, um anzugeben, welche bestimmte Messung verwendet wurde.
+">
+            >
+            ["at0144"] = <
+                text = <"Dosis">
+                description = <"Die Menge der verabreichten Medikation zu einem Zeitpunkt.">
+                comment = <"Zum Beispiel: 1 mg, 1,5 ml, 0,125 g; oder 1-2 ml, 1,5-20,5 mg.">
+            >
+            ["at0164"] = <
+                text = <"Dosierungsreihenfolge">
+                description = <"Beabsichtigte Reihenfolge dieser Dosierung in der Gesamtdosierungsfolge.">
+                comment = <"Zum Beispiel: \"1\", \"2\", \"3\".
+Wenn mehrere Dosierungen angegeben werden, gibt die \"Dosierungsreihenfolge\" die Reihenfolge an, in der sie ausgeführt werden soll. Zum Beispiel: (1) 1 Tablette am Morgen, (2) 2 Tabletten um 14 Uhr, (3) 1 Tablette am Abend.">
+            >
+            ["at0176"] = <
+                text = <"Alternative Dosis">
+                description = <"Eine alternative Darstellung vom Wert der verabreichten Medikation zu einem Zeitpunkt.">
+                comment = <"Kann zum Beispiel verwendet werden, um einen Wert darzustellen, der auf Verpackungseinheit wie \"Tabletten\" basiert, wobei die Dosismenge als SI-Einheit angegeben ist, z. B. \"mg\"; oder wenn sowohl die Gesamtmenge als auch die Dosismenge des Wirkstoffes einer Infusionslösung angegeben werden müssen.">
+            >
+            ["at0178"] = <
+                text = <"Dosisbeschreibung">
+                description = <"Textbeschreibung der Dosis.">
+                comment = <"Zum Beispiel: \"Salbe auf die betroffene Stelle auftragen, bis sie glänzt\". Dieses Element soll den Entwicklern ermöglichen, die Strukturen zum Erhöhen / Verringern von Dosierungen zu verwenden, ohne die Dosierungen notwendigerweise auf strukturierte Weise spezifizieren zu müssen.">
+            >
+            ["at9001"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Dosering">
+                description = <"Kombinationen av läkemedelsmängd och administreringstidpunkt för en dag, i samband med en läkemedelsorder eller läkemedelshantering.">
+                comment = <"Till exempel: \"2 tabletter kl. 18\" eller \"20 mg tre gånger per dag\". Observera: cluster tillåter här flera förekomster för att möjliggöra representation av en komplett uppsättning dosmönster för en enda dosriktning.">
+            >
+            ["at0037"] = <
+                text = <"Daglig timing">
+                description = <"Strukturerade detaljer om tidsmönstret för en dag.">
+                comment = <"Till exempel: \"på morgonen\", \"0600, 1400, 2100\".">
+            >
+            ["at0102"] = <
+                text = <"Administrationens varaktighet">
+                description = <"Tiden under vilken en enda dos av läkemedlet eller vaccinet ska administreras.">
+                comment = <"Till exempel: 'Administrera över 10 minuter'.">
+            >
+            ["at0134"] = <
+                text = <"Administrationshastighet">
+                description = <"Den hastighet med vilken läkemedlet, såsom en infusion, ska administreras.">
+                comment = <"Till exempel: '200 ml / h'. Använd textdatatypen för att spela in icke- eller halvkvantifierbara instruktioner.">
+            >
+            ["at0135"] = <
+                text = <"Doseringsformel">
+                description = <"Formeln som används för att beräkna dosmängden eller administreringshastigheten då detta är beroende av någon annan faktor, såsom kroppsvikt eller ytarea.">
+                comment = <"*For example: '10mg/kg/day'. The result of this formula would normally be held in Dose or Administration rate/duration. Where clinical measurements such as body weight is used in the dose calculation, a LINK attribute should used to specify which particular measurement has been used. (en)">
+            >
+            ["at0144"] = <
+                text = <"*Dose (en)">
+                description = <"*The value of the amount of medication administered at one time. (en)">
+                comment = <"*For example: 1 mg, 1.5 ml, 0.125 g; or 1-2 ml, 12.5-20.5 mg. (en)">
+            >
+            ["at0164"] = <
+                text = <"Doseringssekvens">
+                description = <"Den avsedda positionen för denna dosering inom den totala doseringssekvensen.">
+                comment = <"Till exempel: '1', '2', '3'.
+När flera doser uttrycks, gör 'Mönstresekvensen' ordningen i vilken de ska köras. Till exempel: (1) 1 flik på morgonen, (2) 2 flik vid 14:00, (3) 1 flik på natten.">
+            >
+            ["at0176"] = <
+                text = <"*Alternate dose (en)">
+                description = <"*An alternate representation of the value of the amount of medication administered at one time. (en)">
+                comment = <"*For example, can be used to represent a unit-dose based value such as 'tabs', when the Dose amount is expressed as an SI unit such as 'mg', or where it is required to express the total volume of an infusion as well as the amount of the active ingredient. (en)">
+            >
+            ["at0178"] = <
+                text = <"Doseringsbeskrivning">
+                description = <"Textbeskrvining av dosen.">
+                comment = <"Till exempel: \"Applicera salva på det drabbade området tills det glänser\". Detta element är avsett att tillåta implementerare att använda strukturerna för att öka/minska doser utan att nödvändigtvis specificera doserna på ett strukturerat sätt.">
+            >
+            ["at9001"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Dosering">
+                description = <"Kombinasjonen av legemiddeldose og administrasjonstidspunkter for en dag, innenfor sammenhengen legemiddelordinering eller legemiddelhåndtering.">
+                comment = <"For eksempel \"2 tabletter kl. 18:00\" eller \"20 mg tre ganger om dagen\". Merk: Dette clusteret er laget for å repeteres for å kunne representere et fullstendig sett av doseringsmønstre for en enkelt Terapeutisk anvisning.">
+            >
+            ["at0037"] = <
+                text = <"Administreringstidspunkt">
+                description = <"Strukturerte detaljer om mønsteret for administreringstidspunkter innenfor en dag.">
+                comment = <"For eksempel \"om morgenen\", \"kl 6, 14 og 21\".">
+            >
+            ["at0102"] = <
+                text = <"Administreringsvarighet">
+                description = <"Tidsperioden en enkelt dose av legemiddelet eller vaksinen skal administreres over.">
+                comment = <"For eksempel \"Administreres over 10 minutter\".">
+            >
+            ["at0134"] = <
+                text = <"Administreringshastighet">
+                description = <"Hastigheten som skal benyttes under administreringen, for eksempel ved en infusjon.">
+                comment = <"For eksempel \"200 ml/t\". Bruk datatypen \"tekst\" for å registrere ikke- eller semikvantifiserbare instruksjoner.">
+            >
+            ["at0135"] = <
+                text = <"Doseringsformel">
+                description = <"Formelen som er brukt for å regne ut dosen eller administreringshastigheten der dette er avhengig av en annen faktor som f.eks. kroppsvekt eller hudoverflate.">
+                comment = <"For eksempel \"10 mg/kg/dag\". Resultatet av denne formelen vil normalt registreres i Dosemengde/-enhet eller Administreringshastighet/-varighet. Der det benyttes kliniske målinger som for eksempel kroppsvekt i doseberegningen, bør det brukes en LINK-attributt for å spesifisere hvilken måling som er brukt.">
+            >
+            ["at0144"] = <
+                text = <"Dose">
+                description = <"Legemiddelmengden (dosen) administrert på ett tidspunkt">
+                comment = <"For eksempel 1 mg, 1,5 ml, 0.125 g eller 1-2 ml, 12.5-20.5 mg.">
+            >
+            ["at0164"] = <
+                text = <"Doseringsrekkefølge">
+                description = <"Tilsiktet rekkefølge for denne doseringen i den overordnede sekvensen av doseringer.">
+                comment = <"For eksempel \"1\", \"2\", \"3\". Der det er spesifisert flere doseringer, gjør Doseringsrekkefølge det tydelig hvilken rekkefølge de hører hjemme i. Eksempel: (1) 1 tablett om morgenen, (2) 2 tabletter kl. 14, (3) 1 tablett om kvelden.">
+            >
+            ["at0176"] = <
+                text = <"Alternativ dose">
+                description = <"En alternativ representasjon av legemiddelmengden (dosen) administrert på ett tidspunkt.">
+                comment = <"Kan for eksempel brukes for å representere en verdi basert på pakningsenheter som \"tabletter\", der Dosemengde uttrykkes som en SI-enhet som \"mg\", eller der det er nødvendig å uttrykke den totale mengden infusjonsvæske i tillegg til mengden aktiv substans.">
+            >
+            ["at0178"] = <
+                text = <"Dosebeskrivelse">
+                description = <"Tekstbeskrivelse av dosen.">
+                comment = <"For eksempel \"Påfør salve på det affiserte området til det glinser\". Dette elementet har som hensikt å tillate implementasjoner å bruke strukturene for økende og avtagende dosering uten å nødvendigvis spesifisere dosene strukturert.">
+            >
+            ["at9001"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Dose">
+                description = <"A combinação de uma quantidade de medicamento e o tempo de administração para um único dia, no contexto de uma solicitação ou gestão de medicamento.
+">
+                comment = <"Por exemplo: \"2 comprimidos às 18h\" ou \"20 mg três vezes ao dia\". Por favor note que: este cluster permite ocorrências múltiplas para possibilitar a representação de um conjunto completo de padrões de dose para uma orientação de dose única.">
+            >
+            ["at0037"] = <
+                text = <"Tempo">
+                description = <"Detalhes estruturados sobre o padrão temporal dentro de um único dia.">
+                comment = <"Por exemplo: \"pela manhã\", às 6h, 14h, 21h.">
+            >
+            ["at0102"] = <
+                text = <"Duração da administração">
+                description = <"O período de tempo no qual uma única dose do medicamento ou vacina deve ser administrado.">
+                comment = <"Por exemplo: \"Administrar por 10 minutos\".">
+            >
+            ["at0134"] = <
+                text = <"Taxa de administração">
+                description = <"A taxa na qual o medicamento, como uma infusão, deve ser administrado.">
+                comment = <"Por exemplo: \"200 ml/h\". Use o tipo de dado texto para gravar instruções qualitativas ou semi-quantitativas.">
+            >
+            ["at0135"] = <
+                text = <"Fórmula da dose">
+                description = <"A fórmula utilizada para calcular a quantidade da dose ou taxa de administração à qual é dependente ou algum outro fator, como peso corporal ou área de superfície.">
+                comment = <"*For example: '10mg/kg/day'. The result of this formula would normally be held in Dose or Administration rate/duration. Where clinical measurements such as body weight is used in the dose calculation, a LINK attribute should used to specify which particular measurement has been used. (en)">
+            >
+            ["at0144"] = <
+                text = <"*Dose (en)">
+                description = <"*The value of the amount of medication administered at one time. (en)">
+                comment = <"*For example: 1 mg, 1.5 ml, 0.125 g; or 1-2 ml, 12.5-20.5 mg. (en)">
+            >
+            ["at0164"] = <
+                text = <"Sequência de dosagem">
+                description = <"A posição determinada desta dose dentro da sequência geral de doses.">
+                comment = <"Por exemplo: \"1\", \"2\", \"3\". 
+Quando são expressas múltiplas doses, a \"Sequência Padrão\" indica a ordem na qual deve ser explicitamente executada. Por exemplo: (1) 1 comprimido pela manhã, (2) 2 comprimidos às 14h, (3) 1 comprimido à noite.">
+            >
+            ["at0176"] = <
+                text = <"*Alternate dose (en)">
+                description = <"*An alternate representation of the value of the amount of medication administered at one time. (en)">
+                comment = <"*For example, can be used to represent a unit-dose based value such as 'tabs', when the Dose amount is expressed as an SI unit such as 'mg', or where it is required to express the total volume of an infusion as well as the amount of the active ingredient. (en)">
+            >
+            ["at0178"] = <
+                text = <"Descrição da dose">
+                description = <"Descrição textual da dose.">
+                comment = <"Por exemplo: \"Aplicar pomada na área afetada até preenchê-la\". Este elemento pretende permitir aos implementadores o uso de estruturas para doses crescentes/decrescentes sem especificar necessariamente as doses de uma forma estruturada.">
+            >
+            ["at9001"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+        >
+        ["sk"] = <
+            ["at0000"] = <
+                text = <"Dávkovanie">
+                description = <"Slúži pre záznam množstva dávky a časov podania za jeden deň - ako časť preskripcie alebo medikácie">
+                comment = <"Napr.: \"2tbl o 18:00\", \"20mg 3x denne\". Pozor: tento cluster umožňuje viacpočetný výskyt , aby bolo možné zapísať kompletný rozpis dávkovania pre jednotlivú dávku">
+            >
+            ["at0037"] = <
+                text = <"Denný rozpis">
+                description = <"Štrukturované detaily ohľadom časového rozpisu pre jeden deň">
+                comment = <"Napr.: \"ráno\", \"o 6:00, 14:00, 12:00\"">
+            >
+            ["at0102"] = <
+                text = <"Dĺžka podávania">
+                description = <"Časový interval, počas ktorého má byť podávaná jednotlivá dávka lieku">
+                comment = <"Napr.: \"Podávajte 10min\"">
+            >
+            ["at0134"] = <
+                text = <"Rýchlosť podávania">
+                description = <"Rýchlosť , ktorou sa daný liek (ako napr infúzia) má podávať alebo podáva">
+                comment = <"Napr.: \"200ml/h\". Pre nekvalifikovateľné údaje použite text">
+            >
+            ["at0135"] = <
+                text = <"Vzorec pre výpočet množstva dávky">
+                description = <"Vzorec, ktorý sa použije pre výpočet množstva dávky alebo rýchlosti podania, v prípade, že to závislé od iných faktorov ako napr. váha pacienta alebo povrch tela">
+                comment = <"Napr.: '10 mg/kg/day'. Výsledok tohto vzorca by mal by riadne zapísaný v elemente \"Množstvo dávky\" alebo \"Rýchlosť podávania, Dĺžka podávania\". V prípade, že boli použité fyzikálne parametre ako napr váha alebo povrch tela, mal by byť zadaný aj LINK atribút, aby bolo jasné , ktoré konkrétne meranie sa použilo.">
+            >
+            ["at0144"] = <
+                text = <"Dávka">
+                description = <"Množstvo dávky, ktoré má byť podané naraz pri jednom podaní">
+                comment = <"Napr.: 1 mg, 1.5 ml, 0.125 g; or 1-2 ml, 12.5-20.5 mg.">
+            >
+            ["at0164"] = <
+                text = <"Sekvencia dávkovania">
+                description = <"Pozícia daného dávkovania v rámci celkovej sekvencie dávkovania">
+                comment = <"Napr.: '1', '2', '3'. 
+V prípade, že je zadaných viacej dávkovaní, táto sekvencia explicitne definuje poradie , v akom majú byť vykonané. Napr.: (1) 1 tbl ráno, (2) 2 tlb o 14:00, (3) 1 tbl večer.">
+            >
+            ["at0176"] = <
+                text = <"Alternatívna dávka">
+                description = <"Alternatívne množstvo dávky, ktoré má byť podané naraz pri jednom podaní">
+                comment = <"Napr.: môže byť použité v prípadoch, že jednotlivá dávka je v \"tbl\" alebo aj v SI jednotkách napr. \"mg\". Alebo v prípadoch, že je požadované zapísať celkový objem infúzie ako aj množstvá jednotlivých ingrediencií">
+            >
+            ["at0178"] = <
+                text = <"Popis množstva dávky">
+                description = <"Textový popis k množstvu jednotlivej dávky">
+                comment = <"Napr.: \"aplikujte masť na postihnutú oblasť, kým sa leskne\" . Účelom tohto elementu je umožniť evidenciu pre väčšiu alebo menšiu dávku, bez nutnosti ju špecifikovať štruktúrovaným spôsobom.">
+            >
+            ["at9001"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Dosage">
+                description = <"The combination of a medication amount and administration timing for a single day, in the context of a medication order or medication management.">
+                comment = <"For example: '2 tablets at 6pm' or '20 mg three times per day'. Please note: this cluster allows multiple occurrences to enable representation of a complete set of dose patterns for a single dose direction.">
+            >
+            ["at0037"] = <
+                text = <"Daily timing">
+                description = <"Structured details about the timing pattern for a single day.">
+                comment = <"For example: 'in the morning', 'at 0600, 1400, 2100'.">
+            >
+            ["at0102"] = <
+                text = <"Administration duration">
+                description = <"The period of time over which a single dose of the medication or vaccine should be administered.">
+                comment = <"For example: 'Administer over 10 minutes'.">
+            >
+            ["at0134"] = <
+                text = <"Administration rate">
+                description = <"The rate at which the medication, such as an infusion, is to be administered.">
+                comment = <"For example: '200 ml/h'. Use the text data type to record non- or semi-quantifiable instructions.">
+            >
+            ["at0135"] = <
+                text = <"Dose formula">
+                description = <"The formula used to calculate the dose amount or administration rate where this is dependent on some other factor, such as body weight or surface area.">
+                comment = <"For example: '10 mg/kg/day'. The result of this formula would normally be held in Dose or Administration rate/duration. Where clinical measurements such as body weight is used in the dose calculation, a LINK attribute should used to specify which particular measurement has been used.">
+            >
+            ["at0144"] = <
+                text = <"Dose">
+                description = <"The amount of medication administered at one time.">
+                comment = <"For example: 1 mg, 1.5 ml, 0.125 g; or 1-2 ml, 12.5-20.5 mg.">
+            >
+            ["at0164"] = <
+                text = <"Dosage sequence">
+                description = <"The intended position of this dosage within the overall sequence of dosages.">
+                comment = <"For example: '1', '2', '3'. 
+Where multiple dosages are expressed, the 'Pattern sequence' makes the order in which they should be executed explicit. For example: (1) 1 tab in the morning, (2) 2 tab at 2pm, (3) 1 tab at night.">
+            >
+            ["at0176"] = <
+                text = <"Alternate dose">
+                description = <"An alternate representation of the amount of medication administered at one time.">
+                comment = <"For example, can be used to represent a unit-dose based value such as 'tabs', when the Dose amount is expressed as an SI unit such as 'mg', or where it is required to express the total volume of an infusion as well as the amount of the active ingredient.">
+            >
+            ["at0178"] = <
+                text = <"Dose description">
+                description = <"Text description of the dose.">
+                comment = <"For example: \"Apply ointment to affected area until it glistens\". This element is intended to allow implementers to use the structures for increasing/tapering dosages without necessarily specifying the doses in a structured way.">
+            >
+            ["at9001"] = <
+                text = <"Flow rate, volume">
+                description = <"Flow rate, volume">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Dosificación">
+                description = <"Combinación de una cantidad de medicación y el momento de administración para un mismo día, como parte de una prescripción o gestión de medicación.">
+                comment = <"Por ejemplo: \"2 comprimidos a las 18.00 horas\" o \"20 mg tres veces al día\". Nota: este grupo permite múltiples ocurrencias para permitir la representación de un conjunto completo de patrones de dosis para una única dirección de dosis.">
+            >
+            ["at0037"] = <
+                text = <"Pauta horaria">
+                description = <"Detalles estructurados sobre la pauta horaria de un solo día.">
+                comment = <"Por ejemplo: \"por la mañana\", \"a las 06.00, a las 14.00, a las 21.00\".">
+            >
+            ["at0102"] = <
+                text = <"Duración de la administración">
+                description = <"Periodo de tiempo durante el cual debe administrarse una dosis única del medicamento o vacuna.">
+                comment = <"Por ejemplo: \"Administrar durante 10 minutos\".">
+            >
+            ["at0134"] = <
+                text = <"Velocidad de administración">
+                description = <"La velocidad a la que debe administrarse la medicación, por ejemplo una infusión.">
+                comment = <"Por ejemplo: \"200 ml/h\". Utilice el tipo de datos de texto para registrar instrucciones no cuantificables o semicuantificables.">
+            >
+            ["at0135"] = <
+                text = <"Fórmula de dosificación">
+                description = <"La fórmula utilizada para calcular la cantidad de dosis o la tasa de administración cuando ésta depende de algún otro factor, como el peso corporal o la superficie.">
+                comment = <"Por ejemplo: \"10 mg/kg/día\". El resultado de esta fórmula se mantendrá normalmente en Dosis o Tasa de administración/duración. Cuando en el cálculo de la dosis se utilicen medidas clínicas como el peso corporal, deberá utilizarse un atributo LINK para especificar qué medida concreta se ha utilizado.">
+            >
+            ["at0144"] = <
+                text = <"Dosis">
+                description = <"La cantidad de medicación administrada de una sola vez.">
+                comment = <"Por ejemplo: 1 mg, 1,5 ml, 0,125 g; o 1-2 ml, 12,5-20,5 mg.">
+            >
+            ["at0164"] = <
+                text = <"Secuencia de dosificación">
+                description = <"La posición prevista de esta dosis dentro de la secuencia global de dosis.">
+                comment = <"Por ejemplo: \"1\", \"2\", \"3\". 
+Cuando se expresan dosis múltiples, la \"Secuencia patrón\" hace explícito el orden en que deben ejecutarse. Por ejemplo: (1) 1 cápsula por la mañana, (2) 2 cápsulas a las 14 horas, (3) 1 cápsula por la noche.">
+            >
+            ["at0176"] = <
+                text = <"Dosis alternativa">
+                description = <"Representación alternativa de la cantidad de medicación administrada de una sola vez.">
+                comment = <"Por ejemplo, puede utilizarse para representar un valor basado en la unidad de dosis, como \"tabletas\", cuando la cantidad de dosis se expresa como una unidad SI, como \"mg\", o cuando se requiere expresar el volumen total de una infusión, así como la cantidad de principio activo.">
+            >
+            ["at0178"] = <
+                text = <"Descripción de la dosis">
+                description = <"Descripción textual de la dosis.">
+                comment = <"Por ejemplo: \"Aplicar pomada en la zona afectada hasta que brille\". Este elemento está pensado para que los implementadores puedan utilizar las estructuras para aumentar/disminuir dosis sin especificar necesariamente las dosis de forma estructurada.">
+            >
+            ["at9001"] = <
+                text = <"Caudal, volumen">
+                description = <"Caudal, volumen">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Dosificació">
+                description = <"La combinació d’una quantitat de medicació i el moment d’administració en un mateix dia, com a part d’una prescripció o gestió de medicació.">
+                comment = <"Per exemple: «2 comprimits a les 18:00 h» o «20 mg tres vegades al dia». Nota: aquesta agrupació permet múltiples opcions per a permetre la representació d’un conjunt complet de pautes de dosificació que serveixen per a una única instrucció de dosificació.">
+            >
+            ["at0037"] = <
+                text = <"Pauta diària">
+                description = <"Dades estructurals sobre la pauta horària d’un únic dia.">
+                comment = <"Per exemple: «al matí», «a les 6:00 h, a les 14:00 h, a les 21:00 h».">
+            >
+            ["at0102"] = <
+                text = <"Durada de l'administració">
+                description = <"Període de temps durant el qual s’ha d’administrar una única dosi de la medicació o vacuna.">
+                comment = <"Per exemple: «Administrar durant 10 minuts».">
+            >
+            ["at0134"] = <
+                text = <"Freqüència d’administració">
+                description = <"La freqüència amb la qual s’ha d’administrar la medicació. Per exemple, una infusió.">
+                comment = <"Per exemple: «200 ml/hora». Utilitzar el tipus de dades de text per a registrar instruccions no quantificables o semiquantificables.">
+            >
+            ["at0135"] = <
+                text = <"Fórmula de dosificació">
+                description = <"La fórmula utilitzada per a calcular la quantitat de dosi o la freqüència d’administració quan ambdues depenen d’algun altre factor, com el pes corporal o la superfície.">
+                comment = <"Per exemple: «10 mg/kg/dia». El resultat d’aquesta fórmula normalment estarà contingut en freqüència/durada de Dosi o Administració. Quan s’utilitzen mesures clíniques com el pes corporal per a calcular la dosi, cal utilitzar un atribut LINK per a especificar la mesura concreta que s’ha utilitzat.">
+            >
+            ["at0144"] = <
+                text = <"Dosi">
+                description = <"La quantitat de medicació administrada d’una sola vegada.">
+                comment = <"Per exemple: 1 mg, 1,5 ml, 0,125 g; o 1-2 ml, 12,5-20,5 mg.">
+            >
+            ["at0164"] = <
+                text = <"Seqüència de dosificació">
+                description = <"La posició prevista d’aquesta dosi dins de la seqüència global de dosis.">
+                comment = <"Per exemple: «1», «2», «3».
+Quan s’expressen diverses dosis, la «Seqüència de pautes» explicita l’ordre en què s’han de realitzar. Per exemple: (1) 1 comprimit al matí, (2) 2 comprimits a les 14:00 h, (3) 1 comprimit a la nit.">
+            >
+            ["at0176"] = <
+                text = <"Dosi alternativa">
+                description = <"Representació alternativa de la quantitat de medicació administrada al mateix temps.">
+                comment = <"Per exemple: es pot utilitzar per a representar un valor basat en la unitat de dosi, com «comprimits», quan la quantitat de dosi s’expressa com una unitat del SI (Sistema Internacional), com «mg», o quan s’ha d’expressar el volum total d’una infusió, així com la quantitat del principi actiu.">
+            >
+            ["at0178"] = <
+                text = <"Descripció de la dosi">
+                description = <"Descripció de la dosi.">
+                comment = <"Per exemple: «Aplicar pomada a la zona afectada fins que brilli». Aquest element pretén que els implementadors puguin utilitzar les estructures per a augmentar/disminuir les dosis sense la necessitat d’especificar les dosis de manera estructurada.">
+            >
+            ["at9001"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/126>
+        >
+    >

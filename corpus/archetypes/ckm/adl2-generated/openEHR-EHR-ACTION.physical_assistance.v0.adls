@@ -1,0 +1,386 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=bc89a5c0-5756-46b9-af5d-d94d2fb43608; build_uid=c54ac301-35cd-4bf8-8bb2-febe3c8abff0)
+    openEHR-EHR-ACTION.physical_assistance.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2025-05-29">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"AUCDI Clinical Design Group (CDG), Sparked FHIR accelerator, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Requirements identified by clinicians, reflecting current clinical practice and workflows.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"4B580525FE0E0F8545949D8424562752">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about the provision of physical assistance at clinically relevant events in the intervention lifecycle, from planning to completion, and including deviations or interruptions.">
+            keywords = <"intervention", ...>
+            use = <"Use to record details about the provision of physical assistance at clinically relevant events in the intervention lifecycle, from planning to completion, and including deviations or interruptions.
+
+The scope of this data group includes a wide range of physical assistance, including but not limited to activities of daily living:
+- Mobility assistance – such as walking, standing, or transferring 
+- Personal activities and hygiene – such as bathing, dressing, grooming, and toileting.
+- Feeding assistance
+- Therapeutic exercises – such as hands-on support during physical therapy exercises or rehabilitation activities
+- Use of assistive devices – such as helping with the use of mobility aids, prosthetic device, or communication devices.     
+
+Record one instance per careflow step or event for each specified assistance activity in a health record. If the assistance consists of a single activity, the 'Assistance provided' and the 'Assistance completed' careflow step may be recorded simultaneously. However, if the assistance consists of multiple component activities, record a separate instance of the 'Assistance provided' careflow step for each component activity provided, and record the 'Assistance completed' step only after the final component activity has been provided.">
+            misuse = <"Not to be used to record other types of assistance, other than physical or hands-on support. The need for a specific archetype for this purpose is acknowledged but has not yet been developed.">
+            copyright = <"© Sparked AU FHIR accelerator, openEHR Foundation">
+        >
+    >
+
+definition
+    ACTION[at0000] matches {    -- Physical assistance
+        description matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {1} matches {    -- Assistance type
+                        value matches {
+                            DV_TEXT[at9008]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Assistance category
+                        value matches {
+                            DV_TEXT[at9009]
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9010]
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Clinical indication
+                        value matches {
+                            DV_TEXT[at9011]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0007] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Scheduled date/time
+                        value matches {
+                            DV_DATE_TIME[at9012]
+                        }
+                    }
+                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Outcome
+                        value matches {
+                            DV_TEXT[at9013]
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9014]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0013] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Requestor order identifier
+                        value matches {
+                            DV_TEXT[at9015]
+                            DV_IDENTIFIER[at9016]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0021] matches {    -- Requestor
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Receiver order identifier
+                        value matches {
+                            DV_TEXT[at9017]
+                            DV_IDENTIFIER[at9018]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0023] matches {    -- Receiver
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    allow_archetype CLUSTER[at0024] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+        ism_transition matches {
+            ISM_TRANSITION[at0010] matches {    -- Assistance planned
+                current_state matches {
+                    DV_CODED_TEXT[at9019] matches {
+                        defining_code matches {[at9000]}    -- planned
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9020] matches {
+                        defining_code matches {[at0010]}    -- Assistance planned
+                    }
+                }
+            }
+            ISM_TRANSITION[at0011] matches {    -- Assistance request sent
+                current_state matches {
+                    DV_CODED_TEXT[at9021] matches {
+                        defining_code matches {[at9000]}    -- planned
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9022] matches {
+                        defining_code matches {[at0011]}    -- Assistance request sent
+                    }
+                }
+            }
+            ISM_TRANSITION[at0012] matches {    -- Assistance postponed
+                current_state matches {
+                    DV_CODED_TEXT[at9023] matches {
+                        defining_code matches {[at9001]}    -- postponed
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9024] matches {
+                        defining_code matches {[at0012]}    -- Assistance postponed
+                    }
+                }
+            }
+            ISM_TRANSITION[at0014] matches {    -- Assistance cancelled
+                current_state matches {
+                    DV_CODED_TEXT[at9025] matches {
+                        defining_code matches {[at9002]}    -- cancelled
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9026] matches {
+                        defining_code matches {[at0014]}    -- Assistance cancelled
+                    }
+                }
+            }
+            ISM_TRANSITION[at0015] matches {    -- Assistance scheduled
+                current_state matches {
+                    DV_CODED_TEXT[at9027] matches {
+                        defining_code matches {[at9003]}    -- scheduled
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9028] matches {
+                        defining_code matches {[at0015]}    -- Assistance scheduled
+                    }
+                }
+            }
+            ISM_TRANSITION[at0016] matches {    -- Assistance provided
+                current_state matches {
+                    DV_CODED_TEXT[at9029] matches {
+                        defining_code matches {[at9004]}    -- active
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9030] matches {
+                        defining_code matches {[at0016]}    -- Assistance provided
+                    }
+                }
+            }
+            ISM_TRANSITION[at0017] matches {    -- Assistance suspended
+                current_state matches {
+                    DV_CODED_TEXT[at9031] matches {
+                        defining_code matches {[at9005]}    -- suspended
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9032] matches {
+                        defining_code matches {[at0017]}    -- Assistance suspended
+                    }
+                }
+            }
+            ISM_TRANSITION[at0018] matches {    -- Assistance abandoned
+                current_state matches {
+                    DV_CODED_TEXT[at9033] matches {
+                        defining_code matches {[at9006]}    -- aborted
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9034] matches {
+                        defining_code matches {[at0018]}    -- Assistance abandoned
+                    }
+                }
+            }
+            ISM_TRANSITION[at0019] matches {    -- Assistance completed
+                current_state matches {
+                    DV_CODED_TEXT[at9035] matches {
+                        defining_code matches {[at9007]}    -- complete
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9036] matches {
+                        defining_code matches {[at0019]}    -- Assistance completed
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Physical assistance">
+                description = <"Hands-on support provided by a caregiver to enable an individual to complete a task they cannot perform independently and/or safely due to a limitation in strength, mobility, coordination, communication, cognition, or sensory abilities, such as visual or auditory impairments.">
+            >
+            ["at0002"] = <
+                text = <"Assistance type">
+                description = <"Name of the specific type of physical support or help required.">
+                comment = <"For example: washing hair, toileting, transfer from wheelchair to car, or use of a communication device. Use of a clinical terminology is recommended whenever possible. Free text entry should be allowed only when an appropriate coded value is not available.">
+            >
+            ["at0003"] = <
+                text = <"Assistance category">
+                description = <"An overarching grouping for the assistance identified in 'Assistance type'.">
+                comment = <"For example: activity of daily living, mobilty.">
+            >
+            ["at0004"] = <
+                text = <"Description">
+                description = <"Narrative description about the physical assistance, relevant to the active careflow step.">
+            >
+            ["at0005"] = <
+                text = <"Clinical indication">
+                description = <"The clinical reason for the physical assistance.">
+                comment = <"For example: diabetes control; or cancer treatment. Coding of the indication with a terminology is preferred, where possible. This data element allows multiple occurrences.">
+            >
+            ["at0007"] = <
+                text = <"Additional details">
+                description = <"Additional structured details about the physical assistance.">
+            >
+            ["at0008"] = <
+                text = <"Scheduled date/time">
+                description = <"The intended date and/or time for provision of the physical assistance.">
+                comment = <"This data element must only be used in conjunction with the 'Assistance scheduled' careflow step.">
+            >
+            ["at0009"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the physical assistance activity or careflow step not captured in other fields.">
+            >
+            ["at0010"] = <
+                text = <"Assistance planned">
+                description = <"An intent or need to initiate the assistance process has been recognised; active careflow steps have not commenced.">
+            >
+            ["at0011"] = <
+                text = <"Assistance request sent">
+                description = <"A request to initiate the assistance process has been submitted; active careflow steps have not commenced.">
+            >
+            ["at0012"] = <
+                text = <"Assistance postponed">
+                description = <"The planned assistance has been temporarily stopped; active careflow steps have not commenced.">
+            >
+            ["at0014"] = <
+                text = <"Assistance cancelled">
+                description = <"The planned assistance has been permanently stopped; active careflow steps have not commenced.">
+            >
+            ["at0015"] = <
+                text = <"Assistance scheduled">
+                description = <"A date and/or time has been scheduled for the planned assistance; active careflow steps have not commenced.">
+            >
+            ["at0016"] = <
+                text = <"Assistance provided">
+                description = <"The assistance has been provided; active careflow steps are in process.">
+                comment = <"If the assistance consists of a single component, this careflow step and the 'Assistance completed' step may be recorded simultaneously. If the assistance consists of multiple components, record a separate instance of this careflow step for each component provided, and record the 'Assistance completed' step only after the final component has been delivered.">
+            >
+            ["at0017"] = <
+                text = <"Assistance suspended">
+                description = <"The active assistance process has been temporarily stopped; active careflow steps have been put on hold.">
+            >
+            ["at0018"] = <
+                text = <"Assistance abandoned">
+                description = <"The active assistance process has been permanently stopped; active careflow steps have been aborted.">
+            >
+            ["at0019"] = <
+                text = <"Assistance completed">
+                description = <"All components of the assistance have been delivered; active careflow steps have been completed.">
+                comment = <"If the assistance consists of a single component, this careflow step and the 'Assistance supply delivered' step may be recorded simultaneously.">
+            >
+            ["at0020"] = <
+                text = <"Requestor order identifier">
+                description = <"The local ID assigned to the order by the 'Requestor'.">
+            >
+            ["at0021"] = <
+                text = <"Requestor">
+                description = <"Details about the healthcare provider or organisation requesting the order.">
+            >
+            ["at0022"] = <
+                text = <"Receiver order identifier">
+                description = <"The ID assigned to the order by the 'Receiver'.">
+                comment = <"This may also be referred to as 'Filler order identifier'.">
+            >
+            ["at0023"] = <
+                text = <"Receiver">
+                description = <"Details about the healthcare provider or organisation who received the request.">
+            >
+            ["at0024"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0025"] = <
+                text = <"Outcome">
+                description = <"The result or consequence of the assistance provided, reflecting the individual's ability to complete the activity with the support.">
+                comment = <"For example: completed successfully, partially completed, unable to complete, or ineffective. This data element must only be used in conjunction with the 'Assistance provided' or 'Assistance completed' careflow step.">
+            >
+            ["at9004"] = <
+                text = <"active">
+                description = <"active">
+            >
+            ["at9000"] = <
+                text = <"planned">
+                description = <"planned">
+            >
+            ["at9001"] = <
+                text = <"postponed">
+                description = <"postponed">
+            >
+            ["at9002"] = <
+                text = <"cancelled">
+                description = <"cancelled">
+            >
+            ["at9003"] = <
+                text = <"scheduled">
+                description = <"scheduled">
+            >
+            ["at9005"] = <
+                text = <"suspended">
+                description = <"suspended">
+            >
+            ["at9006"] = <
+                text = <"aborted">
+                description = <"aborted">
+            >
+            ["at9007"] = <
+                text = <"complete">
+                description = <"complete">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9004"] = <http://openehr.org/id/245>
+            ["at9000"] = <http://openehr.org/id/526>
+            ["at9001"] = <http://openehr.org/id/527>
+            ["at9002"] = <http://openehr.org/id/528>
+            ["at9003"] = <http://openehr.org/id/529>
+            ["at9005"] = <http://openehr.org/id/530>
+            ["at9006"] = <http://openehr.org/id/531>
+            ["at9007"] = <http://openehr.org/id/532>
+        >
+    >

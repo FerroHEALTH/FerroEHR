@@ -1,0 +1,385 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f00c4336-158d-49e8-94d1-52ce8695b55e; build_uid=6d9cf440-9301-4232-a5eb-4a3a2f1dbbd6)
+    openEHR-EHR-OBSERVATION.acvpu.v1.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Antje Wulff">
+                ["organisation"] = <"PLRI for Medical Informatics Medical School Hannover and TU Braunschweig">
+                ["email"] = <"wulff.antje@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Åsa Skagerhult">
+                ["organisation"] = <"Region Östergötland">
+                ["email"] = <"asa.skagerhult@regionostergotland.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke; John Tore Valand">
+                ["organisation"] = <"Nasjonal IKT HF; Helse Bergen HF">
+                ["email"] = <"john.tore.valand@helse-bergen.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Vladimir Pizzo">
+                ["organisation"] = <"Hospital Sirio Libanes, Brazil">
+                ["email"] = <"vladimir.pizzo@hsl.org.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Hildegard Franke">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"hildi@freshehr.com">
+        ["date"] = <"2018-02-01">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Erling Are Hole, Helse Bergen, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Gunn Elin Blakkisrud, DIPS ASA, Norway", "Grant Forrest, NHS Scotland, United Kingdom", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)", "Heather Grain, Llewelyn Grain Informatics, Australia", "Evelyn Hovenga, EJSH Consulting, Australia", "Morten Hørthe, DIPS, Norway", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Liv Laugen, Oslo universitetssykehus, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Svenne Naumann, Finnmarkssykehuset, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Terje Sagmyr, DIPS AS, Norway", "Gro-Hilde Severinsen, Norwegian center for ehealthresearch, Norway", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Arild Stangeland, Helse Bergen, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "June Susanne Berge, DIPS AS, Norway", "Nyree Taylor, Ocean Informatics, Australia", "Marianne Thorbjørnsen, Oslo Universitetssykehus, Norway", "Karl Trygve Kalleberg, Oslo Universitetssykehus, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Ingrid Vange, Helse Bergen, Norway", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: ACVPU, Draft archetype [Internet]. Apperta UK, Apperta UK Clinical Knowledge Manager [cited: 2019-03-12]. Available from: https://ckm.apperta.org/ckm/#showArchetype_1051.32.706">
+        ["2"] = <"National Early Warning Score (NEWS) 2 - Standardising the assessment of acute-illness severity in the NHS [Internet]. Royal College of Physicians [cited 2020 Jan 17]. Available at: https://www.rcplondon.ac.uk/file/8636/download">
+        ["3"] = <"Williams B. The National Early Warning Score and the acutely confused patient. Clin Med (Lond). 2019 Mar;19(2):190-191. doi: 10.7861/clinmedicine.19-2-190. PMID: 30872312; PMCID: PMC6454357.">
+        ["4"] = <"National Early Warning Score (NEWS) 2. Pasientsikkerhetsprogrammet [cited 2019.03.01]. Norwegian translation. Available at: https://pasientsikkerhetsprogrammet.no/om-oss/innsatsomrader/tidlig-oppdagelse-av-forverret-tilstand">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"8A256DAD4500E0D52C2B2547210C2362">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Aufzeichnung des Grades des Bewusstseins eines Individuums.">
+            keywords = <"avpu", "Alarm", "Stimme", "Schmerz", "nicht ansprechbar", "wach", "Rede", "Schmerz", "unbewusst", "Stimme", "Bewusstsein", "verbal", "halbkomatös", "bewusst", "Bewusstseinsebene", "komatös", "Verwirrung", "news2">
+            use = <"Zur einfachen Beurteilung des Bewusstseinsniveaus einer Person, besonders geeignet für die Beurteilung in Notfallsituationen.
+
+Diese Skala ist eine Verfeinerung der ursprünglichen AVPU, die 2017 durch Hinzufügen eines \"C\" aktualisiert wurde, wobei C für \"ein neues Auftreten oder eine sich verschlimmernde Verwirrung, ein Delirium oder eine andere veränderte Mentalität\" steht.
+
+Diese Skala wird jetzt als Bestandteil von NEWS2 veröffentlicht, um den Grad des Bewusstseins einer Person zu erfassen.">
+            misuse = <"">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera en individs medvetandegrad.">
+            keywords = <"*avpu(en)", "*alert(en)", "*voice(en)", "*pain(en)", "*unresponsive(en)", "*awake(en)", "*speech(en)", "*pain(en)", "*unconscious(en)", "*voice(en)", "*consciousness(en)", "*verbal(en)", "*verbal response(en)", "*semicomatose(en)", "*conscious(en)", "*level of consciousness(en)", "*comatose(en)", "*confusion(en)", "*acvpu(en)">
+            use = <"Används för att registrera en snabb och enkel bedömning av en individs medvetandegrad, i synnerhet i akuta situationer. Bedömningen har uppdaterats som en konsekvens av publiceringen av NEWS2 år 2017.">
+            misuse = <"">
+            copyright = <"© Apperta UK, openEHR Foundation, openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"Brukes for å vurdere et individs bevissthetsnivå.">
+            keywords = <"AVPU", "alert", "voice", "pain", "unresponsive", "våken", "tale", "smerte", "bevisstløs", "stemme", "bevissthet", "verbal", "verbalrespons", "semikomatøs", "bevisst", "bevissthetsnivå", "komatøs", "sløv", "barn", "nonverbal", "stimuli", "GCS", "glasgow coma scale", "news2", "uresponsiv", "forvirring", "tiltale", "confusion">
+            use = <"Brukes for å gjøre en rask og enkel vurdering av et individs bevissthetsnivå, særlig egnet til vurdering i akutte situasjoner. 
+
+Skalaen er en er forbedring av den originale AVPU skalaen. Den ble oppdatert i 2017 ved å legge til 'C', der C representerer nytt tilfelle av- eller økt forvirring, delirum eller endring i mental tilstand.
+
+Skalaen er nå publisert som en del av NEWS 2.">
+            misuse = <"">
+            copyright = <"© Apperta UK, openEHR Foundation, openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Registrar a responsividade de um paciente, como uma indicação do seu nível de consciência.">
+            keywords = <"avda", "alerta", "voz", "dor", "arresponsivo">
+            use = <"Usar para registrar, como parte de uma avaliação de rastreamento da responsividade de um paciente, como uma indicação do seu nível de consicência.">
+            misuse = <"">
+            copyright = <"© Apperta UK, openEHR Foundation, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record an individual's level of consciousness.">
+            keywords = <"avpu", "alert", "voice", "pain", "unresponsive", "awake", "speech", "pain", "unconscious", "consciousness", "verbal", "semicomatose", "conscious", "level of consciousness", "comatose", "confusion", "news2">
+            use = <"Use to make a simple assessment of an individual's level of consciousness, especially suitable for assessment in emergency situations.
+
+This scale is a refinement of the original AVPU, updated in 2017 by adding 'C', where C represents 'a new onset or worsening confusion, delirium or any other altered mentation'.
+
+This scale is now published as a component of NEWS2.">
+            misuse = <"">
+            copyright = <"© Apperta UK, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- ACVPU scale
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Any point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {1} matches {    -- ACVPU
+                                        value matches {
+                                            DV_CODED_TEXT[at9001] matches {
+                                                defining_code matches {[ac9000]}    -- ACVPU (synthesised)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0013]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0009] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0011] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"ACVPU-Skala">
+                description = <"Einfache Skala, die als Teil einer Bewertung verwendet wird, um den Grad des Bewusstseins einer Person zu messen und aufzuzeichnen.">
+                comment = <"ACVPU ist ein Akronym für \"Alert\", \"Confusion\", \"Voice\", \"Pain\", \"Unresponsive\".">
+            >
+            ["at0002"] = <
+                text = <"Jedes Ereignis zu einem beliebigen Zeitpunkt">
+                description = <"Standardmäßiges, nicht spezifiziertes Ereignis zu einem bestimmten Zeitpunkt, das in einem Template oder zur Laufzeit explizit definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"ACVPU">
+                description = <"Die Bewertung des Bewusstseinsniveaus des Patienten.">
+            >
+            ["at0005"] = <
+                text = <"Alert">
+                description = <"Vollständig wach. Spontanes Öffnen der Augen, reagiert auf die Stimme und hat eine motorische Funktion.">
+            >
+            ["at0006"] = <
+                text = <"Stimme">
+                description = <"Jede verbale, motorische oder Augenreaktion auf einen Stimmreiz.">
+            >
+            ["at0007"] = <
+                text = <"Schmerzen">
+                description = <"Jede verbale, motorische oder Augenreaktion auf einen Schmerzreiz.">
+            >
+            ["at0008"] = <
+                text = <"Nicht ansprechbar">
+                description = <"Keine Reaktion auf Stimme oder Schmerzreiz.">
+            >
+            ["at0011"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen, die zur Erfassung lokaler Inhalte oder zur Anpassung an andere Referenzmodelle/Formalismen erforderlich sind.">
+                comment = <"z.B. Lokale Informationsanforderungen oder zusätzliche Metadaten zur Anpassung an FHIR- oder CIMI-Äquivalente.">
+            >
+            ["at0015"] = <
+                text = <"Verwirrtheit">
+                description = <"Ein neuer Krankheitsbeginn oder eine sich verschlimmernde Verwirrtheit, ein Delirium oder eine andere veränderte Mentalität.">
+            >
+            ["ac9000"] = <
+                text = <"ACVPU (synthesised)">
+                description = <"Die Bewertung des Bewusstseinsniveaus des Patienten. (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"*ACVPU scale (en)">
+                description = <"En skala som används som del av bedömningen och registreringen av en individs medvetandegrad.">
+                comment = <"*ACVPU is an acronym for 'Alert', 'Confusion', 'Voice', 'Pain', 'Unresponsive'. (en)">
+            >
+            ["at0002"] = <
+                text = <"Ospecificerad händelse">
+                description = <"Ospecificerad standardhändelse vid en tidpunkt eller inom ett tidsintervall som explicit kan definieras i en mall eller genereras automatiskt av vissa IT-system.">
+            >
+            ["at0004"] = <
+                text = <"*ACVPU (en)">
+                description = <"Den observerade medvetenhetsgraden hos patienten.">
+            >
+            ["at0005"] = <
+                text = <"Vaken">
+                description = <"Öppnar ögonen spontant, sammanhängande tal, följer uppmaningar.">
+            >
+            ["at0006"] = <
+                text = <"Röst">
+                description = <"Någon form av verbal, motorisk eller ögonrespons på röststimulans.">
+            >
+            ["at0007"] = <
+                text = <"Smärta">
+                description = <"Någon form av verbal, motorisk eller ögonrespons på smärtstimulans, såsom tryck mot nagelband, men inte på röststimulans.">
+            >
+            ["at0008"] = <
+                text = <"Ingen respons">
+                description = <"Ingen respons på vare sig röst- eller smärtstimulans.">
+            >
+            ["at0011"] = <
+                text = <"Tilläggsinformation">
+                description = <"Plats för att infoga tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.">
+                comment = <"Exempelvis lokala informationskrav eller metadata för anpassning till FHIR- eller CIMI-motsvarigheter.">
+            >
+            ["at0015"] = <
+                text = <"Förvirring">
+                description = <"Nytillkommen förvirring, desorientering och/eller oro, där tillståndet tidigare varit normalt.">
+            >
+            ["ac9000"] = <
+                text = <"*ACVPU (en) (synthesised)">
+                description = <"Den observerade medvetenhetsgraden hos patienten. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"ACVPU skala">
+                description = <"En enkel skala for å vurdere et individs bevissthetsnivå.">
+                comment = <"ACVPU er en forkortelse for engelsk \"Alert\", \"Confusion\", \"Voice\", \"Pain\" og \"Unresponsive\", på norsk \"Våken\", \"Forvirring\" \"Reagerer på tiltale\", \"Reagerer ved smertestimulering\" og \"Reagerer ikke på tale eller smertestimulering\".">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert tidspunkthendelse">
+                description = <"Uspesifisert tidspunkt som kan defineres mer eksplisitt i en templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"ACVPU">
+                description = <"Observasjonen av individets bevissthetsnivå.">
+            >
+            ["at0005"] = <
+                text = <"Alert">
+                description = <"Våken. Øynene åpnes spontant, responderer på tale og har motorikk.">
+            >
+            ["at0006"] = <
+                text = <"Voice">
+                description = <"Reagerer på tiltale. Hvilken som helst verbal, motorisk eller øye-respons på verbal tiltale.">
+            >
+            ["at0007"] = <
+                text = <"Pain">
+                description = <"Reagerer ved smertestimulering. En hvilken som helst verbal, motorisk eller øye-respons på smertestimuli.">
+            >
+            ["at0008"] = <
+                text = <"Unresponsive">
+                description = <"Reagerer ikke på tale eller smertestimulering.">
+            >
+            ["at0011"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at0015"] = <
+                text = <"Confusion">
+                description = <"Nyoppstått forvirring. Nytt tilfelle eller forverring av forvirring, delirium eller en hvilken som helst endring i mental tilstand.">
+            >
+            ["ac9000"] = <
+                text = <"ACVPU (synthesised)">
+                description = <"Observasjonen av individets bevissthetsnivå. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"*ACVPU scale (en)">
+                description = <"*Simple scale used as part of an assessment to measure and record an individual's level of consciousness.(en)">
+                comment = <"*ACVPU is an acronym for 'Alert', 'Confusion', 'Voice', 'Pain', 'Unresponsive'. (en)">
+            >
+            ["at0002"] = <
+                text = <"Qualquer evento">
+                description = <"Padrão, evento ponto no tempo ou intervalo não especificado que pode ser definido explicitamente num template ou no tempo corrente.">
+            >
+            ["at0004"] = <
+                text = <"*ACVPU (en)">
+                description = <"*The observation of the patient's level of consciousness.(en)">
+            >
+            ["at0005"] = <
+                text = <"Alerta">
+                description = <"O paciente está completamente acordado e alerta.">
+            >
+            ["at0006"] = <
+                text = <"Voz">
+                description = <"O paciente responde de alguma forma a um estímulo vocal.">
+            >
+            ["at0007"] = <
+                text = <"Dor">
+                description = <"O paciente responde de alguma forma a um estímulo doloroso.">
+            >
+            ["at0008"] = <
+                text = <"Arresponsivo">
+                description = <"O paciente não responde de forma alguma a um estímulo vocal ou doloroso.">
+            >
+            ["at0011"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+                comment = <"*e.g. Local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+            ["at0015"] = <
+                text = <"*Confusion(en)">
+                description = <"*New onset of confusion, disorientation and/or agitation, where previously their mental state was normal.(en)">
+            >
+            ["ac9000"] = <
+                text = <"*ACVPU (en) (synthesised)">
+                description = <"*The observation of the patient's level of consciousness.(en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"ACVPU scale">
+                description = <"Simple scale used as part of an assessment to measure and record an individual's level of consciousness.">
+                comment = <"ACVPU is an acronym for 'Alert', 'Confusion', 'Voice', 'Pain', 'Unresponsive'.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time event">
+                description = <"Default, unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"ACVPU">
+                description = <"The assessment of the patient's level of consciousness.">
+            >
+            ["at0005"] = <
+                text = <"Alert">
+                description = <"Fully awake. Spontaneous opening of the eyes, responds to voice and have motor function.">
+            >
+            ["at0006"] = <
+                text = <"Voice">
+                description = <"Any verbal, motor or eye response to a voice stimulus.">
+            >
+            ["at0007"] = <
+                text = <"Pain">
+                description = <"Any verbal, motor or eye response to a pain stimulus.">
+            >
+            ["at0008"] = <
+                text = <"Unresponsive">
+                description = <"No response to voice or pain stimuli.">
+            >
+            ["at0011"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"e.g. Local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0015"] = <
+                text = <"Confusion">
+                description = <"A new onset or worsening confusion, delirium or any other altered mentation.">
+            >
+            ["ac9000"] = <
+                text = <"ACVPU (synthesised)">
+                description = <"The assessment of the patient's level of consciousness. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0005", "at0015", "at0006", "at0007", "at0008">
+        >
+    >

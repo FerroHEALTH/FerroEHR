@@ -1,0 +1,101 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=9072bf18-7cb7-4c5a-97ba-b3d137b69ceb; build_uid=60ad62e1-11e8-449f-8d5d-42c6b14122bb)
+    openEHR-EHR-CLUSTER.level_of_certainty_bc.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2023-06-16">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Guillain Barré and Miller Fisher Syndromes: Case Definition Companion Guide v1.0. Brighton Collaboration, USA; 05 Mar 2021. Available from: https://brightoncollaboration.us/guillain-barre-and-miller-fisher-syndromes-case-definition-companion-guide/. Accessed 2023 Jun 16.">
+        ["2"] = <"Kohl KS, Bonhoeffer J, Braun MM, et al.; The Brighton Collaboration. The Brighton Collaboration: Creating a Global Standard for Case Definitions (and Guidelines) for Adverse Events Following Immunization. In: Henriksen K, Battles JB, Marks ES, et al., editors. Advances in Patient Safety: From Research to Implementation (Volume 2: Concepts and Methodology). Rockville (MD): Agency for Healthcare Research and Quality (US); 2005 Feb. Available from: https://www.ncbi.nlm.nih.gov/books/NBK20507/. Available from: https://www.ncbi.nlm.nih.gov/books/NBK20507/. Accessed 2023 Jun 16.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"AE7DF7ADC0FFD6D4AC9FFD14CB0A47B6">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the level of diagnostic certainty according to the Brighton Collaboration criteria.">
+            use = <"Use to record the level of diagnostic certainty according to the Brighton Collaboration criteria.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Level of certainty (Brighton Collaboration)
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Index disease
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {1} matches {    -- Level of certainty
+                value matches {
+                    DV_CODED_TEXT[at9002] matches {
+                        defining_code matches {[ac9000]}    -- Level of certainty (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Level of certainty (Brighton Collaboration)">
+                description = <"Determination of the level of certainty for a diagnosis made following a vaccine-related adverse event, based on standardised criteria established by the Brighton Collaboration.">
+            >
+            ["at0001"] = <
+                text = <"Index disease">
+                description = <"">
+            >
+            ["at0002"] = <
+                text = <"Level of certainty">
+                description = <"">
+            >
+            ["at0003"] = <
+                text = <"Level 1">
+                description = <"Highest level of specificity; least sensitive.">
+            >
+            ["at0004"] = <
+                text = <"Level 2">
+                description = <"Intermediate level of specificity; lower sensitivity.">
+            >
+            ["at0005"] = <
+                text = <"Level 3">
+                description = <"Lower level of specificity; highly sensitive.">
+            >
+            ["at0006"] = <
+                text = <"Level 4">
+                description = <"Insufficient information available to meet any level of case definition.">
+            >
+            ["at0007"] = <
+                text = <"Level 5">
+                description = <"Not a case.">
+            >
+            ["ac9000"] = <
+                text = <"Level of certainty (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0003", "at0004", "at0005", "at0006", "at0007">
+        >
+    >

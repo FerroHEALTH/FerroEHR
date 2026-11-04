@@ -1,0 +1,333 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d575b7fa-b711-451b-a42e-dbbe13a93b30; build_uid=fbc257b1-02c9-4565-812d-7dc02f3830bf)
+    openEHR-EHR-OBSERVATION.light_projection_test.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Lars Fuhrmann">
+        ["organisation"] = <"German Society of Ophthalmology, Germany">
+        ["email"] = <"lars.fuhrmann@dog.org">
+        ["date"] = <"2026-03-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Lars Fuhrmann, German Society of Ophthalmology, Germany", "Heather Leslie, Atomica Informatics, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO).">
+    >
+    references = <
+        ["1"] = <"Paris J, Macri C, Lee YM, Agrawal S, Chan WO. Utility of the light projection test in detecting and localising retinal detachment. Hong Kong J Emerg Med. 2025;32:e70064. doi: 10.1002/hkj2.70064.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"28FCB315FFCC5A5DD8472C009532EE71">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results of a light projection test for a single eye. ">
+            keywords = <"light projection, low vision,", ...>
+            use = <"Use to record an individual's ability to perceive the direction of a light source, typically performed when visual acuity is limited to light perception.">
+            misuse = <"Not to be used for recording the results of a visual acuity test result. Use the OBSERVATION.visual_acuity archetype for this purpose.
+
+Not to be used for recording visual field testing. The need for a specific archetype for this purpose is acknowledged but had not yet been developed at the time of the publication of this archetype.
+">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Light projection test
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0005] occurrences matches {1} matches {    -- Eye examined
+                                        value matches {
+                                            DV_CODED_TEXT[at9005] matches {
+                                                defining_code matches {[ac9000]}    -- Eye examined (synthesised)
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0009] matches {    -- Per light position
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0010] occurrences matches {1} matches {    -- Light position
+                                                value matches {
+                                                    DV_CODED_TEXT[at9006] matches {
+                                                        defining_code matches {[ac9012]}    -- Light position (synthesised)
+                                                    }
+                                                    DV_TEXT[at9013]
+                                                }
+                                            }
+                                            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Response
+                                                value matches {
+                                                    DV_CODED_TEXT[at9007] matches {
+                                                        defining_code matches {[ac9002]}    -- Response (synthesised)
+                                                    }
+                                                    DV_TEXT[at9014]
+                                                }
+                                            }
+                                            ELEMENT[at0019] occurrences matches {0..1} matches {    -- Correctness
+                                                value matches {
+                                                    DV_CODED_TEXT[at9008] matches {
+                                                        defining_code matches {[ac9003]}    -- Correctness (synthesised)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0035] occurrences matches {0..1} matches {    -- Overall result
+                                        value matches {
+                                            DV_CODED_TEXT[at9009] matches {
+                                                defining_code matches {[ac9004]}    -- Overall result (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0038] matches {    -- Clinical interpretation
+                                        value matches {
+                                            DV_TEXT[at9010]
+                                        }
+                                    }
+                                    ELEMENT[at0039] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9011]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0040] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0041] matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9012]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0008] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0042] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Light projection test">
+                description = <"The assessment of an individual's ability to discriminate the directions of a light stimulus presented from different positions relative to a single eye.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point-in-time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0005"] = <
+                text = <"Eye examined">
+                description = <"Identification of the eye under examination.">
+            >
+            ["at0006"] = <
+                text = <"Right eye">
+                description = <"The right eye was examined.">
+            >
+            ["at0007"] = <
+                text = <"Left eye">
+                description = <"The left eye was examined.">
+            >
+            ["at0009"] = <
+                text = <"Per light position">
+                description = <"The assessment of an individual's ability to discriminate the direction of a light stimulus presented from a single defined position relative to the eye.">
+                comment = <"A typical test involves four directions which are separated by 90°.">
+            >
+            ["at0010"] = <
+                text = <"Light position">
+                description = <"The position of the light source relative to the eye.">
+                comment = <"Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available.">
+            >
+            ["at0011"] = <
+                text = <"Superior">
+                description = <"The light source was directed at the eye from above.">
+            >
+            ["at0012"] = <
+                text = <"Inferior">
+                description = <"The light source was directed at the eye from below.">
+            >
+            ["at0013"] = <
+                text = <"Temporal">
+                description = <"The light source was directed from the temporal side.">
+            >
+            ["at0014"] = <
+                text = <"Nasal">
+                description = <"The light source was directed from the nasal side.">
+            >
+            ["at0015"] = <
+                text = <"Superior-temporal">
+                description = <"The light source was directed from the upper-temporal quadrant.">
+            >
+            ["at0016"] = <
+                text = <"Superior-nasal">
+                description = <"The light source was directed from the upper-nasal quadrant.">
+            >
+            ["at0017"] = <
+                text = <"Inferior-temporal">
+                description = <"The light source was directed from the lower-temporal quadrant.">
+            >
+            ["at0018"] = <
+                text = <"Inferior-nasal">
+                description = <"The light source was directed from the lower-nasal quadrant.">
+            >
+            ["at0019"] = <
+                text = <"Correctness">
+                description = <"Evaluation of whether the individual's response was correct.">
+            >
+            ["at0020"] = <
+                text = <"Correct">
+                description = <"The individual accurately identified the direction.">
+            >
+            ["at0021"] = <
+                text = <"Incorrect">
+                description = <"The individual failed to identify the direction accurately.">
+            >
+            ["at0022"] = <
+                text = <"Response">
+                description = <"The response given by the individual.">
+                comment = <"Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available.">
+            >
+            ["at0023"] = <
+                text = <"Superior">
+                description = <"The individual reported the light was coming from above.">
+            >
+            ["at0024"] = <
+                text = <"Inferior">
+                description = <"The individual reported the light was coming from below.">
+            >
+            ["at0025"] = <
+                text = <"Temporal">
+                description = <"The individual reported the light was coming from the temporal side.">
+            >
+            ["at0026"] = <
+                text = <"Nasal">
+                description = <"The individual reported the light was coming from the nasal side.">
+            >
+            ["at0027"] = <
+                text = <"Superior-temporal">
+                description = <"The individual reported the light was coming from the upper-temporal quadrant.">
+            >
+            ["at0028"] = <
+                text = <"Superior-nasal">
+                description = <"The individual reported the light was coming from the upper-nasal quadrant.">
+            >
+            ["at0029"] = <
+                text = <"Inferior-temporal">
+                description = <"The individual reported the light was coming from the lower-temporal quadrant.">
+            >
+            ["at0030"] = <
+                text = <"Inferior-nasal">
+                description = <"The individual reported the light was coming from the lower-nasal quadrant.">
+            >
+            ["at0031"] = <
+                text = <"Not visible">
+                description = <"The individual could not see the light source.">
+            >
+            ["at0032"] = <
+                text = <"Visible, but direction not identifiable">
+                description = <"The individual could see the light but could not determine its direction.">
+            >
+            ["at0033"] = <
+                text = <"Central">
+                description = <"The individual reported the light as being in the central field of vision.">
+            >
+            ["at0035"] = <
+                text = <"Overall result">
+                description = <"The overall assessment of light projection results in the examined eye. ">
+            >
+            ["at0036"] = <
+                text = <"Accurate">
+                description = <"The light projection was accurate in all tested directions.">
+            >
+            ["at0037"] = <
+                text = <"Inaccurate">
+                description = <"The light projection was inaccurate in one or more directions.">
+            >
+            ["at0038"] = <
+                text = <"Clinical interpretation">
+                description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the findings.">
+            >
+            ["at0039"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the test results and interpretation not captured in other fields.">
+            >
+            ["at0041"] = <
+                text = <"Confounding factors">
+                description = <"Identification of any incidental factors related to the state of the subject which may affect clinical interpretation of the measurement.">
+                comment = <"For example: 'reduced cooperation'. Coding with a terminology is recommended. Free text entry should only be permitted if no appropriate coded value is available.">
+            >
+            ["at0042"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9000"] = <
+                text = <"Eye examined (synthesised)">
+                description = <"Identification of the eye under examination. (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Light position (synthesised)">
+                description = <"The position of the light source relative to the eye. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Response (synthesised)">
+                description = <"The response given by the individual. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Correctness (synthesised)">
+                description = <"Evaluation of whether the individual's response was correct. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Overall result (synthesised)">
+                description = <"The overall assessment of light projection results in the examined eye.  (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0023", "at0024", "at0025", "at0026", "at0027", "at0028", "at0029", "at0030", "at0031", "at0032", "at0033">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0011", "at0012", "at0013", "at0014", "at0015", "at0016", "at0017", "at0018">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0006", "at0007">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0036", "at0037">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0020", "at0021">
+        >
+    >

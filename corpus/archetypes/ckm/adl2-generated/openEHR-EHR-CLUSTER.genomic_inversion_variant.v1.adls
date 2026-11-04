@@ -1,0 +1,201 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=e42a286f-b603-4b1d-8ba1-24e133abc18f; build_uid=a8b87105-6a60-410a-9d6d-09f644b3a011)
+    openEHR-EHR-CLUSTER.genomic_inversion_variant.v1.0.4
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Aurelie Tomczak, Natalia Strauch">
+                ["organisation"] = <"Institute of Pathology, University Hospital Heidelberg, Germany, Medizinische Hochschule Hannover">
+                ["email"] = <"au.tomczak@yahoo.com, Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Liv Laugen, Silje Ljosland Bakke">
+                ["organisation"] = <"Oslo University Hospital, Norway, Helse Vest IKT AS, Norway">
+                ["email"] = <"liv.laugen@ous-hf.no, silje.ljosland.bakke@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Cecilia Mascia">
+        ["organisation"] = <"CRS4, Italy">
+        ["email"] = <"cecilia.mascia@crs4.it">
+        ["date"] = <"2017-02-23">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Francesca Frexia, CRS4, Italy", "Gideon Giacomelli, Charité Berlin, Germany", "Christina Jaeger-Schmidt, Heidelberg University Hospital, Germany", "Florian Kaercher, Charité Berlin, Germany", "Liv Laugen, ​Oslo University Hospital, Norway, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Cecilia Mascia, CRS4, Italy (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Andrej Orel, Marand d.o.o., Slovenia", "Simon Schumacher, HiGHmed, Germany", "Aurelie Tomczak, Uniklinikum Heidelberg, Germany (openEHR Editor)", "Paolo Uva, CRS4, Italy", "Gianluigi Zanetti, CRS4, Italy", "Gyri Aasland Gradek, Haukeland University Hospital, Norway", "Asbjørg Stray-Pedersen, Oslo University Hospital, Norway", "Toril Fagerheim, University Hospital of Northern Norway, Norway", "Camilla F. Skjelbred, Telemark Hospital HF, Norway", "Dag Erik Undlien, Oslo University Hospital, Norway", "Rune Østern, St Olavs Hospital, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"den Dunnen JT, Dalgleish R, Maglott DR, Hart RK, Greenblatt MS, McGowan-Jordan J, Roux AF, Smith T, Antonarakis SE, Taschner PE. HGVS Recommendations for the Description of Sequence Variants: 2016 Update. Hum Mutat. 2016 Jun;37(6):564-9. doi: 10.1002/humu.22981. Epub 2016 Mar 25. PubMed PMID: 26931183.">
+        ["2"] = <"Sequence Variant Nomenclature - DNA Recommendations - Inversion Variant [Internet]. Human Genome Variation Society. [2019] - [cited 2020-02-26]. Available from: https://varnomen.hgvs.org/recommendations/DNA/variant/inversion/">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"8123D90C4AE8226BD888C84073372E1F">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Beschreibung der in einer Sequenz beobachteten \"Inversion variante\" menschlicher DNA.">
+            keywords = <"Inversion", "Variation", "genetisch", "genomisch", "Variante", "DNA", "Chromosom", "Mutation", "Nukleotid">
+            use = <"Verwenden Sie diesen Archetyp, um die Details einer Inversion Variante menschlicher DNA darzustellen, die in einer genomischen Sequenz beobachtet wurde.
+
+Dieser Archetyp wurde speziell für die Verwendung im SLOT \"Structured variant\" innerhalb des Archetyps CLUSTER.genomic_variant_result entwickelt, kann jedoch auch in anderen ENTRY- oder CLUSTER-Archetypen verwendet werden, sofern dies klinisch angemessen ist.
+
+In den Beispielen in diesem Archetyp sollen Nukleotide in Kleinbuchstaben nur die veränderten Positionen der DNA-Sequenz hervorheben.
+
+Alle Definitionen und Beispiele in diesem Archetyp folgen den HGVS-Standard.">
+            misuse = <"Nicht zur Darstellung von Informationen über Varianten nicht-menschlicher DNA oder jeglicher Art von RNA oder Protein verwenden.
+
+Nicht zur Darstellung einer Inversion mit einem Nukleotid verwenden. Verwenden Sie zu diesem Zweck den Archetyp CLUSTER.genomic_substitution_variant.
+">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljene om en inversjonsvariant i humant DNA, funnet i en genomisk sekvens.">
+            keywords = <"genetisk variasjon", "genetikk", "genom", "variant", "DNA", "kromosom", "mutasjon", "nukleotid", "sekvens">
+            use = <"Brukes for å registrere detaljene om en inversjonsvariant i humant DNA, funnet i en genomisk sekvens.
+
+Denne arketypen har blitt laget for å brukes i SLOT'et \"Strukturert variantbeskrivelse\" i arketypen CLUSTER.genomic_variant_result (Genetisk variant resultat). Den kan også brukes i andre ENTRY- eller CLUSTER-arketyper der det er klinisk hensiktsmessig.
+
+I eksemplene i denne arketypen er det brukt små bokstaver på nukleotidene for å markere endringen/-e i DNA-sekvensen.
+Alle definisjoner og eksempler i denne arketypen følger HGVS-nomenklaturen.">
+            misuse = <"Skal ikke brukes til å registrere informasjon om varianter av ikke-humant DNA, eller noen form for RNA eller protein.
+
+Skal ikke brukes for å dokumentere en inversjon av et enkelt nukleotid (enkeltbaseforskjell), bruk arketypen CLUSTER.substitution_variant (Genetisk variant - substitusjon) til dette.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the details about an inversion variant of human DNA, observed in a genomic sequence.">
+            keywords = <"inversion", "variation", "genetic", "genomic", "variant", "DNA", "chromosome", "mutation", "nucleotide">
+            use = <"Use to record the details about an inversion variant of human DNA, observed in a genomic sequence.
+
+This archetype has been specifically designed to be used in the ‘Structured variant' SLOT within the CLUSTER.genomic_variant_result archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+In the examples in this archetype, lower case nucleotides are only intended to highlight the changed positions of the DNA sequence.
+All definitions and examples in this archetype follow the HGVS nomenclature.">
+            misuse = <"Not to be used to record information about variants of non-human DNA, or any kind of RNA or protein.
+
+Not to be used to record a one nucleotide inversion. Use the CLUSTER.genomic_substitution_variant archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Genomic inversion variant
+        items cardinality matches {2..*} matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- Start position
+                value matches {
+                    DV_COUNT[at9000]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {1} matches {    -- End position
+                value matches {
+                    DV_COUNT[at9001]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Inverted sequence
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            allow_archetype CLUSTER[at0007] matches {    -- Reference sequence
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.reference_sequence(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Genomic inversion variant">
+                description = <"Eine menschliche genetische Sequenzänderung, bei der mehr als ein Nukleotid die ursprüngliche Sequenz durch das umgekehrte Komplement der ursprünglichen Sequenz ersetzt, verglichen mit einer genomischen Referenzsequenz.">
+                comment = <"For example: changing \"TCAG\" to \"CTGA\".">
+            >
+            ["at0001"] = <
+                text = <"Start position">
+                description = <"Position of the first nucleotide of the inverted range.">
+                comment = <"For example: for a variant where the reference sequence \"CAtcagCCT\" is changed to \"CActgaCCT\", the start position is 3.">
+            >
+            ["at0004"] = <
+                text = <"End position">
+                description = <"Position of the last nucleotide of the inverted range.">
+                comment = <"For example: for a variant where the reference sequence \"CAtcagCCT\" is changed to \"CActgaCCT\", the end position is 6.">
+            >
+            ["at0006"] = <
+                text = <"Inverted sequence">
+                description = <"The inverted sequence.">
+                comment = <"For example: for a variant where the reference sequence \"CAtcagCCT\" is changed to \"CActgaCCT\", the inverted sequence is \"TCAG\".">
+            >
+            ["at0007"] = <
+                text = <"Reference sequence">
+                description = <"The sequence file used as a reference to describe this variant.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Genetisk variant - inversjon">
+                description = <"En endring i den humane gensekvensen hvor mer enn ett nukleotid er blitt erstattet med samme sekvens i omvendt rekkefølge (reversering av rekkefølgen i et kromosomsegment), sammenliknet med referansesekvensen.\" Engelsk: inversion.">
+                comment = <"For eksempel: endring fra 'TCAG' til 'CTGA'.">
+            >
+            ["at0001"] = <
+                text = <"Startposisjonen">
+                description = <"Posisjonen til det første nukleotidet i inversjonen i forhold til referansesekvensen.">
+                comment = <"For eksempel: for en variant hvor referansesekvensen 'CAtcagCCT' har blitt endret til 'CActgaCCT', er startposisjonen 3.">
+            >
+            ["at0004"] = <
+                text = <"Sluttposisjonen">
+                description = <"Posisjonen til det siste nukleotidet i inversjonen i forhold til referansesekvensen.">
+                comment = <"For eksempel: for en variant hvor en referansesekvens 'CAtcagCCT' er endret til 'CActgaCCT', er sluttposisjonen 6.">
+            >
+            ["at0006"] = <
+                text = <"Inverterte sekvensen">
+                description = <"Den omvendte/inverterte nukleotidsekvensen på referansesekvensen.">
+                comment = <"For eksempel: for en variant hvor referansesekvensen 'CAtcagCCT' er endret til 'CActgaCCT', er den omvendte/inverterte sekvensen 'TCAG'.">
+            >
+            ["at0007"] = <
+                text = <"Referansesekvens">
+                description = <"Sekvensfilen som har blitt brukt som en referanse for å beskrive varianten.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Genomic inversion variant">
+                description = <"A human genetic sequence change where more than one nucleotide replaces the original sequence with the reverse complement of the original sequence, compared to a genomic reference sequence.">
+                comment = <"For example: changing 'TCAG' to 'CTGA'.">
+            >
+            ["at0001"] = <
+                text = <"Start position">
+                description = <"Position of the first nucleotide of the inverted range.">
+                comment = <"For example: for a variant where the reference sequence 'CAtcagCCT' is changed to 'CActgaCCT', the start position is 3.">
+            >
+            ["at0004"] = <
+                text = <"End position">
+                description = <"Position of the last nucleotide of the inverted range.">
+                comment = <"For example: for a variant where the reference sequence 'CAtcagCCT' is changed to 'CActgaCCT', the end position is 6.">
+            >
+            ["at0006"] = <
+                text = <"Inverted sequence">
+                description = <"The inverted sequence.">
+                comment = <"For example: for a variant where the reference sequence 'CAtcagCCT' is changed to 'CActgaCCT', the inverted sequence is 'TCAG'.">
+            >
+            ["at0007"] = <
+                text = <"Reference sequence">
+                description = <"The sequence file used as a reference to describe this variant.">
+            >
+        >
+    >

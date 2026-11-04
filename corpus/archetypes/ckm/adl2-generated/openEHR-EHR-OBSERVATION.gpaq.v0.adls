@@ -1,0 +1,271 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=cb89bb8b-40a6-451f-a5af-19b314bab8b3; build_uid=6f5bafc8-89b7-4118-9dff-f9df0f381e97)
+    openEHR-EHR-OBSERVATION.gpaq.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-11-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"87294C099D1D5CF913FF2EE1286829C2">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the responses to the WHO Global Physical Activity Questionnaire.">
+            use = <"Use to record the responses to the WHO Global Physical Activity Questionnaire.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Global Physical Activity Questionnaire (GPAQ)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- 1. Work - Vigorous activity?
+                                        value matches {
+                                            DV_CODED_TEXT[at9001] matches {
+                                                defining_code matches {[ac9000]}    -- 1. Work - Vigorous activity? (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- 2. Work - Vigorous activity/week
+                                        value matches {
+                                            DV_QUANTITY[at9017] matches {
+                                                magnitude matches {|0.0..7.0|}
+                                                units matches {"1/wk"}
+                                                precision matches {0}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- 3. Work - Vigorous activity/day
+                                        value matches {
+                                            DV_DURATION[at9003] matches {
+                                                value matches {PTHM/|PT0S..PT24H|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- 4.  Work - Moderate activity?
+                                        value matches {
+                                            DV_CODED_TEXT[at9004] matches {
+                                                defining_code matches {[ac9000]}    -- 1. Work - Vigorous activity? (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- 5. Work - Moderate activity/week
+                                        value matches {
+                                            DV_QUANTITY[at9018] matches {
+                                                magnitude matches {|0.0..7.0|}
+                                                units matches {"1/wk"}
+                                                precision matches {0}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- 6. Work - Moderate activity/day
+                                        value matches {
+                                            DV_DURATION[at9006] matches {
+                                                value matches {PTHM/|PT0S..PT24H|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..2} matches {    -- 7. Travel activity?
+                                        value matches {
+                                            DV_CODED_TEXT[at9007] matches {
+                                                defining_code matches {[ac9000]}    -- 1. Work - Vigorous activity? (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- 8. Travel/week
+                                        value matches {
+                                            DV_QUANTITY[at9019] matches {
+                                                magnitude matches {|0.0..7.0|}
+                                                units matches {"1/wk"}
+                                                precision matches {0}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- 9. Travel/day
+                                        value matches {
+                                            DV_DURATION[at9009] matches {
+                                                value matches {PTHM/|PT0S..PT24H|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- 10. Leisure - Vigorous activity?
+                                        value matches {
+                                            DV_CODED_TEXT[at9010] matches {
+                                                defining_code matches {[ac9000]}    -- 1. Work - Vigorous activity? (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- 11. Leisure - Vigorous activity/week
+                                        value matches {
+                                            DV_QUANTITY[at9020] matches {
+                                                magnitude matches {|0.0..7.0|}
+                                                units matches {"1/wk"}
+                                                precision matches {0}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- 12. Leisure - Vigorous activity/day
+                                        value matches {
+                                            DV_DURATION[at9012] matches {
+                                                value matches {PTHM/|PT0S..PT24H|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- 13. Leisure - Moderate activity?
+                                        value matches {
+                                            DV_CODED_TEXT[at9013] matches {
+                                                defining_code matches {[ac9000]}    -- 1. Work - Vigorous activity? (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- 14. Leisure - Moderate activity/week
+                                        value matches {
+                                            DV_QUANTITY[at9021] matches {
+                                                magnitude matches {|0.0..7.0|}
+                                                units matches {"1/wk"}
+                                                precision matches {0}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- 15. Leisure - Moderate activity/day
+                                        value matches {
+                                            DV_DURATION[at9015] matches {
+                                                value matches {PTHM/|PT0S..PT24H|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- 16. Sedentary/day
+                                        value matches {
+                                            DV_DURATION[at9016] matches {
+                                                value matches {PTHM/|PT0S..PT24H|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Global Physical Activity Questionnaire (GPAQ)">
+                description = <"WHO surveillance tool to assess levels of physical activity.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"1. Work - Vigorous activity?">
+                description = <"Does your work involve vigorous-intensity activity that causes large increases in breathing or heart rate for at least 10 minutes continuously?">
+                comment = <"For example: carrying or lifting heavy loads, digging or construction work.">
+            >
+            ["at0005"] = <
+                text = <"2. Work - Vigorous activity/week">
+                description = <"In a typical week, on how many days do you do vigorous-intensity activities as part of your work?">
+            >
+            ["at0006"] = <
+                text = <"3. Work - Vigorous activity/day">
+                description = <"How much time do you spend doing vigorous-intensity activities at work on a typical day?">
+            >
+            ["at0007"] = <
+                text = <"4.  Work - Moderate activity?">
+                description = <"Does your work involve moderate-intensity activity that causes small increases in breathing or heart rate for at least 10 minutes continuously?">
+                comment = <"For example: brisk walking or carrying light loads.">
+            >
+            ["at0008"] = <
+                text = <"5. Work - Moderate activity/week">
+                description = <"In a typical week, on how many days do you do moderate-intensity activities as part of your work?">
+            >
+            ["at0009"] = <
+                text = <"6. Work - Moderate activity/day">
+                description = <"How much time do you spend doing moderate-intensity activities at work on a typical day?">
+            >
+            ["at0010"] = <
+                text = <"7. Travel activity?">
+                description = <"Do you walk or use a bicycle for at least 10 minutes continuously to get to and from places?">
+            >
+            ["at0011"] = <
+                text = <"8. Travel/week">
+                description = <"In a typical week, on how many days do you walk or bicycle for at least 10 minutes continuously to get to and from places?">
+            >
+            ["at0023"] = <
+                text = <"9. Travel/day">
+                description = <"How much time do you spend walking or bicycling for travel on a typical day?">
+            >
+            ["at0024"] = <
+                text = <"10. Leisure - Vigorous activity?">
+                description = <"Do you do any vigorous-intensity sports, fitness or recreational activities that cause large increases in breathing or heart rate for at least 10 minutes continuously?">
+                comment = <" For example: running or football.">
+            >
+            ["at0025"] = <
+                text = <"11. Leisure - Vigorous activity/week">
+                description = <"In a typical week, on how many days do you do vigorous-intensity sports, fitness or recreational activities?">
+            >
+            ["at0026"] = <
+                text = <"12. Leisure - Vigorous activity/day">
+                description = <"How much time do you spend doing vigorous-intensity sports, fitness or recreational activities on a typical day?">
+            >
+            ["at0027"] = <
+                text = <"13. Leisure - Moderate activity?">
+                description = <"Do you do any moderate-intensity sports, fitness or recreational activities that causes a small increase in breathing or heart rate for at least 10 minutes continuously?">
+                comment = <"For example: brisk walking, cycling, swimming, or volleyball.">
+            >
+            ["at0028"] = <
+                text = <"14. Leisure - Moderate activity/week">
+                description = <"In a typical week, on how many days do you do moderate-intensity sports, fitness or recreational activities?">
+            >
+            ["at0029"] = <
+                text = <"15. Leisure - Moderate activity/day">
+                description = <"How much time do you spend doing moderate-intensity sports, fitness or recreational activities on a typical day?">
+            >
+            ["at0030"] = <
+                text = <"16. Sedentary/day">
+                description = <"How much time do you usually spend sitting or reclining on a typical day?">
+            >
+            ["at0031"] = <
+                text = <"Yes">
+                description = <"*">
+            >
+            ["at0032"] = <
+                text = <"No">
+                description = <"*">
+            >
+            ["ac9000"] = <
+                text = <"1. Work - Vigorous activity? (synthesised)">
+                description = <"Does your work involve vigorous-intensity activity that causes large increases in breathing or heart rate for at least 10 minutes continuously? (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0031", "at0032">
+        >
+    >

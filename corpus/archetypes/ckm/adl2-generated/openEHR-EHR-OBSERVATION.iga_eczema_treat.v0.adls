@@ -1,0 +1,137 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c8e2f9e2-47d3-32da-b908-2478dd7e0e5e; build_uid=323d866f-d3b7-47ff-af26-e69a008c0419)
+    openEHR-EHR-OBSERVATION.iga_eczema_treat.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Dmitri Wall">
+        ["organisation"] = <"Irish Skin Foundation">
+        ["email"] = <"dmitri.wall@gmail.com">
+        ["date"] = <"2015-02-05">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Ian McNicoll, freshEHR Clinical Informatics, UK", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"The treatment of severe atopic eczema trial (TREAT) trial. Available from: http://www.isrctn.com/ISRCTN15837754">
+    >
+    other_details = <
+        ["current_contact"] = <"Dmitri Wall">
+        ["MD5-CAM-1.0.1"] = <"5ADBC94EA0C5DD3466B45502D2B0C357">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a clinical assessment of the severity of atopic dermatitis. This version is being used by the TREAT eczema group.">
+            keywords = <"Atopic Dermatitis", "Dermatology", "Effectiveness outcome parameter", "Severity scale">
+            use = <"A representative area should be chosen as a means to determine a patient's IGA.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- IGA eczema (TREAT)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_LIST[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Assessment score
+                                        value matches {
+                                            DV_ORDINAL[at9001] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- Clear
+                                                    [{1}, {[at0006]}],    -- Almost clear
+                                                    [{2}, {[at0007]}],    -- Mild disease
+                                                    [{3}, {[at0008]}],    -- Moderate disease
+                                                    [{4}, {[at0009]}],    -- Severe disease
+                                                    [{5}, {[at0010]}]    -- Very severe disease
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0011] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0012] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"IGA eczema (TREAT)">
+                description = <"Investigator global assessment (PGA) to describe the severity of their eczema for the treatment of severe atopic eczema trial (TREAT).">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Any event.">
+            >
+            ["at0004"] = <
+                text = <"Assessment score">
+                description = <"The total IGA score.">
+                comment = <"A representative area should be utilised as a means to generate this score.">
+            >
+            ["at0005"] = <
+                text = <"Clear">
+                description = <"No inflammatory signs of atopic dermatitis.">
+            >
+            ["at0006"] = <
+                text = <"Almost clear">
+                description = <"Just perceptible erythema and just perceptible papulation/infiltration.">
+            >
+            ["at0007"] = <
+                text = <"Mild disease">
+                description = <"Mild erythema and mild papulation/infiltration.">
+            >
+            ["at0008"] = <
+                text = <"Moderate disease">
+                description = <"Moderate erythema and moderate papulation/infiltration.">
+            >
+            ["at0009"] = <
+                text = <"Severe disease">
+                description = <"Severe erythema and severe papulation/infiltration.">
+            >
+            ["at0010"] = <
+                text = <"Very severe disease">
+                description = <"Severe erythema and severe papulation/infiltration with oozing/crusting.">
+            >
+            ["at0012"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9001"] = <
+                text = <"Assessment score (synthesised)">
+                description = <"The total IGA score. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009", "at0010">
+        >
+    >

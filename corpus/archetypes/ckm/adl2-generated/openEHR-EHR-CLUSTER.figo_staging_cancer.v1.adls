@@ -1,0 +1,244 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c9bad5a3-fdff-43ed-9c5b-add7128115f6; build_uid=4cd7f50e-ad38-4aad-8025-8f22813603ba)
+    openEHR-EHR-CLUSTER.figo_staging_cancer.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand, Kanika Kuwelker">
+                ["organisation"] = <"Helse Vest IKT">
+                ["email"] = <"john.tore.valand@helse-vest-ikt.no, kanika.kuwelker@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Kanika Kuwelker, John Tore Valand, Hanne Marte Sandal Bårholm">
+        ["organisation"] = <"Helse Vest IKT">
+        ["email"] = <"kanika.kuwelker@helse-vest-ikt-no, john.tore.valand@helse-vest-ikt.no, hanne.marte.sandal.barholm@helse-vest-ikt.no">
+        ["date"] = <"2024-04-29">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Ivar Berge, Oslo University Hospital, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Mari Bunkholt Elstrand, OUS-HF, Norway", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "Mona Didriksen, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Ciprian Gerstenberger, Helse Nord IKT, Norway (openEHR Editor)", "Heather Grain, Llewelyn Grain Informatics, Australia", "Evelyn Hovenga, EJSH Consulting, Australia", "June Marie Nepstad Knappskog, Helse Nord IKT AS, Norway (openEHR Editor), Norway (openEHR Editor)", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Eli Larsen, UNN, Norway (openEHR Editor)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Nina Louise Jebsen, Haukeland Universitetssykehus, Norway", "Jonas Lyshaug, FSE/ HN IKT, Norway", "June Marie Knappskog, Helse Nord IKT AS, Norway (Nasjonal IKT redaktør), Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Terje Nordberg, Helse Bergen, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Marlene Pérez Colman, Digital Health and Care Wales, United Kingdom", "Kanthan Theivendran, NHS, United Kingdom", "John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Berek JS, Matias-Guiu X, Creutzberg C, Fotopoulou C, Gaffney D, Kehoe S, Lindemann K, Mutch D, Concin N; Endometrial Cancer Staging Subcommittee, FIGO Women's Cancer Committee. FIGO staging of endometrial cancer: 2023. Int J Gynaecol Obstet. 2023 Aug;162(2):383-394. doi: 10.1002/ijgo.14923. Epub 2023 Jun 20. Erratum in: Int J Gynaecol Obstet. 2023 Oct 6. doi: 10.1002/ijgo.15193. PMID: 37337978.">
+        ["2"] = <"Berek JS, Renz M, Kehoe S, Kumar L, Friedlander M. Cancer of the ovary, fallopian tube, and peritoneum: 2021 update. Int J Gynaecol Obstet. 2021 Oct;155 Suppl 1(Suppl 1):61-85. doi: 10.1002/ijgo.13878. PMID: 34669199; PMCID: PMC9298325.">
+        ["3"] = <"Olawaiye AB, Cotler J, Cuello MA, Bhatla N, Okamoto A, Wilailak S, Purandare CN, Lindeque G, Berek JS, Kehoe S. FIGO staging for carcinoma of the vulva: 2021 revision. Int J Gynaecol Obstet. 2021 Oct;155(1):43-47. doi: 10.1002/ijgo.13880. PMID: 34520062; PMCID: PMC9290586.">
+        ["4"] = <"Adams TS, Rogers LJ, Cuello MA. Cancer of the vagina: 2021 update. Int J Gynaecol Obstet. 2021 Oct;155 Suppl 1(Suppl 1):19-27. doi: 10.1002/ijgo.13867. PMID: 34669198; PMCID: PMC9298013.">
+        ["5"] = <"Bhatla N, Berek JS, Cuello Fredes M, Denny LA, Grenman S, Karunaratne K, Kehoe ST, Konishi I, Olawaiye AB, Prat J, Sankaranarayanan R, Brierley J, Mutch D, Querleu D, Cibula D, Quinn M, Botha H, Sigurd L, Rice L, Ryu HS, Ngan H, Mäenpää J, Andrijono A, Purwoto G, Maheshwari A, Bafna UD, Plante M, Natarajan J. Revised FIGO staging for carcinoma of the cervix uteri. Int J Gynaecol Obstet. 2019 Apr;145(1):129-135. doi: 10.1002/ijgo.12749. Epub 2019 Jan 17. Erratum in: Int J Gynaecol Obstet. 2019 Nov;147(2):279-280. doi: 10.1002/ijgo.12969. PMID: 30656645.">
+        ["6"] = <"Ray-Coquard I, Casali PG, Croce S, Fennessy FM, Fischerova D, Jones R, Sanfilippo R, Zapardiel I, Amant F, Blay JY, Martἰn-Broto J, Casado A, Chiang S, Tos APD, Haas R, Hensley ML, Hohenberger P, Kim JW, Kim SI, Meydanli MM, Pautier P, Razak ARA, Sehouli J, van Houdt W, Planchamp F, Friedlander M. ESGO/EURACAN/GCIG guidelines for the management of patients with uterine sarcomas. Int J Gynecol Cancer. 2024 Oct 7;34(10):1499-1521. doi: 10.1136/ijgc-2024-005823.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"6BCBCF64D3FCE67A6BCC6579AC43F759">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere stadium av gynekologisk kreftsykdom i henhold til FIGO-klassifisering.">
+            keywords = <"figo, cervix, livmorhals, livmor, endometrium, corpus uteri, eggstokk, ovarie, eggleder, peritoneum, bukhinne, vulva, vagina, placenta, morkake, trofoblastsykdom, leiomyosarkom, adenosarkom, endometriestromasarkom, udifferensiert uterint sarkom, gynekologisk, gynekologi, bekken, klassifisering, stadium, stadieinndeling, svulst, kreft, neoplasi, onkologi", ...>
+            use = <"Brukes for å registrere stadium av gynekologisk kreftsykdom i henhold til FIGO-klassifisering
+
+Arketypen er laget for å benyttes i en ENTRY eller CLUSTER arketype som vil gi den kliniske eller patologiske konteksten for FIGO-registreringen. For eksempel: I SLOTet \"Spesifikke detaljer\" i arketypen EVALUATION.problem_diagnosis (Problem/diagnose), i en relevant patologirelatert CLUSTER-arketype som igjen nøstes i laboratoriesvar-arketypen (OBSERVATION.laboratory_test_result), i arketypen OBSERVATION.imaging_exam_result (Bildediagnostisk svar) eller innen andre ENTRY- eller CLUSTER-arketyper der det er klinisk passende. Når denne arketypen må inkluderes i en ikke-OBSERVATION-arketype, som for eksempel Problem/diagnose-arketypen (EVALUATION.problem_diagnosis), bør den først nøstes i Klinisk grunnlag-arketypen (CLUSTER.clinical_evidence) for å gi viktig kontekst, slik som vurderingsdato.
+
+Hver gynekologisk krefttype er tildelt en FIGO-stadieinndeling, som oppdateres og publiseres på nytt med jevne mellomrom. Det forventes at implementatorer bruker en kunnskapsbase som inneholder det relevante verdiutvalget for den spesifikke krefttypen og revisjonen, og bruker denne til å fylle ut dette rammeverket under kjøring. I fravær av en kunnskapsbase kan det relevante verdiutvalget manuelt integreres i dataelementet \"FIGO-stadium\" innenfor et forhåndsdefinert templat.">
+            misuse = <"Skal ikke brukes for å registrere FIGO-klassifisering av tilstander annet enn gynekologisk kreft. For eksempel FIGOs klassifiseringssystem (PALM-COEIN) for årsaker til unormal livmorblødning.
+Skal ikke brukes for å registrere non-FIGO-klassifisering av gynekologisk kreft.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the stage of gynaecological cancer according to the FIGO classification systems.">
+            keywords = <"figo, cervix, corpus uteri, endometrium, uterus, ovary, fallopian tube, peritoneum, vulva, vagina, placenta, gestational trophoblastic neoplasia, leiomyosarcoma, adenosarcoma, undifferentiated uterine sarcoma, endometrial stromal sarcoma, gynaecological, gynecology, gynaecology, pelvis, pelvic, classification, stage, staging, tumor, cancer, neoplasia, oncology", ...>
+            use = <"Use to record the stage of gynaecological cancer according to the FIGO classification systems
+
+This archetype has been designed to be nested inside an ENTRY or appropriate CLUSTER archetype which will provide a clinical or pathological context for the FIGO stage - for example: the 'Specific details' SLOT within the EVALUATION.problem_diagnosis archetype; an appropriate histopathology-related CLUSTER archetype within the OBSERVATION.laboratory_test_result archetype context; within the OBSERVATION.imaging_exam_result archetype; or within other ENTRY or CLUSTER archetypes, where clinically appropriate. When this archetype needs to be included within an non-OBSERVATION archetype such as EVALUATION.problem_diagnosis, it should first be nested within the CLUSTER.clinical_evidence to provide important context such as the date of the assessment.
+
+Each gynaecological cancer has been assigned a FIGO staging criteria, which are periodically updated and republished. It is anticipated that implementers will utilise a knowledge base containing the appropriate value set for the specific cancer and revision, and use it to populate this archetype framework at runtime. In the absence of a knowledge base, the relevant value set can be manually incorporated into the 'FIGO stage element' within a predefined template.">
+            misuse = <"Not to be used for FIGO classification of conditions other than gynecological cancer. For example FIGO classification system (PALM-COEIN) for causes of abnormal uterine bleeding.
+Not to be used for recording non-FIGO classifications of gynaecological cancer.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- FIGO staging of gynaecological cancer
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Staging criteria
+                value matches {
+                    DV_TEXT[at9000]
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[ac9004]}    -- Staging criteria (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- FIGO stage
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0003] matches {    -- Molecular subtype
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- FIGO stage with molecular classification
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- FIGO version
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"FIGO-stadium for gynekologisk kreft">
+                description = <"Stadium for gynekologisk kreft i henhold til FIGO-stadieinndeling.">
+                comment = <"FIGO - The International Federation of Gynecology and Obstetrics.">
+            >
+            ["at0002"] = <
+                text = <"FIGO-stadium">
+                description = <"FIGO-stadiet valgt fra de spesifiserte kriteriene.">
+                comment = <"Koding med en FIGO-stadium som er passende for den gynekologiske kreften som klassifiseres er forventet. For eksempel: \"IIA\" eller \"IVB\".">
+            >
+            ["at0003"] = <
+                text = <"Molekylær subtype">
+                description = <"FIGO-molekylær subtype relatert til den gynekologiske kreften som klassifiseres.">
+                comment = <"Koding med en FIGO-molekylær subtype som er passende for gynekologisk kreft forventes. For eksempel: p53abn eller POLEmut.
+Denne informasjonen kan brukes sammen med tradisjonelle stadieinndelingskriterier for å gi en mer helhetlig forståelse av kreften og forbedre kliniske beslutninger.">
+            >
+            ["at0004"] = <
+                text = <"FIGO-versjon">
+                description = <"Versjonen av FIGO-stadieinndeling som er brukt for å bestemme FIGO-stadiet.">
+                comment = <"For eksempel: 2009.">
+            >
+            ["at0005"] = <
+                text = <"Kriteriesett">
+                description = <"Identifikasjon av organ- eller vevsspesifikke FIGO-kriteriene som brukes for klassifiseringen.">
+                comment = <"Koding foretrekkes der det er mulig.">
+            >
+            ["at0006"] = <
+                text = <"FIGO- stadium med moleklyær klassifisering">
+                description = <"Sammentrekning av FIGO-stadium og molekylær subtype med 'm' som skilletegn.">
+                comment = <"For eksempel: IIImPOLEmut eller IVmPOLEmut.">
+            >
+            ["at0007"] = <
+                text = <"Livmorhals">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Livmor (endometrium)">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Uterussarkom">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Eggstokk, eggleder og bukhinne">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Vagina">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Vulva">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Morkake (trofoblastsykdom)">
+                description = <"">
+            >
+            ["ac9004"] = <
+                text = <"Kriteriesett (synthesised)">
+                description = <"Identifikasjon av organ- eller vevsspesifikke FIGO-kriteriene som brukes for klassifiseringen. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"FIGO staging of gynaecological cancer">
+                description = <"The staging of gynaecological cancer using the FIGO staging system.">
+                comment = <"FIGO - The International Federation of Gynecology and Obstetrics.
+">
+            >
+            ["at0002"] = <
+                text = <"FIGO stage">
+                description = <"The FIGO stage selected from the specified 'Staging criteria'.">
+                comment = <"Coding with a FIGO stage appropriate for the gynaecological cancer is expected. For example: 'IIA' or 'IVB'.">
+            >
+            ["at0003"] = <
+                text = <"Molecular subtype">
+                description = <"FIGO molecular subtype related to the gynaecological cancer being classified.">
+                comment = <"Coding with a FIGO molecular subtype appropriate for the gynaecological cancer is expected. For example: p53abn or POLEmut.
+This information can be used in conjunction with traditional staging criteria to provide a more comprehensive understanding of the cancer and enhance clinical decision-making.">
+            >
+            ["at0004"] = <
+                text = <"FIGO version">
+                description = <"The version of the FIGO staging system used for the assessment.">
+                comment = <"For example: 2009.">
+            >
+            ["at0005"] = <
+                text = <"Staging criteria">
+                description = <"Identification of the organ- or tissue-specific FIGO criteria used for staging.">
+                comment = <"Coding with a FIGO stage appropriate for the gynaecological cancer is expected. For example: 'IIA' or 'IVB'.">
+            >
+            ["at0006"] = <
+                text = <"FIGO stage with molecular classification">
+                description = <"Concatenation of FIGO stage and molecular subtype with 'm' as delimiter.">
+                comment = <"For example: IIImPOLEmut or IVmPOLEmut.">
+            >
+            ["at0007"] = <
+                text = <"Cervix uteri">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Corpus uteri (endometrium)">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Uterine sarcoma">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Ovary, fallopian tube, and peritoneum">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Vagina">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Vulva">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Gestational trophoblastic neoplasia">
+                description = <"">
+            >
+            ["ac9004"] = <
+                text = <"Staging criteria (synthesised)">
+                description = <"Identification of the organ- or tissue-specific FIGO criteria used for staging. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0007", "at0008", "at0009", "at0010", "at0011", "at0012", "at0013">
+        >
+    >

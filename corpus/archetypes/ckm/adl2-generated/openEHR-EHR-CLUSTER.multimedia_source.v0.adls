@@ -1,0 +1,333 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=bf56d324-11d0-42ca-9405-282885f4d6b5; build_uid=392cc6e3-0289-46b5-a2fa-65196e68c04a)
+    openEHR-EHR-CLUSTER.multimedia_source.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Ramona Wellmann">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"wellmann.ramona@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand">
+                ["organisation"] = <"Helse Bergen HF, Norway">
+                ["email"] = <"john.tore.valand@helse-bergen.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Fernanda Maia Ewerton">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"fernanda.maiaewerton@gmail.com">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-12-10">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjorn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"FHIR Resource Media: HL7 [Internet]; [cited 2019 Dec 10]. Available from https://www.hl7.org/fhir/media.html.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"705FA8078781F2C4FD5B73FBBF4D1709">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Dokumentation von Metadaten zu multimedialen klinischen Daten, die nicht im Multimedia-Datentyp erfasst werden.">
+            keywords = <"Bild", "Audio", "Ton", "Text", "Video", "Videosequenz", "Anwendung", "Fotografie", "Animation", "Grafik">
+            use = <"Zur Dokumentation von Metadaten zu multimedialen klinischen Daten, die nicht im Multimedia-Datentyp erfasst werden.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere metadata om en multimediarepresentasjon av kliniske data som ikke er dekket av kun datatypen Multimedia.">
+            keywords = <"bilde", "lyd", "tekst", "video", "applikasjon">
+            use = <"Brukes for å registrere ytterligere metadata om en multimediarepresentasjon av kliniske data som ikke er dekket av kun datatypen Mulitmedia.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Para gravar detalhes de metadados sobre uma representação multimídia dos dados clínicos não capturados usando o tipo de dado de multimídia sozinho.">
+            keywords = <"imagem", "áudio", "texto", "vídeo", "aplicação">
+            use = <"Usado para gravar metadados adicionais sobre uma representação multimídia do dado clínico que não é capturado usando o tipo de dado multimídia sozinho.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about text, audio, images, animations, video and interactive content generated or acquired during the provision of healthcare.">
+            keywords = <"image", "audio", "text", "video", "application", "file">
+            use = <"Use to record details about text, audio, images, animations, video and interactive content generated or acquired during the provision of healthcare.
+
+Examples include but are not limited to:
+- A photo of an injury;
+- A diagram of the location of a specific clinical finding;
+- A digital Xray or CT scan result;
+- An audio or video recording of an interview;
+- Data output from a clinical device, such as an ECG machine; or
+- A scanned image of hand-written clinical notes.
+
+The 'Content' data element allows for the multimedia content to be captured and stored within the health record using the Multimedia data type, or to be referenced elsewhere using the URI data type.
+
+If more than one resource is acquired or used as part of a single activity, use one instance of this archetype to represent each resource.
+
+The context of each resource should be contained within the parent archetype. For example: details about the modality, view or aspect of a radiographic image will be captured within the OBSERVATION.imaging_test_result archetype.">
+            misuse = <"Not to be used to represent multimedia content that is supplied to an individual or carer during the provision of healthcare - use CLUSTER.multimedia_supply for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Multimedia source
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Resource name
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Identifier
+                value matches {
+                    DV_IDENTIFIER[at9001]
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Content
+                value matches {
+                    DV_MULTIMEDIA[at9004]
+                    DV_URI[at9005]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Created
+                value matches {
+                    DV_DATE_TIME[at9006]
+                    DV_INTERVAL<DV_DATE_TIME>[at9007]
+                }
+            }
+            allow_archetype CLUSTER[at0012] matches {    -- Creator
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype CLUSTER[at0011] matches {    -- Source device
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.device\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0013] matches {    -- Additional details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9008]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"*Media capture (en)">
+                description = <"Details zur multimedialen Darstellung der klinischen Daten.">
+            >
+            ["at0001"] = <
+                text = <"*Content (en)">
+                description = <"*Digital representation of the resource. (en)">
+                comment = <"*The actual content will be captured and stored using the Multimedia data type. For example: RTF or PDF for a document; JPG for an image; MP4 for a video; or WAV for an audio file. If the content is stored elsewhere the external location can be referenced using the URI data type. (en)">
+            >
+            ["at0002"] = <
+                text = <"*Resource name (en)">
+                description = <"*Name or title of the photo, video, audio file or document. (en)">
+            >
+            ["at0004"] = <
+                text = <"*Created (en)">
+                description = <"*The time, date, partial date or period when the resource was generated or authored. (en)">
+            >
+            ["at0005"] = <
+                text = <"Beschreibung">
+                description = <"*Narrative description about the resource. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the multimedia source not captured in other fields. (en)">
+            >
+            ["at0010"] = <
+                text = <"*Identifier (en)">
+                description = <"*Identifier for the resource. (en)">
+            >
+            ["at0011"] = <
+                text = <"*Source device (en)">
+                description = <"*Details about the device used to create or acquire the resource. (en)">
+                comment = <"*For example: the camera used to capture an image. (en)">
+            >
+            ["at0012"] = <
+                text = <"*Creator (en)">
+                description = <"*Details about the individual or organisation that generated or authored the resource. (en)">
+            >
+            ["at0013"] = <
+                text = <"*Additional details (en)">
+                description = <"*Further details about the multimedia source. (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"*Media capture (en)">
+                description = <"Detaljer om en multimediarepresentasjon av kliniske data.">
+            >
+            ["at0001"] = <
+                text = <"*Content (en)">
+                description = <"*Digital representation of the resource. (en)">
+                comment = <"*The actual content will be captured and stored using the Multimedia data type. For example: RTF or PDF for a document; JPG for an image; MP4 for a video; or WAV for an audio file. If the content is stored elsewhere the external location can be referenced using the URI data type. (en)">
+            >
+            ["at0002"] = <
+                text = <"*Resource name (en)">
+                description = <"*Name or title of the photo, video, audio file or document. (en)">
+            >
+            ["at0004"] = <
+                text = <"*Created (en)">
+                description = <"*The time, date, partial date or period when the resource was generated or authored. (en)">
+            >
+            ["at0005"] = <
+                text = <"Beskrivelse">
+                description = <"*Narrative description about the resource. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the multimedia source not captured in other fields. (en)">
+            >
+            ["at0010"] = <
+                text = <"*Identifier (en)">
+                description = <"*Identifier for the resource. (en)">
+            >
+            ["at0011"] = <
+                text = <"*Source device (en)">
+                description = <"*Details about the device used to create or acquire the resource. (en)">
+                comment = <"*For example: the camera used to capture an image. (en)">
+            >
+            ["at0012"] = <
+                text = <"*Creator (en)">
+                description = <"*Details about the individual or organisation that generated or authored the resource. (en)">
+            >
+            ["at0013"] = <
+                text = <"*Additional details (en)">
+                description = <"*Further details about the multimedia source. (en)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"*Media capture (en)">
+                description = <"Detalhes sobre a representação multimídia dos dados clínicos.">
+            >
+            ["at0001"] = <
+                text = <"*Content (en)">
+                description = <"*Digital representation of the resource. (en)">
+                comment = <"*The actual content will be captured and stored using the Multimedia data type. For example: RTF or PDF for a document; JPG for an image; MP4 for a video; or WAV for an audio file. If the content is stored elsewhere the external location can be referenced using the URI data type. (en)">
+            >
+            ["at0002"] = <
+                text = <"*Resource name (en)">
+                description = <"*Name or title of the photo, video, audio file or document. (en)">
+            >
+            ["at0004"] = <
+                text = <"*Created (en)">
+                description = <"*The time, date, partial date or period when the resource was generated or authored. (en)">
+            >
+            ["at0005"] = <
+                text = <"Descrição">
+                description = <"*Narrative description about the resource. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the multimedia source not captured in other fields. (en)">
+            >
+            ["at0010"] = <
+                text = <"*Identifier (en)">
+                description = <"*Identifier for the resource. (en)">
+            >
+            ["at0011"] = <
+                text = <"*Source device (en)">
+                description = <"*Details about the device used to create or acquire the resource. (en)">
+                comment = <"*For example: the camera used to capture an image. (en)">
+            >
+            ["at0012"] = <
+                text = <"*Creator (en)">
+                description = <"*Details about the individual or organisation that generated or authored the resource. (en)">
+            >
+            ["at0013"] = <
+                text = <"*Additional details (en)">
+                description = <"*Further details about the multimedia source. (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Multimedia source">
+                description = <"A multimedia resource that is generated or acquired during the provision of healthcare.">
+            >
+            ["at0001"] = <
+                text = <"Content">
+                description = <"Digital representation of the resource.">
+                comment = <"The actual content will be captured and stored using the Multimedia data type. For example: RTF or PDF for a document; JPG for an image; MP4 for a video; or WAV for an audio file. If the content is stored elsewhere the external location can be referenced using the URI data type.">
+            >
+            ["at0002"] = <
+                text = <"Resource name">
+                description = <"Name or title of the multimedia resource.">
+            >
+            ["at0004"] = <
+                text = <"Created">
+                description = <"The time, date, partial date or period when the resource was generated or authored.">
+            >
+            ["at0005"] = <
+                text = <"Description">
+                description = <"Narrative description about the resource.">
+            >
+            ["at0007"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the multimedia source not captured in other fields.">
+            >
+            ["at0010"] = <
+                text = <"Identifier">
+                description = <"Identifier for the resource.">
+            >
+            ["at0011"] = <
+                text = <"Source device">
+                description = <"Details about the device used to generate or author the resource.">
+                comment = <"For example: the camera used to capture an image.">
+            >
+            ["at0012"] = <
+                text = <"Creator">
+                description = <"Details about the individual or organisation who generated or authored the resource.">
+            >
+            ["at0013"] = <
+                text = <"Additional details">
+                description = <"Further details about the multimedia source.">
+            >
+        >
+    >

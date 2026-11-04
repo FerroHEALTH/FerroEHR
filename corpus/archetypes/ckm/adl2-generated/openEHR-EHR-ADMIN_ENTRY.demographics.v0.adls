@@ -1,0 +1,59 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f271625d-30dc-46c4-8401-92c3b81a9c3e; build_uid=10ba36b2-aa8c-4b1a-ae11-aa5176aeb97b)
+    openEHR-EHR-ADMIN_ENTRY.demographics.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-07-29">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B2439FE7CDCBBB0532C37A0F15FE82CD">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To contain demographic-related EHR CLUSTER archetypes when they are to be used standalone within a template, such as when they are used as a proxy for the review of demographic data in the header of a form or document template.">
+            use = <"Use within a template to contain demographic-related EHR CLUSTER archetypes to be modelled standalone in a template, such as when they are used as a proxy for the review of demographic data in the header of a form or document template.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ADMIN_ENTRY[at0000] matches {    -- Demographics container
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0003] matches {    -- Person/Organisation
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Demographics container">
+                description = <"A container archetype used to hold demographic-related EHR CLUSTER archetypes.">
+            >
+            ["at0003"] = <
+                text = <"Person/Organisation">
+                description = <"">
+            >
+        >
+    >

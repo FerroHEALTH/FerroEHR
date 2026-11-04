@@ -1,0 +1,277 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=92e3730d-1ab5-4759-b9f5-7aa50803cdd9; build_uid=1e3552e1-2c1d-4a8b-94f0-f1e03b4bf975)
+    openEHR-EHR-OBSERVATION.faecal_output.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Joost Holslag">
+                ["organisation"] = <"Nedap">
+                ["email"] = <"joost.holslag@nedap.com">
+            >
+            accreditation = <"MD">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2018-10-09">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Derived from: Fluid output, Published archetype [Internet]. openEHR Foundation, openEHR Clinical Knowledge Manager [cited: 2018-11-16]. Available from: https://ckm.openehr.org/ckm/#showArchetype_1013.1.1683">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"D7974D547B07024093F8CC12F76B631D">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about faecal output.">
+            keywords = <"fluid", "balance", "output", "urine", "vomit", "drain", "drainage", "aspirate", "exudate", "loss">
+            use = <"Use to record details about faecal output.
+
+This archetype can be used to record details about:
+- each single bowel motion, including episodes of diarrhoea; or
+- the total faecal output over a specified period of time, for example the amount of diarrhoea as art of a fluid balance chart over an 8 hour nursing shift.
+
+Each measurement should be recorded using a separate instance of this archetype.
+
+If an individual has diarrhoea, a fluid balance chart may require inclusion of this archetype alongside multiple instances of OBSERVATION.fluid_output and OBSERVATION.fluid_input archetype to capture all of the various inputs and outputs, plus a single instance of the OBSERVATION.fluid_balance to record the overall fluid status.">
+            misuse = <"Not to be used to record fluid input. Use OBSERVATION.fluid_input for this purpose.
+
+Not to be used to record fluid output, other than diarrhoea. Use OBSERVATION.fluid_output for this purpose.
+
+Not to be used to record fluid balance calculations or to record the calculation of insensible fluid loss. Use OBSERVATION.fluid_balance for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"Voor het vastleggen van details van de faecale uitscheiding.">
+            keywords = <"vocht", "balans", "uitscheiding", "output", "urine", "braaksel", "vomitus", "drain", "drainage", "aspiratie", "exudaat", "verlies">
+            use = <"Gebruik voor het vastleggen van detaills over de faecale uitscheiding.
+
+Dit archetype kan gebruikt worden voor het vastleggen van detaills over:
+-elke individuele stoelgang, inclusief episodes van diarree; of
+-de totale faecale uitscheiding over een specifieke tijdsperiode, bijvoorbeeld de hoeveelheid diarree als onderdeel van een vochtbalans over een 8 uur durende verpleegkundige dienst.
+
+Elke meting dient vastgelegd te worden met een aparte 'instances' van dit archetype.
+
+Als een individu diarree heeft, kan het nodig zijn dit archetype op te nemen in een vochtbalans naast meerdere 'instance' van OBSERVATION.fluid_output en OBSERVATION.fluid_input archetypes om de verschillende inputs en uitputs te vatten, plus een enkele 'instance' van de OBSERVATION.fluid_balance voor het vastleggen van de gehele vochtbalans.">
+            misuse = <"Niet te gebruiken voor het vastleggen van vocht inname. Gebruik hiervoor OBSERVATION.fluid_input. 
+Niet te gebruiken voor het vastleggen van vocht uitscheiding. Gebruik hiervoor OBSERVATION.fluid_output.
+Niet te gebruiken voor het vastleggen van een vocht balans of het berekenen van onlogisch vocht verlies. Gebruik hiervoor OBSERVATION.fluid_balance.">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Faecal output
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Amount
+                                        value matches {
+                                            DV_QUANTITY[at9002] matches {
+                                                property matches {[at9000]}    -- Volume
+                                                [magnitude, units, precision] matches {
+                                                    [{|>=0.0|}, {"ml"}, {0}],
+                                                    [{|>=0.0|}, {"g"}, {0}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0005] matches {    -- Faecal details
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.exam_faeces\.v0\..*/}
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9003]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0008] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Method
+                        value matches {
+                            DV_CODED_TEXT[at9004] matches {
+                                defining_code matches {[ac9001]}    -- Method (synthesised)
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0012] occurrences matches {0..1} matches {    -- Output device
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                        exclude
+                            archetype_id/value matches {/.*/}
+                    }
+                    allow_archetype CLUSTER[at0013] occurrences matches {0..1} matches {    -- Measurement device
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                        exclude
+                            archetype_id/value matches {/.*/}
+                    }
+                    allow_archetype CLUSTER[at0014] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Faecal output">
+                description = <"The measurement of faeces excreted from the body.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Amount">
+                description = <"The amount of faeces excreted.">
+                comment = <"If absorbant material, such as diapers and dressings, are weighed as part of managing faecal output, the weight will need to be converted to a volume or mass for recording.">
+            >
+            ["at0005"] = <
+                text = <"Faecal details">
+                description = <"Additional details about the faeces, including macroscopic appearance or other tests not currently captured in the structured data.">
+                comment = <"For example: the colour of the faeces.">
+            >
+            ["at0006"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the faecal output not captured in other fields.">
+            >
+            ["at0009"] = <
+                text = <"Method">
+                description = <"The approach used to quantify the amount of faeces.">
+            >
+            ["at0010"] = <
+                text = <"Estimated">
+                description = <"The faecal ourput has been estimated.">
+            >
+            ["at0011"] = <
+                text = <"Measured">
+                description = <"The faecal output has been directly measured.">
+            >
+            ["at0012"] = <
+                text = <"Output device">
+                description = <"Details of the device that was used to collect the faeces.">
+                comment = <"*">
+            >
+            ["at0013"] = <
+                text = <"Measurement device">
+                description = <"Details of the device used to measure the faecal output.">
+                comment = <"*">
+            >
+            ["at0014"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"e.g. Local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at9000"] = <
+                text = <"Volume">
+                description = <"Volume">
+            >
+            ["ac9001"] = <
+                text = <"Method (synthesised)">
+                description = <"The approach used to quantify the amount of faeces. (synthesised)">
+            >
+        >
+        ["nl"] = <
+            ["at0000"] = <
+                text = <"Faecale uitscheiding">
+                description = <"De meting van uit het lichaam uitgescheiden faeces.">
+            >
+            ["at0002"] = <
+                text = <"Elke gebeurtenis">
+                description = <"Standaard, ongespecificeerd moment in de tijd of een interval gebeurtenis die expliciet vastgelegd kan worden terwijl de applicatie loopt.">
+            >
+            ["at0004"] = <
+                text = <"Hoeveelheid">
+                description = <"De hoeveelheid uitgescheiden faeces.">
+                comment = <"Als opvang materiaal (zoals luiers of verband) gewogen wordt als onderdeel van het bijhouden van de faecale uitscheiding, dient het gewicht omgerekend te worden naar een volume of massa om vastgelegd te worden.">
+            >
+            ["at0005"] = <
+                text = <"Details over de ontlasting">
+                description = <"Extra informatie over de ontlasting, inclusief macroscopisch uiterlijk of andere testen die niet momenteel niet gevat worden binnen andere gestructureerde data.">
+                comment = <"Bijvoorbeeld: kleur van de ontlasting.">
+            >
+            ["at0006"] = <
+                text = <"Opmerking">
+                description = <"Extra beschrijving van de faecale uitscheding die niet gevat wordt binnen andere velden.">
+            >
+            ["at0009"] = <
+                text = <"Methode">
+                description = <"De aanpak die gebruikt is om de hoeveel ontlasting te kwantificeren.">
+            >
+            ["at0010"] = <
+                text = <"Geschat">
+                description = <"De hoeveelheid faecale uitscheiding is geschat.">
+            >
+            ["at0011"] = <
+                text = <"Gemeten">
+                description = <"De faecale uitscheiding is direct gemeten.">
+            >
+            ["at0012"] = <
+                text = <"Ontlastings hulpmiddel">
+                description = <"Details over het hulpmiddel dat werd gebruikt voor het opvangen van de faeces.">
+                comment = <"*">
+            >
+            ["at0013"] = <
+                text = <"Meetapparaat">
+                description = <"Details over het gebruikte apparaat om de faecale uitscheiding te meten.">
+                comment = <"*">
+            >
+            ["at0014"] = <
+                text = <"Uitbreiding">
+                description = <"Extra informatie benodigd voor het vastleggen van lokale informatie of voor het verbinden met andere standaarden.">
+                comment = <"Bijvoorbeeld: lokale informatie eisen of extra metadata voor het verbinden met FHIR of CIMI standaarden.">
+            >
+            ["at9000"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["ac9001"] = <
+                text = <"Methode (synthesised)">
+                description = <"De aanpak die gebruikt is om de hoeveel ontlasting te kwantificeren. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/129>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0010", "at0011">
+        >
+    >

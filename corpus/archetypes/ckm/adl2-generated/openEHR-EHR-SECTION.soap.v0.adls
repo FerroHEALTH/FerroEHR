@@ -1,0 +1,77 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c4ef831a-deaa-3968-97d9-fb3744e9394e; build_uid=8cdebbf5-1edc-408c-93d9-57aca0bfafc1)
+    openEHR-EHR-SECTION.soap.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-10-28">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Sam Heard, Ocean Informatics, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Weed LL. Medical records that guide and teach. N Engl J Med. 1968 Mar 14;278(11):593-600. doi: 10.1056/NEJM196803142781105. PMID: 5637758.">
+        ["2"] = <"Weed LL. Medical records, medical education and patient care. Press of the Case Western Reserve University, 1970.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"784DACCF65D07D9E332C1C016A8BAA80">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To provide a framework and design guidance for consistent modelling of SOAP content within a template representing problem-oriented clinical notes.">
+            keywords = <"subjective", "objective", "assessment", "plan", "education", "problem", "oriented">
+            use = <"Use to provide a framework and design guidance for consistent modelling of SOAP(E) content within a template representing problem-oriented clinical notes.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- SOAP headings
+        items cardinality matches {0..*; unordered} matches {
+            SECTION[at0001] occurrences matches {0..1}    -- Subjective (S)
+            SECTION[at0002] occurrences matches {0..1}    -- Objective (O)
+            SECTION[at0003] occurrences matches {0..1}    -- Assessment (A)
+            SECTION[at0004] occurrences matches {0..1}    -- Plan (P)
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"SOAP headings">
+                description = <"Acronym for a group of headings used to aid recording of consistent, problem-oriented notes in a patient's health record.">
+            >
+            ["at0001"] = <
+                text = <"Subjective (S)">
+                description = <"The subjective component, usually focused on the presenting complaint, history of present illness, relevant medical history and review of system.">
+                comment = <"For example: EVALUATION.reason_for_encounter and OBSERVATION.story.">
+            >
+            ["at0002"] = <
+                text = <"Objective (O)">
+                description = <"The objective component, usually focused on observations, measurements, examination findings and diagnostic test results.">
+                comment = <"For example: OBSERVATION.exam, OBSERVATION.blood_pressure and OBSERVATION.laboratory_test_result.">
+            >
+            ["at0003"] = <
+                text = <"Assessment (A)">
+                description = <"The assessment component, usually focused on conclusions and synopses about progress or change.">
+                comment = <"For example: EVALUATION.differential_diagnoses, EVALUATION.problem_diagnosis, and EVALUATION.clinical_synopsis.">
+            >
+            ["at0004"] = <
+                text = <"Plan (P)">
+                description = <"The plan component, usually focused on future investigations and treatment, goals of therapy and monitoring.">
+                comment = <"For example: INSTRUCTION.service_request, INSTRUCTION.medication_order, and INSTRUCTION.health_education_request.">
+            >
+        >
+    >

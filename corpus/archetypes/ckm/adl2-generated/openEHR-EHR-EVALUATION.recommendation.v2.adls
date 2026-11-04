@@ -1,0 +1,488 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=a15aad41-4ae9-4588-be4e-5c67f83e442f; build_uid=1c00256d-4057-4075-a7d1-7161980e7684)
+    openEHR-EHR-EVALUATION.recommendation.v2.0.4
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Alina Rehberg, Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"rehberg.alina@mh-hannover.de, Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Åsa Skagerhult">
+                ["organisation"] = <"Region Östergötland">
+                ["email"] = <"asa.skagerhult@regionostergotland.se">
+            >
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Alan March">
+                ["organisation"] = <"Hospital Universitario Austral, Buenos Aires, Argentina">
+                ["email"] = <"alandmarch@gmail.com">
+                ["alandmarch@gmail.com"] = <"alandmarch@gmail.com">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Bjørn Grøva, John Tore Valand">
+                ["organisation"] = <"Direktoratet for e-helse, Helse Bergen">
+                ["email"] = <"bjorn.grova@ehelse.no, john.tore.valand@helse-vest-ikt.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Vladimir Pizzo">
+                ["organisation"] = <"Hospital Sirio Libanes, Brazil">
+                ["email"] = <"vladimir.pizzo@hsl.org.br">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Joost Holslag">
+                ["organisation"] = <"Nedap">
+                ["email"] = <"joost.holslag@nedap.com">
+            >
+            accreditation = <"MD">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Julio de Sosa">
+                ["organisation"] = <"Servei Català de la Salut">
+                ["email"] = <"juliodesosa@catsalut.cat">
+            >
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Julio de Sosa">
+                ["organisation"] = <"Servei Català de la Salut">
+                ["email"] = <"juliodesosa@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2013-02-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo universitetssykehus HF, Norway", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway", "Bente Gjelsvik, Helse Bergen, Norway", "Sam Heard, Ocean Informatics, Australia", "Kristian Heldal, Telemark Hospital Trust, Norway", "Hilde Hollås, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Shinji Kobayashi, National Institute of Public Health, Japan", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hallvard Lærum, Oslo Universitetssykehus HF, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Andrej Orel, Marand d.o.o., Slovenia", "Anne Pauline Anderssen, Helse Nord RHF, Norway", "Tanja Riise, Nasjonal IKT HF, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"99B27EB9818E4FDB6D7BEFCEAFB15F51">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung einer Empfehlung, einer Beratung oder eines Vorschlags für die klinische Versorgung zu einem bestimmten Zeitpunkt.">
+            keywords = <"Beratung", "Empfehlung", "Vorschlag">
+            use = <"Verwenden Sie diesen Archetyp, um eine Empfehlung, eine Beratung oder einen Vorschlag für die klinische Versorgung zu einem bestimmten Zeitpunkt darzustellen.
+
+Der vorgesehene Anwendungsfall ist, um einen Kliniker bei der Aufzeichnung einer oder mehreren Empfehlung/en zu einem bestimmten Zeitpunkt zu unterstützen.
+Zum Beispiel als Bestandteil der Schlussfolgerungen, die im Rahmen einer klinischen Beratung getroffen werden.">
+            misuse = <"Der Archetyp darf nicht verwendet werden, um strukturierte Datenelemente einzuschließen, die zusätzliche Anweisungen wie Timing, Häufigkeit, Dauer oder Dosierung enthalten. Verwenden Sie zu diesem Zweck geeignete INSTRUCTION-Archetypen.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att föreslå eller ge råd om behandlingsåtgärd vid ett specifikt tillfälle.">
+            keywords = <"råd", "förslag", "rekommendation">
+            use = <"Att föreslå eller ge råd om behandlingsåtgärd vid ett specifikt tillfälle.
+
+Är tänkt att ge stöd för att dokumentera en behandlingsrekommendation vid en specifik tidpunkt. Exempelvis som en del av slutsatsen vid en klinisk konsultation.">
+            misuse = <"*Not to be used to carry structured data elements detailing additional instructions, such as timing, frequency, duration or dosage - use appropriate INSTRUCTION archetypes for this purpose. (en)">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Para el registro de una sugerencia, consejo o propuesta para el manejo clínico en un momento determinado.">
+            keywords = <"consejo", "propuesta", "sugerencia">
+            use = <"Utilícese para registrar una sugerencia, consejo o propuesta para el manejo clínico en un momento específico.
+
+El caso de uso previsto se vincula a permitir el registro por parte del clínico de una o mas recomendaciones, en un mento específico en el tiempo. Por ejemplo, como un componente de las conclusiones a las que se ha arribado como parte de una consutla clínica.">
+            misuse = <"*Not to be used to carry structured data elements detailing additional instructions, such as timing, frequency, duration or dosage - use appropriate INSTRUCTION archetypes for this purpose. (en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"Anvendes for å registrere et forslag, et råd eller en anmodning om klinisk oppfølging på et spesifikt tidspunkt.">
+            keywords = <"råd", "forslag", "anmodning", "tilråde", "tilrådning", "instruks">
+            use = <"Anvendes for å registrere et forslag, et råd eller en anmodning om klinisk oppfølging på et spesifikt tidspunkt.
+
+Arketypen er ment å understøtte klinikere som dokumenterer en eller flere anbefalinger på et spesifikt tidspunkt.
+Anbefalingen kan for eksempel benyttes som en del av dokumentasjonen av konklusjonene som trekkes i forbindelse med en klinisk konsultasjon.">
+            misuse = <"Brukes ikke for å registrere strukturerte dataelementer for å beskrive ytterligere instruksjoner som for eksempel 'timing', frekvens, varighet eller dose. Bruk relevante INSTRUCTION-arketyper for dette formålet.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Registrar uma sugestão, conselho ou proposta de manejo clínico num tempo específico.">
+            keywords = <"conselho", "proposta", "sugestão">
+            use = <"Utilizar para registrar uma sugestão, conselho ou proposta de manejo clínico num tempo específico.
+
+O caso de uso pretendido é apoiar o registro clínico de uma recomendação, ou recomendações, num ponto específico no tempo.
+Por exemplo, como um componente das conclusões tiradas como parte de uma consulta clínica.">
+            misuse = <"*Not to be used to carry structured data elements detailing additional instructions, such as timing, frequency, duration or dosage - use appropriate INSTRUCTION archetypes for this purpose. (en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a suggestion, advice or proposal for clinical management at a specific time.">
+            keywords = <"advice", "proposal", "suggestion">
+            use = <"Use to record a suggestion, advice or proposal for clinical management at a specific time.
+
+The intended use case is to support a clinician recording a recommendation, or recommendations, at a specific point-in-time. 
+For example, as a component of the conclusions drawn as part of a clinical consultation.">
+            misuse = <"Not to be used to carry structured data elements detailing additional instructions, such as timing, frequency, duration or dosage - use appropriate INSTRUCTION archetypes for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"Het vastleggen van een suggestie, advies of voorstel voor behandeling op een bepaald moment.">
+            keywords = <"advies", "voorstel", "suggestie">
+            use = <"Gebruik voor het vastleggen van een suggestie, advies of voorstel voor behandeling op een specifiek moment.
+
+Het beoogd gebruik is het ondersteunen van een clinicus bij het vastleggen van een advies, of adviezen, op een specifiek moment in de tijd.
+Bijvoorbeeld als onderdeel van de conclusies uit een gezondheidsconsult.">
+            misuse = <"Niet te gebruiken voor het vastleggen van gestructureerde data elementen die opdrachten gedetailleerd specificeren, zoals timing, frequentie, duur of dosering - gebruik hiervoor de toepasselijke INSTRUCTION archetypes.">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar una sugerencia, consejo o propuesta de gestión clínica en un momento determinado.">
+            keywords = <"consejo", "propuesta", "sugerencia">
+            use = <"Se utiliza para registrar una sugerencia, consejo o propuesta de gestión clínica en un momento determinado.
+
+El caso de uso previsto es ayudar a un clínico a registrar una recomendación, o recomendaciones, en un momento específico. 
+Por ejemplo, como componente de las conclusiones extraídas en el marco de una consulta clínica.">
+            misuse = <"No debe utilizarse para incluir elementos de datos estructurados que detallen instrucciones adicionales, como el tiempo, la frecuencia, la duración o la dosis; para ello, utilice los arquetipos de tipo INSTRUCTION adecuados.">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Registrar un suggeriment, consell o proposta de gestió clínica en un moment determinat.">
+            keywords = <"consell", "proposta", "suggeriment">
+            use = <"Es fa servir per registrar un suggeriment, consell o proposta de gestió clínica en un moment determinat.
+
+El cas d'ús previst és ajudar un clínic a registrar una recomanació, o recomanacions, en un moment específic.
+Per exemple, com a component de les conclusions extretes en el marc de la consulta clínica.">
+            misuse = <"No s'ha d'utilitzar per incloure elements de dades estructurats que detallin instruccions addicionals, com ara el temps, la freqüència, la durada o la dosi; per fer-ho, utilitzeu els arquetips de tipus INSTRUCTION adequats.">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Recommendation
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Topic
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                    ELEMENT[at0002] occurrences matches {1..*} matches {    -- Recommendation
+                        value matches {
+                            DV_TEXT[at9000]
+                        }
+                    }
+                    ELEMENT[at0003] matches {    -- Rationale
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0004] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9003]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0005] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Empfehlung">
+                description = <"Eine Empfehlung, eine Beratung oder ein Vorschlag für die klinische Versorgung.">
+            >
+            ["at0002"] = <
+                text = <"Empfehlung">
+                description = <"Beschreibung der Empfehlung.">
+                comment = <"Kann bei Bedarf mit einer Terminologie kodiert werden.">
+            >
+            ["at0003"] = <
+                text = <"Begründung">
+                description = <"Begründung für die Empfehlung.">
+            >
+            ["at0005"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Modelle.">
+            >
+            ["at0006"] = <
+                text = <"Gegenstand">
+                description = <"Das Thema oder der Gegenstand der Empfehlung.">
+                comment = <"Hilfreich, wenn mehrere Arten von Empfehlungen gleichzeitig und innerhalb desselben Datensatzes abgegeben werden.">
+            >
+            ["at0007"] = <
+                text = <"Zuletzt aktualisiert">
+                description = <"Das Datum, an dem diese Empfehlung zuletzt aktualisiert wurde.">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Rekommendation">
+                description = <"Ett förslag eller råd om behandling.">
+            >
+            ["at0002"] = <
+                text = <"Rekommendation">
+                description = <"Beskrivning av rekommendationen.">
+                comment = <"Kan kodas i en terminologi vid behov.">
+            >
+            ["at0003"] = <
+                text = <"*Rationale(en)">
+                description = <"*Justifications for the recommendation.(en)">
+            >
+            ["at0005"] = <
+                text = <"Tilläggsinformation">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0006"] = <
+                text = <"*Topic (en)">
+                description = <"*The topic or subject of the recommendation. (en)">
+                comment = <"*Useful if multiple types of recommendations are made at the same time, and within the same data set. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Last updated (en)">
+                description = <"*The date this recommendation was last updated. (en)">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"Recomendación">
+                description = <"Una sugerencia, consejo o propuesta para el manejo clínico.">
+            >
+            ["at0002"] = <
+                text = <"Recomendación">
+                description = <"Descripción narrativa de la recomendación">
+                comment = <"Puede ser codificada mediante una terminología si así se lo requiere.">
+            >
+            ["at0003"] = <
+                text = <"*Rationale(en)">
+                description = <"*Justifications for the recommendation.(en)">
+            >
+            ["at0005"] = <
+                text = <"Extensión">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0006"] = <
+                text = <"*Topic (en)">
+                description = <"*The topic or subject of the recommendation. (en)">
+                comment = <"*Useful if multiple types of recommendations are made at the same time, and within the same data set. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Last updated (en)">
+                description = <"*The date this recommendation was last updated. (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Anbefaling">
+                description = <"Et forslag, råd eller anmodning om klinisk oppfølging.">
+            >
+            ["at0002"] = <
+                text = <"Anbefaling">
+                description = <"Fritekstbeskrivelse av anbefalingen.">
+                comment = <"Det bør om mulig benyttes terminologi for å angi anbefaling.">
+            >
+            ["at0003"] = <
+                text = <"Begrunnelse">
+                description = <"Begrunnelse for anbefalingen.">
+            >
+            ["at0005"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0006"] = <
+                text = <"Tema">
+                description = <"Tema eller emne anbefalingen omhandler.">
+                comment = <"Dataelementet er hensiktsmessig om man skal registrere flere anbefalinger til samme tema.">
+            >
+            ["at0007"] = <
+                text = <"Sist oppdatert">
+                description = <"Datoen denne anbefalingen sist ble oppdatert.">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Recomendação">
+                description = <"Uma sugestão, conselho ou proposta para manejo clínico.">
+            >
+            ["at0002"] = <
+                text = <"Recomendação">
+                description = <"Descrição narrativa da recomendação.">
+                comment = <"Pode ser codificada, utilizando terminologia, se necessário.">
+            >
+            ["at0003"] = <
+                text = <"Justificativa">
+                description = <"Justificativa para a recomendação.">
+            >
+            ["at0005"] = <
+                text = <"Extensão">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0006"] = <
+                text = <"*Topic (en)">
+                description = <"*The topic or subject of the recommendation. (en)">
+                comment = <"*Useful if multiple types of recommendations are made at the same time, and within the same data set. (en)">
+            >
+            ["at0007"] = <
+                text = <"*Last updated (en)">
+                description = <"*The date this recommendation was last updated. (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Recommendation">
+                description = <"A suggestion, advice or proposal for clinical management.">
+            >
+            ["at0002"] = <
+                text = <"Recommendation">
+                description = <"Narrative description of the recommendation.">
+                comment = <"May be coded, using a terminology, if required.">
+            >
+            ["at0003"] = <
+                text = <"Rationale">
+                description = <"Justifications for the recommendation.">
+            >
+            ["at0005"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0006"] = <
+                text = <"Topic">
+                description = <"The topic or subject of the recommendation.">
+                comment = <"Useful if multiple types of recommendations are made at the same time, and within the same data set.">
+            >
+            ["at0007"] = <
+                text = <"Last updated">
+                description = <"The date this recommendation was last updated.">
+            >
+        >
+        ["nl"] = <
+            ["at0000"] = <
+                text = <"Advies">
+                description = <"Een suggestie, advies of voorstel voor behandeling.">
+            >
+            ["at0002"] = <
+                text = <"Advies">
+                description = <"Verhalende beschrijving van het advies.">
+                comment = <"Mag gecodeerd worden middels terminologie, indien vereist.">
+            >
+            ["at0003"] = <
+                text = <"Onderbouwing">
+                description = <"De onderbouwing voor het advies.">
+            >
+            ["at0005"] = <
+                text = <"Uitbreiding">
+                description = <"Additionele informatie benodigd voor het uitbreiden van het model met lokale content of het allignen met andere referentie modellen of formalismen.">
+                comment = <"Bijvoorbeeld: lokale informatie eisen of metadata om te alignen met FHIR.">
+            >
+            ["at0006"] = <
+                text = <"Onderwerp">
+                description = <"Het onderwerp waar het advies over gaat.">
+                comment = <"Bruikbaar als verschillende type adviezen op het zelfde moment gemaakt worden binnen dezelfde dataset.">
+            >
+            ["at0007"] = <
+                text = <"Laatst geüpdate">
+                description = <"De datum waarop het advies voor het laatst is geüpdate.">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Recomendación">
+                description = <"Una sugerencia, consejo o propuesta de gestión clínica.">
+            >
+            ["at0002"] = <
+                text = <"Recomendación">
+                description = <"Descripción narrativa de la recomendación.">
+                comment = <"Puede codificarse, utilizando una terminología, si es necesario.">
+            >
+            ["at0003"] = <
+                text = <"Justificación">
+                description = <"Justificación de la recomendación.">
+            >
+            ["at0005"] = <
+                text = <"Ampliación">
+                description = <"Información adicional necesaria para ampliar el modelo con contenido local o para alinearlo con otros modelos o formalismos de referencia.">
+                comment = <"Por ejemplo: requisitos locales de información; o metadatos adicionales para alinearse con FHIR.">
+            >
+            ["at0006"] = <
+                text = <"Asunto">
+                description = <"El tema o asunto de la recomendación.">
+                comment = <"Útil si se hacen varios tipos de recomendaciones al mismo tiempo y dentro del mismo conjunto de datos.">
+            >
+            ["at0007"] = <
+                text = <"Última actualización">
+                description = <"Fecha de la última actualización de esta recomendación.">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Recomanació">
+                description = <"Un suggeriment, consell o proposta de gestió clínica.">
+            >
+            ["at0002"] = <
+                text = <"Recomanació">
+                description = <"Descripció narrativa de la recomanació.">
+                comment = <"Es pot codificar, utilitzant una terminologia, si cal.">
+            >
+            ["at0003"] = <
+                text = <"Justificació">
+                description = <"Justificació de la recomanació.">
+            >
+            ["at0005"] = <
+                text = <"Ampliació">
+                description = <"Informació addicional necessària per ampliar el model amb contingut local o per alinear-lo amb altres models o formalismes de referència.">
+                comment = <"Per exemple: requisits d'informació locals; o metadades addicionals per alinear-se amb FHIR.">
+            >
+            ["at0006"] = <
+                text = <"Assumpte">
+                description = <"El tema o assumpte de la recomanació.">
+                comment = <"Útil si es fan diversos tipus de recomanacions alhora i dins del mateix conjunt de dades.">
+            >
+            ["at0007"] = <
+                text = <"Última actualització">
+                description = <"Data de la darrera actualització d'aquesta recomanació.">
+            >
+        >
+    >

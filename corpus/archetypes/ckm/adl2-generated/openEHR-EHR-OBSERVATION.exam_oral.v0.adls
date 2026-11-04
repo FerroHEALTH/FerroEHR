@@ -1,0 +1,162 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b630682b-acc2-4eb7-9d44-15bbab763995; build_uid=a8c9a5d1-c061-4991-9550-7ad44bc81985)
+    openEHR-EHR-OBSERVATION.exam_oral.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::ja]>
+
+description
+    original_author = <
+        ["name"] = <"">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"1B7898E1A4028F7E7BB98042E3484D43">
+    >
+    details = <
+        ["ja"] = <
+            language = <[ISO_639-1::ja]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Exam oral
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- 任意のイベント(Event)
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- No abnormality detected
+                                        value matches {
+                                            DV_BOOLEAN[at9000] matches {
+                                                value matches {True, False}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Clinical description
+                                        value matches {
+                                            DV_TEXT[at9001]
+                                        }
+                                    }
+                                    allow_archetype ELEMENT[at0006] matches {    -- Examination findings
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-ELEMENT\.exam_teeth(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-ELEMENT\.exam_giginvae(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-ELEMENT\.exam_dentition(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-ELEMENT\.exam_oral_membrane(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-ELEMENT\.exam_tempromandibular_joint(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-ELEMENT\.exam_tongue(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-ELEMENT\.exam_occlusal(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    allow_archetype ELEMENT[at0007] matches {    -- Multimedia representation
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-ELEMENT\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Clinical interpretation
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9003]
+                                        }
+                                    }
+                                    allow_archetype ELEMENT[at0010] matches {    -- Examination not done
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-ELEMENT\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["ja"] = <
+            ["at0000"] = <
+                text = <"Exam oral">
+                description = <"Examination findings in oral">
+                comment = <"This archetype is designed to record dental examination of oral.">
+            >
+            ["at0002"] = <
+                text = <"任意のイベント(Event)">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"No abnormality detected">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"Clinical description">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"Examination findings">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Multimedia representation">
+                description = <"*">
+            >
+            ["at0008"] = <
+                text = <"Clinical interpretation">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"Comment">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Examination not done">
+                description = <"*">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"*Exam oral(ja)">
+                description = <"*Examination findings in oral(ja)">
+                comment = <"*This archetype is designed to record dental examination of oral.(ja)">
+            >
+            ["at0002"] = <
+                text = <"*任意のイベント(Event)(ja)">
+                description = <"**(ja)">
+            >
+            ["at0004"] = <
+                text = <"*No abnormality detected(ja)">
+                description = <"**(ja)">
+            >
+            ["at0005"] = <
+                text = <"*Clinical description(ja)">
+                description = <"**(ja)">
+            >
+            ["at0006"] = <
+                text = <"*Examination findings(ja)">
+                description = <"**(ja)">
+            >
+            ["at0007"] = <
+                text = <"*Multimedia representation(ja)">
+                description = <"**(ja)">
+            >
+            ["at0008"] = <
+                text = <"*Clinical interpretation(ja)">
+                description = <"**(ja)">
+            >
+            ["at0009"] = <
+                text = <"*Comment(ja)">
+                description = <"**(ja)">
+            >
+            ["at0010"] = <
+                text = <"*Examination not done(ja)">
+                description = <"**(ja)">
+            >
+        >
+    >

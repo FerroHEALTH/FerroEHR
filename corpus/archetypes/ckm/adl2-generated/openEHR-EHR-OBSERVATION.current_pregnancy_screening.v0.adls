@@ -1,0 +1,241 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=191038a0-81e0-42cc-bb8b-84e7bdb8f435; build_uid=544a365e-2f33-4ba1-87af-291c8469dda8)
+    openEHR-EHR-OBSERVATION.current_pregnancy_screening.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-08-30">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"A5039FA85949AD5622552E4F0032D718">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the responses to a screening questionnaire about a current pregnancy and associated antenatal care intended to provide an instant snapshot of a current pregnancy situation at a point in time.">
+            keywords = <"pregnancy", "antenatal">
+            use = <"Use to record the responses to a screening questionnaire about a current pregnancy and associated antenatal care.
+
+Common use cases include, but are not limited to:
+- Systematic questioning in any consultation or general health screening situation; or
+- Specific questioning related to infectious disease surveillance.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry about the pregnancy at a specific point in time. If the individual is pregnant and it is intended that the details are to be recorded and persisted as part of an ongoing health record, any further specific details about the exposure should be recorded using the EVALUATION.pregnancy_summary and related archetypes.">
+            misuse = <"Not to be used to record persistent details about a known pregnancy. Use the EVALUATION.pregnancy_summary archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Current pregnancy screening questionnaire
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Pregnant?
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                            DV_CODED_TEXT[at9003] matches {
+                                                defining_code matches {[ac9000]}    -- Pregnant? (synthesised)
+                                            }
+                                            DV_BOOLEAN[at9004] matches {
+                                                value matches {True}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Multiple pregnancy?
+                                        value matches {
+                                            DV_CODED_TEXT[at9011] matches {
+                                                defining_code matches {[ac9010]}    -- Multiple pregnancy? (synthesised)
+                                            }
+                                            DV_TEXT[at9012]
+                                            DV_BOOLEAN[at9013]
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Antenatal referral status
+                                        value matches {
+                                            DV_CODED_TEXT[at9007] matches {
+                                                defining_code matches {[ac9001]}    -- Antenatal referral status (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- First antenatal appointment
+                                        value matches {
+                                            DV_DATE_TIME[at9008]
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Next antenatal appointment
+                                        value matches {
+                                            DV_DATE_TIME[at9009]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0016] matches {    -- Antenatal care
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    allow_archetype CLUSTER[at0020] matches {    -- Planned delivery location
+                                        include
+                                            archetype_id/value matches {/.*/}
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9010]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0017] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0018] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Current pregnancy screening questionnaire">
+                description = <"An individual- or self-reported questionnaire about the current pregnancy and associated antenatal care.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"First antenatal appointment">
+                description = <"The date and time of the first scheduled antenatal appointment.">
+            >
+            ["at0010"] = <
+                text = <"Antenatal referral status">
+                description = <"Has the individual been referred for antenatal care?">
+            >
+            ["at0011"] = <
+                text = <"Referred">
+                description = <"The individual has been referred for antenatal care.">
+            >
+            ["at0012"] = <
+                text = <"Not referred">
+                description = <"The individual has not been referred for antenatal care.">
+            >
+            ["at0013"] = <
+                text = <"Refused referral">
+                description = <"The individual has refused referral for antenatal care.">
+            >
+            ["at0018"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0016"] = <
+                text = <"Antenatal care">
+                description = <"Details about the provider or organisation providing antenatal care.">
+                comment = <"For example: the name of the clinic where the woman has booked in for antenatal care.">
+            >
+            ["at0015"] = <
+                text = <"Next antenatal appointment">
+                description = <"The date and time of the next scheduled antenatal appointment.">
+            >
+            ["at0004"] = <
+                text = <"Pregnant?">
+                description = <"Is the individual currently pregnant?">
+            >
+            ["at0005"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the screening for current pregnancy and associated antenatal care, not captured in other fields.">
+            >
+            ["at0020"] = <
+                text = <"Planned delivery location">
+                description = <"The anticipated place of delivery.">
+                comment = <"For example: the name of the hospital where the woman has booked in for delivery.">
+            >
+            ["at0024"] = <
+                text = <"Multiple pregnancy?">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["ac9000"] = <
+                text = <"Pregnant? (synthesised)">
+                description = <"Is the individual currently pregnant? (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Multiple pregnancy? (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Antenatal referral status (synthesised)">
+                description = <"Has the individual been referred for antenatal care? (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0005"] = <http://snomed.info/id/373066001>
+            ["at0007"] = <http://snomed.info/id/373067005>
+            ["at0006"] = <http://snomed.info/id/261665006>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0011", "at0012", "at0013">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0005", "at0006", "at0007">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0025", "at0026", "at0027">
+        >
+    >

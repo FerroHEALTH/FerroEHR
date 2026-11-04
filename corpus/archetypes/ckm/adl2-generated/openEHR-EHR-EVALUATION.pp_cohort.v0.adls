@@ -1,0 +1,93 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=157c3a79-820e-4bb6-8d36-11b31aa31f68; build_uid=503aca39-7856-400c-86de-c78bcc9f9001)
+    openEHR-EHR-EVALUATION.pp_cohort.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-09-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"F1AE88E842C8441C1505E7DEBF69C395">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Phenopacket cohort
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- id
+                        value matches {
+                            DV_IDENTIFIER[at9000]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- description
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0004] matches {    -- members
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_phenopacket_framework\.v0\..*/}
+                    }
+                    allow_archetype CLUSTER[at0005] matches {    -- hts_files
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_htsfile\.v0\..*/}
+                    }
+                    allow_archetype CLUSTER[at0006] matches {    -- meta_data
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_metadata\.v0\..*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Phenopacket cohort">
+                description = <"Phenopacket cohort">
+            >
+            ["at0002"] = <
+                text = <"id">
+                description = <"*">
+            >
+            ["at0003"] = <
+                text = <"description">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"members">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"hts_files">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"meta_data">
+                description = <"*">
+            >
+        >
+    >

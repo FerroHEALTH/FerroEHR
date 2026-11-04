@@ -1,0 +1,651 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=4d96ccdf-bb48-4dbb-9fd2-580dcde5dcd1; build_uid=e1beb87f-7a14-4c7e-8b6f-e675816b1aa3)
+    openEHR-EHR-EVALUATION.substance_use_summary.v1.0.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Liv Laugen, Vebjørn Arntzen">
+                ["organisation"] = <"​Oslo University Hospital, Norway">
+                ["email"] = <"liv.laugen@ous-hf.no, varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-02-13">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Marit Alice Venheim, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Randi Brendberg, Helse Nord RHF, Norway", "Hugo Claudio Briceño García, Catsalut, Spain", "Clara Calleja Vega, CatSalut. Servei Català de la Salut., Spain", "Fatemeh Chalabianloo, Helse Bergen, Norway", "Julio de Sosa, Servei Català de la Salut, Spain", "Giovanni Delussu, crs4, Italy", "Gunn Elin Blakkisrud, DIPS ASA, Norway", "Kåre Flø, DIPS ASA, Norway", "Grant Forrest, Lunaria Ltd, United Kingdom", "Astrid Gjelstad, Antidoping Norge, Norway", "Rosane Gotardo, Systema Ltda., Brazil", "Atle Hansen, Universitetssykehuset Nord-Norge, Norway", "Amanda Herbrand, University Hospital Basel, Switzerland", "Evelyn Hovenga, EJSH Consulting, Australia", "Mika Kiviaho, Tietoevry, Finland", "Peter Krajci, OUS, Norway", "Ronald Krawec, Alberta Health Services, Canada", "Anjali Kulkarni, Karkinos, India", "Jörgen Kuylenstierna, eWeave AB, Sweden", "michel laji!, Karolinska Institutet, Sweden", "Liv Laugen, Oslo universitetssykehus, Norway (Nasjonal IKT redaktør)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "June Marie Knappskog, Helse Nord IKT AS, Norway (Nasjonal IKT redaktør), Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "John Meredith, openEHR International, United Kingdom", "Christine Mikalsen, Helse Nord IKT, Norway", "Laura Moral Lopez, Sistema de Salut de Catalunya, Spain", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Jayashree Panickar, Karolinska Institute, Sweden", "Mari Sandlund, Oslo Universitetssykehus, avdeling for teknologi og e-helse, Norway", "Benjamin Senst, Germany", "Ingrid Skard, DIPS AS, Norway", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Erik Sundvall, Karolinska Institutet + Karolinska University Hospital, Region Stockholm + Linköping University, Sweden", "Venkatesh Thoppae, Dedalus, United Kingdom", "John Tore Valand, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Aisa Meisler Manneh, Oslo University Hospital, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"9EBDE43B192CC7016D161F8CB8947573">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere et sammendrag om bruksmønsteret individet vanligvis har av en spesifikk substans eller klasse av substanser som kan ha skadelige effekter på individets helse eller sosiale velferd.">
+            keywords = <"stoff", "avhengighet", "misbruk", "doping", "rus", "narkotika", "vanedannende", "prestasjonsfremmende", "anabole steroider">
+            use = <"Brukes for å registrere et sammendrag om bruksmønsteret individet vanligvis har av en spesifikk substans eller klasse av substanser som kan ha skadelige effekter på individets helse eller sosiale velferd.
+
+Denne arketypen har blitt utformet som et rammeverk for objektivt å kunne dokumentere bruk eller administrasjon av en enkelt substans. Selv om arketypen støtter å kunne identifisere misbruk og avhengighet, er den ikke utelukkende ment for det formålet.
+
+Substanser som kommer inn under denne arketypen inkluderer skadelige eller potensielt vanedannende substanser, i tillegg til medikamenter som misbrukes. Misbruket kan innbefatte administrasjon utenfor klinisk kontroll, bruk utenfor det tiltenkte formålet eller i mengder eller hyppighet som overstiger trygg dosering. Eksempler av slike substanser som kan registeres ved å bruke denne arketypen er, men er ikke begrenset til:
+
+- koffein
+- nikotin og andre komponenter av klinisk betydning i væske som dampes (vaping juices)
+- psykostimulanter
+- barbiturater
+- cannabis
+- hallusinogener
+- opioider
+- GHB
+- MDMA
+- sniffing av hydrokarboner eller andre væsker
+- \"bath salts\" og
+- administrasjon av terapeutiske susbstanser, som for eksempel avføringsmidler for andre formål enn obstipasjon, betablokkere for å redusere hjertefrekvens hos toppidrettsutøvere og anabole steroider hos vektløftere.
+
+På den andre side, substanser som vanligvis blir registrert i pasientjournaler, og som har en veldokumentert skadeprofil og som blir registrert i eksisterende arketyper laget for formålet er unntatt fra bruksområdet for denne arketypen, og inkluderer:
+
+- Røykeanamnese,
+- Røykfri tobakksanamnese,
+- Damping (Vaping),
+- Alkoholanamese, og
+- Administrasjon av legemidler i henhold til etablerte medisinske retningslinjer, inkludert rett dose og korrekt indikasjon, timing og administrasjonsvei.
+
+Denne arketypen er tenkt brukt for å registrere både nåværende og tidligere bruk av en substans, og kan bli oppdatert over tid.
+
+Clusteret \"Episode\" gjør det mulig å registrere detaljer innen en spesifisert tidsperiode. Triggere for å avslutte en episode og starte en ny vil i stor grad reflektere lokale preferanser for datainnsamling. En ny instans av \"Episode\" bør imidlertid bli startet hvis personen:
+- endrer mengde, bruksmønster eller administrasjonsvei betydelig, eller
+- slutter i en signifikant periode.
+
+Damping (\"Vaping\") av substanser er et konsept som krever fokus både på adferd og de substansene som inhaleres. I en slik kontekst, bruk denne arketypen for å registrere mengde av identifiserte ingredienser i væsken som fordampes, som nikotin, og bruk arketypen EVALUATION.vaping_summary for selve dampeadferden. I noen tilfeller er det nødvendig å bruke begge arketypene.
+
+Bruk en egen instans av denne arketypen for å registrere hver enkelt substans.">
+            misuse = <"Skal ikke brukes til å registrere et sammendrag om tobakksbruk. Bruk EVALUATION.tobacco_smoking_summary (Røykeanamnese) eller EVALUATION.smokeless_tobacco_summary (Røykfri tobakkanamnese) til dette formålet.
+
+Skal ikke brukes til å registrere et sammendrag om damping (vaping). Bruk EVALUATION.vaping_summary eller lignende til dette formålet.
+
+Skal ikke brukes til å registrere et sammendrag om alkoholbruk. Bruk EVALUATION.alcohol_use_summary (Alkoholanamnese) til dette formålet.
+
+Skal ikke brukes for å registrere et sammendrag om, eller monitorere samlet dose av et legemiddel. Bruk EVALUATION.medication_summary (Legemiddelsammendrag) til dette formålet.
+
+Skal ikke brukes til å registrere informasjon om den faktiske bruken av substansen i en spesifisert tidsperiode, for eksempel en daglig registrering. Bruk arketypen OBSERVATION.substance_use til dette formålet.
+
+Skal ikke brukes til å registrere feilmedisinering eller eksponering av en substans eller medikasjon, overdose eller forgiftninger. Bruk en av arketypene som handler om overfølsomhetsreaksjon eller eksponering til dette formålet.
+
+Skal ikke brukes for spørreskjemalignede registreringer om substansbruk, eksempelvis \"Har du brukt kokain siste uke?\". Bruk arketypen OBSERVATION.substance_use_screening til dette formålet.
+
+Skal ikke brukes til å registrere informasjon om legemidler som er gitt under klinisk kontroll for det tiltenkte formålet og i passende doser. Bruk en passende arketype innenfor gruppen av legemiddelarketyper til dette formålet.
+
+Skal ikke brukes til å registrere en formell vurdering av avhengighet av en spesifikk substans. Bruk arketypen EVALUATION.problem_diagnosis.v1 (Problem/diagnose) til dette.
+">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record summary or persistent information about the typical use of a specific substance or class of substances that may harm an individual's health or social well-being.">
+            keywords = <"drugs, addiction, abuse, doping, narcotics, performance enhancing, steroids", ...>
+            use = <"Use to record summary or persistent information about the typical use of a specific substance or class of substances that may harm an individual's health or social well-being.
+
+This archetype has been designed as a framework for objectively documenting the use or administration of a single substance. While it supports the recognition of abuse and dependence, it is not intended exclusively for this purpose.
+
+Substances that fall within the scope of this archetype include harmful or potentially addictive substances as well as medications that are misused. Misuse may involve administration without clinical supervision, use for non-recommended purposes, or consumption in quantities or frequencies that exceed safe dosages. Examples of substances that may be recorded using this archetype include but are not limited to:
+- caffeine;
+- nicotine and other clinically significant components of vaping liquid;
+- psychostimulants; 
+- barbiturates; 
+- cannabis; 
+- hallucinogens; 
+- opioids; 
+- GHB; 
+- MDMA; 
+- sniffing of hydrocarbons or other solvents; 
+- \"bath salts\"; and
+- medication administration, such as a laxative for purposes other than relief of constipation, beta blockers to reduce the heart rate in elite athletes and anabolic steroids in weight lifters.
+
+On the other hand, substances that are commonly recorded in health records, have a well-documented harm profile and are recorded using existing purpose-specific archetypes, are excluded from the scope of this archetype, including:
+- tobacco smoking;
+- smokeless tobacco use;
+- vaping;
+- alcohol consumption; and 
+- medication administration according to established medical guidelines and standards, including the correct dosage and appropriate indication, timing and route of administration.
+
+This archetype is intended to be used to record information about both current and previous substance use behaviour patterns and can be updated over time.
+
+The 'Episode' Cluster allows the recording of details within a specified period of time. Triggers for closing one episode and commencing a new one will largely reflect local data collection preferences, however, a new instance of the ‘Episode’ CLUSTER should be used if:
+- the typical amount used or administered, the pattern of use or the route of administration changes significantly; or
+- the individual quits for a significant period of time.
+
+Vaping is a complex concept that requires attention to both the behaviour and the substances inhaled. In that context, use this archetype to record amounts of clinically significant ingredients of vaping liquid, such as 'Nicotine', and use EVALUATION.vaping_summary to record the patterns of vaping behaviour. In some cases, both archetypes may be required.
+
+Use a separate instance of this archetype to record each substance.">
+            misuse = <"Not to be used to record summary or persistent information about tobacco smoking. Use EVALUATION.tobacco_smoking_summary for this purpose.
+
+Not to be used to record summary or persistent information about smokeless tobacco use. Use EVALUATION.smokeless_tobacco_summary for this purpose.
+
+Not to be used to record the summary or persistent information about vaping behaviour. Use an EVALUATION.vaping_summary or similar, yet to be developed.
+
+Not to be used to record summary or persistent information about alcohol consumption. Use EVALUATION.alcohol_use_summary for this purpose.
+
+Not to be used to record the summary or persistent information about, or monitor the cumulative dose of, a medication. Use EVALUATION.medication_summary for this purpose.
+
+Not to be used to record information about actual substance use at or during a specified point or interval of time, such as daily or average use over a specified period of time, or a diary of use. Use the OBSERVATION.substance_use archetype for this purpose..
+
+Not to be used to record accidental administration of, or exposure to, a substance or medication, overdoses or poisonings, etc. Use an Adverse event archetype for this purpose.
+
+Not to be used to record answers to pre-defined screening questions about substance use. Use OBSERVATION.substance_use_screening archetype for this purpose.
+
+Not to be used for recording information about appropriate medication use under clinical supervision, for recommended therapeutic intent and at appropriate dosages. Use an appropriate medication archetype for this purpose.
+
+Not to be used to record a formal assessment of dependence to a specific substance. Use EVALUATION.problem_diagnosis archetype for this purpose.">
+            copyright = <"© openEHR Norway, openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Substance use summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {1} matches {    -- Substance name
+                        value matches {
+                            DV_TEXT[at9040]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Overall status
+                        value matches {
+                            DV_CODED_TEXT[at9035] matches {
+                                defining_code matches {[ac9036]}    -- Overall status (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Overall description
+                        value matches {
+                            DV_TEXT[at9041]
+                        }
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- First ever use
+                        value matches {
+                            DV_DATE_TIME[at9042]
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Regular use commenced
+                        value matches {
+                            DV_DATE_TIME[at9043]
+                        }
+                    }
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Daily use commenced
+                        value matches {
+                            DV_DATE_TIME[at9044]
+                        }
+                    }
+                    CLUSTER[at0012] matches {    -- Per episode
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Episode label
+                                value matches {
+                                    DV_COUNT[at9046] matches {
+                                        magnitude matches {|>=0|}
+                                    }
+                                    DV_TEXT[at9047]
+                                }
+                            }
+                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Episode start date
+                                value matches {
+                                    DV_DATE_TIME[at9048]
+                                }
+                            }
+                            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Specific substance name
+                                value matches {
+                                    DV_TEXT[at9051]
+                                }
+                            }
+                            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Status
+                                value matches {
+                                    DV_CODED_TEXT[at9052] matches {
+                                        defining_code matches {[ac9067]}    -- Status (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0018] occurrences matches {0..1} matches {    -- Episode description
+                                value matches {
+                                    DV_TEXT[at9069]
+                                }
+                            }
+                            ELEMENT[at0019] matches {    -- Pattern
+                                value matches {
+                                    DV_TEXT[at9054]
+                                    DV_CODED_TEXT[at9055] matches {
+                                        defining_code matches {[ac9037]}    -- Pattern (synthesised)
+                                    }
+                                    DV_QUANTITY[at9073] matches {
+                                        [magnitude, units] matches {
+                                            [{|>=0.0|}, {"1/d"}],
+                                            [{|>=0.0|}, {"1/wk"}],
+                                            [{|>=0.0|}, {"1/mo"}],
+                                            [{|>=0.0|}, {"1/a"}]
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Typical amount
+                                value matches {
+                                    DV_QUANTITY[at9057] matches {
+                                        [magnitude, units] matches {
+                                            [{|>=0.0|}, {"mg/d"}],
+                                            [{|>=0.0|}, {"g/d"}],
+                                            [{|>=0.0|}, {"mg/wk"}],
+                                            [{|>=0.0|}, {"g/wk"}],
+                                            [{|>=0.0|}, {"mg/mo"}],
+                                            [{|>=0.0|}, {"g/mo"}],
+                                            [{|>=0.0|}, {"ug/d"}],
+                                            [{|>=0.0|}, {"ug/wk"}],
+                                            [{|>=0.0|}, {"ug/mo"}]
+                                        }
+                                    }
+                                    DV_TEXT[at9070]
+                                }
+                            }
+                            ELEMENT[at0036] occurrences matches {1..*} matches {    -- Route
+                                value matches {
+                                    DV_TEXT[at9074]
+                                }
+                            }
+                            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Episode end date
+                                value matches {
+                                    DV_DATE_TIME[at9049]
+                                }
+                            }
+                            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Number of quit attempts
+                                value matches {
+                                    DV_COUNT[at9064] matches {
+                                        magnitude matches {|>=0|}
+                                    }
+                                }
+                            }
+                            allow_archetype CLUSTER[at0025] matches {    -- Episode details
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                            ELEMENT[at0026] occurrences matches {0..1} matches {    -- Episode comment
+                                value matches {
+                                    DV_DATE_TIME[at9065]
+                                }
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0027] matches {    -- Overall details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Overall quit date
+                        value matches {
+                            DV_DATE_TIME[at9036]
+                        }
+                    }
+                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- Overall comment
+                        value matches {
+                            DV_TEXT[at9066]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0029] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0031] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9067]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0032] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Substansanamnese">
+                description = <"Sammendrag eller varig (persistent) informasjon om bruksmønsteret individet vanligvis har av en spesifikk substans eller klasse av substanser som kan ha skadelige effekter på individets helse eller sosiale velferd.">
+                comment = <"Tobakksrøyking, bruk av røykfri tobakk, alkoholbruk, damping (vaping) og administrasjon av medikamenter i henhold til etablerte medisinske retningslinjer og standarder er bevisst holdt utenfor konseptet, og skal registreres ved å bruke andre arketyper laget for formålet.">
+            >
+            ["at0002"] = <
+                text = <"Substansnavn">
+                description = <"Navnet på substansen eller klassen av substanser.">
+                comment = <"Koding med ekstern terminologi anbefales om det er mulig.">
+            >
+            ["at0003"] = <
+                text = <"Overordnet status">
+                description = <"Utsagn om nåværende substansbruk, uavhengig av administrasjonsvei.">
+            >
+            ["at0004"] = <
+                text = <"Aldri brukt">
+                description = <"Individet har aldri brukt den identifiserte substansen.">
+            >
+            ["at0005"] = <
+                text = <"Bruker">
+                description = <"Individet bruker den identifiserte substansen.">
+            >
+            ["at0006"] = <
+                text = <"Tidligere brukt">
+                description = <"Individet har tidligere brukt den identifiserte substansen.">
+            >
+            ["at0007"] = <
+                text = <"Overordnet beskrivelse">
+                description = <"Fritekstsammendrag om bruk av substansen gjennom individets livsløp.">
+                comment = <"Dette elementet kan også brukes til å ta inn fritekstlige beskrivelser av substansbruk fra eksisterende eller historiske kliniske systemer.">
+            >
+            ["at0008"] = <
+                text = <"Første gangs bruk">
+                description = <"Dato eller deldato for når individet brukte substansen første gang.">
+                comment = <"Kan være en deldato, for eksempel bare et årstall, eller måned og årstall.">
+            >
+            ["at0009"] = <
+                text = <"Startet regelmessig bruk">
+                description = <"Dato eller deldato da individet for første gang begynte å bruke substansen hyppig eller regelmessig, men vanligvis ikke daglig.">
+                comment = <"Kan være en deldato, for eksempel bare et årstall, eller måned og årstall. For eksempel kan denne datoen representere tidspunktet da individet begynte å bruke substansen hver fredagskveld eller på fest.">
+            >
+            ["at0010"] = <
+                text = <"Start daglig bruk">
+                description = <"Dato eller deldato individet begynte å bruke substansen daglig.">
+                comment = <"Kan være en deldato, for eksempel bare et årstall, eller måned og årstall.">
+            >
+            ["at0012"] = <
+                text = <"Per episode">
+                description = <"Detaljer om en periode med bruk av substansen som er oppgitt i elementet \"Substansnavn\", eller for å legge til rette for å registrere detaljer om bruk av en spesifikk substans dersom det i stedet er oppgitt en klasse av substanser.">
+            >
+            ["at0013"] = <
+                text = <"Episodenavn">
+                description = <"Identifisering av en episode med bruk av substansen, enten som et nummer i en sekvens eller som en navngitt hendelse.">
+                comment = <"For eksempel: \"2\" som den andre episoden i en serie av episoder, \"Livtidsbruk\" dersom det gjelder overordnet bruk, \"1995-2000\" eller \"I studentperioden\" for et tidsintervall, eller \"Gravid med tvillinger\" om en beskriver bruken av substansen under en helserelatert hendelse, som en spesifikk graviditet.">
+            >
+            ["at0014"] = <
+                text = <"Episodens startdato">
+                description = <"Dato eller deldato da episoden startet.">
+                comment = <"Kan være en deldato, for eksempel bare et årstall, eller måned og årstall.">
+            >
+            ["at0015"] = <
+                text = <"Episodens sluttdato">
+                description = <"Datoen episoden opphørte.">
+                comment = <"Kan være en deldato, for eksempel bare et årstall, eller måned og årstall. Dette dataelementet vil være tomt om episoden er pågående.">
+            >
+            ["at0016"] = <
+                text = <"Navn på spesifikk substans">
+                description = <"Navnet på den spesifikke substansen som brukes i denne perioden.">
+                comment = <"Det som er registrert i \"Substansnavn\" kan bli kopiert hit dersom den spesifikke substansen allerede har blitt identifisert. Dersom \"Substansnavn\" er brukt til å identifisere en gruppe eller klasse av substanser kan dette dataelementet imidlertid bli brukt til å identifisere en spesifikk substans som rettferdiggjør en separat episode.">
+            >
+            ["at0017"] = <
+                text = <"Status">
+                description = <"Rapportert bruk av den spesifikke substansen i løpet av perioden.">
+            >
+            ["at0018"] = <
+                text = <"Episodebeskrivelse">
+                description = <"Fritekstsammendrag om bruken av den spesifikke substansen i løpet av episoden.">
+            >
+            ["at0019"] = <
+                text = <"Mønster">
+                description = <"Bruksmønsteret og frekvensen av bruken av den spesifikke substansen i løpet av episoden.">
+                comment = <"Dette elementet er repeterbart, for å tillate flere dimensjoner av bruksmønster. Det typiske bruksmønsteret kan gjøres mer finkornet ved å kode med en terminologi eller med et lokalt verdisett i et templat.">
+            >
+            ["at0020"] = <
+                text = <"Daglig">
+                description = <"Bruker substansen minst en gang per dag.">
+            >
+            ["at0021"] = <
+                text = <"Ikke daglig">
+                description = <"Bruker ikke substansen daglig.">
+            >
+            ["at0023"] = <
+                text = <"Typisk mengde">
+                description = <"Mengden som vanligvis blir brukt av den spesifikke substansen i løpet av episoden.">
+                comment = <"For eksempel som mengde \"6 g/uke\" eller som fritekst \"Varierende mengde etter stressnivå, mellom 1 og 10 gram per uke\".">
+            >
+            ["at0024"] = <
+                text = <"Antall forsøk på å slutte">
+                description = <"Totalt antall ganger individet har forsøkt å slutte å bruke den spesifiserte substansen innenfor denne episoden.">
+            >
+            ["at0025"] = <
+                text = <"Episodedetaljer">
+                description = <"Ytterligere strukturerte detaljer om episoden.">
+            >
+            ["at0026"] = <
+                text = <"Episodekommentar">
+                description = <"Ytterligere fritekst om bruk av den spesifikke substansen innenfor denne episoden, og som ikke er fanget i andre felt.">
+            >
+            ["at0027"] = <
+                text = <"Overordnede detaljer">
+                description = <"Ytterligere strukturerte detaljer om overordnet bruk av substansen.">
+            >
+            ["at0028"] = <
+                text = <"Overordnet sluttdato">
+                description = <"Datoen da individet sist brukte substansen.">
+                comment = <"Kan være en deldato, for eksempel bare et årstall, eller måned og årstall.">
+            >
+            ["at0030"] = <
+                text = <"Overordnet kommentar">
+                description = <"Ytterligere fritekst om den overordnede bruken av substansen, og som ikke er fanget i andre felt.">
+            >
+            ["at0031"] = <
+                text = <"Sist oppdatert">
+                description = <"Datoen da Substansbruk sist ble oppdatert.">
+            >
+            ["at0032"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0036"] = <
+                text = <"Administrasjonsvei">
+                description = <"Navnet på administrasjonsveien for den spesifikke substansen i løpet av episoden.">
+                comment = <"Koding med en ekstern terminologi er ønskelig, dersom mulig.">
+            >
+            ["at0042"] = <
+                text = <"Brukt">
+                description = <"Individet brukte den identifiserte substansen i løpet av denne episoden.">
+            >
+            ["at0043"] = <
+                text = <"Ikke brukt">
+                description = <"Individet har ikke brukt den identifiserte substansen i løpet av denne episoden.">
+            >
+            ["ac9036"] = <
+                text = <"Overordnet status (synthesised)">
+                description = <"Utsagn om nåværende substansbruk, uavhengig av administrasjonsvei. (synthesised)">
+            >
+            ["ac9067"] = <
+                text = <"Status (synthesised)">
+                description = <"Rapportert bruk av den spesifikke substansen i løpet av perioden. (synthesised)">
+            >
+            ["ac9037"] = <
+                text = <"Mønster (synthesised)">
+                description = <"Bruksmønsteret og frekvensen av bruken av den spesifikke substansen i løpet av episoden. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Substance use summary">
+                description = <"Summary or persistent information about typical use of a specific substance or class of substances that may harm an individual's health or social well-being.">
+                comment = <"Tobacco smoking, smokeless tobacco use, alcohol consumption, vaping and medication administration according to established medical guidelines and standards, are intentionally excluded from the scope of this archetype and recorded using other purpose-specific archetypes.">
+            >
+            ["at0002"] = <
+                text = <"Substance name">
+                description = <"The name of the substance or class of substance.">
+                comment = <"Coding with an external terminology is preferred, where possible.">
+            >
+            ["at0003"] = <
+                text = <"Overall status">
+                description = <"Statement about current use of the substance, by all routes.">
+            >
+            ["at0004"] = <
+                text = <"Never used">
+                description = <"The individual has never used the identified substance.">
+            >
+            ["at0005"] = <
+                text = <"Current user">
+                description = <"The individual is currently using the identified substance.">
+            >
+            ["at0006"] = <
+                text = <"Former user">
+                description = <"The individual has previously used the identified substance.">
+            >
+            ["at0007"] = <
+                text = <"Overall description">
+                description = <"Narrative summary about the use of the substance over the lifetime of the individual.">
+                comment = <"This element can also be used to incorporate the narrative descriptions of substance use habits within existing or legacy clinical systems.">
+            >
+            ["at0008"] = <
+                text = <"First ever use">
+                description = <"Date when the individual first used the substance.">
+                comment = <"Can be a partial date, for example, only a year.">
+            >
+            ["at0009"] = <
+                text = <"Regular use commenced">
+                description = <"The date when the individual first started frequent or regular, but usually non-daily, use of the substance.">
+                comment = <"Can be a partial date, for example, only a year. For example, this date could represent when the individual commenced using the substance every Friday night or at parties.">
+            >
+            ["at0010"] = <
+                text = <"Daily use commenced">
+                description = <"The date when the individual first started daily use of the substance.">
+                comment = <"Can be a partial date, for example, only a year.">
+            >
+            ["at0012"] = <
+                text = <"Per episode">
+                description = <"Details about a period of use of the substance identified in 'Substance name' or, if a class of substance is used in 'Substance name, to provide details about the use of a specific substance.">
+            >
+            ["at0013"] = <
+                text = <"Episode label">
+                description = <"Identification of an episode of substance use - either as a number in a sequence or a named event.">
+                comment = <"For example: '2' as the second episode within a sequence of episodes; 'Lifelong' if recording typical overall use; '1995-2000' or 'At university' for an interval of time; or 'Pregnancy with twins' if describing the substance use during a health event such as a specific pregnancy.">
+            >
+            ["at0014"] = <
+                text = <"Episode start date">
+                description = <"Date when this episode commenced.">
+                comment = <"Can be a partial date, for example, only a year.">
+            >
+            ["at0015"] = <
+                text = <"Episode end date">
+                description = <"Date when this episode ceased.">
+                comment = <"Can be a partial date, for example, only a year. This data field will be empty if the episode is current and ongoing.">
+            >
+            ["at0016"] = <
+                text = <"Specific substance name">
+                description = <"The name of the specific substance used during the episode.">
+                comment = <"The recorded entry in the 'Substance name' may be duplicated if the specific substance has already been identified. However if the 'Substance name' data element identified a grouping or a class of substance, this data element may be used to identify a specific substance and justify a separate episode.">
+            >
+            ["at0017"] = <
+                text = <"Status">
+                description = <"Reported usage of the specific substance during the episode.">
+            >
+            ["at0018"] = <
+                text = <"Episode description">
+                description = <"Narrative summary about use of the specific substance during the episode.">
+            >
+            ["at0019"] = <
+                text = <"Pattern">
+                description = <"The typical pattern of frequency of use of the specific substance during the episode.">
+                comment = <"This element is repeatable to allow multiple ways of recording the pattern of use. The typical pattern of use can be made more granular by coding with a terminology or a local value set, or using the quantity data type, in a template.">
+            >
+            ["at0020"] = <
+                text = <"Daily">
+                description = <"Using the substance at least once every day.">
+            >
+            ["at0021"] = <
+                text = <"Not daily">
+                description = <"Not using the substance every day.">
+            >
+            ["at0023"] = <
+                text = <"Typical amount">
+                description = <"Typical amount of use of the specified substance during the episode.">
+                comment = <"For example: as a quantity of '6 g/wk'; or as narrative text, such as 'irregular amount of use depending on stress levels, ranging from 1-10 grams per week'.">
+            >
+            ["at0024"] = <
+                text = <"Number of quit attempts">
+                description = <"Total number of times the individual has attempted to stop using the specified substance within this episode.">
+            >
+            ["at0025"] = <
+                text = <"Episode details">
+                description = <"Additional details about the episode.">
+            >
+            ["at0026"] = <
+                text = <"Episode comment">
+                description = <"Additional narrative about use of the specific substance during this episode, not captured in other fields.">
+            >
+            ["at0027"] = <
+                text = <"Overall details">
+                description = <"Additional structured details about the overall use of the substance.">
+            >
+            ["at0028"] = <
+                text = <"Overall quit date">
+                description = <"The date when the individual last used the substance.">
+                comment = <"Can be a partial date, for example, only a year.">
+            >
+            ["at0030"] = <
+                text = <"Overall comment">
+                description = <"Additional narrative about the overall use of the substance that has not been captured in other fields.">
+            >
+            ["at0031"] = <
+                text = <"Last updated">
+                description = <"The date this Substance use summary was last updated.">
+            >
+            ["at0032"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0036"] = <
+                text = <"Route">
+                description = <"The name of the route of administration of the specified substance during the episode.">
+                comment = <"Coding with an external terminology is preferred, where possible.">
+            >
+            ["at0042"] = <
+                text = <"User">
+                description = <"The individual used the identified substance during this episode.">
+            >
+            ["at0043"] = <
+                text = <"Non-user">
+                description = <"The individual has not used the identified substance during this episode.">
+            >
+            ["ac9036"] = <
+                text = <"Overall status (synthesised)">
+                description = <"Statement about current use of the substance, by all routes. (synthesised)">
+            >
+            ["ac9067"] = <
+                text = <"Status (synthesised)">
+                description = <"Reported usage of the specific substance during the episode. (synthesised)">
+            >
+            ["ac9037"] = <
+                text = <"Pattern (synthesised)">
+                description = <"The typical pattern of frequency of use of the specific substance during the episode. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9037"] = <
+            id = <"ac9037">
+            members = <"at0020", "at0021">
+        >
+        ["ac9036"] = <
+            id = <"ac9036">
+            members = <"at0004", "at0005", "at0006">
+        >
+        ["ac9067"] = <
+            id = <"ac9067">
+            members = <"at0042", "at0043">
+        >
+    >

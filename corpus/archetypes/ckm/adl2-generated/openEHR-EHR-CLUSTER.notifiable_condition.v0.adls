@@ -1,0 +1,174 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=2fc6951e-3ffc-4df1-9785-52c7a43e0c6c; build_uid=440814c3-fd3b-467c-8b4b-e76dd0f72a42)
+    openEHR-EHR-CLUSTER.notifiable_condition.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, United Kingdom">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"08/12/2009">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"IHE, Laboratory Technical Framework, Volume 3 Content [Internet]. 2008;Available from: http://www.ihe.net/Technical_Framework/upload/ihe_lab_TF_rel2_1-Vol-3_FT_2008-08-08.pdf">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"38D0F2522328F47304A9B52CD4003552">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details of a notifiable condition as part of a microbiology result.">
+            keywords = <"microbiology", "public health">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل التفاصيل حول الظرف الذي يتطلب الإبلاغ عنه كجزء من نتيجة اختبار ميكروبيولوجي">
+            keywords = <"الميكروبيولوجيا", "الصحة العامة">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Notifiable condition
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Specimen surce
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Status
+                value matches {
+                    DV_CODED_TEXT[at9002] matches {
+                        defining_code matches {[ac9000]}    -- Status (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Date of notification
+                value matches {
+                    DV_DATE_TIME[at9003]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Notifiable condition
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Record of notifiable condition
+                value matches {
+                    DV_EHR_URI[at9005]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Notifiable condition">
+                description = <"To record details of a notifiable condition as part of a microbiology result.">
+            >
+            ["at0001"] = <
+                text = <"Specimen surce">
+                description = <"Identifies the specimen source of the condition – patient, food, soil,...">
+            >
+            ["at0002"] = <
+                text = <"Status">
+                description = <"A status of completed means the patient has been associated with the given notifiable condition.
+A status of aborted means the patient was associated with the notifiable condition in error.">
+            >
+            ["at0003"] = <
+                text = <"Completed">
+                description = <"Patient correctly associated with notifiable condition.">
+            >
+            ["at0004"] = <
+                text = <"Aborted">
+                description = <"Patient associated with notifiable condition in error.">
+            >
+            ["at0005"] = <
+                text = <"Date of notification">
+                description = <"The data and time that the notification was made.">
+            >
+            ["at0006"] = <
+                text = <"Notifiable condition">
+                description = <"A description or coded entry for the notifiable condition.">
+            >
+            ["at0007"] = <
+                text = <"Record of notifiable condition">
+                description = <"A link to the original record identifying the notifiable condition.">
+            >
+            ["ac9000"] = <
+                text = <"Status (synthesised)">
+                description = <"A status of completed means the patient has been associated with the given notifiable condition.
+A status of aborted means the patient was associated with the notifiable condition in error. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"ظرف يستلزم الإبلاغ">
+                description = <"لتسجيل التفاصيل حول ظرف يستدعي الإبلاغ عنه كجزء من نتيجة اختبار ميكروبيولوجي">
+            >
+            ["at0001"] = <
+                text = <"مصدر العينة">
+                description = <"لتعريف مصدر العينة في الظرف الصحي - المريض, الغذاء/الطعام, التربة, ...">
+            >
+            ["at0002"] = <
+                text = <"الحالة">
+                description = <"إذا كانت الحالة (مكتملة) فذلك يعني أن المريض متعلق بالظرف محل التركيز و الذي يستلزم الإبلاغ عنه.
+إذا كانت الحالة (توقف مفاجئ) فإن ذلك يعني أن المريض متعلق بالظرف محل التركيز و الذي يستلزم الإبلاغ عنه و لكل حدث خطأ ما.">
+            >
+            ["at0003"] = <
+                text = <"مكتمل">
+                description = <"المريض متعلق بالفعل بالظرف الذي يستلزم الإبلاغ عنه.">
+            >
+            ["at0004"] = <
+                text = <"توقف مفاجئ">
+                description = <"المريض متعلق بالظرف الذي يستلزم الإبلاغ عنه و لكن حدث خطأ ما.">
+            >
+            ["at0005"] = <
+                text = <"تاريخ الإبلاغ">
+                description = <"التاريخ و التوقيت الذي حدث فيه الإبلاغ">
+            >
+            ["at0006"] = <
+                text = <"الظرف الذي يستلزم الإبلاغ عنه">
+                description = <"وصف أو بيانات مُرْمَزة حول الظرف الذي يستلزم الإبلاغ عنه.">
+            >
+            ["at0007"] = <
+                text = <"تسجيل الظرف الذي يستلزم الإبلاغ عنه">
+                description = <"رابط للسجل الأصلي الذي يعرف الظرف الذي يستلزم الإبلاغ عنه.">
+            >
+            ["ac9000"] = <
+                text = <"الحالة (synthesised)">
+                description = <"إذا كانت الحالة (مكتملة) فذلك يعني أن المريض متعلق بالظرف محل التركيز و الذي يستلزم الإبلاغ عنه.
+إذا كانت الحالة (توقف مفاجئ) فإن ذلك يعني أن المريض متعلق بالظرف محل التركيز و الذي يستلزم الإبلاغ عنه و لكل حدث خطأ ما. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0003", "at0004">
+        >
+    >

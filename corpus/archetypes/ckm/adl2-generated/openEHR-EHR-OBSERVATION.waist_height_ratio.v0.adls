@@ -1,0 +1,109 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=fae8970a-47fc-4d7a-8fd5-9c7342aa532f; build_uid=06af4d70-d96f-4bcf-b278-04efecd99e9b)
+    openEHR-EHR-OBSERVATION.waist_height_ratio.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Priscila Maranhao; Gustavo Bacelar">
+        ["organisation"] = <"MEDCIDES/FMUP; VirtualCare">
+        ["email"] = <"priscilamaranhao@gmail.com">
+        ["date"] = <"2017-07-07">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Ricardo Cruz-Correia, FMUP, Portugal", "Pedro Vieira-Marques, FMUP, Portugal", "Duarte Ferreira, FMUP, Portugal", "Heather Leslie, Ocean Health Systems">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    references = <
+        ["1"] = <"Yoo Eun-Gyong. Waist-to-height ratio as a screening tool for obesity and cardiometabolic. Korean Journal of pediatrics, 59 (11):425-431, 2016. ">
+        ["2"] = <"Browning LM, Hsieh SD, Ashwell M. A systemic review of waist-to-height ratio as  as screening tool for the prediction of cardiovascular disease and diabetes: 0.5 could be a suitable global boundary value. Nutr Res Rev,  23 (2): 247-69, 2010.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Health Systems<heather.leslie@oceanhealthsystems.com>">
+        ["MD5-CAM-1.0.1"] = <"D6AD5752DDC2067B6AE44BE50C3919C9">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the ratio of the circumference of the waist to height.">
+            keywords = <"waist", "height", "obesity", "stature", "WHtR">
+            use = <"Use to record the ratio of the circumference of the waist to the height as an indicator of central obesity and risk of developing serious health conditions, such as cardiovascular disease.
+
+Use to enter the Waist-height ratio either manually (ie calculated and directly entered by the clinician), or automatically (ie calculation and entry is done automatically by a software application, based on separate waist circumference and height measurements).
+
+The archetype is appropriate for use in adults and children > 6 years.">
+            misuse = <"Not to be used to record the actual waist circumference or height measurements. Use the specific OBSERVATION.waist_circumference and/or OBSERVATION.height archetypes for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Waist-height ratio
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Any point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Waist-height ratio
+                                        value matches {
+                                            DV_PROPORTION[at9000] matches {
+                                                is_integral matches {False}
+                                                type matches {1}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9001]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0009] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0010] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Waist-height ratio">
+                description = <"The ratio of the circumference of the waist to the height.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time event">
+                description = <"Default, unspecified point in the time may be explicitly defined in a template or at run-time.">
+            >
+            ["at0007"] = <
+                text = <"Waist-height ratio">
+                description = <"Ratio of waist circumference to height.">
+            >
+            ["at0008"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the ratio not captured in other fields.">
+            >
+            ["at0010"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+        >
+    >

@@ -1,0 +1,240 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=365f8abf-be21-43e8-bb00-f053ca88947a; build_uid=4a9c019c-c940-4714-a18f-5834625b9778)
+    openEHR-EHR-CLUSTER.medication_supply_amount.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Kim Werle">
+                ["organisation"] = <"MHH">
+                ["email"] = <"werle.kimkatrin@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke, John Tore Valand, Vebjørn Arntzen">
+                ["organisation"] = <"Nasjonal IKT HF, Helse Bergen HF, Oslo University Hospital">
+                ["email"] = <"varntzen@ous-hf.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Beatriz de Faria Leao">
+                ["organisation"] = <"Bleao Informática em Saúde">
+                ["email"] = <"bfleao@terra.com.br">
+            >
+            accreditation = <"MD, PhD">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd. UK">
+        ["email"] = <"ian@freshehr.com">
+        ["date"] = <"2016-05-12">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Silje Ljosland Bakke, Helse Bergen HF, Norway (Editor)", "John Bennett, NEHTA, Australia", "Sharmila Biswas, Australia", "Stephen Chu, NEHTA, Australia (Editor)", "Matthew Cordell, NEHTA, Australia", "Gail Easterbrook, Flinders Medical Centre, Australia", "David Evans, Queensland Health, Australia", "Sarah Gaunt, NEHTA, Australia", "Trina Gregory, cpc, Australia", "Sam Heard, Ocean Informatics, Australia (Editor)", "Mary Kelaher, NEHTA, Australia", "Robert L'egan, NEHTA, Australia", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Susan McIndoe, Royal District Nursing Service, Australia", "David McKillop, NEHTA, Australia", "Chris Mitchell, RACGP, Australia", "Stewart Morrison, NEHTA, Australia", "Chris Pearce, Melbourne East GP Network, Australia", "Camilla Preeston, Royal Australian College of General Practitioners, Australia", "Margaret Prichard, NEHTA, Australia", "Cathy Richardson, NEHTA, Australia", "Robyn Richards, NEHTA - Clinical Terminology, Australia", "John Taylor, NEHTA, Australia", "Richard Townley-O'Neill, NEHTA, Australia (Editor)", "Kylie Young, The Royal Australian College of General Practitioners, Australia", "Ian McNicoll, freshEHR Clinical Informatics Ltd., UK", "Sam Heard, Ocean Informatics, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Medication instruction, Draft Archetype [Internet]. nehta, Australia, nehta Clinical Knowledge Manager [cited: 2015-12-15]. Available from: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.838">
+        ["2"] = <"Intermountain Healthcare Medication order model, Personal Communication to Sam Heard by Dr Stan Huff.">
+        ["3"] = <"Royal Australian College of General Practitioners. Fact Sheet: Medicines List. 2010.">
+        ["4"] = <"NHS HSCIC Messaging Implementation Manual (GP2GP messages) http://www.uktcregistration.nss.cfh.nhs.uk/trud3">
+        ["5"] = <"Standards for medication and medical device records – technical annex [Internet]. RCP London. [cited 2015 Dec 15]. Available from: https://www.rcplondon.ac.uk/projects/outputs/standards-medication-and-medical-device-records-technical-annex">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"EE0C097D86C864115F3C4480B21599C4">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Erfassung der Menge eines Arzneimittels, eines Impfstoffs oder eines anderen therapeutischen Mittels, das dem Patienten im Rahmen einer Zulassung, Abgabe oder Verabreichung zur Verfügung gestellt oder verabreicht wurde, und zwar sowohl im Rahmen der ursprünglichen Arzneimittelverschreibung als auch in einem Folgevorgang.">
+            use = <"Soll zur Erfassung der Menge eines Arzneimittels, eines Impfstoffs oder eines anderen therapeutischen Mittels, das dem Patienten im Rahmen einer Zulassung, Abgabe oder Verabreichung zur Verfügung gestellt oder verabreicht wurde, und zwar sowohl im Rahmen der ursprünglichen Arzneimittelverschreibung als auch in einem Folgevorgang, verwendet werden.">
+            misuse = <"Dieser Archetyp sollte nicht dazu verwendet werden, die ursprüngliche Dosismenge als Teil einer Dosisanweisung oder der Wirkstärke eines Präparats zu erfassen. Diese werden als Teil der INSTRUCTION Verordnung von Arzneimitteln oder des CLUSTERs Arzneimittel erfasst.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere mengden legemiddel, vaksine, eller annen terapeutisk vare som skal leveres eller utleveres til pasienten, som del av en autorisering, utlevering eller administrering, både i legemiddelforordningen og i en påfølgende legemiddelhandling.">
+            use = <"Brukes til å registrere mengden legemiddel, vaksine, eller annen terapeutisk vare som skal leveres eller utleveres til pasienten, som del av en autorisering, utlevering eller administrering, både i legemiddelforordningen og i en påfølgende legemiddelhandling.">
+            misuse = <"Brukes ikke for å registre en dose eller styrke som del av en anvisning. Disse registreres som en del av arketypene INSTRUCTION.medication_order eller CLUSTER.medication_substance.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*To record the amount of a medication, vaccine or other therapeutic item to be supplied or supplied to the patient, as part of authorisation, dispensing or administration, both in the context of the original medication order and in a subsequent action. (en)">
+            keywords = <"Suprimento de medicamentos", ...>
+            use = <"*Use to record the amount of a medication, vaccine or other therapeutic item to be supplied or supplied to the patient, as part of authorisation, dispensing or administration, both in the context of the original medication order and in a subsequent action. (en)">
+            misuse = <"Este arquétipo não deve ser usado para registrar a quantidade da dose, concentração, forma farmacêutica de uma preparação de medicamento. Estes são registrados como parte da INSTRUCTION de medicamentos, ou CLUSTER de Substâncias Medicamentosas.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the amount of a medication, vaccine or other therapeutic item to be supplied or supplied to the patient, as part of authorisation, dispensing or administration, both in the context of the original medication order and in a subsequent action.">
+            use = <"Use to record the amount of a medication, vaccine or other therapeutic item to be supplied or supplied to the patient, as part of authorisation, dispensing or administration, both in the context of the original medication order and in a subsequent action.">
+            misuse = <"This archetype should not be used to record the original dose amount as part of a dose direction or the strength of a preparation. These are recorded as part of the Medication Order INSTRUCTION, or Medication Substance CLUSTER.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] occurrences matches {0..1} matches {    -- Medication supply amount
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0161] occurrences matches {0..1} matches {    -- Amount description
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0131] occurrences matches {0..1} matches {    -- Amount
+                value matches {
+                    DV_QUANTITY[at9002]
+                }
+            }
+            ELEMENT[at0158] occurrences matches {0..1} matches {    -- Number of packs
+                value matches {
+                    DV_COUNT[at9004] matches {
+                        magnitude matches {|>=1|}
+                    }
+                }
+            }
+            ELEMENT[at0159] occurrences matches {0..1} matches {    -- Pack size
+                value matches {
+                    DV_QUANTITY[at9005]
+                }
+            }
+            ELEMENT[at0142] occurrences matches {0..1} matches {    -- Duration of supply
+                value matches {
+                    DV_DURATION[at9007] matches {
+                        value matches {PYMWDTS/|>=P0D|}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Bereitgestellte Arzneimittelmenge">
+                description = <"Angaben zur Menge eines Arzneimittels, eines Impfstoffs oder eines anderen therapeutischen Mittels, das im Rahmen der Zulassung, Abgabe oder Verabreichung dem Patienten zur Verfügung gestellt oder verabreicht wird.">
+            >
+            ["at0131"] = <
+                text = <"Menge">
+                description = <"Die Menge des Arzneimittels, des Impfstoffs oder des therapeutischen Mittels, das zur Verfügung gestellt werden soll oder tatsächlich bereitgestellt wurde.">
+                comment = <"Zum Beispiel: \"30\" als Wert und \"Tabletten\" als Einheit; oder \"100\" als Wert und \"ml\" als Einheit.">
+            >
+            ["at0142"] = <
+                text = <"Dauer der Bereitstellung">
+                description = <"Der Zeitraum, für den das Arzneimittel bereitgestellt werden sollte oder für den ein Vorrat ausgegeben wurde.">
+                comment = <"Der Ausgebende wird gebeten, eine ausreichende Menge an Arzneimitteln für den festgelegten Zeitraum zur Verfügung zu stellen.">
+            >
+            ["at0158"] = <
+                text = <"Anzahl der Packungen">
+                description = <"Die Anzahl der Packungen, die vom Verschreibenden angegeben oder vom Ausgebenden ausgehändigt wurden.">
+            >
+            ["at0159"] = <
+                text = <"Packungsgröße">
+                description = <"Die Packungsgröße, die vom Verschreibenden angegeben oder vom Ausgebenden ausgehändigt wurden.">
+                comment = <"Zum Beispiel: \"300\" als Wert und \"Tabletten\" als Einheit; oder \"28\" als Wert und \"ml\" als Einheit.">
+            >
+            ["at0161"] = <
+                text = <"Beschreibung der Menge">
+                description = <"Die Menge des Arzneimittels, des Impfstoffs oder des therapeutischen Mittels, das zur Verfügung gestellt werden soll oder tatsächlich bereitgestellt wurde.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Leveringsmengde for legemidler">
+                description = <"Detaljer om mengden legemiddel, vaksine eller andre terapeutiske varer som skal leveres eller utleveres til pasienten, som del av en autorisering, utlevering eller administrering.">
+            >
+            ["at0131"] = <
+                text = <"Mengde">
+                description = <"Mengden legemiddel, vaksine eller terapeutisk vare som ønskes levert eller som faktisk er levert.">
+                comment = <"For eksempel '30' som magnitude og 'tabletter' som unit; eller '100' som magnitude og 'ml' som unit.">
+            >
+            ["at0142"] = <
+                text = <"Utleveringsperiode">
+                description = <"Tidsperioden da legemiddelet skal utleveres eller ble utlevert for.">
+                comment = <"Apoteket bes om å utlevere tilstrekkelig mengde av legemiddelet for å dekke den definerte tidsperioden.">
+            >
+            ["at0158"] = <
+                text = <"Antall pakker">
+                description = <"Antall pakker som er spesifisert av foreskriver eller utlevert av apotek.">
+            >
+            ["at0159"] = <
+                text = <"Pakningsstørrelse">
+                description = <"Pakningsstørrelsen spesifisert av foreskriver eller utlevert av apotek.">
+                comment = <"For eksempel '300' som magnitude og 'tabletter' som unit; eller '28' som magnitude og 'ml' som unit.">
+            >
+            ["at0161"] = <
+                text = <"Mengdebeskrivelse">
+                description = <"En fritekstrepresentasjon av mengden legemiddel, vaksine eller terapeutisk vare som er ønsket levert eller faktisk levert.">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Quantidade de medicamento a ser fornecida">
+                description = <"Detalhes relacionados à quantidade de medicamento, vacina ou outro item terapêutico a ser fornecido ao paciente, como parte da autorização, distribuição ou administração.">
+            >
+            ["at0131"] = <
+                text = <"Quantidade">
+                description = <"A quantidade de medicamento, vacina ou item terapêutico a ser fornecido ou de fato fornecido.">
+                comment = <"*For example: '30' as magnitude and 'tablets' as unit; or '100' as magnitude and 'ml' as unit. (en)">
+            >
+            ["at0142"] = <
+                text = <"Duração do suprimento">
+                description = <"O período de tempo para o qual a medicação deve ser dispensada ou para o qual foi uma prescrição foi dispensada.">
+                comment = <"Solicita-se ao dispensador que forneça quantidade suficiente de medicamento para cobrir o período definido.">
+            >
+            ["at0158"] = <
+                text = <"Número de embalagens">
+                description = <"O número de embalagens especificado pelo prescritor ou dispensado pelo dispensador.">
+            >
+            ["at0159"] = <
+                text = <"Tamanho da embalagem">
+                description = <"O tamanho do pacote especificado pelo prescrito ou dispensado pelo dispensador.">
+                comment = <"*For example: '300 ' as magnitude and 'tablets' as unit; or '28' as magnitude and 'ml' as unit. (en)">
+            >
+            ["at0161"] = <
+                text = <"Descrição da quantidade">
+                description = <"A quantidade de medicamento, vacina ou item terapêutico a ser fornecido ou de fato fornecido.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Medication supply amount">
+                description = <"Details related to the amount of a medication, vaccine or other therapeutic item to be supplied or supplied to the patient, as part of authorisation, dispensing or administration.">
+            >
+            ["at0131"] = <
+                text = <"Amount">
+                description = <"The amount of medication, vaccine or therapeutic good intended to be supplied or actually supplied.">
+                comment = <"For example: '30' as magnitude and 'tablets' as unit; or '100' as magnitude and 'ml' as unit.">
+            >
+            ["at0142"] = <
+                text = <"Duration of supply">
+                description = <"The period of time for which the medication should be dispensed or for which a suppy was dispensed.">
+                comment = <"The dispenser is asked to supply sufficient quantity of medication to cover the defined period.">
+            >
+            ["at0158"] = <
+                text = <"Number of packs">
+                description = <"The number of packs specified by the prescriber or dispensed by the dispenser.">
+            >
+            ["at0159"] = <
+                text = <"Pack size">
+                description = <"The pack size specifed by the prescriber or dispensed by the dispenser.">
+                comment = <"For example: '300 ' as magnitude and 'tablets' as unit; or '28' as magnitude and 'ml' as unit.">
+            >
+            ["at0161"] = <
+                text = <"Amount description">
+                description = <"A narrative representation of the amount The amount of medication, vaccine or therapeutic good intended to be supplied or actually supplied.">
+            >
+        >
+    >

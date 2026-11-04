@@ -1,0 +1,385 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=91403b3e-9779-437e-a08d-287f76c29143; build_uid=430ed707-3be5-428b-855d-9ffcbfc46830)
+    openEHR-EHR-OBSERVATION.bvc.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Marit Alice Venheim">
+                ["organisation"] = <"Helse Vest IKT">
+                ["email"] = <"marit.alice.venheim@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Marit Alice Venheim">
+        ["organisation"] = <"Helse Vest IKT AS, Norway">
+        ["date"] = <"2020-11-13">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Terje Bektesevic Holmlund, UiT Norges arktiske universitet, Norway", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Mikkel Johan Gaup Grønmo, Forvaltningssenter EPJ, Helse-Nord, Norway (openEHR Editor)", "Joost Holslag, Nedap, Netherlands", "Evelyn Hovenga, EJSH Consulting, Australia", "Morten Hørthe, DIPS Norway", "Gunnar Jårvik, Helse Vest IKT AS, Norway", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia", "Hallvard Lærum", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Almvik R, Woods P. Predicting inpatient violence using the Broset Violence Checklist (BVC). Int J Psychiatr Nurs Res. 1999 Jan;4(3):498-505. PMID: 10451308.">
+        ["2"] = <"Hvidhjelm J, Sestoft D, Skovgaard LT, Bue Bjorner J. Sensitivity and specificity of the Brøset Violence Checklist as predictor of violence in forensic psychiatry. Nord J Psychiatry. 2014 Nov;68(8):536-42. doi: 10.3109/08039488.2014.880942. Epub 2014 Feb 10. PMID: 24506491.">
+        ["3"] = <"Riskassessment.no [Internet]. The Brøset Violence Checklist (BVC) [cited 2021 Mar 09]. Available from: http://www.riskassessment.no/.">
+        ["4"] = <"Woods P, Almvik R. The Brøset violence checklist (BVC). Acta Psychiatr Scand Suppl. 2002;(412):103-5. doi: 10.1034/j.1600-0447.106.s412.22.x. PMID: 12072138.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"78D9A74FDA01D6EAD481FFFA904CA8F4">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere resultatene for hvert parameter og deres totalsum for BVC skår.">
+            keywords = <"verbal, psykisk, angrep, voldelig, adferd, farlig, farlighet, farlighetsvurdering, forebygging", ...>
+            use = <"Brukes for å registrere resultatene for hvert parameter og deres totalsum for BVC skår.
+
+BVC er rettet mot voksne.
+
+openEHR-arketyper er fritt tilgjengelige under en åpen lisens, men det spesifikke innholdet i denne Brøset Violence Checklist (BVC) er opphavsrettslig beskyttet. All bruk av denne arketypen i implementasjoner må gjøres i henhold til vilkår gitt av innehaverne av opphavsretten.
+Erklæring om opphavsrett: © Copyright Linaker & Bush Iversen (1995). Almvik & Woods (2000). All rights reserved, do not use without the written permission of the copyright holders.
+Informasjon om opphavsretten: http://www.riskassessment.no/#apps.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation, Nasjonal IKT HF, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter and their total sum for the BVC score.">
+            keywords = <"verbal, physical, attacking, violent, behaviour, broset", ...>
+            use = <"Use to record the results for each component parameter and their total sum for the BVC score.
+
+The BVC is intended for adults.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this Brøset Violence Checklist (BVC) archetype is copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners.
+Copyright statement: © Copyright Linaker & Bush Iversen (1995). Almvik & Woods (2000). All rights reserved, do not use without the written permission of the copyright holders.
+Copyright information: http://www.riskassessment.no/#apps.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation, Nasjonal IKT HF, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Brøset Violence Checklist (BVC)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Day shift
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Confused
+                                        value matches {
+                                            DV_ORDINAL[at9002] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0024]}],    -- Absent
+                                                    [{1}, {[at0018]}]    -- Present
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Irritable
+                                        value matches {
+                                            DV_ORDINAL[at9003] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0024]}],    -- Absent
+                                                    [{1}, {[at0018]}]    -- Present
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Boisterous
+                                        value matches {
+                                            DV_ORDINAL[at9004] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0024]}],    -- Absent
+                                                    [{1}, {[at0018]}]    -- Present
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Physical threats
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0024]}],    -- Absent
+                                                    [{1}, {[at0018]}]    -- Present
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Verbal threats
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0024]}],    -- Absent
+                                                    [{1}, {[at0018]}]    -- Present
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Attacking objects
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0024]}],    -- Absent
+                                                    [{1}, {[at0018]}]    -- Present
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9008] matches {
+                                                magnitude matches {|0..6|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- Interpretation
+                                        value matches {
+                                            DV_CODED_TEXT[at9009] matches {
+                                                defining_code matches {[ac9001]}    -- Interpretation (synthesised)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    POINT_EVENT[at0088] matches {    -- Evening shift
+                        data matches {
+                            use_node ITEM_TREE[at9010] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                    POINT_EVENT[at0113] matches {    -- Night shift
+                        data matches {
+                            use_node ITEM_TREE[at9011] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                    EVENT[at0138] matches {    -- Any event
+                        data matches {
+                            use_node ITEM_TREE[at9012] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0016] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0163] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Brøset Violence Checklist (BVC)">
+                description = <"En klinisk skår som brukes til å predikere nært forestående voldelig adferd.">
+            >
+            ["at0002"] = <
+                text = <"Dagvakt">
+                description = <"Spesifikt hendelsetidspunkt som representerer observasjonene som ble gjort i løpet av en \"Dagvakt\".">
+            >
+            ["at0004"] = <
+                text = <"Forvirret">
+                description = <"Pasienten opptrer åpenbart forvirret og desorientert. Kan være ute av stand til å gjøre rede for tid, sted og person.">
+                comment = <"Er pasienten forvirret til vanlig, skal du skåre 1 dersom individet viser mer av denne adferden enn vanlig.">
+            >
+            ["at0005"] = <
+                text = <"Irritabel">
+                description = <"Blir lett sint og irritabel. Tåler dårlig andres nærvær.">
+                comment = <"Er pasienten irritabel til vanlig, skal du skåre 1 dersom individet viser mer av denne adferden enn vanlig.">
+            >
+            ["at0006"] = <
+                text = <"Brautende atferd">
+                description = <"Atferden er overdrevent støyende.">
+                comment = <"For eksempel roper i stedet for å snakke, slår med dørene o.l. Har pasienten brautende atferd til vanlig, skal du skåre 1 dersom individet viser mer av denne adferden enn vanlig.">
+            >
+            ["at0007"] = <
+                text = <"Verbale trusler">
+                description = <"Et verbalt utbrudd som er mer enn bare å heve røsten og har til hensikt å ydmyke eller skremme en annen person.">
+                comment = <"For eksempel verbale utbrudd, nedlatende tale, nøytrale ytringer i et aggressivt toneleie. Kommer pasienten med verbale trusler til vanlig, skal du skåre 1 dersom individet viser mer av denne adferden enn vanlig.">
+            >
+            ["at0008"] = <
+                text = <"Fysiske trusler">
+                description = <"Pasienten har en klart hensikt å fysisk true en annen person.">
+                comment = <"For eksempel en aggressiv kroppsholdning, tar tak i klærne til en annen person, knytter neven o.l. Kommer pasienten med fysiske trusler til vanlig, skal du skåre 1 dersom individet viser mer av denne adferden enn vanlig.">
+            >
+            ["at0009"] = <
+                text = <"Slag, spark mv mot gjenstander">
+                description = <"Pasienten kommer oftere emd slag,spark etc. mot inventar enn normalt.">
+                comment = <"For eksempel kaster ting, slår på eller knuser vindu, sparker i stykker møbler o.l. Utøver pasienten slag, spark mot gjenstander til vanlig, skal du skåre 1 dersom individet viser mer av denne adferden enn vanlig.">
+            >
+            ["at0017"] = <
+                text = <"Total skår">
+                description = <"Summen av poeng på hvert enkelt parameter i BCV skåren.">
+            >
+            ["at0018"] = <
+                text = <"Tilstede">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Ikke tilstede">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Tolkning">
+                description = <"Tolkning av BCV totalskåren.">
+            >
+            ["at0031"] = <
+                text = <"Ingen eller liten risiko for vold">
+                description = <"BVC skår 0: Det er ingen eller liten risiko for vold.">
+            >
+            ["at0032"] = <
+                text = <"Moderat risiko for vold">
+                description = <"BVC skår 1-2: Det er en moderat risiko for vold. Forebyggende forholdsregler bør iverksettes.">
+            >
+            ["at0033"] = <
+                text = <"Høy risiko for vold">
+                description = <"BVC skår 3-6: Høy risiko for vold, forebyggende forholdsregler skal iverksettes og planer for hvordan møte et eventuelt angrep legges.">
+            >
+            ["at0088"] = <
+                text = <"Kveldsvakt">
+                description = <"Spesifikt hendelsetidspunkt som representerer observasjonene som ble gjort i løpet av en \"Kveldsvakt\".">
+            >
+            ["at0113"] = <
+                text = <"Nattevakt">
+                description = <"Spesifikt hendelsetidspunkt som representerer observasjonene som ble gjort i løpet av en \"Nattevakt\".">
+            >
+            ["at0138"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0163"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["ac9012"] = <
+                text = <"Forvirret (synthesised)">
+                description = <"Pasienten opptrer åpenbart forvirret og desorientert. Kan være ute av stand til å gjøre rede for tid, sted og person. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Tolkning (synthesised)">
+                description = <"Tolkning av BCV totalskåren. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Brøset Violence Checklist (BVC)">
+                description = <"A checklist which assists in the prediction of imminent violent behaviour.">
+            >
+            ["at0002"] = <
+                text = <"Day shift">
+                description = <"Specific point in time event that represents the observations made during a 'Day' shift.">
+            >
+            ["at0004"] = <
+                text = <"Confused">
+                description = <"Appears obviously confused and disorientated. May be unaware of time, place or person.">
+                comment = <"If behaviour is normal for a well known client, only an increase in behaviour scores 1.">
+            >
+            ["at0005"] = <
+                text = <"Irritable">
+                description = <"Easily annoyed or angered. Unable to tolerate the presence of others.">
+                comment = <"If behaviour is normal for a well known client, only an increase in behaviour scores 1.">
+            >
+            ["at0006"] = <
+                text = <"Boisterous">
+                description = <"Behaviour is overtly \"loud\" or noisy.">
+                comment = <"For example slams doors, shouts out when talking etc. If behaviour is normal for a well known client, only an increase in behaviour scores 1.">
+            >
+            ["at0007"] = <
+                text = <"Verbal threats">
+                description = <"A verbal outburst which is more than just a raised voice; and where there is a definite intent to intimidate or threaten another person.">
+                comment = <"For example verbal attacks, abuse, name-calling, verbally neutral comments uttered in a snarling aggressive manner. If behaviour is normal for a well known client, only an increase in behaviour scores 1.">
+            >
+            ["at0008"] = <
+                text = <"Physical threats">
+                description = <"Where there is a definite intent to physically threaten another person.">
+                comment = <"For example the taking of an aggressive stance; the grabbing of another persons clothing; the raising of an arm, leg, making of a fist or modelling of a head-butt directed at another. If behaviour is normal for a well known client, only an increase in behaviour scores 1.">
+            >
+            ["at0009"] = <
+                text = <"Attacking objects">
+                description = <"An attack directed at an object and not an individual.">
+                comment = <"For example the indiscriminate throwing of an object; banging or smashing windows; kicking, banging or head-butting an object; or the smashing of furniture. If behaviour is normal for a well known client, only an increase in behaviour scores 1.">
+            >
+            ["at0017"] = <
+                text = <"Total score">
+                description = <"The total sum of each component variable for the BCV score.">
+            >
+            ["at0018"] = <
+                text = <"Present">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Absent">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Interpretation">
+                description = <"Interpretation of the total score.">
+            >
+            ["at0031"] = <
+                text = <"Small risk of violence">
+                description = <"BVC score 0: The risk of violence is small.">
+            >
+            ["at0032"] = <
+                text = <"Moderate risk of violence">
+                description = <"BVC score 1-2: The risk of violence is moderate. Preventive measures should be taken.">
+            >
+            ["at0033"] = <
+                text = <"High risk of violence">
+                description = <"BVC score 3-6: The risk of violence is very high. Preventive measures should be taken In addition, a plan should be developed to manage the potential violence.">
+            >
+            ["at0088"] = <
+                text = <"Evening shift">
+                description = <"Specific point in time event that represents the observations made during an 'Evening' shift.">
+            >
+            ["at0113"] = <
+                text = <"Night shift">
+                description = <"Specific point in time event that represents the observations made during a 'Night' shift.">
+            >
+            ["at0138"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0163"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9012"] = <
+                text = <"Confused (synthesised)">
+                description = <"Appears obviously confused and disorientated. May be unaware of time, place or person. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Interpretation (synthesised)">
+                description = <"Interpretation of the total score. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0031", "at0032", "at0033">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0024", "at0018">
+        >
+    >

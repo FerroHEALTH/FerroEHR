@@ -1,0 +1,204 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-OBSERVATION.howru.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Kieran D Evans">
+        ["organisation"] = <"Cardiff COMSC">
+        ["email"] = <"k.evans@cs.cf.ac.uk">
+        ["date"] = <"03/03/2010">
+    >
+    other_contributors = <"Dr Ian McNicoll, Ocean Informatics, UK", ...>
+    lifecycle_state = <"AuthorDraft">
+    references = <
+        ["1"] = <"Benson T, Arikan S, Whatling J. Introducing howRU™ An Instrument for Routine Health Outcomes Measurement [Internet]. Unpublished Draft 2008;Available from: http://www.routinehealthoutcomes.com/HowRU.pdf">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"C52023F71787B1E5D9DB0A72339221DE">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record information captured by the howRU™patient-reported outcomes instrument.">
+            keywords = <"proms", "pain", "symptom", "patient", "dependent", "outcome">
+            use = <"'howRU' (TM) is a generic patient-reported outcomes instrument, designed to meet these requirements, and answer the central question: \"How are you today?\"
+ It has four dimensions, which reflect the presence or absence of what matters most to patients, in addition to survival:
+- Symptoms such as pain ­ includes discomfort such as breathlessness or nausea
+- Feeling low or worried ­ includes anxiety, depression and fatigue.
+- Limits to what you can do ­ includes physical incapacity, loss of memory, sight or hearing.
+- Dependence on others ­ reliance on other people or equipment.
+
+For each dimension, the patient picks one of four levels, indicated using a traffic-light metaphor with labels, colour, position and images. 
+The four dimensions and four levels give 256 (44) different permutations, each of which represents a different health state. For data storage and analysis, each level is recorded on a 0-3 ordinal scale, with none = 3, slight = 2 quite a lot = 1, and extreme = 0. Higher score means better health. A simple aggregate howRU score is calculated by adding the scores for each dimension, giving a range from 12 (4 x none, ceiling) to 0 (4 x extreme, floor).
+
+Copyright 2008 Routine Health Outcomes Ltd. All rights reserved. Used with Permission. Users should notify Tim Benson by email: timbenson@routinehealthoutcomes.com 
+">
+            misuse = <"Should not be used other than to record information derived from the patient-reported outcomes instrument. 
+Copyright 2008 Routine Health Outcomes Ltd. All rights reserved - Do not use without permission.
+
+">
+            copyright = <"© Clinical Models UK">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- howRU score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {1} matches {    -- Recording event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {5..*} matches {
+                                    ELEMENT[at0044] occurrences matches {1} matches {    -- Pain or discomfort
+                                        value matches {
+                                            DV_ORDINAL[at9001] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0040]}],    -- none
+                                                    [{1}, {[at0041]}],    -- slight
+                                                    [{2}, {[at0042]}],    -- quite a lot
+                                                    [{3}, {[at0043]}]    -- extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {1} matches {    -- Feeling low or worried
+                                        value matches {
+                                            DV_ORDINAL[at9002] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0040]}],    -- none
+                                                    [{1}, {[at0041]}],    -- slight
+                                                    [{2}, {[at0042]}],    -- quite a lot
+                                                    [{3}, {[at0043]}]    -- extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0039] occurrences matches {1} matches {    -- Limited in what I can do
+                                        value matches {
+                                            DV_ORDINAL[at9003] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0040]}],    -- none
+                                                    [{1}, {[at0041]}],    -- slight
+                                                    [{2}, {[at0042]}],    -- quite a lot
+                                                    [{3}, {[at0043]}]    -- extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {1} matches {    -- Dependent on others
+                                        value matches {
+                                            DV_ORDINAL[at9004] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0040]}],    -- none
+                                                    [{1}, {[at0041]}],    -- slight
+                                                    [{2}, {[at0042]}],    -- quite a lot
+                                                    [{3}, {[at0043]}]    -- extreme
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0004] occurrences matches {1} matches {    -- Summary score
+                                        value matches {
+                                            DV_COUNT[at9005] matches {
+                                                magnitude matches {|0..12|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0022] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0038] matches {    -- Device
+                        include
+                            archetype_id/value matches {/.*/}
+                        exclude
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"howRU score">
+                description = <"Information captured by the howRU™ patient-reported outcomes instrument.">
+            >
+            ["at0002"] = <
+                text = <"Recording event">
+                description = <"The event at which the recording was made.">
+            >
+            ["at0004"] = <
+                text = <"Summary score">
+                description = <"An overall score combining the 4 individual ratings. ">
+            >
+            ["at0006"] = <
+                text = <"Dependent on others">
+                description = <"Dependent on others – the need to rely on other people or equipment.">
+            >
+            ["at0008"] = <
+                text = <"Feeling low or worried">
+                description = <"Feeling low or worried – includes all psychological states, including anxiety, feeling low and depression.">
+            >
+            ["at0038"] = <
+                text = <"Device">
+                description = <"The device used to obtain this set of readings.">
+            >
+            ["at0039"] = <
+                text = <"Limited in what I can do">
+                description = <"Limited in what I can do – includes incapacity due to physical or psychological reasons, such as not being able to perform activities of daily living, or not being able to carry out leisure activities.">
+            >
+            ["at0040"] = <
+                text = <"none">
+                description = <"The subject is not affected at all.">
+            >
+            ["at0041"] = <
+                text = <"slight">
+                description = <"The subject is only slighly affected.">
+            >
+            ["at0042"] = <
+                text = <"quite a lot">
+                description = <"The subject is considerably affected.">
+            >
+            ["at0043"] = <
+                text = <"extreme">
+                description = <"The subject is extremely affected.">
+            >
+            ["at0044"] = <
+                text = <"Pain or discomfort">
+                description = <"Symptoms such as pain – includes all physical forms of discomfort such as breathlessness, itching, dizziness or nausea.">
+            >
+            ["ac9005"] = <
+                text = <"Pain or discomfort (synthesised)">
+                description = <"Symptoms such as pain – includes all physical forms of discomfort such as breathlessness, itching, dizziness or nausea. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["LOINC"] = <
+            ["at0000"] = <http://loinc.org/id/55744-7>
+            ["at0004"] = <http://loinc.org/id/55749-6>
+            ["at0006"] = <http://loinc.org/id/55745-8>
+            ["at0008"] = <http://loinc.org/id/55746-2>
+            ["at0039"] = <http://loinc.org/id/55747-0>
+            ["at0044"] = <http://loinc.org/id/55745-4>
+        >
+    >
+    value_sets = <
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0040", "at0041", "at0042", "at0043">
+        >
+    >

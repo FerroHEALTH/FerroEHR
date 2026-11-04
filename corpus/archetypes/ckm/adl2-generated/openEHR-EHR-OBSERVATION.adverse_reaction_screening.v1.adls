@@ -1,0 +1,427 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c691d488-ce79-4653-9a03-403df574b9a5; build_uid=d77294a1-a400-41de-b389-2fda9b22b0a6)
+    openEHR-EHR-OBSERVATION.adverse_reaction_screening.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"June Marie Nepstad Knappskog">
+                ["organisation"] = <"Helse Nord IKT AS, Norway (openEHR Editor)">
+                ["email"] = <"june.marie.nepstad.knappskog@hnikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2023-06-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Ivar Berge, Oslo University Hospital, Norway (openEHR Editor)", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "Fabian Max Bürki, University of Berne, Switzerland", "Mona Didriksen, Helse Vest IKT, Norway", "Aleksander Furnes, Helse Nord IKT, Norway", "Ciprian Gerstenberger, Helse Nord IKT, Norway (openEHR Editor)", "Matteus Janicki, Akershus Universitetssykehus, Norway", "Anne K Fossum, OUS, Norway", "June Marie Nepstad Knappskog, Helse Nord IKT AS, Norway (openEHR Editor)", "Martin Koch, Servei Català de la Salut, Spain", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Eli Larsen, UNN, Norway (openEHR Editor)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ruth Lochan, Akademiska Sjukhuset Uppsala, Sweden", "Jonas Lyshaug, FSE/ HN IKT, Norway", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Marlene Pérez Colman, Digital Health and Care Wales, United Kingdom", "Terje Sagmyr, Helse Vest IKT, Norway (openEHR Editor)", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Karsten Øvretveit, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"D3A1E58463261BAA824EAFACFFD75704">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å lage et rammeverk for registrering av svar på forhåndsdefinerte spørsmål om overfølsomhetsreaksjoner.">
+            keywords = <"kartlegging, spørreskjema, allergi, bivirkning, overfølsomhetsreaksjon, reaksjon, allergi, intoleranse", ...>
+            use = <"Bruk for å lage et rammeverk for registrering av svar på forhåndsdefinerte spørsmål om tidligere overfølsomhetsreaksjoner.
+
+Arketypen er løst modellert for å inkludere det bredeste spekteret av overfølsomhetsreaksjoner, som inkluderer men ikke er begrenset til allergier, overfølsomhet, intoleranser og bivirkninger som krever at man unngår kontakt med substansen. Substanser inkluderer, men er ikke begrenset til:
+- Terapeutiske substanser administrert korrekt i en passende dosering for individet.
+- Mat.
+- Materiale av plante- eller animalsk opprinnelse.
+- Gift fra insektstikk.
+
+Vanlige bruksområder inkluderer, men er ikke begrenset til:
+- Systematiserte spørsmål ved enhver konsultasjon, for eksempel:
+--- Er du allergisk mot penicillin? Ja, Nei, Ukjent, Usikker.
+--- Reagerer du på plaster? Ja, Nei, Ukjent, Usikker.
+--- Har du noen matintoleranser?
+--- Har du noen gang hatt allergi mot hunder?
+
+Semantikken i denne arketypen er med vilje løst definert, og spørringer etter data i denne arketypen vil normalt bare være hensiktsmessig eller sikkert i konteksten av det spesifikke templatet. I et templat vil hvert dataelement vanligvis døpes om til det (spesifikke) spørsmålet man ønsker svar på. Flere steder er det foreslått verdisett som passer til de vanligste bruksområder, men det er allikevel mulig å tilpasse/endre verdisett for lokal bruk ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN i stedet. 
+
+Bruk en separat instans av denne arketypen for å skille mellom spørsmål som registrerer informasjon om en overfølsomhetsreaksjon som har oppstått når som helst i fortiden og informasjon om en overfølsomhetsreaksjon som har oppstått innenfor et spesifisert tidsintervall - for eksempel forskjellen mellom \"Har du noen allergier?\" sammenlignet med \"Har du hatt noen overfølsomhetsreaksjoner på medikamenter de siste fire ukene?\"
+
+Kilden til informasjonen i et spørreskjema kan variere i ulike kontekster, men kan identifiseres spesifikt ved å benytte \"Information provider\" elementet i openEHR-referansemodell.
+
+Denne arketypen er laget for å bli brukt i et spørreskjema eller for å registrere enkle strukturerte data til for eksempel et sykdomsregister. Dersom det i spørreskjemaet identifiseres at det er noen overfølsomhetsreaksjoner som bør lagres i den elektroniske journalen, utover et øyeblikksbilde, er det tenkt at dette skal lagres i persistente arketyper laget spesielt for detaljer om overfølsomhetsreaksjonen (som for eksempel datoen for klinisk anerkjennelse) ved bruk av EVALUATION.adverse_reaction_risk archetype eller CLUSTER.adverse_reaction_event.">
+            misuse = <"Skal ikke brukes til å registrere tilstedeværelse eller fravær av overfølsomhetsreaksjoner utenfor kartleggingssammenheng. Bruk EVALUATION.adverse_reaction_risk, CLUSTER.adverse_reaction_event eller EVALUATION.exclusion_specific for dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To create a framework for recording answers to pre-defined screening questions about adverse reactions.">
+            keywords = <"Condition, state, illness, syndrome, questionnaire, screening, issue, allergy, intolerance", ...>
+            use = <"Use to create a framework for recording answers to pre-defined screening questions about past adverse reactions. 
+
+This archetype has deliberately been loosely modelled to be inclusive of the broadest range of adverse reactions, including but not limited to allergies, sensitivities, intolerances and side effects which warrant avoiding exposure to the identified substance. Substances include, but are not limited to: 
+- Therapeutic substance administered correctly at an appropriate dosage for the individual.
+- Food.
+- Materials derived from plants or animals.
+- Venom from insect stings.
+
+Common use cases include, but are not limited to:
+- Systematic questioning in any consultation, for example:
+--- Allergy to penicilin? Yes, No, Unknown, Unsure.
+--- Reaction to sticking plasters? Yes, No, Unknown, Unsure.
+--- Do you have any food intolerances?
+--- Have you ever had an allergy to dogs?
+
+The semantics of this archetype are intentionally loose, and querying this archetype would normally only be useful or safe within the context of each specific template. In a template, each data element would usually be renamed to the specific question asked. Where value sets have been proposed for common use cases, these can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.
+
+Use a separate instance of this archetype to distinguish between a questionnaire recording information about an adverse reaction that has occurred at any time in the past and information about an adverse reaction which occurred within a specified time interval - for example the difference between \"Do you have any allergies?\" compared to \"Have you had any reactions to any medications in the last four weeks?\"
+
+The source of the information in a questionnaire response may vary in different contexts but can be specifically identified using the 'Information provider' element in the Reference Model.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry. If the screening questionnaire identifies the presence of an adverse reaction, it is recommended that clinical system record and persist the specific details about the adverse reaction (such as the date of clinical recognition) using the EVALUATION.adverse_reaction_risk archetype or the CLUSTER.adverse_reaction_event.">
+            misuse = <"Not to be used to record details about the presence or absence of an adverse reaction, outside of a screening context. Use EVALUATION.adverse_reaction_risk, CLUSTER.adverse_reaction_event or EVALUATION.exclusion_specific for these purposes.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Adverse reaction screening questionnaire
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0034] occurrences matches {0..1} matches {    -- Screening purpose
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                    ELEMENT[at0028] matches {    -- Any adverse reactions?
+                                        value matches {
+                                            DV_CODED_TEXT[at9003] matches {
+                                                defining_code matches {[ac9016]}    -- Any adverse reactions? (synthesised)
+                                            }
+                                            DV_TEXT[at9004]
+                                            DV_BOOLEAN[at9005]
+                                        }
+                                    }
+                                    ELEMENT[at0043] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at9006]
+                                        }
+                                    }
+                                    CLUSTER[at0022] matches {    -- Specific adverse reaction
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0004] occurrences matches {1} matches {    -- Substance name
+                                                value matches {
+                                                    DV_TEXT[at9007]
+                                                }
+                                            }
+                                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Presence?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9008] matches {
+                                                        defining_code matches {[ac9017]}    -- Presence? (synthesised)
+                                                    }
+                                                    DV_TEXT[at9009]
+                                                    DV_BOOLEAN[at9010]
+                                                }
+                                            }
+                                            ELEMENT[at0040] matches {    -- Timing
+                                                value matches {
+                                                    DV_TEXT[at9011]
+                                                    DV_INTERVAL<DV_DURATION>[at9012]
+                                                    DV_DURATION[at9013]
+                                                    DV_DATE_TIME[at9014]
+                                                    DV_INTERVAL<DV_DATE_TIME>[at9015]
+                                                }
+                                            }
+                                            allow_archetype CLUSTER[at0039] matches {    -- Additional details
+                                                include
+                                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation\.v1\..*/}
+                                            }
+                                            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Comment
+                                                value matches {
+                                                    DV_TEXT[at9016]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0042] matches {    -- Additional details
+                                        include
+                                            archetype_id/value matches {/.*/}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0007] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0021] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Kartleggingsspørsmål om overfølsomhetsreaksjoner">
+                description = <"Spørsmål og tilhørende svar som brukes til å kartlegge forekomst av tidligere overfølsomhetsreaksjoner.">
+                comment = <"Svarene kan være pasientregistrerte.
+">
+            >
+            ["at0002"] = <
+                text = <"Uspesifikk hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Substansnavn">
+                description = <"Identifikasjon av en substans, eller en substansklasse, som individet kan ha hatt tidligere reaksjoner på.">
+                comment = <"Både en individuell substans og en substansklasse er gyldige oppføringer i 'Substans'. En substans kan være en sammensetning av enklere substanser, for eksempel et legemiddel.">
+            >
+            ["at0005"] = <
+                text = <"Tilstede?">
+                description = <"Finnes det en historikk med overfølsomhetsreaksjoner mot \"Substansnavn\" som er relevant for kartleggingsformålet?">
+                comment = <"Navnet på dataelementet kan omformuleres til det spesifikke spørsmålet i et templat eller brukergrensesnitt. Det foreslåtte verdisettet kan tilpasses/endres i det enkelte bruksområde ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN.">
+            >
+            ["at0021"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0022"] = <
+                text = <"Spesifikk overfølsomhetsreaksjon">
+                description = <"Detaljer om en spesifikk overfølsomhetsreaksjon på en identifisert substans, eller substansklasse eller -gruppe, relevant for kartleggingsformålet.">
+            >
+            ["at0025"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om det spesifikke overfølsomhetsreaksjonsspørsmålet som ikke er omfattet av andre felt.">
+            >
+            ["at0028"] = <
+                text = <"Overfølsomhetsreaksjoner?">
+                description = <"Finnes det en historikk av overfølsomhetsreaksjoner som er relevant til kartleggingsformålet?">
+                comment = <"Navnet på dataelementet kan omformuleres til det spesifikke spørsmålet i et templat eller brukergrensesnitt. Det foreslåtte verdisettet kan tilpasses/endres i det enkelte bruksområde ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN.">
+            >
+            ["at0034"] = <
+                text = <"Kartleggingsformål">
+                description = <"Konteksten eller årsaken for kartleggingen.">
+                comment = <"Dette dataelementet er ment for å sette en kontekst for spørsmålene, dersom man senere ønsker å gjøre spørringer på dataene. Det er ikke forventet at dette dataelementet skal være synlig for en bruker av skjemaet, men kun tilgjengelig i de lagrede dataene. For eksempel: \"Preoperativ screening\" eller navnet på det faktiske spørreskjemaet.">
+            >
+            ["at0039"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Strukturerte detaljer eller spørsmål om den spesifikke overfølsomhetsreaksjonen.">
+                comment = <"For eksempel: sykehuset behandlingen fant sted.">
+            >
+            ["at0040"] = <
+                text = <"Tidsangivelse">
+                description = <"Tidsangivelse for en overfølsomhetsreaksjon.">
+                comment = <"Dataelementet \"Tidsangivelse\" er med hensikt løst modellert for å støtte ulike måter å angi tidsangivelser for en overfølsomhetsreaksjon i et spørreskjema. Den konkrete semantikken defineres i templatet.
+
+Eksempler på bruk inkluderer:
+– Dato og/eller klokkeslett for når overfølsomhetsreaksjon startet.
+– Et tidsintervall, for eksempel mellom 1940 og 1942.
+– Tekstlige beskrivelser, som «Umiddelbart etter bistikket» eller «For en uke siden».
+– Varighet, for eksempel individets alder ved debut.
+– Intervall av varighet, som et omtrentlig aldersspenn ved debut.">
+            >
+            ["at0042"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Strukturerte detaljer eller spørsmål om den spesifikke overfølsomhetsreaksjonen.">
+            >
+            ["at0043"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse om en historikk av overfølsomhetsreaksjoner som er relevante til kartleggingsformålet.">
+            >
+            ["at0044"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Ukjent">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Usikker">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Ukjent">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"Usikker">
+                description = <"">
+            >
+            ["ac9016"] = <
+                text = <"Overfølsomhetsreaksjoner? (synthesised)">
+                description = <"Finnes det en historikk av overfølsomhetsreaksjoner som er relevant til kartleggingsformålet? (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Tilstede? (synthesised)">
+                description = <"Finnes det en historikk med overfølsomhetsreaksjoner mot \"Substansnavn\" som er relevant for kartleggingsformålet? (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Adverse reaction screening questionnaire">
+                description = <"Series of questions and associated answers used to screen for the presence of any previous adverse reactions.">
+                comment = <"The answers may be self-reported.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Substance name">
+                description = <"Identification of a substance, or substance class, that the individual may have had prior reactions to.">
+                comment = <"Both an individual substance and a substance class are valid entries in 'Substance'. A substance may be a compound of simpler substances, for example a medicinal product.">
+            >
+            ["at0005"] = <
+                text = <"Presence?">
+                description = <"Is there a history of adverse reactions to the 'Substance name', relevant to the screening purpose?">
+                comment = <"In a template, the data element would usually be renamed to the specific question asked. The proposed value set can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.">
+            >
+            ["at0021"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0022"] = <
+                text = <"Specific adverse reaction">
+                description = <"Details about a specific adverse reaction to an identified substance, or substance class or grouping, relevant for the screening purpose.
+">
+            >
+            ["at0025"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the specific adverse reaction question, not captured in other fields.">
+            >
+            ["at0028"] = <
+                text = <"Any adverse reactions?">
+                description = <"Is there a history of any adverse reactions relevant for the screening purpose?">
+                comment = <"In a template, the data element would usually be renamed to the specific question asked. The proposed value set can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.">
+            >
+            ["at0034"] = <
+                text = <"Screening purpose">
+                description = <"The context or reason for screening.">
+                comment = <"This data element is intended to provide collection context for the question/answer groups when queried at a later date. It is not expected that this data element will be exposed to the individual, but only stored in data.
+For example: pre-admission screening or the name of the actual questionnaire.">
+            >
+            ["at0039"] = <
+                text = <"Additional details">
+                description = <"Structured details or questions about the specific adverse reaction.">
+                comment = <"For example; hospital where treated.">
+            >
+            ["at0040"] = <
+                text = <"Timing">
+                description = <"Indication of timing related to the adverse reaction.">
+                comment = <"The 'Timing' data element has deliberately been loosely modelled to support the myriad of ways that it can be used in questionnaires to capture the onset or the timing of an adverse reaction. The specific and intended semantics can be further clarified in a template.
+
+For example:
+– Date/time for the date of onset of an adverse reaction.
+– Interval of date/time for a period of time, for example between 1940 and 1942.
+– Text for descriptions such as 'Immediately after the 'bee sting' or 'One week ago'.
+– Duration for the individual's age at the onset. 
+– Interval of Duration for an approximate age range at onset.">
+            >
+            ["at0042"] = <
+                text = <"Additional details">
+                description = <"Structured details or questions about screening for adverse reactions.">
+            >
+            ["at0043"] = <
+                text = <"Description">
+                description = <"Narrative description about the history of any adverse reactions relevant for the screening purpose.">
+            >
+            ["at0044"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Unsure">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"Unsure">
+                description = <"">
+            >
+            ["ac9016"] = <
+                text = <"Any adverse reactions? (synthesised)">
+                description = <"Is there a history of any adverse reactions relevant for the screening purpose? (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Presence? (synthesised)">
+                description = <"Is there a history of adverse reactions to the 'Substance name', relevant to the screening purpose? (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0044"] = <http://snomed.info/id/373066001>
+            ["at0045"] = <http://snomed.info/id/373067005>
+            ["at0046"] = <http://snomed.info/id/261665006>
+            ["at0052"] = <http://snomed.info/id/373066001>
+            ["at0053"] = <http://snomed.info/id/373067005>
+            ["at0054"] = <http://snomed.info/id/261665006>
+        >
+    >
+    value_sets = <
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0052", "at0053", "at0054", "at0055">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0044", "at0045", "at0046", "at0047">
+        >
+    >

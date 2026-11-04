@@ -1,0 +1,100 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d2d7e33e-9db1-4195-8462-ff9899ef6bcd; build_uid=b4296009-283b-4c36-ad8a-6776ba254251)
+    openEHR-EHR-OBSERVATION.vaccination_status.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-10-30">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"2239CC39C1E4713F350998A71AAA3938">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the vaccination status of an individual for an identified infectious disease or agent, at a specified point in time.">
+            use = <"Use to record the vaccination status of an individual for an identified infectious disease or agent, at a specified point in time.
+
+This archetype has been designed to be used within the context of a Vaccine certificate or other document that requires information about whether the individual is fully vaccinated or not. It is intended to complement the EVALUATION.vaccination_summary archetype which records a summary of previously administered vaccines.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Vaccination status
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Targeted disease or agent
+                                        value matches {
+                                            DV_TEXT[at9000]
+                                        }
+                                    }
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Vaccination status
+                                        value matches {
+                                            DV_TEXT[at9001]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0006] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0007] occurrences matches {0..1} matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Vaccination status">
+                description = <"Vaccination status of an individual for an identified infectious disease or agent.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Vaccination status">
+                description = <"An assertion about whether the individual has received all recommended vaccines for the targeted disease or agent.">
+                comment = <"For example: 'Fully vaccinated', 'Partially vaccinated' and 'Unvaccinated'; or 'Up-to-date' and 'Not up-to-date'.The recommendations will vary for each individual depending on the targeted disease/s or agent/s, age, geographical location and relevant health considerations.">
+            >
+            ["at0005"] = <
+                text = <"Targeted disease or agent">
+                description = <"Name of the infectious disease or agent targeted by a vaccine.">
+                comment = <"If the 'Vaccine name' is a combination vaccine this data element may contain more than one target disease. Coding with an external terminology is preferred, where possible.">
+            >
+            ["at0007"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+        >
+    >

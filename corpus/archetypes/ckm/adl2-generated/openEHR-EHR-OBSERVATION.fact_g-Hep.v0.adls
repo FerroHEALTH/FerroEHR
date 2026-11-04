@@ -1,0 +1,478 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=343a9207-8508-408a-9b8c-52f1de126b98; build_uid=ec90cdfc-3750-4f72-a81f-c8de20a21ad4)
+    openEHR-EHR-OBSERVATION.fact_g-Hep.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-OBSERVATION.fact_g.v0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Vanessa Pereira">
+        ["organisation"] = <"Pathfinder - Better">
+        ["email"] = <"vanessa.pereira@better.care">
+        ["date"] = <"2020-04-09">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Elodie Léost, Medtronic, France", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Cella D. Facit.org Questionnaires. [Internet]. FACIT; 2020. Available from: https://www.facit.org/FACITOrg/Questionnaires.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"a798793db044034afa63f7c35a00bdf0">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter and their total sum for the FACT-Hep measure.">
+            keywords = <"FACT, cancer, QOL, quality of life, assessment,liver, bile duct, pancreas", ...>
+            use = <"Use to record the results for each component parameter and their total sum for the FACT-Hep measure.
+
+Several of the score item response scores are reversed on scoring, to convert a low response on a negatively phrased question to a high quality of life score, or opposite. Reversal is performed by subtracting the item response from 4.
+
+The subscale scores are calculated by summing the item scores after reversing the relevant item responses, multiplying by the number of items in the subscale, and dividing by the number of items answered.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this archetype is copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners.
+Copyright statement: © Copyright 1987, 1997 David Cella, Ph.D
+Terms and conditions for use: https://www.facit.org/FACITOrg/AboutUs/Copyright">
+            misuse = <"Not to be used for recording any FACT measure other than FACT-Hep. Use the parent or a sibling of this archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000.1] matches {    -- FACT-Hep
+        /data[at0001]/events[at0002]/data[at0003]/items matches {
+            ELEMENT[at0.21] occurrences matches {0..1} matches {    -- FACT-Hep total score
+                value matches {
+                    DV_COUNT[at0.9020] matches {
+                        magnitude matches {|0..180|}
+                    }
+                }
+            }
+            after [at0064]
+            ELEMENT[at0.1] occurrences matches {0..1} matches {    -- Swelling or cramps in stomach area
+                value matches {
+                    DV_ORDINAL[at0.9000] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0056]}],
+                            [{1}, {[at0057]}],
+                            [{2}, {[at0058]}],
+                            [{3}, {[at0059]}],
+                            [{4}, {[at0060]}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.3] occurrences matches {0..1} matches {    -- Losing weight
+                value matches {
+                    DV_ORDINAL[at0.9001] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0056]}],
+                            [{1}, {[at0057]}],
+                            [{2}, {[at0058]}],
+                            [{3}, {[at0059]}],
+                            [{4}, {[at0060]}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.4] occurrences matches {0..1} matches {    -- Control of bowels
+                value matches {
+                    DV_ORDINAL[at0.9002] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0056]}],
+                            [{1}, {[at0057]}],
+                            [{2}, {[at0058]}],
+                            [{3}, {[at0059]}],
+                            [{4}, {[at0060]}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.5] occurrences matches {0..1} matches {    -- Could digest food well
+                value matches {
+                    DV_ORDINAL[at0.9003] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0056]}],
+                            [{1}, {[at0057]}],
+                            [{2}, {[at0058]}],
+                            [{3}, {[at0059]}],
+                            [{4}, {[at0060]}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.6] occurrences matches {0..1} matches {    -- Diarrhea
+                value matches {
+                    DV_ORDINAL[at0.9004] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0056]}],
+                            [{1}, {[at0057]}],
+                            [{2}, {[at0058]}],
+                            [{3}, {[at0059]}],
+                            [{4}, {[at0060]}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.7] occurrences matches {0..1} matches {    -- Good appetite
+                value matches {
+                    DV_ORDINAL[at0.9005] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0056]}],
+                            [{1}, {[at0057]}],
+                            [{2}, {[at0058]}],
+                            [{3}, {[at0059]}],
+                            [{4}, {[at0060]}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.8] occurrences matches {0..1} matches {    -- Unhappy about appearance change
+                value matches {
+                    DV_ORDINAL[at0.9006] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0056]}],
+                            [{1}, {[at0057]}],
+                            [{2}, {[at0058]}],
+                            [{3}, {[at0059]}],
+                            [{4}, {[at0060]}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.9] occurrences matches {0..1} matches {    -- Back pain
+                value matches {
+                    DV_ORDINAL[at0.9007] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0056]}],
+                            [{1}, {[at0057]}],
+                            [{2}, {[at0058]}],
+                            [{3}, {[at0059]}],
+                            [{4}, {[at0060]}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.10] occurrences matches {0..1} matches {    -- Bothered by constipation
+                value matches {
+                    DV_ORDINAL[at0.9008] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0056]}],
+                            [{1}, {[at0057]}],
+                            [{2}, {[at0058]}],
+                            [{3}, {[at0059]}],
+                            [{4}, {[at0060]}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.11] occurrences matches {0..1} matches {    -- Felt fatigued
+                value matches {
+                    DV_ORDINAL[at0.9009] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0056]}],
+                            [{1}, {[at0057]}],
+                            [{2}, {[at0058]}],
+                            [{3}, {[at0059]}],
+                            [{4}, {[at0060]}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.12] occurrences matches {0..1} matches {    -- Able to do usual activities
+                value matches {
+                    DV_ORDINAL[at0.9010] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0056]}],
+                            [{1}, {[at0057]}],
+                            [{2}, {[at0058]}],
+                            [{3}, {[at0059]}],
+                            [{4}, {[at0060]}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.13] occurrences matches {0..1} matches {    -- Bothered by jaundice
+                value matches {
+                    DV_ORDINAL[at0.9011] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0056]}],
+                            [{1}, {[at0057]}],
+                            [{2}, {[at0058]}],
+                            [{3}, {[at0059]}],
+                            [{4}, {[at0060]}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.14] occurrences matches {0..1} matches {    -- Fever
+                value matches {
+                    DV_ORDINAL[at0.9012] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0056]}],
+                            [{1}, {[at0057]}],
+                            [{2}, {[at0058]}],
+                            [{3}, {[at0059]}],
+                            [{4}, {[at0060]}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.15] occurrences matches {0..1} matches {    -- Itching
+                value matches {
+                    DV_ORDINAL[at0.9013] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0056]}],
+                            [{1}, {[at0057]}],
+                            [{2}, {[at0058]}],
+                            [{3}, {[at0059]}],
+                            [{4}, {[at0060]}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.16] occurrences matches {0..1} matches {    -- Changes on food taste
+                value matches {
+                    DV_ORDINAL[at0.9014] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0056]}],
+                            [{1}, {[at0057]}],
+                            [{2}, {[at0058]}],
+                            [{3}, {[at0059]}],
+                            [{4}, {[at0060]}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.17] occurrences matches {0..1} matches {    -- Chills
+                value matches {
+                    DV_ORDINAL[at0.9015] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0056]}],
+                            [{1}, {[at0057]}],
+                            [{2}, {[at0058]}],
+                            [{3}, {[at0059]}],
+                            [{4}, {[at0060]}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.18] occurrences matches {0..1} matches {    -- Dry mouth
+                value matches {
+                    DV_ORDINAL[at0.9016] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0056]}],
+                            [{1}, {[at0057]}],
+                            [{2}, {[at0058]}],
+                            [{3}, {[at0059]}],
+                            [{4}, {[at0060]}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.19] occurrences matches {0..1} matches {    -- Discomfort or pain in stomach area
+                value matches {
+                    DV_ORDINAL[at0.9017] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0056]}],
+                            [{1}, {[at0057]}],
+                            [{2}, {[at0058]}],
+                            [{3}, {[at0059]}],
+                            [{4}, {[at0060]}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0.2] occurrences matches {0..1} matches {    -- Hepatobiliary cancer subscale score
+                value matches {
+                    DV_COUNT[at0.9018] matches {
+                        magnitude matches {|0..72|}
+                    }
+                }
+            }
+            ELEMENT[at0.20] occurrences matches {0..1} matches {    -- FACT-Hep Trial Outcome Index (TOI)
+                value matches {
+                    DV_COUNT[at0.9019] matches {
+                        magnitude matches {|0..128|}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"FACT-Hep">
+                description = <"Functional Assessment of Cancer Therapy-General, a 45-Item measure of physical, role, emotional, and social/family functioning, as well additional concern and global quality of life in patients with hepatobiliary cancer.">
+            >
+            ["at0.1"] = <
+                text = <"Swelling or cramps in stomach area">
+                description = <"I have swelling or cramps in my stomach area">
+                Subscale = <"HCS">
+                Item_code = <"C1">
+                comment = <"Section: Additional concerns.">
+                Question_number = <"28">
+            >
+            ["at0.3"] = <
+                text = <"Losing weight">
+                description = <"I am losing weight">
+                Subscale = <"HCS">
+                Item_code = <"C2">
+                comment = <"Section: Additional concerns.">
+                Question_number = <"29">
+            >
+            ["at0.4"] = <
+                text = <"Control of bowels">
+                description = <"I have control of my bowels">
+                Subscale = <"HCS">
+                Item_code = <"C3">
+                comment = <"Section: Additional concerns.">
+                Question_number = <"30">
+            >
+            ["at0.5"] = <
+                text = <"Could digest food well">
+                description = <"I can digest my food well">
+                Subscale = <"HCS">
+                Item_code = <"C4">
+                comment = <"Section: Additional concerns.">
+                Question_number = <"31">
+            >
+            ["at0.6"] = <
+                text = <"Diarrhea">
+                description = <"I have diarrhea (diarrhoea)">
+                Subscale = <"HCS">
+                Item_code = <"C5">
+                comment = <"Section: Additional concerns.">
+                Question_number = <"32">
+            >
+            ["at0.7"] = <
+                text = <"Good appetite">
+                description = <"I have a good appetite">
+                Subscale = <"HCS">
+                Item_code = <"C6">
+                comment = <"Section: Additional concerns.">
+                Question_number = <"33">
+            >
+            ["at0.8"] = <
+                text = <"Unhappy about appearance change">
+                description = <"I am unhappy about a change in my appearance">
+                Subscale = <"HCS">
+                Item_code = <"Hep1">
+                comment = <"Section: Additional concerns.">
+                Question_number = <"34">
+            >
+            ["at0.9"] = <
+                text = <"Back pain">
+                description = <"I have pain in my back">
+                Subscale = <"HCS">
+                Item_code = <"CNS7">
+                comment = <"Section: Additional concerns.">
+                Question_number = <"35">
+            >
+            ["at0.10"] = <
+                text = <"Bothered by constipation">
+                description = <"I am bothered by constipation">
+                Subscale = <"HCS">
+                Item_code = <"Cx6">
+                comment = <"Section: Additional concerns.">
+                Question_number = <"36">
+            >
+            ["at0.11"] = <
+                text = <"Felt fatigued">
+                description = <"I feel fatigued">
+                Subscale = <"HCS">
+                Item_code = <"Hl7">
+                comment = <"Section: Additional concerns.">
+                Question_number = <"37">
+            >
+            ["at0.12"] = <
+                text = <"Able to do usual activities">
+                description = <"I am able to do my usual activities">
+                Subscale = <"HCS">
+                Item_code = <"An7">
+                comment = <"Section: Additional concerns.">
+                Question_number = <"38">
+            >
+            ["at0.13"] = <
+                text = <"Bothered by jaundice">
+                description = <"I am bothered by jaundice or yellow color to my skin">
+                Subscale = <"HCS">
+                Item_code = <"Hep2">
+                comment = <"Section: Additional concerns.">
+                Question_number = <"39">
+            >
+            ["at0.14"] = <
+                text = <"Fever">
+                description = <"I have had fevers (episodes of high body temperature)">
+                Subscale = <"HCS">
+                Item_code = <"Hep3">
+                comment = <"Section: Additional concerns.">
+                Question_number = <"40">
+            >
+            ["at0.15"] = <
+                text = <"Itching">
+                description = <"I have had itching">
+                Subscale = <"HCS">
+                Item_code = <"Hep4">
+                comment = <"Section: Additional concerns.">
+                Question_number = <"41">
+            >
+            ["at0.16"] = <
+                text = <"Changes on food taste">
+                description = <"I have had a change in the way food tastes">
+                Subscale = <"HCS">
+                Item_code = <"Hep5">
+                comment = <"Section: Additional concerns.">
+                Question_number = <"42">
+            >
+            ["at0.17"] = <
+                text = <"Chills">
+                description = <"I have had chills">
+                Subscale = <"HCS">
+                Item_code = <"Hep6">
+                comment = <"Section: Additional concerns.">
+                Question_number = <"43">
+            >
+            ["at0.18"] = <
+                text = <"Dry mouth">
+                description = <"My mouth is dry">
+                Subscale = <"HCS">
+                Item_code = <"HN2">
+                comment = <"Section: Additional concerns.">
+                Question_number = <"44">
+            >
+            ["at0.19"] = <
+                text = <"Discomfort or pain in stomach area">
+                description = <"I have discomfort or pain in my stomach area">
+                Subscale = <"HCS">
+                Item_code = <"Hep8">
+                comment = <"Section: Additional concerns.">
+                Question_number = <"45">
+            >
+            ["at0.2"] = <
+                text = <"Hepatobiliary cancer subscale score">
+                description = <"The score for the hepatobiliary cancer subscale.">
+                comment = <"All items are reversed except \"I have control of my bowels\", \"I can digest my food well\", \"I have a good appetite\" and \"I am able to do my usual activities\".">
+            >
+            ["at0.20"] = <
+                text = <"FACT-Hep Trial Outcome Index (TOI)">
+                description = <"Total score from from the PWB, FWB and HCS subscales.">
+                comment = <"Scored by summing the PWB, FWB and HCS subscale scores.">
+            >
+            ["at0.21"] = <
+                text = <"FACT-Hep total score">
+                description = <"Total score from from all the subscales.">
+                comment = <"Scored by summing the PWB, SWB, EWB, FWB and HCS subscale scores.">
+            >
+        >
+    >

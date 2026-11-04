@@ -1,0 +1,457 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=86cb6739-f7f6-48ca-90ac-541e4655cd26; build_uid=4a873676-670e-4ff1-b58c-5586e8ddf9fa)
+    openEHR-EHR-EVALUATION.physical_activity_summary.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch, Weronika Gujo">
+                ["organisation"] = <"Medizinische Hochschule Hannover, Heidelberg University Hospital">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de, weronika.gujo@med.uni-heidelberg.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Annika Terner">
+                ["organisation"] = <"B3 Healthcare Consulting AB">
+                ["email"] = <"annika.terner@b3.se">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Martijn van Eenennaam">
+                ["organisation"] = <"Nedap Healthcare">
+                ["email"] = <"martijn.vaneenennaam@nedap.com">
+            >
+            accreditation = <"Ph.D.">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2017-06-20">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Stephen Chu, Australia", "Priscila Maranhão, MEDCIDS-FMUP, Portugal", "Gustavo Bacelar, Virtual Care, Portugal", "Hugh Leslie, Ocean Informatics, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Physical Activity Summary, Draft Archetype [Internet]. Australian Digital Health Agency, Australian Digital Health Agency Clinical Knowledge Manager [cited: 2017-06-20]. Available from: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.932">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Health Systems<heather.leslie@oceanhealthsystems.com>">
+        ["MD5-CAM-1.0.1"] = <"903AE74AA8EDD5020885B8E197541099">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung einer Übersicht über die körperliche Aktivität einer Person.">
+            keywords = <"Aktivität", "Training", "körperlich", "Leistungsfähigkeit", "Bewegung", "Kondition", "Gesundheit", "Fitness">
+            use = <"Dieser Archetyp sollte zur Darstellung einer zusammenfassenden Aufstellung von typischer körperlicher Aktivität bei Kindern oder Erwachsenen verwendet werden.
+
+Bitte beachten: Es gibt einige offensichtliche Überschneidungen zwischen dem Datenelement \"Status des Aktivitätslevels (PAL)\" in diesem Archetyp und dem Datenelement \"Kategorie der körperlichen Aktivität\" in dem Archetyp OBSERVATION.physical_activity - beide verwenden denselben Wertebereich. Dieser Archetyp sollte zur Aufzeichnung von typischer Aktivität verwendet werden. Wenn die Kategorie zu einem bestimmten Zeitpunkt oder während eines bestimmten Zeitraums dokumentiert wird, sollte der entsprechende Datenpunkt in der Datei OBSERVATION.physical_activity verwendet werden.">
+            misuse = <"Nicht zur Darstellung von körperlichen Aktivität zu einem bestimmten Zeitpunkt oder während eines bestimmten Zeitraums verwenden. Für diesen Zweck sollte der Archetyp OBSERVATION.physical_activity genutzt werden.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera en sammanfattning av en individs typiska fysiska aktivitet.">
+            keywords = <"aktivitet", "träning", "fysisk", "kondition">
+            use = <"Används för att registrera en sammanfattning av typiska eller vanliga, fysiska aktiviteter hos barn eller vuxna.
+
+Observera: Det finns viss uppenbar överlapp mellan dataelementet \"Fysisk aktivitetsnivå (PAL)\" i denna arketyp och dataelementet \"Fysisk aktivitetskategori\" i OBSERVATION.physical_activity archetype - de använder båda samma värdeuppsättning. Använd den här arketypen när du registrerar den typiska aktiviteten som summativt uttalande, men om avsikt är att registrera kategorin vid en viss tidpunkt eller under en viss tidsperiod, använd sedan motsvarande datapunkt i OBSERVATION.physical_activity.">
+            misuse = <"Ska inte användas för att registrera aktuell fysisk aktivitet vid en viss tidpunkt eller under en viss tidsperiod - använd då istället OBSERVATION.physical_activity.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a summary of typical physical activity of an individual.">
+            keywords = <"activity", "exercise", "physical", "fitness">
+            use = <"Use to record a summary of typical, or usual, physical activity of children or adults.
+
+Please note: There is some apparent overlap between the 'Physical activity level (PAL) status' data element in this archetype and the 'Physical activity category' data element in OBSERVATION.physical_activity archetype - they both use the same value set. Use this archetype when recording the the typical activity as a summative statement, however if the intent is to record the category at a specified point in time or during a specified period of time then use the equivalent data point in the OBSERVATION.physical_activity.">
+            misuse = <"Not to be used to record actual physical activity at a specific point in time or during a specified period of time - use OBSERVATION.physical_activity for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"Om een omschrijving van de typische fysieke activiteit van een individu vast te leggen.">
+            keywords = <"Activiteit", "Lichaamsbeweging", "Fysiek", "Fitness">
+            use = <"Gebruik om een overzicht vast te leggen van typische of gebruikelijke fysieke activiteit bij kinderen of volwassenen.
+
+Merk op: er is enige overlap tussen het 'Physical activity level (PAL) status' data element in dit archetype en het 'Physical activity category' data element in het OBSERVATION.physical_activity archetype.
+Beiden gebruiken dezelfde waardenset. Gebruik dit archetype voor het vastleggen van de typische activiteit als een opbouwende uitspraak. Als de intentie is om activiteit vast te leggen op een moment of periode, gebruik dan een data point in OBSERVATION.physical_activity.">
+            misuse = <"Niet te gebruiken om fysieke activiteit op een bepaald moment of tijdens een bepaalde periode vast te leggen - gebruik hiervoor OBSERVATION.physical_activity.">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Physical activity summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Physical activity level (PAL) status
+                        value matches {
+                            DV_CODED_TEXT[at9002] matches {
+                                defining_code matches {[ac9000]}    -- Physical activity level (PAL) status (synthesised)
+                            }
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                    ELEMENT[at0005] matches {    -- Barrier
+                        value matches {
+                            DV_TEXT[at9005]
+                        }
+                    }
+                    ELEMENT[at0006] matches {    -- Enabler
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Typical moderate exercise
+                        value matches {
+                            DV_QUANTITY[at9007] matches {
+                                property matches {[at9001]}    -- Frequency
+                                [units] matches {
+                                    [{"1/d"}],
+                                    [{"1/wk"}],
+                                    [{"1/mo"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Typical vigorous exercise
+                        value matches {
+                            DV_QUANTITY[at9008] matches {
+                                property matches {[at9001]}    -- Frequency
+                                [units] matches {
+                                    [{"1/d"}],
+                                    [{"1/wk"}],
+                                    [{"1/mo"}]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0014] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9009]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0015] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Zusammenfassung der körperlichen Aktivität">
+                description = <"Eine Zusammenfassung des typischen körperlichen Aktivitätslevels einer Person.">
+            >
+            ["at0002"] = <
+                text = <"Status des Aktivitätslevels (PAL)">
+                description = <"Kategorie der typischen oder üblichen körperlichen Aktivität einer Person.">
+                comment = <"Wenn möglich, ist eine Kodierung mit einer Terminologie wünschenswert.">
+            >
+            ["at0003"] = <
+                text = <"Beschreibung">
+                description = <"Eine Beschreibung der typischen körperlichen Aktivitätslevels der Person.">
+            >
+            ["at0005"] = <
+                text = <"Hindernis">
+                description = <"Ermittelter Faktor, der die Person daran hindert, körperlich aktiver zu werden.">
+            >
+            ["at0006"] = <
+                text = <"Unterstützung">
+                description = <"Ermittelter Faktor, der eine Person dabei unterstützen kann, körperlich aktiver zu werden.">
+                comment = <"Zum Beispiel: lebt in der Nähe eines Schwimmbades oder vorher ein Spitzensportler gewesen.">
+            >
+            ["at0007"] = <
+                text = <"Typische kräftige Bewegung">
+                description = <"Übliche Anzahl von Minuten intensiver Bewegung.">
+            >
+            ["at0008"] = <
+                text = <"Typische moderate Bewegung">
+                description = <"Übliche Anzahl moderater Bewegung.">
+            >
+            ["at0009"] = <
+                text = <"Extrem inaktiv">
+                description = <"Die Person ist extrem inaktiv, zum Beispiel ein bettlägeriger Patient.">
+            >
+            ["at0010"] = <
+                text = <"Bewegungsarm">
+                description = <"Die Person verbringt die meiste Zeit im Sitzen, zum Beispiel ein Büroangestellter der wenig oder gar keine Bewegung hat.">
+            >
+            ["at0011"] = <
+                text = <"Mäßig aktiv">
+                description = <"Die Person ist mäßig aktiv, zum Beispiel ein Bauarbeiter oder eine Person, die täglich eine Stunde läuft.">
+            >
+            ["at0012"] = <
+                text = <"Kräftig aktiv">
+                description = <"Die Person ist sehr aktiv, zum Beispiel ein Handarbeiter oder eine Person, die zwei Stunden täglich schwimmt.">
+            >
+            ["at0013"] = <
+                text = <"Extrem aktiv">
+                description = <"Die Person ist äußerst aktiv, zum Beispiel ein Wettkampfradfahrer.">
+            >
+            ["at0015"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+            ["at0016"] = <
+                text = <"Zuletzt aktualisiert">
+                description = <"Das Datum, an dem diese Zusammenfassung der körperliche Aktivität zuletzt aktualisiert wurde.">
+            >
+            ["at9001"] = <
+                text = <"* Frequency (en)">
+                description = <"* Frequency (en)">
+            >
+            ["ac9000"] = <
+                text = <"Status des Aktivitätslevels (PAL) (synthesised)">
+                description = <"Kategorie der typischen oder üblichen körperlichen Aktivität einer Person. (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Sammanfattninga av fysisk aktivitet">
+                description = <"En sammanfattning av den typiska nivån av fysiska aktivitet som individen utför.">
+            >
+            ["at0002"] = <
+                text = <"Fysisk aktivitetsnivå">
+                description = <"Kategorin av en individs typiska eller vanliga fysiska aktivitetsnivå.">
+                comment = <"Kodning med terminologi är önskvärt där det är möjligt.">
+            >
+            ["at0003"] = <
+                text = <"Beskrivning">
+                description = <"En berättande beskrivning om individens typiska nivå av fysisk aktivitet.">
+            >
+            ["at0005"] = <
+                text = <"Hinder">
+                description = <"Identifierad faktor som hindrar individen att bli mer fysiskt aktiv.">
+            >
+            ["at0006"] = <
+                text = <"Möjliggörare">
+                description = <"Identifierad faktor som kan stödja individen att bli mer fysiskt aktiv.">
+                comment = <"Till exempel: bor nära en simbassäng; eller tidigare en elitidrottare.">
+            >
+            ["at0007"] = <
+                text = <"Typiskt intensiv fysisk träning">
+                description = <"Typiskt antal minuter av intensiv fysisk träning.">
+            >
+            ["at0008"] = <
+                text = <"Typiskt måttlig fysisk aktivitet">
+                description = <"Typiskt antal minuter med måttlig träning, vardagsmotion">
+            >
+            ["at0009"] = <
+                text = <"Extremt inaktiv">
+                description = <"Individen är extremt inaktiv, till exempel en sängliggande patient.">
+            >
+            ["at0010"] = <
+                text = <"Stillasittande">
+                description = <"Individen spenderar mycket tid sittande, till exempel en kontorsarbetare som tränar lite eller inte alls.">
+            >
+            ["at0011"] = <
+                text = <"Medelmåttig aktivitet">
+                description = <"Individen är medelmåttigt aktiv, till exempel en byggnadsarbetare eller en person som springer en timme varje dag.">
+            >
+            ["at0012"] = <
+                text = <"Mycket aktiv">
+                description = <"Individen är väldigt aktiv, till exempel en person som rör dig mycket i sitt arbete eller en person som simmar två timmar varje dag.">
+            >
+            ["at0013"] = <
+                text = <"Extremt aktiv">
+                description = <"Individen är extremt aktiv, till exempel en tävlingscyklist.">
+            >
+            ["at0015"] = <
+                text = <"Utökning">
+                description = <"Ytterligare information som krävs för att fånga upp lokalt innehåll eller att anpassa sig till andra referensmodeller/formaliteter.">
+                comment = <"Till exempel: lokal information som krävs">
+            >
+            ["at0016"] = <
+                text = <"Senast uppdaterad">
+                description = <"Datumet då sammanfattningen av fysisk aktivitet senast uppdaterades.">
+            >
+            ["at9001"] = <
+                text = <"* Frequency (en)">
+                description = <"* Frequency (en)">
+            >
+            ["ac9000"] = <
+                text = <"Fysisk aktivitetsnivå (synthesised)">
+                description = <"Kategorin av en individs typiska eller vanliga fysiska aktivitetsnivå. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Physical activity summary">
+                description = <"A summary of the typical level of physical activity undertaken by the individual.">
+            >
+            ["at0002"] = <
+                text = <"Physical activity level (PAL) status">
+                description = <"The category of the typical, or usual, physical activity level of an individual.">
+                comment = <"Coding with a terminology is desirable, where possible.">
+            >
+            ["at0003"] = <
+                text = <"Description">
+                description = <"A narrative description about the individual's typical level of physical activity.">
+            >
+            ["at0005"] = <
+                text = <"Barrier">
+                description = <"Identified factor that prevents the individual to become more physically active.">
+            >
+            ["at0006"] = <
+                text = <"Enabler">
+                description = <"Identified factor that may support the individual to become more physically active.">
+                comment = <"For example: lives close to a swimming pool; or previously an elite athlete.">
+            >
+            ["at0007"] = <
+                text = <"Typical vigorous exercise">
+                description = <"Typical number of minutes of vigorous exercise.">
+            >
+            ["at0008"] = <
+                text = <"Typical moderate exercise">
+                description = <"Typical number of minutes of moderate exercise.">
+            >
+            ["at0009"] = <
+                text = <"Extremely inactive">
+                description = <"The individual is extremely inactive, for example a bedridden patient.">
+            >
+            ["at0010"] = <
+                text = <"Sedentary">
+                description = <"The individual spends most of their time sitting, for example an office worker getting little or no exercise.">
+            >
+            ["at0011"] = <
+                text = <"Moderately active">
+                description = <"The individual is moerately active, for example a construction worker or a person running one hour daily.">
+            >
+            ["at0012"] = <
+                text = <"Vigorously active">
+                description = <"The individual is very active, for example a manual labourer or a person swimming two hours daily.">
+            >
+            ["at0013"] = <
+                text = <"Extremely active">
+                description = <"The individual is extremely active, for example a competitive cyclist.">
+            >
+            ["at0015"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0016"] = <
+                text = <"Last updated">
+                description = <"The date when the physical activity summary was last updated.">
+            >
+            ["at9001"] = <
+                text = <"Frequency">
+                description = <"Frequency">
+            >
+            ["ac9000"] = <
+                text = <"Physical activity level (PAL) status (synthesised)">
+                description = <"The category of the typical, or usual, physical activity level of an individual. (synthesised)">
+            >
+        >
+        ["nl"] = <
+            ["at0000"] = <
+                text = <"Fysieke activiteit overzicht">
+                description = <"Een overzicht van het typische niveau van fysieke activiteit ondernomen door het individu.">
+            >
+            ["at0002"] = <
+                text = <"Physical activity level (PAL) status">
+                description = <"De categorie van het typische of gebruikelijke fysieke activiteitsniveau van een individu.">
+                comment = <"Coderen met een terminologie is wenselijk, waar mogelijk.">
+            >
+            ["at0003"] = <
+                text = <"Omschrijving">
+                description = <"Een verhalende omschrijving over het individu's typische activiteitsniveau.">
+            >
+            ["at0005"] = <
+                text = <"Barrière">
+                description = <"Factor die het individu ervan weerhoudt om meer fysiek actief te worden.">
+            >
+            ["at0006"] = <
+                text = <"Motivator">
+                description = <"Factor die een individu motiveert om meer fysiek actief te worden.">
+                comment = <"Bijvoorbeeld: dicht bij een zwembad wonen; voormalig topatleet.">
+            >
+            ["at0007"] = <
+                text = <"Typische krachtige oefening">
+                description = <"Typische aantal minuten krachtige oefening.">
+            >
+            ["at0008"] = <
+                text = <"Typische gematigde oefening">
+                description = <"Typische aantal minuten van gematigde oefening.">
+            >
+            ["at0009"] = <
+                text = <"Extreem inactief">
+                description = <"Het individu is extreem inactief, bijvoorbeeld een bedlegerige patient.">
+            >
+            ["at0010"] = <
+                text = <"Sedentair">
+                description = <"Het individu brengt het grootste deel van de tijd zitten door, bijvoorbeeld een kantoorwerker die niet of nauwelijks beweegt.">
+            >
+            ["at0011"] = <
+                text = <"Matig actief">
+                description = <"Het individu is matig actief, bijvoorbeeld een bouwvakker of een persoon die dagelijks een uur hardloopt.">
+            >
+            ["at0012"] = <
+                text = <"Krachtig actief">
+                description = <"Het individu is erg actief, bijvoorbeeld een handarbeider of iemand die twee uur per dag zwemt.">
+            >
+            ["at0013"] = <
+                text = <"Extreem actief">
+                description = <"Het individu is extreem actief, bijvoorbeeld een competitiewielrenner.">
+            >
+            ["at0015"] = <
+                text = <"Uitbreiding">
+                description = <"Aanvullende informatie vereist om lokale inhoud vast te leggen of om aan te sluiten bij andere referentiemodellen/formalismen.">
+                comment = <"Bijvoorbeeld: lokale informatie eisen of additionele metadata om aan te sluiten bij FHIR of CIMI equivalenten.">
+            >
+            ["at0016"] = <
+                text = <"Laatst bijgewerkt">
+                description = <"De datum waarop deze Fysieke activiteit overzicht voor het laatst is bijgewerkt.">
+            >
+            ["at9001"] = <
+                text = <"* Frequency (en)">
+                description = <"* Frequency (en)">
+            >
+            ["ac9000"] = <
+                text = <"Physical activity level (PAL) status (synthesised)">
+                description = <"De categorie van het typische of gebruikelijke fysieke activiteitsniveau van een individu. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/382>
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0009", "at0010", "at0011", "at0012", "at0013">
+        >
+    >

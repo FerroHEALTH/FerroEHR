@@ -1,0 +1,221 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=2f9ed53c-5665-472e-be02-0681cbbb72ce; build_uid=626764f5-5181-4fce-b4c7-3e754e42b025)
+    openEHR-EHR-ADMIN_ENTRY.referral_review.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-06-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"FF99DB6B0BE1F42DD1D453D7F33D565D">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record information about follow-up for proposed additional care or escalation of care.">
+            use = <"Use to record information about follow-up for proposed additional care or escalation of care.
+
+This archetype has been designed to support an investigation into appropriate health care provision, including maternity mortality surveillance.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ADMIN_ENTRY[at0000] matches {    -- Referral review
+        data matches {
+            ITEM_TREE[at0003] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Care need
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Referred?
+                        value matches {
+                            DV_CODED_TEXT[at9004] matches {
+                                defining_code matches {[ac9000]}    -- Referred? (synthesised)
+                            }
+                            DV_TEXT[at9005]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0024] matches {    -- Referred to
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0025] matches {    -- Referred by
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Date of referral
+                        value matches {
+                            DV_DATE_TIME[at9006]
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Reason for referral
+                        value matches {
+                            DV_TEXT[at9007]
+                        }
+                    }
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Followed up?
+                        value matches {
+                            DV_CODED_TEXT[at9008] matches {
+                                defining_code matches {[ac9001]}    -- Followed up? (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Attended?
+                        value matches {
+                            DV_CODED_TEXT[at9009] matches {
+                                defining_code matches {[ac9002]}    -- Attended? (synthesised)
+                            }
+                            DV_TEXT[at9010]
+                        }
+                    }
+                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Date of attendance
+                        value matches {
+                            DV_DATE_TIME[at9011]
+                        }
+                    }
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Reason for non-attendance
+                        value matches {
+                            DV_TEXT[at9012]
+                        }
+                    }
+                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Reason for delay
+                        value matches {
+                            DV_TEXT[at9013]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Referral review">
+                description = <"Information about follow-up for proposed additional care or escalation of care.">
+            >
+            ["at0004"] = <
+                text = <"Care need">
+                description = <"The name of the identified care need or escalation.">
+                comment = <"For example: specialist care; second opinion; or admission to hospital.">
+            >
+            ["at0005"] = <
+                text = <"Reason for referral">
+                description = <"The reason for referral for additional care.">
+            >
+            ["at0006"] = <
+                text = <"Attended?">
+                description = <"Did the patient attend as requested?">
+            >
+            ["at0007"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Date of referral">
+                description = <"The date when the patient was referred for additional care.">
+            >
+            ["at0014"] = <
+                text = <"Date of attendance">
+                description = <"The date when the patient attended for the proposed care.">
+            >
+            ["at0015"] = <
+                text = <"Reason for non-attendance">
+                description = <"The reason why the patient did not attend for the proposed care.">
+            >
+            ["at0016"] = <
+                text = <"Followed up?">
+                description = <"Was the patient followed up re attendance?">
+            >
+            ["at0017"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Referred?">
+                description = <"Was the patient referred for additional care?">
+            >
+            ["at0021"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Referred to">
+                description = <"Identification of the clinician or healthcare professional to whom the patient was referred.">
+            >
+            ["at0025"] = <
+                text = <"Referred by">
+                description = <"Identification of the clinician or healthcare professional who made the referral for additional care.">
+            >
+            ["at0026"] = <
+                text = <"Reason for delay">
+                description = <"The reason the patient was delayed in presenting for the proposed care.">
+            >
+            ["ac9000"] = <
+                text = <"Referred? (synthesised)">
+                description = <"Was the patient referred for additional care? (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Followed up? (synthesised)">
+                description = <"Was the patient followed up re attendance? (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Attended? (synthesised)">
+                description = <"Did the patient attend as requested? (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0007", "at0008", "at0009">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0017", "at0018", "at0019">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0021", "at0022", "at0023">
+        >
+    >

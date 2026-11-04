@@ -1,0 +1,119 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=5d5e10cb-490a-4a04-a5c7-734b0734908e; build_uid=d7d7e289-e5ff-438d-8bc7-a776af2cb5a9)
+    openEHR-DEMOGRAPHIC-CLUSTER.registration_other_data.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Sergio Miranda Freire">
+                ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+                ["email"] = <"sergio@lampada.uerj.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sergio Miranda Freire & Rigoleta Dutra Mediano Dias">
+        ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+        ["email"] = <"sergio@lampada.uerj.br">
+        ["date"] = <"2009-05-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Rigoleta Dutra, Ministry of Defense, Brazil (openEHR Editor)", "Sergio Freire, State University of Rio de Janeiro, Brazil (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"D19487FFABA32073CC594C1036F46AB6">
+    >
+    details = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Representação de dados adicionais do registro de um profissional">
+            keywords = <"serviço demográfico", "registro de um profissional de saúde">
+            use = <"Usado em um serviço demográfico para coletar dados adicionais do registro de um profissional de saúde">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Representation of additional data about a provider registration">
+            keywords = <"demographic service", "provider registration details">
+            use = <"Used in demographic services to collect additional data about a healthcare provider registration">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Other provider registration data
+        items matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- State
+                value matches {
+                    DV_CODED_TEXT[at9000] matches {
+                        defining_code matches {[ac2]}    -- State codes
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {1} matches {    -- Country
+                value matches {
+                    DV_CODED_TEXT[at9001] matches {
+                        defining_code matches {[ac3]}    -- Country codes
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Outros detalhes do registro profissional">
+                description = <"Outros detalhes do registro profissional">
+            >
+            ["at0001"] = <
+                text = <"Estado">
+                description = <"O Estado onde se localiza o conselho que registrou o profissional">
+            >
+            ["at0002"] = <
+                text = <"País">
+                description = <"O código internacional do país no qual o órgão profissional está registrado">
+            >
+            ["ac2"] = <
+                text = <"Códigos de estados">
+                description = <"códigos válidos para estados">
+            >
+            ["ac3"] = <
+                text = <"Códigos de países">
+                description = <"códigos válidos para países">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Other provider registration data">
+                description = <"Other provider registration data">
+            >
+            ["at0001"] = <
+                text = <"State">
+                description = <"The State of location of the registering body">
+            >
+            ["at0002"] = <
+                text = <"Country">
+                description = <"The international code for the country within which the professional was registered">
+            >
+            ["ac2"] = <
+                text = <"State codes">
+                description = <"valid codes for state/territory/province">
+            >
+            ["ac3"] = <
+                text = <"Country codes">
+                description = <"valid codes for countries">
+            >
+        >
+    >

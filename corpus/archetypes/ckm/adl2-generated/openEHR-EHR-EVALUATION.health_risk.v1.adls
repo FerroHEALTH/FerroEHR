@@ -1,0 +1,1717 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=70e1c139-739e-42be-992a-bb1891d222e8; build_uid=f27a8630-fdca-43dd-8048-1baefb95a46a)
+    openEHR-EHR-EVALUATION.health_risk.v1.2.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Jasmin Buck, Sebastian Garde, Anneka Sargeant, Weronika Gujo, Natalia Strauch">
+                ["organisation"] = <"University of Heidelberg, Cental Queensland University, Universitätsmedizin Göttingen, Medizinische Hochschule Hannover">
+                ["email"] = <"Weronika.Gujo@med.uni-heidelberg.de, Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Annika Terner">
+                ["organisation"] = <"B3 Healthcare Consulting AB">
+                ["email"] = <"annika.terner@b3.se">
+            >
+            accreditation = <".">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Alan March">
+                ["organisation"] = <"Hospital Universitario Austral, Pilar, Buenos Aires, Argentina">
+                ["email"] = <"alandmarch@gmail.com">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand, Silje Ljosland Bakke, Marit Alice Venheim">
+                ["organisation"] = <"Helse Bergen HF, Nasjonal IKT HF, Helse Vest IKT, Helse Vest IKT AS">
+                ["email"] = <"marit.alice.venheim@helse-vest-ikt.no, silje.ljosland.bakke@helse-vest-ikt.no">
+            >
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            author = <
+                ["name"] = <"Erasmia Partafylla">
+                ["organisation"] = <"Sigmasoft">
+                ["email"] = <"c.partafylla@sigmasoft.gr">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Laura Moral Lopez">
+                ["organisation"] = <"Sistema de Salut de Catalunya">
+                ["email"] = <"lauramoral@catsalut.cat">
+            >
+            other_details = <
+                ["other_contributors"] = <"Tradcrea">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Clara Calleja Vega">
+                ["organisation"] = <"CatSalut. Servei Català de la Salut.">
+                ["email"] = <"ccalleja@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2006-04-23">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Tomas Alme, DIPS, Norway", "Nadim Anani, Karolinska Institutet, Sweden", "Anne Pauline Anderssen, Helse Nord RHF, Norway", "Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (Nasjonal IKT redaktør)", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (Nasjonal IKT redaktør)", "Lars Bitsch-Larsen, Haukeland University Hospital, Bergen, Norway", "Rong Chen, Cambio Healthcare Systems, Sweden", "Stephen Chu, Queensland Health, Australia", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Shahla Foozonkhah, Iran ministry of health and education, Iran", "Einar Fosse, UNN HF, Norwegian Centre for Integrated Care and Telemedicine, Norway", "Sebastian Garde, Ocean Informatics, Germany", "Gyri Gradek, Senter for medisinsk genetikk og molekylærmedisin, Haukeland Universitetssykehus, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)", "Kristian Heldal, Telemark Hospital Trust, Norway", "Anca Heyd, DIPS ASA, Norway", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Lars Karlsen, DIPS ASA, Norway", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Heather Leslie, Ocean Informatics, Australia", "Hallvard Lærum, Direktoratet for e-helse, Norway", "Luis Marco Ruiz, Norwegian Center for Integrated Care and Telemedicine, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Rune Pedersen, Universitetssykehuset i Nord Norge, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Jussara Rotzsch, UNB, Brazil", "Line Sæle, Nasjonal IKT HF, Norway", "Jon Tysdahl, Furst medlab AS, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Health Risk, draft archetype, NEHTA Clinical Knowledge Manager [Internet]. Australia: National eHealth Transition Authority. Authored: 2006 Apr 23. Available at: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.1276 (accessed 2015 Mar 04). Archetype originated from the openEHR CKM.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"CF20C90DB5DA408987BFD954937BDC3F">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung bekannter Risikofaktoren für eine identifizierte Krankheit, einen Zustand oder ein anderes potenziell gesundheitsschädliches Problem und / oder einer Beurteilung der Wahrscheinlichkeit, dass die Person in der Zukunft davon betroffen ist.
+
+Dieser Archetyp wurde absichtlich offen und breit angelegt. Das \"Gesundheitsrisiko\" kann aus den Risikofaktoren aus dem einen oder allen den folgenden Bereichen ermittelt werden: medizinische Risikofaktoren, Biomarker, Lebensstil, soziale Risikofaktoren, Berufsrisiko oder Umweltbereich.
+Die Absicht dieses Archetyps besteht darin, potentielle Risiken zu einem bestimmten Zeitpunkt zu dokumentieren und Entscheidungen zu unterstützen, die das erkannte Risiko verringern können, sei es durch Kliniker oder die Person selbst.">
+            keywords = <"Einschätzung", "Begutachtung", "Beurteilung", "unerwünscht", "Evaluation", "Gesundheitsstatus", "Befinden", "Gesundheitszustand", "Einschätzung", "Risiko", "Risikofaktor", "Faktor", "Bewertung", "Gesundheit", "Gesundheitsrisiko", "Risikostratifizierung", "Risikostratifikation", "Management">
+            use = <"Der Archetyp \"Bewertung des Gesundheitsrisikos\" wird verwendet, um bekannte Risikofaktoren für eine identifizierte Krankheit, einen Zustand oder ein anderes potenziell gesundheitsschädliches Problem darzustellenn und / oder zur Bewertung der Wahrscheinlichkeit, dass die Person in Zukunft davon betroffen ist.
+
+Da Risikofaktoren im Laufe der Zeit schrittweise identifiziert werden und das Gesamtrisiko infolgedessen neu bewertet wird, wird der \"Identifizierungszeitpunkt\" das Datum erfassen, an dem der Risikofaktor identifiziert wurde. Das Datenelement \"Letzte Aktualisierung\" gibt an, wann die gesamte Bewertung zuletzt aktualisiert wurde.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"*To record known risk factors for an identified disease, condition, or other potentially adverse health issue, and/or an evaluation of the likelihood of the individual experiencing it in the future.
+
+This archetype has been deliberately left open and broad in scope. The 'Health Risk' could be determined from risk factors from any or all of: medical; biomarker; lifestyle; social; occupational hazard; or environmental domains.
+
+The intent of this archetype is to document potential risk at a point in time, and to support decision-making that may reduce the identified risk, whether by clinicians or the individual themselves.(en)">
+            keywords = <"*assessment(en)", "*risk(en)", "*evaluation(en)", "*adverse(en)", "*factor(en)", "*health(en)", "*issue(en)", "*estimated(en)", "*management(en)", "*risk factor(en)", "*risk stratification(en)">
+            use = <"*Use to record known risk factors for an identified disease, condition, or other potentially adverse health issue, and/or an evaluation of the likelihood of the individual experiencing it in the future.
+
+As risk factors may be gradually identified over time and the overall risk reassessed as a result, the 'Date identified' will record the date on which each risk factor has been identified and the 'Last updated' data element will record the last time that the whole assessment was updated.(en)">
+            misuse = <"">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera kända riskfaktorer för en identifierad sjukdom, tillstånd eller annat potentiellt skadligt hälsotillstånd, och / eller en utvärdering av sannolikheten för att personen upplever det i framtiden.
+
+Denna arketyp har medvetet lämnats öppen och omfattande. Risken kan bestämmas av riskfaktorer från någon eller alla följande domäner: medicinska; biomarkör; livsstil; social; yrkesrisk; eller miljödomäner.
+
+Avsikten med denna arketyp är att dokumentera potentiell risk vid en tidpunkt och att stödja beslutsfattande som kan minska den identifierade risken, vare sig av kliniker eller individen själva.">
+            keywords = <"Bedömning", "Risk", "Utvärdering", "Negativ", "Faktor", "Hälsa", "Fråga", "Beräknad", "Förvaltning", "Riskfaktor", "Risklagstiftning", "Hälsorisk">
+            use = <"Används för att registrera kända riskfaktorer för en identifierad sjukdom, tillstånd eller annat potentiellt skadligt hälsotillstånd, och / eller en utvärdering av sannolikheten för att personen drabbas av det i framtiden.
+
+Eftersom riskfaktorer kan identifieras gradvis över tiden och den övergripande risken omvärderas som ett resultat kommer den \"identifierade Datum\" att registrera det datum då varje riskfaktor har identifierats och \"Senast uppdaterad\" dataelement registrerar sista gången att hela utvärderingen uppdaterades.">
+            misuse = <"">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"Brukes til å registrere kjente risikofaktorer for en spesifikk sykdom, tilstand eller andre potensielt uønskede helseproblemer. Det kan også registreres en vurdering av sannsynligheten for at individet vil oppleve den aktuelle tilstanden i fremtiden.
+
+Arketypen er med vilje laget åpen og bred. Helserisikoen kan bestemmes ut fra risikofaktorer fra det medisinske feltet, biomarkører, livsstil, sosiale forhold, yrkesmessige farer eller omgivelser.
+
+Intensjonen med arketypen er å dokumentere en potensiell risiko ved et gitt tidspunkt, og å støtte beslutninger som kan redusere risikoen enten de er tatt av en kliniker eller av individet selv.">
+            keywords = <"vurdering", "risiko", "evaluering", "uønsket", "faktor", "helse", "problem", "estimert", "håndtering", "risikofaktor", "risikostratifisering">
+            use = <"Brukes til å registrere kjente risikofaktorer for en spesifikk sykdom, tilstand eller andre potensielt uønskede helseproblemer. Det kan også registreres en vurdering av sannsynligheten for at individet vil oppleve den aktuelle tilstanden i fremtiden.
+
+Siden risikofaktorer gradvis kan identifiseres over tid og den generelle risikoen revurderes som et resultat, vil 'Dato identifisert' registrere datoen hvor hver risikofaktor er identifisert og dataelementet 'Sist oppdatert' registrerer siste gang hele vurderingen ble oppdatert.">
+            misuse = <"">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Para el registro de factores de riesgo para una enfermedad, condición u otro problema potencialmente adverso para la salud, y/o para la evaluación de la probabilidad de que el individuo experimente estas situaciones en el futuro.
+Este arquetipo se mantiene deliberadamente abierto y amplio en su alcance. El 'Riesgo para la Salud' puede ser determinado a partir de todos o algunos de los factores de riesgo: médicos, marcadores biológicos, estilo de vidas, sociales, riesgo ocupacional o cuestiones ambientales.
+El propósito de este arquetipo es la documentación de un riesgo potencial en un punto en el tiempo, y para asistir en la toma de decisiones que puedan reducir el mencionado riesgo, ya sea por parte de los médicos o del/de los individuo/s mismo/s.">
+            keywords = <"evaluación", "riesgo", "adverso", "factor", "salud", "problema", "estimado", "manejo", "factor de riesgo", "estratificación de riesgo">
+            use = <"*Use to record known risk factors for an identified disease, condition, or other potentially adverse health issue, and/or an evaluation of the likelihood of the individual experiencing it in the future.
+
+As risk factors may be gradually identified over time and the overall risk reassessed as a result, the 'Date identified' will record the date on which each risk factor has been identified and the 'Last updated' data element will record the last time that the whole assessment was updated.(en)">
+            misuse = <"">
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            purpose = <"Για την καταγραφή γνωστών παραγόντων κινδύνου για μια αναγνωρισμένη ασθένεια, πάθηση ή άλλο δυνητικά δυσμενές πρόβλημα υγείας ή/και αξιολόγηση της πιθανότητας να το βιώσει το άτομο στο μέλλον.
+
+Αυτό το αρχέτυπο έχει σκόπιμα αφεθεί ανοικτό και ευρύ σε εύρος. Ο «κίνδυνος για την υγεία» θα μπορούσε να προσδιοριστεί από παράγοντες κινδύνου από οποιοδήποτε ή όλα: ιατρικά; βιοδείκτης; τρόπος ζωής; κοινωνικός; επαγγελματικός κίνδυνος· ή περιβαλλοντικούς τομείς.
+
+Η πρόθεση αυτού του αρχέτυπου είναι να τεκμηριώσει τον πιθανό κίνδυνο σε μια χρονική στιγμή και να υποστηρίξει τη λήψη αποφάσεων που μπορεί να μειώσουν τον αναγνωρισμένο κίνδυνο, είτε από κλινικούς ιατρούς είτε από το ίδιο το άτομο.">
+            keywords = <"εκτίμηση", "κίνδυνος", "αξιολόγηση", "αντίθετος", "παράγοντας", "Υγεία", "ζήτημα", "υπολογισμένος", "διαχείριση", "παράγοντας κινδύνου", "Διαστρωμάτωση κινδύνου">
+            use = <"Χρησιμοποιείται για την καταγραφή γνωστών παραγόντων κινδύνου για μια αναγνωρισμένη ασθένεια, κατάσταση ή άλλο δυνητικά δυσμενές πρόβλημα υγείας ή/και αξιολόγηση της πιθανότητας να το βιώσει το άτομο στο μέλλον.
+
+Δεδομένου ότι οι παράγοντες κινδύνου μπορούν να προσδιοριστούν σταδιακά με την πάροδο του χρόνου και, ως εκ τούτου, ο συνολικός κίνδυνος να επανεκτιμηθεί, η «ημερομηνία που προσδιορίστηκε» θα καταγράψει την ημερομηνία κατά την οποία προσδιορίστηκε κάθε παράγοντας κινδύνου και το στοιχείο δεδομένων «Τελευταία ενημέρωση» θα καταγράψει την τελευταία φορά που επικαιροποιήθηκε ολόκληρη η αξιολόγηση.">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record known risk factors for an identified disease, condition, or other potentially adverse health issue, and/or an evaluation of the likelihood of the individual experiencing it in the future.
+
+This archetype has been deliberately left open and broad in scope. The 'Health Risk' could be determined from risk factors from any or all of: medical; biomarker; lifestyle; social; occupational hazard; or environmental domains.
+
+The intent of this archetype is to document potential risk at a point in time, and to support decision-making that may reduce the identified risk, whether by clinicians or the individual themselves.">
+            keywords = <"assessment", "risk", "evaluation", "adverse", "factor", "health", "issue", "estimated", "management", "risk factor", "risk stratification">
+            use = <"Use to record known risk factors for an identified disease, condition, or other potentially adverse health issue, and/or an evaluation of the likelihood of the individual experiencing it in the future.
+
+As risk factors may be gradually identified over time and the overall risk reassessed as a result, the 'Date identified' will record the date on which each risk factor has been identified and the 'Last updated' data element will record the last time that the whole assessment was updated.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل التخاطر/احتمالية الخطر لظرف صحي قد يحدث في المستقبل">
+            keywords = <"تقييم", ...>
+            use = <"*Use to record known risk factors for an identified disease, condition, or other potentially adverse health issue, and/or an evaluation of the likelihood of the individual experiencing it in the future.
+
+As risk factors may be gradually identified over time and the overall risk reassessed as a result, the 'Date identified' will record the date on which each risk factor has been identified and the 'Last updated' data element will record the last time that the whole assessment was updated.(en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"Registrare i fattori di rischio noti per una malattia, una condizione o un altro problema di salute potenzialmente avverso e/o una valutazione della probabilità che l'individuo ne sia colpito in futuro.
+
+Questo archetipo è stato deliberatamente lasciato aperto e di ampio respiro. Il \"rischio per la salute\" potrebbe essere determinato dai fattori di rischio di uno o di tutti i settori: medico, biomarcatore, stile di vita, sociale, rischio professionale o ambientale.
+
+L'intento di questo archetipo è quello di documentare il rischio potenziale in un determinato momento e di supportare il processo decisionale che può ridurre il rischio identificato, sia da parte dei medici che dell'individuo stesso.">
+            keywords = <"valutazione", "rischio", "valutazione", "avverso", "fattore", "salute", "numero", "stimato", "gestione", "fattore di rischio", "stratificazione del rischio">
+            use = <"Utilizzare per registrare i fattori di rischio noti per una malattia, condizione o altro problema di salute potenzialmente avverso identificato, e/o una valutazione della probabilità che l'individuo ne sia colpito in futuro.
+
+Poiché i fattori di rischio possono essere identificati gradualmente nel tempo e il rischio complessivo può essere rivalutato di conseguenza, la \"Data identificata\" registrerà la data in cui ciascun fattore di rischio è stato identificato e l'elemento di dati \"Ultimo aggiornamento\" registrerà l'ultima volta che l'intera valutazione è stata aggiornata.">
+            misuse = <"">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Per registrar els factors de risc coneguts per a una malaltia, condició o un altre problema de salut potencialment advers, i/o una avaluació de la probabilitat que l'individu l'experimenti en el futur.
+
+Aquest arquetip s'ha deixat deliberadament obert i d'ampli abast. El 'Risc per a la salut' es podria determinar a partir de factors de risc de qualsevol o de tots: mèdics; biomarcadors; estil de vida; socials; riscos laborals; o dominis ambientals.
+
+La intenció d'aquest arquetip és documentar el risc potencial en un moment donat, i donar suport a la presa de decisions que poden reduir el risc identificat, ja sigui pels metges o pel propi pacient.">
+            keywords = <"avaluació", "risc", "advers", "factor", "salut", "assumpte", "estimat", "gestió", "factor de risc", "estratificació de risc">
+            use = <"S'utilitza per registrar els factors de risc coneguts d'una malaltia, condició o un altre problema de salut potencialment advers, i/o una avaluació de la probabilitat que l'individu l'experimenti en el futur.
+
+Com que els factors de risc es poden identificar gradualment amb el temps i el risc global reavaluat com a resultat, el \"Data identificat\" registrarà la data en què s'hagi identificat cada factor de risc i l'element de dades \"Darrera actualització\" registrarà l'última vegada que s'hagi actualitzat tota l'avaluació.">
+            misuse = <"">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Para registrar los factores de riesgo conocidos para una enfermedad, condición u otro problema de salud potencialmente adverso, y/o una evaluación de la probabilidad de que el individuo lo experimente en el futuro.
+
+Este arquetipo se ha dejado deliberadamente abierto y de amplio alcance. El 'Riesgo para la salud' podría determinarse a partir de factores de riesgo de cualquiera o de todos: médicos; biomarcadores; estilo de vida; sociales; riesgos laborales; o dominios ambientales.
+
+La intención de este arquetipo es documentar el riesgo potencial en un momento dado, y apoyar la toma de decisiones que pueden reducir el riesgo identificado, ya sea por los médicos o por el propio paciente.">
+            keywords = <"evaluación", "riesgo", "adverso", "factor", "salud", "asunto", "estimado", "gestión", "factor de riesgo", "estratificación de riesgo">
+            use = <"Se utiliza para registrar los factores de riesgo conocidos de una enfermedad, condición u otro problema de salud potencialmente adverso, y/o una evaluación de la probabilidad de que el individuo lo experimente en el futuro.
+
+Dado que los factores de riesgo pueden identificarse gradualmente con el tiempo y el riesgo global reevaluado como resultado, \"Fecha de identificación\" registrará la fecha en que se haya identificado cada factor de riesgo y el elemento de datos \"Última actualización\" registrará la última vez que se haya actualizado toda la evaluación.">
+            misuse = <"">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Health risk assessment
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {1..*} matches {
+                    ELEMENT[at0002] occurrences matches {1} matches {    -- Health risk
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                    CLUSTER[at0016] matches {    -- Risk factors
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0013] occurrences matches {1} matches {    -- Risk factor
+                                value matches {
+                                    DV_TEXT[at9003]
+                                }
+                            }
+                            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Presence
+                                value matches {
+                                    DV_CODED_TEXT[at9004] matches {
+                                        defining_code matches {[ac9015]}    -- Presence (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9005]
+                                }
+                            }
+                            ELEMENT[at0029] occurrences matches {0..1} matches {    -- Date identified
+                                value matches {
+                                    DV_DATE_TIME[at9019]
+                                }
+                            }
+                            ELEMENT[at0028] occurrences matches {0..1} matches {    -- Mitigated
+                                value matches {
+                                    DV_BOOLEAN[at9016] matches {
+                                        value matches {True}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0012] matches {    -- Link to evidence
+                                value matches {
+                                    DV_URI[at9006]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0027] matches {    -- Detail
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.family_prevalence\.v1\..*/}
+                            }
+                            ELEMENT[at0030] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_TEXT[at9020]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Risk assessment
+                        value matches {
+                            DV_TEXT[at9015]
+                            DV_PROPORTION[at9010]
+                            DV_QUANTITY[at9018] matches {
+                                property matches {[at9017]}    -- Qualified real
+                                units matches {"1"}
+                            }
+                        }
+                    }
+                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Assessment type
+                        value matches {
+                            DV_CODED_TEXT[at9011] matches {
+                                defining_code matches {[ac9009]}    -- Assessment type (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Time period
+                        value matches {
+                            DV_DURATION[at9012]
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Rationale
+                        value matches {
+                            DV_TEXT[at9008]
+                        }
+                    }
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9009]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0010] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9013]
+                        }
+                    }
+                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Assessment method
+                        value matches {
+                            DV_TEXT[at9014]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0011] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Bewertung des Gesundheitsrisikos">
+                description = <"Bewertung der möglichen und wahrscheinlichen gesundheitsschädigenden Wirkungen anhand der identifizierten Risikofaktoren.">
+            >
+            ["at0002"] = <
+                text = <"Gesundheitsrisiko">
+                description = <"Identifizierung der potenziellen zukünftigen Krankheit, des Zustands oder des Gesundheitsproblems, für die das Risiko bewertet wird.">
+                comment = <"Wenn möglich, wird die Kodierung des Gesundheitsrisikos mit einer Terminologie bevorzugt. Freier Text sollte nur verwendet werden, wenn keine geeignete Terminologie vorhanden ist. Zum Beispiel: Risiko für Herz-Kreislauf-Erkrankungen, mit Risikofaktoren von Bluthochdruck und Hypercholesterinämie.">
+            >
+            ["at0003"] = <
+                text = <"Risikobewertung">
+                description = <"Bewertung des Gesundheitsrisikos.">
+                comment = <"Die Risikoeinschätzung kann vielfältig variieren. Der Choice-Datentyp ermöglicht die Darstellung der Bewertung mit Freitext oder mit Wertebereich (z.B. niedrig, mittel oder hoch). Der Proportions-Datentyp ermöglicht die Darstellung eines Prozentsatzes, eines Verhältnisses oder eines Bruches. Der Quantity-Datentyp ermöglicht die Darstellung einer Dezimalzahl.">
+            >
+            ["at0004"] = <
+                text = <"Begründung">
+                description = <"Begründung für die Risikobewertung.">
+                comment = <"Angaben, die zu diesem Datenelement hinzugefügt werden können. Diese können z.B. Informationen über die Bevölkerungsuntergruppen usw. enthalten, anhand derer die Risikobewertung erfolgt.">
+            >
+            ["at0011"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+            ["at0012"] = <
+                text = <"Link zum Nachweis">
+                description = <"Identifizierung des Pfades zum Archetyp oder Datenknoten zum Nachweis des Risikos.">
+            >
+            ["at0013"] = <
+                text = <"Risikofaktor">
+                description = <"Identifizierung des Risikofaktors über einen Namen.">
+                comment = <"Zum Beispiel: Hypertonie und Hypercholesterinämie, die als Teil der Gesamtbewertung für Herz-Kreislauf-Erkrankungen verwendet werden können; oder ein genetischer Marker. Die Kodierung des \"Risikofaktors\" sollte, wenn möglich, mit Hilfe einer Terminologie erfolgen.">
+            >
+            ["at0014"] = <
+                text = <"Beschreibung">
+                description = <"Beschreibung des Risikofaktors.">
+            >
+            ["at0015"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Informationen über die Risikobewertung, welche in anderen Bereichen nicht erfasst wurden.">
+            >
+            ["at0016"] = <
+                text = <"Risikofaktoren">
+                description = <"Angaben zu jedem möglichen Risikofaktor.">
+            >
+            ["at0017"] = <
+                text = <"Vorhandensein">
+                description = <"Vorhandensein des Risikofaktors.">
+            >
+            ["at0018"] = <
+                text = <"Vorhanden">
+                description = <"Der Risikofaktor wurde bei der Person identifiziert.">
+            >
+            ["at0019"] = <
+                text = <"Nicht vorhanden">
+                description = <"Der Risikofaktor wurde bei der Person nicht festgestellt.">
+            >
+            ["at0020"] = <
+                text = <"Art der Bewertung">
+                description = <"Zur Darstellung der relativen oder absoluten Risikobewertung.">
+            >
+            ["at0021"] = <
+                text = <"Relatives Risiko">
+                description = <"Verhältnis der Wahrscheinlichkeit des Auftretens eines Gesundheitsereignisses oder -zustands im Vergleich zu einer Population mit ähnlichen Merkmalen, z. B. gleichem Alter und Geschlecht.">
+            >
+            ["at0022"] = <
+                text = <"Absolutes Risiko">
+                description = <"Verhältnis der Wahrscheinlichkeit des Auftretens eines Gesundheitsereignisses oder -zustands im Vergleich zur Gesamtbevölkerung.">
+            >
+            ["at0023"] = <
+                text = <"Zeitraum">
+                description = <"Der Zeitraum, in dem das vorhergesagte Gesundheitsrisiko relevant ist.">
+                comment = <"Das heißt: das Risiko, in den nächsten <X> Jahren das identifizierte „Gesundheitsrisiko“ zu erfahren.">
+            >
+            ["at0024"] = <
+                text = <"Letzte Aktualisierung">
+                description = <"Das Datum an dem die Bewertung des Gesundheitsrisikos zuletzt aktualisiert wurde.">
+                comment = <"Dieses Datenelement kann als redundant angesehen werden, wenn die Daten unter Verwendung von COMPOSITIONs innerhalb eines geschlossenen klinischen Systems aufgezeichnet und gespeichert werden. Wenn diese Informationen jedoch aus dem ursprünglichen COMPOSITION-Kontext extrahiert werden, um beispielsweise in ein anderes Dokument oder eine andere Nachricht aufzunehmen, dann wird der zeitliche Kontext effektiv entfernt. Dieses Datenelement \"Letzte Aktualisierung\" wurde explizit hinzugefügt, damit die kritischen Zeitdaten unter allen Umständen neben den klinischen Daten aufbewahrt werden können. Es wird angenommen, dass das klinische System das Datum aus der COMPOSITION kopieren kann, um doppelte Dateneingabe durch den Kliniker zu vermeiden.">
+            >
+            ["at0025"] = <
+                text = <"Bewertungsmethode">
+                description = <"Identifikation des Algorithmus oder der Leitlinie, welche für die Risikobewertung verwendet wurde.">
+                comment = <"Zum Beispiel: Framingham Herz-Kreislauf-Risiko-Kalkulator.">
+            >
+            ["at0026"] = <
+                text = <"Unbestimmt">
+                description = <"Es ist nicht möglich festzustellen, ob der Risikofaktor vorhanden oder nicht vorhanden ist.">
+            >
+            ["at0027"] = <
+                text = <"Details">
+                description = <"Strukturierte Informationen zu anderen Aspekten der Risikofaktorenbewertung.">
+                comment = <"Zum Beispiel: Prävalenz des Risikofaktors bei Familienmitgliedern.">
+            >
+            ["at0028"] = <
+                text = <"Verringert">
+                description = <"Der Risikofaktor wurde als vorhanden identifiziert, anschließend jedoch durch Behandlung oder Untersuchung vermindert.">
+                comment = <"Als \"Wahr\" darstellen, wenn der Risikofaktor behandelt oder untersucht wurde und das Risiko dadurch als vermindert angesehen werden kann. Zum Beispiel: Bei einem Säugling, der Gentamicin auf der Neugeborenen-Intensivstation erhält, besteht das Risiko eines dauerhaften Hörverlustes. Wenn die diagnostischen Untersuchungen im ersten Lebensjahr keine Anzeichen eines Hörverlustes zeigt, wird das Risiko eines späteren Hörverlustes als sehr gering, aber immer noch möglich angesehen. Das Datenelement ermöglicht es den Klinikern mitzuteilen, dass das Risiko vermindert ist, aber in Zukunft immer noch als möglich betrachtet werden sollte. In der Praxis kann der Risikofaktor in der Risikobewertung für den Fall, dass er sich zu einem späteren Zeitpunkt auf den Gesundheitszustand des Einzelnen auswirken könnte, beibehalten werden. Dennoch weist er darauf hin, dass sein Beitrag zur Risikobewertung möglicherweise nicht so hoch ist, wenn er nicht zuvor behandelt oder untersucht worden wäre.">
+            >
+            ["at0029"] = <
+                text = <"Identifizierungszeitpunkt">
+                description = <"Der Zeitpunkt an dem der Risikofaktor identifiziert wurde.">
+            >
+            ["at0030"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Informationen zum Risikofaktor, welche in anderen Bereichen nicht erfasst wurden.">
+            >
+            ["at9017"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9015"] = <
+                text = <"Vorhandensein (synthesised)">
+                description = <"Vorhandensein des Risikofaktors. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Art der Bewertung (synthesised)">
+                description = <"Zur Darstellung der relativen oder absoluten Risikobewertung. (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Riskbedömning">
+                description = <"Bedömning av potential och sannolikhet för framtida negativa hälsoeffekter som bestäms av identifierade riskfaktorer.">
+            >
+            ["at0002"] = <
+                text = <"Risk">
+                description = <"Identifiering med namn av den potentiella framtida sjukdomen, tillståndet eller hälsotillståndet för vilken risken är bedömd.">
+                comment = <"Vid kodning av \"Risk\" med en terminologi är att föredra, om möjligt. Fri text ska endast användas om det inte finns någon lämplig terminologi. Till exempel: risk för kardiovaskulär sjukdom, med riskfaktorer för hypertension och hyperkolesterolemi.">
+            >
+            ["at0003"] = <
+                text = <"Riskbedömning">
+                description = <"Utvärdering av hälsorisken.">
+                comment = <"Det kan finnas flera variationer i riskbedömningen. Datatypen val (choice) möjliggör registrering av bedömningen som antingen fritext eller vallista (t.ex. låg, medium eller hög). Datatypen andel (proportion) tillåter registrering av en procentandel, ett förhållande eller en fraktion. Datatypen numerisk (quantity) tillåter registrering av ett decimaltal.">
+            >
+            ["at0004"] = <
+                text = <"Motivering">
+                description = <"Motivering för denna riskbedömning.">
+                comment = <"Detaljer som kan läggas till i detta dataelement kan innehålla information om befolkningsundergrupperna etc mot vilka bestämningen av risken bedöms.">
+            >
+            ["at0011"] = <
+                text = <"Extension">
+                description = <"Ytterligare information som krävs för att fånga upp lokalt innehåll eller för anpassning sig till andra referensmodeller / formaliteter.">
+                comment = <"Till exempel: lokala informationskrav eller ytterligare metadata för att anpassa sig till FHIR- eller CIMI-ekvivalenter.">
+            >
+            ["at0012"] = <
+                text = <"Länk till evidens">
+                description = <"Identifiering av sökvägen till arketypen eller datanoden för evidensen för risk.">
+            >
+            ["at0013"] = <
+                text = <"Riskfaktor">
+                description = <"Identifiering med namn av riskfaktorn.">
+                comment = <"Till exempel: högt blodtryck och hyperkolesterolemi, som kan användas som en del av den övergripande bedömningen för kardiovaskulär sjukdom; eller en genetisk markör. Vid kodning av
+Riskfaktor använd en terminologi om det är möjligt.">
+            >
+            ["at0014"] = <
+                text = <"Beskrivning">
+                description = <"Berättande beskrivning om riksfaktorn.">
+            >
+            ["at0015"] = <
+                text = <"Kommentar">
+                description = <"Ytterligare beskrivning om riskbedömningen som inte tagits med i andra fält.">
+            >
+            ["at0016"] = <
+                text = <"Riskfaktorer">
+                description = <"Detaljer om varje möjlig riskfaktor.">
+            >
+            ["at0017"] = <
+                text = <"Förekomst">
+                description = <"Förekomst av riskfaktor.">
+            >
+            ["at0018"] = <
+                text = <"Nuvarande">
+                description = <"Riskfaktorn har identifierats för den här personen.">
+            >
+            ["at0019"] = <
+                text = <"Frånvarande">
+                description = <"Riskfaktorn har inte identifierats för den här personen.">
+            >
+            ["at0020"] = <
+                text = <"Bedömningstyp">
+                description = <"Uppgift om riskbedömningen är relativ eller absolut.">
+            >
+            ["at0021"] = <
+                text = <"Relativ risk">
+                description = <"Förhållande mellan sannolikheten för ett hälsohändelse eller ett tillstånd som uppstår jämfört med en befolkning med liknande egenskaper, t.ex. samma ålder och kön.">
+            >
+            ["at0022"] = <
+                text = <"Absolut risk">
+                description = <"Förhållandet mellan sannolikheten för en hälsohändelse eller ett tillstånd som uppstår i förhållande till befolkningen som helhet.">
+            >
+            ["at0023"] = <
+                text = <"Tidsperiod">
+                description = <"Den tidsperiod under vilken den förutspådda hälsorisken är relevant.">
+                comment = <"Det vill säga: risken att drabbas av den identifierade hälsorisken under de kommande <X> åren.">
+            >
+            ["at0024"] = <
+                text = <"Senast uppdaterad">
+                description = <"Datumet när hälsoriskbedömningen senast uppdaterades.">
+                comment = <"*This data element may be thought redundant if the data is recorded and stored using COMPOSITIONs within a closed clinical system. However if this information is extracted from its original COMPOSITION context, for example, to be included in another document or message then the temporal context is effectively removed. This 'Last updated' data element has been explicitly added to allow the critical temporal data to be kept alongside the clinical data in all circumstances. It is assumed that the clinical system can copy the date from the COMPOSITION to reduce the need for duplication of data entry by the clinician. (en)">
+            >
+            ["at0025"] = <
+                text = <"Bedömningsmetod">
+                description = <"Identifiering av metoden eller riktlinjen som används för bedömning av risker.">
+                comment = <"Till exempel: Framingham kardiovaskulär riskkalkylator.
+">
+            >
+            ["at0026"] = <
+                text = <"Obestämd">
+                description = <"Det är inte möjligt att bestämma om riskfaktorn finns eller är frånvarande.">
+            >
+            ["at0027"] = <
+                text = <"Detaljer">
+                description = <"Strukturerad detalj om andra aspekter av riskfaktorbedömningen.">
+                comment = <"Till exempel: Förekomst av riskfaktorn hos familjemedlemmar.">
+            >
+            ["at0028"] = <
+                text = <"Minskad/mildrad">
+                description = <"Riskfaktorn har identifierats att den finns, men har därefter minskats genom behandling eller undersökning.">
+                comment = <"Anteckna som sant om riskfaktorn har behandlats eller undersökts och risken från denna riskfaktor anses vara nedsatt. Till exempel: ett barn som ges gentamicin i neonatal intensivvård anses ha risk för permanent hörselnedsättning. Om diagnostisk testning inte visar någon hörselnedsättning under det första levnadsåret, anses risken för senare hörselnedsättning vara mycket reducerad men fortfarande möjlig. Detta dataelement gör det möjligt för kliniker att säga att risken har minskats men ska betraktas som en möjlighet i framtiden. I praktiken kan riskfaktorn bibehållas i riskbedömningen om det kan påverka den enskilda människans hälsa i framtiden, men att det inte är så stort att dess bidrag till riskberäkning är lika stort som om det inte tidigare har behandlats eller undersökts.">
+            >
+            ["at0029"] = <
+                text = <"Datum för konstaterande">
+                description = <"Datum/tid då riskfaktorn konstaterades.">
+            >
+            ["at0030"] = <
+                text = <"Kommentar">
+                description = <"Ytterligare beskrivning av riskfaktorn som inte fångats i andra fält.">
+            >
+            ["at9017"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9015"] = <
+                text = <"Förekomst (synthesised)">
+                description = <"Förekomst av riskfaktor. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Bedömningstyp (synthesised)">
+                description = <"Uppgift om riskbedömningen är relativ eller absolut. (synthesised)">
+            >
+        >
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"Terveysriski arvio">
+                description = <"*Assessment of the potential and likelihood of future adverse health effects as determined by identified risk factors.(en)">
+            >
+            ["at0002"] = <
+                text = <"Terveysriski">
+                description = <"*Identification of the potential future disease, condition or health issue for which the risk is being assessed, by name.(en)">
+                comment = <"*Coding of 'Health risk' with a terminology is preferred, where possible. Free text should be used only if there is no appropriate terminology available. For example: risk of cardiovascular disease, with risk factors of hypertension and hypercholesterolaemia.(en)">
+            >
+            ["at0003"] = <
+                text = <"Riskiarvio">
+                description = <"*Evaluation of the health risk.(en)">
+                comment = <"*There may be multiple variations on the assessment of risk. The Choice data type allows for recording of the assessment as either free text or value sets (such as low, medium or hig). The proportion data type allows recording of a percentage, a ratio or a fraction. The quantity data type allows recording of a decimal number.(en)">
+            >
+            ["at0004"] = <
+                text = <"Perustelut">
+                description = <"*Justification for this risk assessment.(en)">
+                comment = <"*Details that may be added to this data element may include information about the population subgroups etc against which the determination of risk is assessed.(en)">
+            >
+            ["at0011"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+                comment = <"*For example:  local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+            ["at0012"] = <
+                text = <"*Link to evidence(en)">
+                description = <"*Identification of the path to the archetype or data node for the evidence of risk.(en)">
+            >
+            ["at0013"] = <
+                text = <"*Risk factor(en)">
+                description = <"*Identification of the risk factor, by name.(en)">
+                comment = <"*For example: hypertension and hypercholesterolaemia, which may be used as part of the overall assessment for cardiovascular disease; or a genetic marker. Coding of 
+'Risk factor' with a terminology, where possible.(en)">
+            >
+            ["at0014"] = <
+                text = <"*Description(en)">
+                description = <"*Narrative description about the risk factor.(en)">
+            >
+            ["at0015"] = <
+                text = <"*Comment(en)">
+                description = <"*Additional narrative about the risk assessment not captured in other fields.(en)">
+            >
+            ["at0016"] = <
+                text = <"*Risk factors(en)">
+                description = <"*Details about each possible risk factor.(en)">
+            >
+            ["at0017"] = <
+                text = <"*Presence(en)">
+                description = <"*Presence of the risk factor.(en)">
+            >
+            ["at0018"] = <
+                text = <"*Present(en)">
+                description = <"*The risk factor has been identified for this individual.(en)">
+            >
+            ["at0019"] = <
+                text = <"*Absent(en)">
+                description = <"*The risk factor has not been identified for this individual.(en)">
+            >
+            ["at0020"] = <
+                text = <"*Assessment type(en)">
+                description = <"*Record of whether the risk assessment is a relative or absolute.(en)">
+            >
+            ["at0021"] = <
+                text = <"*Relative risk(en)">
+                description = <"*Ratio of probability of a health event or condition occurring compared to a population with similar characteristics eg same age and sex.(en)">
+            >
+            ["at0022"] = <
+                text = <"*Absolute risk(en)">
+                description = <"*Ratio of probability of a health event or condition occurring compared to the population as a whole.(en)">
+            >
+            ["at0023"] = <
+                text = <"*Time period(en)">
+                description = <"*The time period during which the predicted health risk is relevant.(en)">
+                comment = <"*That is: the risk of experiencing the identified 'Health risk' in the next <X> years.(en)">
+            >
+            ["at0024"] = <
+                text = <"*Last updated(en)">
+                description = <"*The date this health risk assessment was last updated.(en)">
+                comment = <"*This data element may be thought redundant if the data is recorded and stored using COMPOSITIONs within a closed clinical system. However if this information is extracted from its original COMPOSITION context, for example, to be included in another document or message then the temporal context is effectively removed. This 'Last updated' data element has been explicitly added to allow the critical temporal data to be kept alongside the clinical data in all circumstances. It is assumed that the clinical system can copy the date from the COMPOSITION to reduce the need for duplication of data entry by the clinician.(en)">
+            >
+            ["at0025"] = <
+                text = <"*Assessment method(en)">
+                description = <"*Identification of the algorithm or guideline used to make the assessment of risk.(en)">
+                comment = <"*For example: Framingham cardiovascular risk calculator.(en)">
+            >
+            ["at0026"] = <
+                text = <"*Indeterminate(en)">
+                description = <"*It is not possible to determine if the risk factor is present or absent.(en)">
+            >
+            ["at0027"] = <
+                text = <"*Detail(en)">
+                description = <"*Structured detail about other aspects of the risk factor assessment.(en)">
+                comment = <"*For example: Prevalence of the risk factor in family members.(en)">
+            >
+            ["at0028"] = <
+                text = <"*Mitigated(en)">
+                description = <"*The risk factor has been identified as present, but then subsequently been mitigated by treatment or investigation.(en)">
+                comment = <"*Record as True if the risk factor has been treated or investigated and risk from this risk factor is considered to be lessened. For example: an infant given gentamicin in neonatal intensive care is regarded as having a risk of permanent hearing loss. If diagnostic testing shows no evidence of hearing loss in the first year of life, the risk of later hearing loss is considered to be much reduced, but still possible. This data element allows clinicians to say that the risk has been mitigated but should still be considered as a possibility in future. In practice, the risk factor could be maintained in the risk assessment in case it might impact the individual's health at a future time, but flagging that its contribution to risk calculation may not be as great as if it had not been previously treated or investigated. (en)">
+            >
+            ["at0029"] = <
+                text = <"*Date identified(en)">
+                description = <"*The date/time that the risk factor was identified.(en)">
+            >
+            ["at0030"] = <
+                text = <"*Comment(en)">
+                description = <"*Additional narrative about the risk factor not captured in other fields.(en)">
+            >
+            ["at9017"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9015"] = <
+                text = <"*Presence(en) (synthesised)">
+                description = <"*Presence of the risk factor.(en) (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"*Assessment type(en) (synthesised)">
+                description = <"*Record of whether the risk assessment is a relative or absolute.(en) (synthesised)">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"Evaluacion de riesgo para la salud">
+                description = <"Evaluación del potencial y probabilidad de futuros efectos adversos para la salud determinados por la identificación de factores de riesgo.">
+            >
+            ["at0002"] = <
+                text = <"Riesgo para la salud">
+                description = <"Identificación, por nombre, de la enfermedad, condición o problema de salud potenciales para el cual se evalua el riesgo.">
+                comment = <"Se prefiere la codificación del 'Riesgo para la salud' mediante una terminología cuando esto sea posible. El texto libre solo debería ser utilizado cuando no se disponga de una terminología adecuada. Por ejemplo: riesgo de enfermedad cardiovascular con factores de riesgo de hipertensión arterial e hipercolesterolemia.">
+            >
+            ["at0003"] = <
+                text = <"Evaluación de riesgo">
+                description = <"Evaluación del riesgo para la salud.">
+                comment = <"Pueden haber múltiples variaciones en la evaluación de riesgo. La elección del tipo de dato permite el registro de la evaluación tanto mediante texto libre como mediante un conjunto de valores (tales como bajo, medio o alto). El tipo de dato 'proporción' permite el registro como un porcentaje, una tasa o una fracción. El tipo de dato 'cantidad' permite el registro como un número decimal.">
+            >
+            ["at0004"] = <
+                text = <"Razón">
+                description = <"Justificación para esta evaluación de riesgo.">
+                comment = <"Detalles que pueden ser agregados en este elemento pueden incluir información acerca de la población, subgrupos, etc, frente a los cuales se evalúa el riesgo.">
+            >
+            ["at0011"] = <
+                text = <"Extensión">
+                description = <"Información adicional requerida para registrar contenido local o para alinear con otros modelos o formalismos de referencia.">
+                comment = <"Por ejemplo: requerimientos locales de información o metadatos adicionales para alinear con equivalentes FHIR o CIMI.">
+            >
+            ["at0012"] = <
+                text = <"Vínculo a la evidencia">
+                description = <"Identificación del path al arquetipo o nodo de datos que contiene la evidencia del riesgo.">
+            >
+            ["at0013"] = <
+                text = <"Factor de riesgo">
+                description = <"Identificación, por nombre, del factor de riesgo.">
+                comment = <"Por ejemplo: hipertensión arterial e hipercolesterolemia, que pueden ser utilizados como parte de una evaluación general de enfermedad cardiovascular; o un marcador genético. Codificar el factor de riesgo mediante una terminología cuando esto sea posible.">
+            >
+            ["at0014"] = <
+                text = <"Descripción">
+                description = <"Descripción narrativa del factor de riesgo.">
+            >
+            ["at0015"] = <
+                text = <"Comentario">
+                description = <"Narrativa adicional acerca de la evaluación de riesgo no contemplada en otros campos.">
+            >
+            ["at0016"] = <
+                text = <"Factores de riesgo">
+                description = <"Detalles acerca de cada factor de riesgo posible.">
+            >
+            ["at0017"] = <
+                text = <"Presencia">
+                description = <"Presencia del factor de riesgo.">
+            >
+            ["at0018"] = <
+                text = <"Presente">
+                description = <"El factor de riesgo ha sido identificado para este individuo.">
+            >
+            ["at0019"] = <
+                text = <"Ausente">
+                description = <"El factor de riesgo no ha sido identificado para este individuo.">
+            >
+            ["at0020"] = <
+                text = <"Tipo de evaluación">
+                description = <"Registro acerca de la condición relativa o absoluta de la evaluación del riesgo.">
+            >
+            ["at0021"] = <
+                text = <"Riesgo relativo">
+                description = <"Probabilidad de la ocurrencia de un evento o condición de salud en comparación con una población de características similares. Ejemplo: mismo sexo y edad.">
+            >
+            ["at0022"] = <
+                text = <"Riesgo absoluto">
+                description = <"Probabilidad de la ocurrencia de un evento o condición de salud en comparación con el total de la población.">
+            >
+            ["at0023"] = <
+                text = <"Período de tiempo">
+                description = <"El período de tiempo durante el cual el riesgo para la salud previsto es relevante.">
+                comment = <"Esto es: el riesgo de incurrir en el 'riesgo para la salud' identificado, en el curso de los próximos <X> años.">
+            >
+            ["at0024"] = <
+                text = <"Última actualización">
+                description = <"La fecha en la cual se realizó la ultima actualización de este factor de riesgo para la salud.">
+                comment = <"*This data element may be thought redundant if the data is recorded and stored using COMPOSITIONs within a closed clinical system. However if this information is extracted from its original COMPOSITION context, for example, to be included in another document or message then the temporal context is effectively removed. This 'Last updated' data element has been explicitly added to allow the critical temporal data to be kept alongside the clinical data in all circumstances. It is assumed that the clinical system can copy the date from the COMPOSITION to reduce the need for duplication of data entry by the clinician. (en)">
+            >
+            ["at0025"] = <
+                text = <"Método de evaluación">
+                description = <"Identificación del algoritmo o de la guia utilziada para realizar la evaluación de riesgo.">
+                comment = <"Por ejemplo: el cálculo de riesgo cardiovascular de Framingham.">
+            >
+            ["at0026"] = <
+                text = <"Indeterminado">
+                description = <"No es posible determinar la presencia o ausencia del factor de riesgo.">
+            >
+            ["at0027"] = <
+                text = <"Detalle">
+                description = <"Detalle estructurado acerca de otros aspectos de la evaluación del factor de riesgo.">
+                comment = <"Por ejemplo: Prevalencia del factor de riesgo en famililares.">
+            >
+            ["at0028"] = <
+                text = <"Mitigado">
+                description = <"El factor de riesgo esta presente pero ha sido subsecuentemente mitigado por tratamiento o investigación.">
+                comment = <"Registrar como Verdadero si el factor de riesgo ha sido tratado o mejor investigado como para determinar que el riesgo puede considerarse disminuido. Por ejemplo: un niño ha recibido gentamicina en la unidad de cuidados intensivos neonatales puede considerarse en riesgo para hipoacusia permanente. Si los estudios diagnósticos no muestran evidencia de hipoacusia en el primer año de vida, el riesgo de hipoacusia posterior pueden considerarse como muy disminuido pero aún posible. Este dato permite a los clínicos considerar que el riesgo ha sido mitigado pero debe aún ser considerado como una posibildiad futura. En la práctica, el factor de riesgo puede mantenerse para la evaluación de riesgo en caso de poder tener impacto futuro sobre la salud del individuo, pero señalando que su contribución a la determinación del riesgo puede no ser tan importante como si no hubiera sido tratado o investigado.">
+            >
+            ["at0029"] = <
+                text = <"*Date identified(en)">
+                description = <"*The date/time that the risk factor was identified.(en)">
+            >
+            ["at0030"] = <
+                text = <"*Comment(en)">
+                description = <"*Additional narrative about the risk factor not captured in other fields.(en)">
+            >
+            ["at9017"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9015"] = <
+                text = <"Presencia (synthesised)">
+                description = <"Presencia del factor de riesgo. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Tipo de evaluación (synthesised)">
+                description = <"Registro acerca de la condición relativa o absoluta de la evaluación del riesgo. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Helserisiko">
+                description = <"Vurdering av potensiale og sannsynlighet for fremtidige uønskede helseeffekter, bestemt ut fra spesifikke risikofaktorer.">
+            >
+            ["at0002"] = <
+                text = <"Helserisiko">
+                description = <"Navnet på den potensielle fremtidige sykdommen, tilstanden eller helseproblemet som risikoen gjelder.">
+                comment = <"Dersom mulig foretrekkes det at \"Helserisiko\" kodes med en terminologi. Fritekst bør kun brukes dersom ingen passende terminologi er tilgjengelig. Eksempel: Risiko for kardiovaskulær sykdom, med risikofaktorene hypertensjon og hyperkolesterolemi.">
+            >
+            ["at0003"] = <
+                text = <"Risikovurdering">
+                description = <"Evaluering av helserisikoen.">
+                comment = <"Det finnes flere måter å registrere risikovurderingen på. Datatypen Choice tillater registrering av vurderingen som enten fritekst eller verdisett (som lav, middels og høy). Datatypen proporsjon tillater registrering av prosent, ratio eller fraksjon. Datatypen kvantitet tillater registrering av desimaltall.">
+            >
+            ["at0004"] = <
+                text = <"Berettigelse">
+                description = <"Berettigelse for risikovurderingen.">
+                comment = <"Detaljer som kan legges til dette dataelementet kan omfatte informasjon om populasjonssubgrupper etc. som risikovurderingen er gjort for.">
+            >
+            ["at0011"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at0012"] = <
+                text = <"Lenke til underlag">
+                description = <"Sti til arketypen eller dataelementet der underlagsinformasjonen for risikofaktoren er lagret.
+">
+                comment = <"For eksempel: Lenke til siste blodtrykksverdi, røykestatus eller kolesterolmåling i journalen.">
+            >
+            ["at0013"] = <
+                text = <"Risikofaktor">
+                description = <"Navnet på risikofaktoren.">
+                comment = <"For eksempel hypertensjon og hyperkolesterolemi, som kan brukes som del av den totale vurderingen for kardiovaskulær sykdom, eller en genetisk markør. Der det er mulig foretrekkes koding av \"Risikofaktor\" med en terminologi.">
+            >
+            ["at0014"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekst beskrivelse av risikofaktoren.">
+            >
+            ["at0015"] = <
+                text = <"Kommentar">
+                description = <"Fritekst om risikovurderingen som ikke passer i andre felt.">
+            >
+            ["at0016"] = <
+                text = <"Risikofaktorer">
+                description = <"Detaljer om hver enkelt mulige risikofaktor.">
+            >
+            ["at0017"] = <
+                text = <"Tilstedeværelse">
+                description = <"Risikofaktorens tilstedeværelse.">
+            >
+            ["at0018"] = <
+                text = <"Tilstede">
+                description = <"Risikofaktoren er tilstede hos individet.">
+            >
+            ["at0019"] = <
+                text = <"Fraværende">
+                description = <"Risikofaktoren er ikke tilstede hos individet.">
+            >
+            ["at0020"] = <
+                text = <"Vurderingstype">
+                description = <"Registrering av hvorvidt risikovurderingen er relativ eller absolutt.">
+            >
+            ["at0021"] = <
+                text = <"Relativ risiko">
+                description = <"Proporsjonal sannsynlighet for at en helserelatert hendelse eller tilstand skal opptre sammenlignet med en populasjon med lignende karakteristika, som f.eks. samme alder og kjønn.">
+            >
+            ["at0022"] = <
+                text = <"Absolutt risiko">
+                description = <"Proporsjonal sannsynlighet for at en helserelatert hendelse eller tilstand skal opptre sammenlignet med befolkningen som en helhet.">
+            >
+            ["at0023"] = <
+                text = <"Tidsramme">
+                description = <"Tidsrammen helserisikoen er relevant i.">
+                comment = <"Risikoen for å oppleve den identifiserte \"Helserisiko\" i løpet av de neste X årene.">
+            >
+            ["at0024"] = <
+                text = <"Sist oppdatert">
+                description = <"Datoen da risikovurderingen sist ble oppdatert.">
+                comment = <"Dette dataelementet kan tenkes å være unødvendig dersom dataene registreres og lagres ved hjelp av COMPOSITION arketyper innenfor et lukket klinisk system. Dersom risikodata hentes ut fra den opprinnelige COMPOSITION-konteksten f.eks. for å legges ved en oppsummering eller melding, blir den tidsmessige konteksten i praksis fjernet hvis arketypen brukes i en annen COMPOSITION-arketype. Dette dataelementet er eksplisitt lagt til for å tillate bevaring av kritisk tidsmessige data sammen med de kliniske dataene i alle sammenhenger. Det antas at det kliniske systemet kan kopiere datoen fra COMPOSITION-arketypen for å redusere behovet for manuell registrering av klinikeren.">
+            >
+            ["at0025"] = <
+                text = <"Vurderingsmetode">
+                description = <"Algoritmen eller regelen som ble brukt til å gjøre risikovurderingen.
+">
+                comment = <"For eksempel: Framingham cardiovascular risk calculator.">
+            >
+            ["at0026"] = <
+                text = <"Ubestemmelig">
+                description = <"Det er ikke mulig å fastslå om risikofaktoren er tilstede eller fraværende.">
+            >
+            ["at0027"] = <
+                text = <"Detaljer">
+                description = <"Strukturerte detaljer om andre aspekter ved risikovurderingen.
+">
+                comment = <"For eksempel: Forekomst av risikofaktorer hos familiemedlemmer.">
+            >
+            ["at0028"] = <
+                text = <"Moderert">
+                description = <"Risikofaktoren er identifisert som tilstede, men er deretter moderert ved behandling eller utredning.">
+                comment = <"Registrer som Sann om risikofaktoren har blitt behandlet eller utredet og risikoen fra denne risikofaktoren er vurdert som redusert. For eksempel: Nyfødt som gis gentamycin ved nyfødtintensiv har en risiko for å utvikle permanent hørselstap. Viser diagnostiske undersøkelser at det ikke finnes evidens for hørselstap første leveår, er risiko for senere hørselstap redusert, men fortsatt mulig. Dataelementet tillater at klinikere kan beskrive at risikoen er redusert, men fortsatt bør vurderes som mulig i framtiden. I praksis bør risikofaktoren vedlikeholdes i risikovurderingen i tilfelle den kan ha innvirkning på individets helse i framtiden, men flagges for å vise at innvirkning på helserisiko ikke er så stor som om den ikke hadde vært tidligere behandlet eller utredet.">
+            >
+            ["at0029"] = <
+                text = <"Dato påvist">
+                description = <"Dato / klokkeslett da risikofaktoren ble påvist.">
+            >
+            ["at0030"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om risikofaktoren som ikke er fanget opp i andre felt.">
+            >
+            ["at9017"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9015"] = <
+                text = <"Tilstedeværelse (synthesised)">
+                description = <"Risikofaktorens tilstedeværelse. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Vurderingstype (synthesised)">
+                description = <"Registrering av hvorvidt risikovurderingen er relativ eller absolutt. (synthesised)">
+            >
+        >
+        ["el"] = <
+            ["at0000"] = <
+                text = <"Εκτίμηση κινδύνου για την υγεία">
+                description = <"Αξιολόγηση της πιθανότητας μελλοντικών δυσμενών επιπτώσεων στην υγεία, όπως καθορίζεται από αναγνωρισμένους παράγοντες κινδύνου.">
+            >
+            ["at0002"] = <
+                text = <"Υγειονομικό ρίσκο">
+                description = <"Προσδιορισμός της πιθανής μελλοντικής ασθένειας, κατάστασης ή προβλήματος υγείας για το οποίο αξιολογείται ο κίνδυνος, ονομαστικά.">
+                comment = <"Προτιμάται η κωδικοποίηση του «κινδύνου για την υγεία» με ορολογία, όπου είναι δυνατόν. Το ελεύθερο κείμενο θα πρέπει να χρησιμοποιείται μόνο εάν δεν υπάρχει κατάλληλη διαθέσιμη ορολογία. Για παράδειγμα: κίνδυνος καρδιαγγειακής νόσου, με παράγοντες κινδύνου υπέρτασης και υπερχοληστερολαιμίας.">
+            >
+            ["at0003"] = <
+                text = <"Εκτίμηση κινδύνου">
+                description = <"Αξιολόγηση του κινδύνου για την υγεία.">
+                comment = <"Μπορεί να υπάρχουν πολλαπλές παραλλαγές στην εκτίμηση του κινδύνου. Ο τύπος δεδομένων Choice επιτρέπει την καταγραφή της αξιολόγησης είτε ως ελεύθερο κείμενο είτε ως σύνολα τιμών (όπως χαμηλή, μεσαία ή hig). Ο τύπος δεδομένων αναλογίας επιτρέπει την καταγραφή ενός ποσοστού, ενός λόγου ή ενός κλάσματος. Ο τύπος δεδομένων ποσότητας επιτρέπει την καταγραφή ενός δεκαδικού αριθμού.">
+            >
+            ["at0004"] = <
+                text = <"Αιτιολόγηση">
+                description = <"Αιτιολόγηση αυτής της εκτίμησης κινδύνου.">
+                comment = <"Οι λεπτομέρειες που μπορούν να προστεθούν σε αυτό το στοιχείο δεδομένων μπορεί να περιλαμβάνουν πληροφορίες σχετικά με τον πληθυσμό, τις υποομάδες κ. λπ. βάσει των οποίων αξιολογείται ο προσδιορισμός του κινδύνου.">
+            >
+            ["at0011"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+            >
+            ["at0012"] = <
+                text = <"Σύνδεσμος σε αποδεικτικά στοιχεία">
+                description = <"Προσδιορισμός της διαδρομής προς το αρχέτυπο ή τον κόμβο δεδομένων για την απόδειξη κινδύνου.">
+            >
+            ["at0013"] = <
+                text = <"Παράγοντας κινδύνου">
+                description = <"Προσδιορισμός του παράγοντα κινδύνου, ονομαστικά.">
+                comment = <"Για παράδειγμα: υπέρταση και υπερχοληστερολαιμία, τα οποία μπορούν να χρησιμοποιηθούν ως μέρος της συνολικής αξιολόγησης για καρδιαγγειακές παθήσεις. ή έναν γενετικό δείκτη. Κωδικοποίηση
+«Παράγοντας κινδύνου» με ορολογία, όπου είναι δυνατόν.">
+            >
+            ["at0014"] = <
+                text = <"Περιγραφή">
+                description = <"Αφηγηματική περιγραφή σχετικά με τον παράγοντα κινδύνου.">
+            >
+            ["at0015"] = <
+                text = <"Σχόλιο">
+                description = <"Πρόσθετη αφήγηση σχετικά με την εκτίμηση κινδύνου που δεν αποτυπώνεται σε άλλους τομείς.">
+            >
+            ["at0016"] = <
+                text = <"Παράγοντες κινδύνου">
+                description = <"Λεπτομέρειες σχετικά με κάθε πιθανό παράγοντα κινδύνου.">
+            >
+            ["at0017"] = <
+                text = <"Παρουσία">
+                description = <"Παρουσία του παράγοντα κινδύνου.">
+            >
+            ["at0018"] = <
+                text = <"Παρών">
+                description = <"Ο παράγοντας κινδύνου έχει εντοπιστεί για αυτό το άτομο.">
+            >
+            ["at0019"] = <
+                text = <"Απών">
+                description = <"Ο παράγοντας κινδύνου δεν έχει προσδιοριστεί για αυτό το άτομο.">
+            >
+            ["at0020"] = <
+                text = <"Τύπος εκτίμησης">
+                description = <"Καταγραφή του κατά πόσον η εκτίμηση επικινδυνότητας είναι σχετική ή απόλυτη.">
+            >
+            ["at0021"] = <
+                text = <"Σχετικό ρίσκο">
+                description = <"Λόγος πιθανότητας εμφάνισης ενός συμβάντος ή κατάστασης υγείας σε σύγκριση με έναν πληθυσμό με παρόμοια χαρακτηριστικά π. χ. ίδια ηλικία και φύλο">
+            >
+            ["at0022"] = <
+                text = <"Απόλυτο ρίσκο">
+                description = <"Λόγος πιθανότητας εμφάνισης συμβάντος ή κατάστασης υγείας σε σύγκριση με τον πληθυσμό στο σύνολό του.">
+            >
+            ["at0023"] = <
+                text = <"Χρονική περίοδος">
+                description = <"Η χρονική περίοδος κατά την οποία ο προβλεπόμενος κίνδυνος για την υγεία είναι σημαντικός.">
+                comment = <"Δηλαδή: ο κίνδυνος να βιώσουμε τον εντοπισμένο «κίνδυνο για την υγεία» τα επόμενα <X> χρόνια.">
+            >
+            ["at0024"] = <
+                text = <"Τελευταία ενημέρωση">
+                description = <"Η ημερομηνία τελευταίας επικαιροποίησης αυτής της εκτίμησης κινδύνου για την υγεία.">
+                comment = <"Το στοιχείο δεδομένων του μπορεί να θεωρηθεί περιττό εάν τα δεδομένα καταγράφονται και αποθηκεύονται χρησιμοποιώντας ΣΥΝΘΕΣΕΙΣ μέσα σε ένα κλειστό κλινικό σύστημα. Ωστόσο, εάν αυτές οι πληροφορίες εξαχθούν από το αρχικό πλαίσιο ΣΥΝΘΕΣΗΣ, για παράδειγμα, για να συμπεριληφθούν σε άλλο έγγραφο ή μήνυμα, τότε το χρονικό πλαίσιο αφαιρείται αποτελεσματικά. Αυτό το στοιχείο δεδομένων «τελευταίας ενημέρωσης» προστέθηκε ρητά για να επιτρέψει τη διατήρηση των κρίσιμων χρονικών δεδομένων παράλληλα με τα κλινικά δεδομένα σε όλες τις περιστάσεις. Θεωρείται ότι το κλινικό σύστημα μπορεί να αντιγράψει την ημερομηνία από τη ΣΥΝΘΕΣΗ για να μειώσει την ανάγκη επανάληψης της εισαγωγής δεδομένων από τον κλινικό ιατρό.">
+            >
+            ["at0025"] = <
+                text = <"Μέθοδος αξιολόγησης">
+                description = <"Προσδιορισμός του αλγορίθμου ή της κατευθυντήριας γραμμής που χρησιμοποιείται για την εκτίμηση του κινδύνου.">
+                comment = <"Για παράδειγμα: Υπολογιστής καρδιαγγειακού κινδύνου Framingham.">
+            >
+            ["at0026"] = <
+                text = <"Απροσδιόριστος">
+                description = <"Δεν είναι δυνατόν να προσδιοριστεί εάν ο παράγοντας κινδύνου είναι παρών ή απουσιάζει.">
+            >
+            ["at0027"] = <
+                text = <"Λεπτομέρειες">
+                description = <"Δομημένη λεπτομέρεια σχετικά με άλλες πτυχές της εκτίμησης των παραγόντων κινδύνου.">
+                comment = <"Για παράδειγμα: Επιπολασμός του παράγοντα κινδύνου στα μέλη της οικογένειας.">
+            >
+            ["at0028"] = <
+                text = <"Μετρίαση">
+                description = <"Ο παράγοντας κινδύνου έχει αναγνωριστεί ως παρών, αλλά στη συνέχεια μετριάστηκε με θεραπεία ή έρευνα.">
+                comment = <"Καταγράψτε ως αληθές εάν ο παράγοντας κινδύνου έχει αντιμετωπιστεί ή διερευνηθεί και ο κίνδυνος από αυτόν τον παράγοντα κινδύνου θεωρείται μειωμένος. Για παράδειγμα: ένα βρέφος που λαμβάνει γενταμικίνη σε νεογνική εντατική θεραπεία θεωρείται ότι έχει κίνδυνο μόνιμης απώλειας ακοής. Εάν οι διαγνωστικές εξετάσεις δεν δείχνουν ενδείξεις απώλειας ακοής κατά το πρώτο έτος της ζωής, ο κίνδυνος μεταγενέστερης απώλειας ακοής θεωρείται πολύ μειωμένος, αλλά εξακολουθεί να είναι πιθανός. Αυτό το στοιχείο δεδομένων επιτρέπει στους κλινικούς ιατρούς να πουν ότι ο κίνδυνος έχει μετριαστεί, αλλά θα πρέπει να εξεταστεί ως πιθανότητα στο μέλλον. Στην πράξη, ο παράγοντας κινδύνου θα μπορούσε να διατηρηθεί στην εκτίμηση κινδύνου σε περίπτωση που ενδέχεται να επηρεάσει την υγεία του ατόμου στο μέλλον, αλλά επισημαίνοντας ότι η συμβολή του στον υπολογισμό του κινδύνου μπορεί να μην είναι τόσο μεγάλη όσο εάν δεν είχε προηγουμένως αντιμετωπιστεί ή διερευνηθεί.">
+            >
+            ["at0029"] = <
+                text = <"Ημερομηνία εντόπισης">
+                description = <"Η ημερομηνία/ώρα που προσδιορίστηκε ο παράγοντας κινδύνου.">
+            >
+            ["at0030"] = <
+                text = <"Σχόλιο">
+                description = <"Πρόσθετη αφήγηση σχετικά με τον παράγοντα κινδύνου που δεν αποτυπώνεται σε άλλους τομείς.">
+            >
+            ["at9017"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9015"] = <
+                text = <"Παρουσία (synthesised)">
+                description = <"Παρουσία του παράγοντα κινδύνου. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Τύπος εκτίμησης (synthesised)">
+                description = <"Καταγραφή του κατά πόσον η εκτίμηση επικινδυνότητας είναι σχετική ή απόλυτη. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"*Health risk assessment(en)">
+                description = <"*Assessment of the potential and likelihood of future adverse health effects as determined by identified risk factors.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Health risk(en)">
+                description = <"*Identification of the potential future disease, condition or health issue for which the risk is being assessed, by name.(en)">
+                comment = <"*Coding of 'Health risk' with a terminology is preferred, where possible. Free text should be used only if there is no appropriate terminology available. For example: risk of cardiovascular disease, with risk factors of hypertension and hypercholesterolaemia.(en)">
+            >
+            ["at0003"] = <
+                text = <"*Risk assessment(en)">
+                description = <"*Evaluation of the health risk.(en)">
+                comment = <"*There may be multiple variations on the assessment of risk. The Choice data type allows for recording of the assessment as either free text or value sets (such as low, medium or hig). The proportion data type allows recording of a percentage, a ratio or a fraction. The quantity data type allows recording of a decimal number.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Rationale(en)">
+                description = <"*Justification for this risk assessment.(en)">
+                comment = <"*Details that may be added to this data element may include information about the population subgroups etc against which the determination of risk is assessed.(en)">
+            >
+            ["at0011"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+                comment = <"*For example:  local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+            ["at0012"] = <
+                text = <"*Link to evidence(en)">
+                description = <"*Identification of the path to the archetype or data node for the evidence of risk.(en)">
+            >
+            ["at0013"] = <
+                text = <"*Risk factor(en)">
+                description = <"*Identification of the risk factor, by name.(en)">
+                comment = <"*For example: hypertension and hypercholesterolaemia, which may be used as part of the overall assessment for cardiovascular disease; or a genetic marker. Coding of 
+'Risk factor' with a terminology, where possible.(en)">
+            >
+            ["at0014"] = <
+                text = <"*Description(en)">
+                description = <"*Narrative description about the risk factor.(en)">
+            >
+            ["at0015"] = <
+                text = <"*Comment(en)">
+                description = <"*Additional narrative about the risk assessment not captured in other fields.(en)">
+            >
+            ["at0016"] = <
+                text = <"*Risk factors(en)">
+                description = <"*Details about each possible risk factor.(en)">
+            >
+            ["at0017"] = <
+                text = <"*Presence(en)">
+                description = <"*Presence of the risk factor.(en)">
+            >
+            ["at0018"] = <
+                text = <"*Present(en)">
+                description = <"*The risk factor has been identified for this individual.(en)">
+            >
+            ["at0019"] = <
+                text = <"*Absent(en)">
+                description = <"*The risk factor has not been identified for this individual.(en)">
+            >
+            ["at0020"] = <
+                text = <"*Assessment type(en)">
+                description = <"*Record of whether the risk assessment is a relative or absolute.(en)">
+            >
+            ["at0021"] = <
+                text = <"*Relative risk(en)">
+                description = <"*Ratio of probability of a health event or condition occurring compared to a population with similar characteristics eg same age and sex.(en)">
+            >
+            ["at0022"] = <
+                text = <"*Absolute risk(en)">
+                description = <"*Ratio of probability of a health event or condition occurring compared to the population as a whole.(en)">
+            >
+            ["at0023"] = <
+                text = <"*Time period(en)">
+                description = <"*The time period during which the predicted health risk is relevant.(en)">
+                comment = <"*That is: the risk of experiencing the identified 'Health risk' in the next <X> years.(en)">
+            >
+            ["at0024"] = <
+                text = <"*Last Updated(en)">
+                description = <"*The date this health risk assessment was last updated.(en)">
+                comment = <"*This data element may be thought redundant if the data is recorded and stored using COMPOSITIONs within a closed clinical system. However if this information is extracted from its original COMPOSITION context, for example, to be included in another document or message then the temporal context is effectively removed. This 'Last updated' data element has been explicitly added to allow the critical temporal data to be kept alongside the clinical data in all circumstances. It is assumed that the clinical system can copy the date from the COMPOSITION to reduce the need for duplication of data entry by the clinician. (en)">
+            >
+            ["at0025"] = <
+                text = <"*Assessment method(en)">
+                description = <"*Identification of the algorithm or guideline used to make the assessment of risk.(en)">
+                comment = <"*For example: Framingham cardiovascular risk calculator.(en)">
+            >
+            ["at0026"] = <
+                text = <"*Indeterminate(en)">
+                description = <"*It is not possible to determine if the risk factor is present or absent.(en)">
+            >
+            ["at0027"] = <
+                text = <"*Detail(en)">
+                description = <"*Structured detail about other aspects of the risk factor assessment.(en)">
+                comment = <"*For example: Prevalence of the risk factor in family members.(en)">
+            >
+            ["at0028"] = <
+                text = <"*Mitigated(en)">
+                description = <"*The risk factor has been identified as present, but then subsequently been mitigated by treatment or investigation.(en)">
+                comment = <"*Record as True if the risk factor has been treated or investigated and risk from this risk factor is considered to be lessened. For example: an infant given gentamicin in neonatal intensive care is regarded as having a risk of permanent hearing loss. If diagnostic testing shows no evidence of hearing loss in the first year of life, the risk of later hearing loss is considered to be much reduced, but still possible. This data element allows clinicians to say that the risk has been mitigated but should still be considered as a possibility in future. In practice, the risk factor could be maintained in the risk assessment in case it might impact the individual's health at a future time, but flagging that its contribution to risk calculation may not be as great as if it had not been previously treated or investigated. (en)">
+            >
+            ["at0029"] = <
+                text = <"*Date identified(en)">
+                description = <"*The date/time that the risk factor was identified.(en)">
+            >
+            ["at0030"] = <
+                text = <"*Comment(en)">
+                description = <"*Additional narrative about the risk factor not captured in other fields.(en)">
+            >
+            ["at9017"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9015"] = <
+                text = <"*Presence(en) (synthesised)">
+                description = <"*Presence of the risk factor.(en) (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"*Assessment type(en) (synthesised)">
+                description = <"*Record of whether the risk assessment is a relative or absolute.(en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Health risk assessment">
+                description = <"Assessment of the potential and likelihood of future adverse health effects as determined by identified risk factors.">
+            >
+            ["at0002"] = <
+                text = <"Health risk">
+                description = <"Identification of the potential future disease, condition or health issue for which the risk is being assessed, by name.">
+                comment = <"Coding of 'Health risk' with a terminology is preferred, where possible. Free text should be used only if there is no appropriate terminology available. For example: risk of cardiovascular disease, with risk factors of hypertension and hypercholesterolaemia.">
+            >
+            ["at0003"] = <
+                text = <"Risk assessment">
+                description = <"Evaluation of the health risk.">
+                comment = <"There may be multiple variations on the assessment of risk. The Choice data type allows for recording of the assessment as either free text or value sets (such as low, medium or hig). The proportion data type allows recording of a percentage, a ratio or a fraction. The quantity data type allows recording of a decimal number.">
+            >
+            ["at0004"] = <
+                text = <"Rationale">
+                description = <"Justification for this risk assessment.">
+                comment = <"Details that may be added to this data element may include information about the population subgroups etc against which the determination of risk is assessed.">
+            >
+            ["at0011"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example:  local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0012"] = <
+                text = <"Link to evidence">
+                description = <"Identification of the path to the archetype or data node for the evidence of risk.">
+            >
+            ["at0013"] = <
+                text = <"Risk factor">
+                description = <"Identification of the risk factor, by name.">
+                comment = <"For example: hypertension and hypercholesterolaemia, which may be used as part of the overall assessment for cardiovascular disease; or a genetic marker. Coding of 
+'Risk factor' with a terminology, where possible.">
+            >
+            ["at0014"] = <
+                text = <"Description">
+                description = <"Narrative description about the risk factor.">
+            >
+            ["at0015"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the risk assessment not captured in other fields.">
+            >
+            ["at0016"] = <
+                text = <"Risk factors">
+                description = <"Details about each possible risk factor.">
+            >
+            ["at0017"] = <
+                text = <"Presence">
+                description = <"Presence of the risk factor.">
+            >
+            ["at0018"] = <
+                text = <"Present">
+                description = <"The risk factor has been identified for this individual.">
+            >
+            ["at0019"] = <
+                text = <"Absent">
+                description = <"The risk factor has not been identified for this individual.">
+            >
+            ["at0020"] = <
+                text = <"Assessment type">
+                description = <"Record of whether the risk assessment is a relative or absolute.">
+            >
+            ["at0021"] = <
+                text = <"Relative risk">
+                description = <"Ratio of probability of a health event or condition occurring compared to a population with similar characteristics eg same age and sex.">
+            >
+            ["at0022"] = <
+                text = <"Absolute risk">
+                description = <"Ratio of probability of a health event or condition occurring compared to the population as a whole.">
+            >
+            ["at0023"] = <
+                text = <"Time period">
+                description = <"The time period during which the predicted health risk is relevant.">
+                comment = <"That is: the risk of experiencing the identified 'Health risk' in the next <X> years.">
+            >
+            ["at0024"] = <
+                text = <"Last updated">
+                description = <"The date this health risk assessment was last updated.">
+                comment = <"This data element may be thought redundant if the data is recorded and stored using COMPOSITIONs within a closed clinical system. However if this information is extracted from its original COMPOSITION context, for example, to be included in another document or message then the temporal context is effectively removed. This 'Last updated' data element has been explicitly added to allow the critical temporal data to be kept alongside the clinical data in all circumstances. It is assumed that the clinical system can copy the date from the COMPOSITION to reduce the need for duplication of data entry by the clinician.">
+            >
+            ["at0025"] = <
+                text = <"Assessment method">
+                description = <"Identification of the algorithm or guideline used to make the assessment of risk.">
+                comment = <"For example: Framingham cardiovascular risk calculator.">
+            >
+            ["at0026"] = <
+                text = <"Indeterminate">
+                description = <"It is not possible to determine if the risk factor is present or absent.">
+            >
+            ["at0027"] = <
+                text = <"Detail">
+                description = <"Structured detail about other aspects of the risk factor assessment.">
+                comment = <"For example: Prevalence of the risk factor in family members.">
+            >
+            ["at0028"] = <
+                text = <"Mitigated">
+                description = <"The risk factor has been identified as present, but then subsequently been mitigated by treatment or investigation.">
+                comment = <"Record as True if the risk factor has been treated or investigated and risk from this risk factor is considered to be lessened. For example: an infant given gentamicin in neonatal intensive care is regarded as having a risk of permanent hearing loss. If diagnostic testing shows no evidence of hearing loss in the first year of life, the risk of later hearing loss is considered to be much reduced, but still possible. This data element allows clinicians to say that the risk has been mitigated but should still be considered as a possibility in future. In practice, the risk factor could be maintained in the risk assessment in case it might impact the individual's health at a future time, but flagging that its contribution to risk calculation may not be as great as if it had not been previously treated or investigated. ">
+            >
+            ["at0029"] = <
+                text = <"Date identified">
+                description = <"The date/time that the risk factor was identified.">
+            >
+            ["at0030"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the risk factor not captured in other fields.">
+            >
+            ["at9017"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+            ["ac9015"] = <
+                text = <"Presence (synthesised)">
+                description = <"Presence of the risk factor. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Assessment type (synthesised)">
+                description = <"Record of whether the risk assessment is a relative or absolute. (synthesised)">
+            >
+        >
+        ["it"] = <
+            ["at0000"] = <
+                text = <"Valutazione del rischio sanitario">
+                description = <"Valutazione del potenziale e della probabilità di futuri effetti negativi per la salute, determinati da fattori di rischio identificati.">
+            >
+            ["at0002"] = <
+                text = <"Rischio sanitario">
+                description = <"Identificazione della potenziale futura malattia, condizione o problema sanitario per il quale si sta valutando il rischio, per nome.">
+                comment = <"Si preferisce, ove possibile, la codifica di \"Rischio per la salute\" con una terminologia. Il testo libero deve essere utilizzato solo se non è disponibile una terminologia appropriata. Ad esempio: rischio di malattie cardiovascolari, con fattori di rischio di ipertensione e ipercolesterolemia.">
+            >
+            ["at0003"] = <
+                text = <"Valutazione del rischio">
+                description = <"Valutazione del rischio per la salute.">
+                comment = <"Ci possono essere molteplici variazioni nella valutazione del rischio. Il tipo di dati Choice permette di registrare la valutazione come testo libero o come set di valori (come basso, medio o alto). Il tipo di dati proporzionali permette di registrare una percentuale, un rapporto o una frazione. Il tipo di dati quantitativi permette la registrazione di un numero decimale.">
+            >
+            ["at0004"] = <
+                text = <"Motivazione">
+                description = <"Giustificazione di questa valutazione del rischio.">
+                comment = <"I dati che possono essere aggiunti a questo elemento di dati possono includere informazioni sui sottogruppi di popolazione ecc. rispetto ai quali viene valutata la determinazione del rischio.">
+            >
+            ["at0011"] = <
+                text = <"Extension">
+                description = <"Informazioni aggiuntive necessarie per acquisire contenuti locali o per allinearsi con altri modelli/formalismi di riferimento.">
+                comment = <"Per esempio: requisiti informativi locali o metadati aggiuntivi per allinearsi con gli equivalenti FHIR o CIMI.">
+            >
+            ["at0012"] = <
+                text = <"Collegamento alle prove">
+                description = <"Identificazione del percorso dell'archetipo o del nodo dati per l'evidenza del rischio.">
+            >
+            ["at0013"] = <
+                text = <"Fattore di rischio">
+                description = <"Identificazione del fattore di rischio, per nome.">
+                comment = <"Per esempio: ipertensione e ipercolesterolemia, che può essere utilizzato come parte della valutazione globale per le malattie cardiovascolari; o un marcatore genetico. Codifica di 
+Fattore di rischio\" con una terminologia, ove possibile.">
+            >
+            ["at0014"] = <
+                text = <"Descrizione">
+                description = <"Descrizione narrativa del fattore di rischio.">
+            >
+            ["at0015"] = <
+                text = <"Commento">
+                description = <"Narrativa aggiuntiva sulla valutazione del rischio non catturata in altri campi.">
+            >
+            ["at0016"] = <
+                text = <"Fattori di rischio">
+                description = <"Dettagliati su ogni possibile fattore di rischio.">
+            >
+            ["at0017"] = <
+                text = <"Presenza">
+                description = <"Presenza del fattore di rischio.">
+            >
+            ["at0018"] = <
+                text = <"Presente">
+                description = <"Il fattore di rischio è stato identificato per questo individuo.">
+            >
+            ["at0019"] = <
+                text = <"Assente">
+                description = <"Il fattore di rischio non è stato identificato per questo individuo.">
+            >
+            ["at0020"] = <
+                text = <"Tipo di valutazione">
+                description = <"Raccordare se la valutazione del rischio è relativa o assoluta.">
+            >
+            ["at0021"] = <
+                text = <"Rischio relativo">
+                description = <"Rapporto di probabilità che si verifichi un evento o una condizione di salute rispetto ad una popolazione con caratteristiche simili, ad esempio la stessa età e lo stesso sesso.">
+            >
+            ["at0022"] = <
+                text = <"Rischio assoluto">
+                description = <"Rapporto di probabilità che un evento o una condizione di salute si verifichi rispetto alla popolazione nel suo complesso.">
+            >
+            ["at0023"] = <
+                text = <"Periodo di tempo">
+                description = <"Il periodo di tempo durante il quale il rischio previsto per la salute è rilevante.">
+                comment = <"Vale a dire: il rischio di incorrere nel \"rischio sanitario\" identificato nei prossimi <X> anni.">
+            >
+            ["at0024"] = <
+                text = <"Ultimo aggiornamento">
+                description = <"La data dell'ultimo aggiornamento di questa valutazione del rischio per la salute.">
+                comment = <"Questo elemento di dati può essere considerato ridondante se i dati sono registrati e memorizzati utilizzando COMPOSIZIONI all'interno di un sistema clinico chiuso. Tuttavia, se queste informazioni sono estratte dal suo contesto COMPOSIZIONE originale, per esempio, per essere incluse in un altro documento o messaggio, allora il contesto temporale viene effettivamente rimosso. Questo elemento di dati \"Ultimo aggiornamento\" è stato aggiunto esplicitamente per permettere che i dati temporali critici siano conservati accanto ai dati clinici in tutte le circostanze. Si presume che il sistema clinico possa copiare la data dal COMPOSIZIONE per ridurre la necessità di duplicare l'inserimento dei dati da parte del clinico. 
+
+Tradotto con www.DeepL.com/Translator (versione gratuita)">
+            >
+            ["at0025"] = <
+                text = <"Metodo di valutazione">
+                description = <"Identificazione dell'algoritmo o della linea guida utilizzata per effettuare la valutazione del rischio.">
+                comment = <"Per esempio: Calcolatore del rischio cardiovascolare Framingham.">
+            >
+            ["at0026"] = <
+                text = <"Indeterminato">
+                description = <"Non è possibile determinare se il fattore di rischio è presente o assente.">
+            >
+            ["at0027"] = <
+                text = <"Dettaglio">
+                description = <"Dettaglio strutturato su altri aspetti della valutazione dei fattori di rischio.">
+                comment = <"Per esempio: Prevalenza del fattore di rischio nei membri della famiglia.">
+            >
+            ["at0028"] = <
+                text = <"Mitigato">
+                description = <"Il fattore di rischio è stato identificato come presente, ma successivamente è stato mitigato da un trattamento o da un'indagine.">
+                comment = <"Registrare come True se il fattore di rischio è stato trattato o indagato e il rischio da questo fattore di rischio è considerato diminuito. Ad esempio: un neonato a cui viene somministrata la gentamicina in terapia intensiva neonatale è considerato a rischio di perdita permanente dell'udito. Se i test diagnostici non mostrano alcuna evidenza di perdita uditiva nel primo anno di vita, il rischio di perdita uditiva successiva è considerato molto ridotto, ma comunque possibile. Questo dato consente ai medici di affermare che il rischio è stato mitigato, ma dovrebbe essere considerato ancora possibile in futuro. In pratica, il fattore di rischio potrebbe essere mantenuto nella valutazione del rischio nel caso in cui possa avere un impatto sulla salute dell'individuo in un momento futuro, ma segnalando che il suo contributo al calcolo del rischio potrebbe non essere così grande come se non fosse stato precedentemente trattato o studiato. 
+
+Tradotto con www.DeepL.com/Translator (versione gratuita)">
+            >
+            ["at0029"] = <
+                text = <"Data identificazione rischio">
+                description = <"La data/ora in cui è stato individuato il fattore di rischio.">
+            >
+            ["at0030"] = <
+                text = <"Commento">
+                description = <"Narrativa aggiuntiva sul fattore di rischio non catturato in altri campi.">
+            >
+            ["at9017"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9015"] = <
+                text = <"Presenza (synthesised)">
+                description = <"Presenza del fattore di rischio. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Tipo di valutazione (synthesised)">
+                description = <"Raccordare se la valutazione del rischio è relativa o assoluta. (synthesised)">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Avaluació del risc sanitari">
+                description = <"Avaluació del potencial i probabilitat de futurs efectes adversos per a la salut segons els factors de risc identificats.">
+            >
+            ["at0002"] = <
+                text = <"Risc per la salut">
+                description = <"Identificació de la possible malaltia futura, condició o problema de salut per a la qual s'està avaluant el risc, pel seu nom.">
+                comment = <"Es prefereix la codificació del \"Risc per la salut\" amb una terminologia, sempre que sigui possible. El text lliure només s'ha d'utilitzar si no hi ha una terminologia adequada disponible. Per exemple: risc de malaltia cardiovascular, amb factors de risc d'hipertensió i hipercolesterolèmia.">
+            >
+            ["at0003"] = <
+                text = <"Avaluació del risc">
+                description = <"Avaluació del risc per a la salut.">
+                comment = <"Hi pot haver múltiples variacions en l'avaluació del risc. El tipus de dades d'elecció permet registrar l'avaluació com a text lliure o conjunts de valors (com ara baix, mitjà o alt). El tipus de dades de proporció permet registrar un percentatge, una proporció o una fracció. El tipus de dades de quantitat permet l'enregistrament d'un nombre decimal.">
+            >
+            ["at0004"] = <
+                text = <"Raó del risc">
+                description = <"Justificació per a aquesta avaluació de riscos.">
+                comment = <"Detalls que es poden afegir a aquest element de dades poden incloure informació sobre els subgrups de població, etc. contra els quals s'avalua la determinació del risc.">
+            >
+            ["at0011"] = <
+                text = <"Extensió">
+                description = <"Informació addicional requerida per capturar contingut local o per alinear-se amb altres models de referència/formalismes.">
+                comment = <"Per exemple, requisits d'informació local o metadades addicionals per alinear-se amb equivalents FHIR o CIMI.">
+            >
+            ["at0012"] = <
+                text = <"Enllaç a la prova">
+                description = <"Identificació de l'arquetip o node de dades per a l'evidència de risc.">
+            >
+            ["at0013"] = <
+                text = <"Factor de risc">
+                description = <"Identificació del factor de risc, pel seu nom.">
+                comment = <"Per exemple, la hipertensió i la hipercolesterolèmia, que es poden utilitzar com a part de l'avaluació global de les malalties cardiovasculars; o un marcador genètic. Codificació del \"factor de risc\" amb una terminologia, quan sigui possible.">
+            >
+            ["at0014"] = <
+                text = <"Descripció">
+                description = <"Descripció sobre el factor de risc.">
+            >
+            ["at0015"] = <
+                text = <"Comentari">
+                description = <"Informació addicional sobre l'avaluació del risc no capturada en altres camps.">
+            >
+            ["at0016"] = <
+                text = <"Factors de risc">
+                description = <"Detalls sobre cada possible factor de risc.">
+            >
+            ["at0017"] = <
+                text = <"Presència">
+                description = <"Presència del factor de risc.">
+            >
+            ["at0018"] = <
+                text = <"Present">
+                description = <"S'ha identificat el factor de risc per a aquest pacient.">
+            >
+            ["at0019"] = <
+                text = <"Absent">
+                description = <"No s'ha identificat el factor de risc per a aquest pacient.">
+            >
+            ["at0020"] = <
+                text = <"Tipus d'avaluació">
+                description = <"Registre de si l'avaluació de riscos és relativa o absoluta.">
+            >
+            ["at0021"] = <
+                text = <"Risc relatiu">
+                description = <"Ràtio de probabilitat que es produeixi un esdeveniment o condició de salut en comparació amb una població amb característiques similars, per exemple, la mateixa edat i sexe.">
+            >
+            ["at0022"] = <
+                text = <"Risc absolut">
+                description = <"Ràtio de probabilitat que es produeixi un esdeveniment o condició de salut en comparació amb la població en el seu conjunt.">
+            >
+            ["at0023"] = <
+                text = <"Període de temps">
+                description = <"El període durant el qual el risc de salut predit és rellevant.">
+                comment = <"És a dir, el risc d'experimentar el \"risc de salut\" identificat en els propers <X> anys.">
+            >
+            ["at0024"] = <
+                text = <"Darrera actualització">
+                description = <"La data en què es va actualitzar per última vegada aquesta avaluació de riscos per a la salut.">
+                comment = <"Aquest element de dades es pot considerar redundant si les dades es registren i emmagatzemen utilitzant composicions dins d'un sistema clínic tancat. No obstant això, si aquesta informació s'extreu del seu context de composició original, per exemple, per a ser inclosa en un altre document o missatge, llavors el context temporal s'elimina efectivament. Aquest element de dades 'Darrera actualització' s'ha afegit explícitament per permetre que les dades temporals crítiques es mantinguin al costat de les dades clíniques en totes les circumstàncies. S'assumeix que el sistema clínic pot copiar la data de la COMPOSICIÓ per reduir la necessitat de duplicació de l'entrada de dades per part del clínic.">
+            >
+            ["at0025"] = <
+                text = <"Mètode d'avaluació">
+                description = <"Identificació de l'algoritme o la guia utilitzada per fer l'avaluació del risc.">
+                comment = <"Per exemple, calculadora de risc cardiovascular de Framingham.">
+            >
+            ["at0026"] = <
+                text = <"Indeterminat">
+                description = <"No és possible determinar si el factor de risc està present o absent.">
+            >
+            ["at0027"] = <
+                text = <"Detalls">
+                description = <"Detall estructurat sobre altres aspectes de l'avaluació dels factors de risc.">
+                comment = <"Per exemple, prevalència del factor de risc en els membres de la família.">
+            >
+            ["at0028"] = <
+                text = <"Mitigat">
+                description = <"El factor de risc s'ha identificat com a present, però posteriorment s'ha mitigat mitjançant tractament o investigació.">
+                comment = <"Registrar com a cert si el factor de risc ha estat tractat o investigat i es considera que el risc d'aquest factor de risc es redueix. Per exemple: un nen amb gentamicina en cures intensives neonatals es considera que té un risc de pèrdua auditiva permanent. Si les proves diagnòstiques no mostren cap evidència de pèrdua auditiva en el primer any de vida, el risc de pèrdua auditiva posterior es considera molt reduït, però encara possible. Aquest element de dades permet als clínics dir que el risc s'ha mitigat, però encara s'ha de considerar com una possibilitat en el futur. En la pràctica, el factor de risc podria mantenir-se en l'avaluació de riscos en cas que pugui afectar la salut de l'individu en un moment futur, però assenyalant que la seva contribució al càlcul de riscos pot no ser tan gran com si no hagués estat tractat o investigat prèviament.">
+            >
+            ["at0029"] = <
+                text = <"Data d'identificació">
+                description = <"La data/hora en què es va identificar el factor de risc.">
+            >
+            ["at0030"] = <
+                text = <"Comentari">
+                description = <"Narrativa addicional sobre el factor de risc no recollida en altres camps.">
+            >
+            ["at9017"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+            ["ac9015"] = <
+                text = <"Presència (synthesised)">
+                description = <"Presència del factor de risc. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Tipus d'avaluació (synthesised)">
+                description = <"Registre de si l'avaluació de riscos és relativa o absoluta. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Evaluación del riesgo para la salud">
+                description = <"Evaluación del potencial y probabilidad de futuros efectos adversos para la salud en función de los factores de riesgo identificados.">
+            >
+            ["at0002"] = <
+                text = <"Riesgo para la salud">
+                description = <"Identificación de la posible enfermedad futura, condición o problema de salud para la que se está evaluando el riesgo, por su nombre.">
+                comment = <"Se prefiere la codificación del \"Riesgo para la salud\" con una terminología, siempre que sea posible. El texto libre sólo debe utilizarse si no existe una terminología adecuada disponible. Por ejemplo: riesgo de enfermedad cardiovascular, con factores de riesgo de hipertensión e hipercolesterolemia.">
+            >
+            ["at0003"] = <
+                text = <"Evaluación del riesgo">
+                description = <"Evaluación del riesgo para la salud.">
+                comment = <"Puede haber múltiples variaciones en la evaluación del riesgo. El tipo de datos de elección permite registrar la evaluación como texto libre o conjuntos de valores (como bajo, medio o alto). El tipo de datos de proporción permite registrar un porcentaje, proporción o fracción. El tipo de datos de cantidad permite la grabación de un número decimal.">
+            >
+            ["at0004"] = <
+                text = <"Razonamiento">
+                description = <"Justificación para esta evaluación de riesgos.">
+                comment = <"Detalles que pueden añadirse a este elemento de datos pueden incluir información sobre los subgrupos de población, etc. contra los que se evalúa la determinación del riesgo.">
+            >
+            ["at0011"] = <
+                text = <"Extensión">
+                description = <"Información adicional requerida para capturar contenido local o para alinearse con otros modelos de referencia/formalismos.">
+                comment = <"Por ejemplo, requisitos de información local o metadatos adicionales para alinearse con equivalentes FHIR o CIMI.">
+            >
+            ["at0012"] = <
+                text = <"Enlace a la prueba">
+                description = <"Identificación del arquetipo o nodo de datos para la evidencia de riesgo.">
+            >
+            ["at0013"] = <
+                text = <"Factor de riesgo">
+                description = <"Identificación del factor de riesgo, por su nombre.">
+                comment = <"Por ejemplo, la hipertensión y la hipercolesterolemia, que pueden utilizarse como parte de la evaluación global de las enfermedades cardiovasculares; o un marcador genético. Codificación del \"factor de riesgo\" con una terminología, cuando sea posible.">
+            >
+            ["at0014"] = <
+                text = <"Descripción">
+                description = <"Descripción sobre el factor de riesgo.">
+            >
+            ["at0015"] = <
+                text = <"Comentario">
+                description = <"Información adicional sobre la evaluación del riesgo no capturada en otros campos.">
+            >
+            ["at0016"] = <
+                text = <"Factores de riesgo">
+                description = <"Detalles sobre cada posible factor de riesgo.">
+            >
+            ["at0017"] = <
+                text = <"Presencia">
+                description = <"Presencia del factor de riesgo.">
+            >
+            ["at0018"] = <
+                text = <"Presente">
+                description = <"Se ha identificado el factor de riesgo para esa persona.">
+            >
+            ["at0019"] = <
+                text = <"Ausente">
+                description = <"No se ha identificado el factor de riesgo para esa persona.">
+            >
+            ["at0020"] = <
+                text = <"Tipo de evaluación">
+                description = <"Registro de si la evaluación de riesgos es relativa o absoluta.">
+            >
+            ["at0021"] = <
+                text = <"Riesgo relativo">
+                description = <"Ratio de probabilidad de que se produzca un evento o condición de salud en comparación con una población con características similares, por ejemplo, la misma edad y sexo.">
+            >
+            ["at0022"] = <
+                text = <"Riesgo absoluto">
+                description = <"Ratio de probabilidad de que se produzca un evento o condición de salud en comparación con la población en su conjunto.">
+            >
+            ["at0023"] = <
+                text = <"Periodo de tiempo">
+                description = <"El período durante el cual el riesgo de salud predicho es relevante.">
+                comment = <"Es decir, el riesgo de experimentar el \"riesgo de salud\" identificado en los próximos <X> años.">
+            >
+            ["at0024"] = <
+                text = <"Última actualización">
+                description = <"La fecha en la que se actualizó por última vez esta evaluación de riesgos para la salud.">
+                comment = <"Este elemento de datos puede considerarse redundante si los datos se registran y almacenan utilizando composiciones dentro de un sistema clínico cerrado. Sin embargo, si esa información se extrae de su contexto de composición original, por ejemplo, para ser incluida en otro documento o mensaje, entonces el contexto temporal se elimina efectivamente. Este elemento de datos 'Última actualización' se ha añadido explícitamente para permitir que los datos temporales críticos se mantengan junto a los datos clínicos en todas las circunstancias. Se asume que el sistema clínico puede copiar la fecha de la COMPOSITION para reducir la necesidad de duplicación de la entrada de datos por parte del clínico.">
+            >
+            ["at0025"] = <
+                text = <"Método de evaluación">
+                description = <"Identificación del algoritmo o la guía utilizada para realizar la evaluación del riesgo.">
+                comment = <"Por ejemplo, calculadora de riesgo cardiovascular de Framingham.">
+            >
+            ["at0026"] = <
+                text = <"Indeterminado">
+                description = <"No es posible determinar si el factor de riesgo está presente o ausente.">
+            >
+            ["at0027"] = <
+                text = <"Detalles">
+                description = <"Detalle estructurado sobre otros aspectos de la evaluación de los factores de riesgo.">
+                comment = <"Por ejemplo, prevalencia del factor de riesgo en los miembros de la familia.">
+            >
+            ["at0028"] = <
+                text = <"Mitigado">
+                description = <"El factor de riesgo se ha identificado como presente, pero posteriormente se ha mitigado mediante tratamiento o investigación.">
+                comment = <"Registrar como cierto si el factor de riesgo ha sido tratado o investigado y se considera que el riesgo de ese factor de riesgo se reduce. Por ejemplo: un niño con gentamicina en cuidados intensivos neonatales se considera que tiene un riesgo de pérdida auditiva permanente. Si las pruebas diagnósticas no muestran ninguna evidencia de pérdida auditiva en el primer año de vida, el riesgo de pérdida auditiva posterior se considera muy reducido, pero posible. Este elemento de datos permite a los clínicos decir que el riesgo se ha mitigado, pero todavía debe considerarse como una posibilidad en el futuro. En la práctica, el factor de riesgo podría mantenerse en la evaluación de riesgos en caso de que pueda afectar a la salud del individuo en un momento futuro, pero señalando que su contribución al cálculo de riesgos puede no ser tan grande como si no hubiera sido tratado o investigado previamente.">
+            >
+            ["at0029"] = <
+                text = <"Fecha de identificación">
+                description = <"La fecha/hora en la que se identificó el factor de riesgo.">
+            >
+            ["at0030"] = <
+                text = <"Comentario">
+                description = <"Narrativa adicional sobre el factor de riesgo no recogida en otros campos.">
+            >
+            ["at9017"] = <
+                text = <"Real calificado">
+                description = <"Real calificado">
+            >
+            ["ac9015"] = <
+                text = <"Presencia (synthesised)">
+                description = <"Presencia del factor de riesgo. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Tipo de evaluación (synthesised)">
+                description = <"Registro de si la evaluación de riesgos es relativa o absoluta. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9017"] = <http://openehr.org/id/380>
+        >
+        ["SNOMED-CT"] = <
+            ["at0018"] = <http://snomed.info/id/52101004>
+            ["at0019"] = <http://snomed.info/id/2667000>
+            ["at0026"] = <http://snomed.info/id/82334004>
+        >
+    >
+    value_sets = <
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0021", "at0022">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0018", "at0026", "at0019">
+        >
+    >

@@ -1,0 +1,207 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b851a462-7ac1-40d3-ab72-fa1007861ea5; build_uid=003e47c4-607a-4fee-abe5-310e869c4f2c)
+    openEHR-EHR-CLUSTER.catheter_cuff.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-05-04">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"87D4B132E2DCED763929D166CFA34B21">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere fysiske og funksjonelle egenskaper til en oppblåsbar mansjett eller ballong på et kateter eller tubulært medisinsk utstyr.">
+            use = <"Brukes for å registrere detaljer om en oppblåsbar mansjett eller ballongkomponent av et kateter eller lignende utstyr. Denne arketypen er designet for å brukes i CLUSTER.device_catheter-arketypen eller lignende arketyper for utstyrsegenskaper.
+
+Vanlige eksempler inkluderer endotrakealtubemansjetter, urinkateterballonger og trakeostomitubemansjetter.">
+            misuse = <"Skal ikke brukes for utstyr uten oppblåsbare mansjetter eller ballonger beregnet på å feste enheten.
+
+Skal ikke brukes til å dokumentere innsettingsutstyr, oppblåsingsprosedyrer eller prosedyretrinn; bruk ACTION.procedure i stedet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the physical and functional properties of an inflatable cuff or balloon on a catheter or tubular medical device.">
+            use = <"Use to record details about an inflatable cuff or balloon component of a catheter or similar device. This archetype is designed to be nested within the CLUSTER.device_catheter archetype or similar device property archetypes.
+
+Common examples include endotracheal tube cuffs, urinary catheter balloons, and tracheostomy tube cuffs.">
+            misuse = <"Not to be used for devices without inflatable cuffs or balloons intended to fixate the device.
+
+Not to be used to document insertion equipment, inflation procedures, or procedural steps; use ACTION.procedure instead.">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Catheter cuff/balloon
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0030] occurrences matches {0..1} matches {    -- Cuff type
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9000]}    -- Cuff type (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0033] occurrences matches {0..1} matches {    -- Cuff position
+                value matches {
+                    DV_CODED_TEXT[at9004] matches {
+                        defining_code matches {[ac9001]}    -- Cuff position (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0036] occurrences matches {0..1} matches {    -- Cuff capacity
+                value matches {
+                    DV_QUANTITY[at9005] matches {
+                        property matches {[at9002]}    -- Volume
+                        magnitude matches {|>=0.0|}
+                        units matches {"ml"}
+                    }
+                }
+            }
+            ELEMENT[at0037] occurrences matches {0..1} matches {    -- Inflation pressure range
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Kateter mansjett/ballong">
+                description = <"Detaljer om en oppblåsbar mansjett eller ballong på et kateter eller tubulært medisinsk utstyr.">
+            >
+            ["at0030"] = <
+                text = <"Mansjetttype">
+                description = <"Klassifiseringen av mansjetten basert på trykk- og volumkarakteristika.">
+            >
+            ["at0031"] = <
+                text = <"Høyt trykk/lavt volum (HPLV)">
+                description = <"En høyttrykk, lavvolum mansjettdesign.">
+            >
+            ["at0032"] = <
+                text = <"Lavt trykk/høyt volum (LPHV)">
+                description = <"En lavttrykk, høytvolum mansjettdesign.">
+            >
+            ["at0033"] = <
+                text = <"Mansjettposisjon">
+                description = <"Den anatomiske posisjonen på mansjetten på enheten.">
+            >
+            ["at0034"] = <
+                text = <"Proksimal">
+                description = <"Mansjetten er plassert nær innsettelsesenden av enheten.">
+            >
+            ["at0035"] = <
+                text = <"Distal">
+                description = <"Mansjetten er plassert bort fra innsettelsesenden av enheten.">
+            >
+            ["at0036"] = <
+                text = <"Mansjettkapasitet">
+                description = <"Volumet av luft eller væske som kreves for fullstendig oppblåsing av mansjetten.">
+            >
+            ["at0037"] = <
+                text = <"Oppblåsingstrykksområde">
+                description = <"Det anbefalte trykksområde for oppblåsing av mansjett.">
+                comment = <"For eksempel '20-30 cmH₂O'.">
+            >
+            ["at9002"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["ac9000"] = <
+                text = <"Mansjetttype (synthesised)">
+                description = <"Klassifiseringen av mansjetten basert på trykk- og volumkarakteristika. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Mansjettposisjon (synthesised)">
+                description = <"Den anatomiske posisjonen på mansjetten på enheten. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Catheter cuff/balloon">
+                description = <"Details about an inflatable cuff or balloon on a catheter or tubular medical device.">
+            >
+            ["at0030"] = <
+                text = <"Cuff type">
+                description = <"The classification of the cuff based on pressure and volume characteristics.">
+            >
+            ["at0031"] = <
+                text = <"High pressure/low volume (HPLV)">
+                description = <"A high-pressure, low-volume cuff design.">
+            >
+            ["at0032"] = <
+                text = <"Low pressure/high volume (LPHV)">
+                description = <"A low-pressure, high-volume cuff design.">
+            >
+            ["at0033"] = <
+                text = <"Cuff position">
+                description = <"The anatomical position of the cuff on the device.">
+            >
+            ["at0034"] = <
+                text = <"Proximal">
+                description = <"The cuff is located near the insertion end of the device.">
+            >
+            ["at0035"] = <
+                text = <"Distal">
+                description = <"The cuff is located away from the insertion end of the device.">
+            >
+            ["at0036"] = <
+                text = <"Cuff capacity">
+                description = <"The volume of air or fluid required to fully inflate the cuff.">
+            >
+            ["at0037"] = <
+                text = <"Inflation pressure range">
+                description = <"The recommended pressure range for cuff inflation.">
+                comment = <"For example: '20-30 cmH₂O'.">
+            >
+            ["at9002"] = <
+                text = <"Volume">
+                description = <"Volume">
+            >
+            ["ac9000"] = <
+                text = <"Cuff type (synthesised)">
+                description = <"The classification of the cuff based on pressure and volume characteristics. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Cuff position (synthesised)">
+                description = <"The anatomical position of the cuff on the device. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9002"] = <http://openehr.org/id/129>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0034", "at0035">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0031", "at0032">
+        >
+    >

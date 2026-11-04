@@ -1,0 +1,191 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=fcba2201-4d9f-404f-a7f2-54bd2f20e0a4; build_uid=97515a5b-8c76-4627-bbb5-24e1dbdb71af)
+    openEHR-EHR-OBSERVATION.self_test_result.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-04-11">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B80E64216FAF9E2907735CB59ADF0711">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the result of a diagnostic test performed on a specimen in a non-laboratory environment, including a self-test by the individual.">
+            keywords = <"home", "results">
+            use = <"To record the result of a simple diagnostic test performed on a specimen within a non-laboratory or non-clinical (POCT) environment, usually by an individual or their carer. 
+
+Use cases include, but are not limited to:
+- a urine pregnancy test;
+- home blood glucose monitoring; or
+- weekly INR self-testing.">
+            misuse = <"Not to be used to record the result of a test carried out in a laboratory or point of care test (POCT) setting - use the OBSERVATION.laboratory_test_result archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Self-test result
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0005] occurrences matches {1} matches {    -- Test name
+                                        value matches {
+                                            DV_TEXT[at9001]
+                                        }
+                                    }
+                                    ELEMENT[at0133] occurrences matches {0..1} matches {    -- Specimen
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                    ELEMENT[at0123] occurrences matches {0..1} matches {    -- Result
+                                        value matches {
+                                            DV_QUANTITY[at9003]
+                                            DV_CODED_TEXT[at9004] matches {
+                                                defining_code matches {[ac9000]}    -- Result (synthesised)
+                                            }
+                                            DV_TEXT[at9005]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0118] matches {    -- Multimedia representation
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.media_file(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                    ELEMENT[at0101] matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9006]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0132] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0130] occurrences matches {0..1} matches {    -- Fasting
+                                        value matches {
+                                            DV_BOOLEAN[at9007]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0004] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0121] occurrences matches {0..1} matches {    -- Method
+                        value matches {
+                            DV_TEXT[at9008]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0117] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    allow_archetype CLUSTER[at0134] matches {    -- Device
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Self-test result">
+                description = <"The result of a diagnostic test performed on a specimen in a non-laboratory environment.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0005"] = <
+                text = <"Test name">
+                description = <"Name of the test carried out on nvestigation performed on the specimen(s).">
+                comment = <"It is strongly recommended that 'Test name' be coded with a terminology, for example LOINC or SNOMED CT. For example: 'Glucometer blood sugar'; or 'COVID-19 rapid antigen test'. The name may sometimes include specimen type and/or patient state, such as 'Fasting glucometer blood sugar' or 'Oral COVID-19 RAT'.">
+            >
+            ["at0101"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the test result not captured in other fields.">
+            >
+            ["at0117"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0118"] = <
+                text = <"Multimedia representation">
+                description = <"Digital image, video or diagram representing the test result.">
+                comment = <"Multiple formats are allowed but they should represent equivalent clinical content.">
+            >
+            ["at0121"] = <
+                text = <"Method">
+                description = <"Description about the method used to carry out the test.">
+                comment = <"For example: manual finger prick. Coding with a terminology is desirable, where possible.">
+            >
+            ["at0123"] = <
+                text = <"Result">
+                description = <"">
+            >
+            ["at0124"] = <
+                text = <"Negative">
+                description = <"The test result is negative.">
+            >
+            ["at0127"] = <
+                text = <"Positive">
+                description = <"The test result is positive.">
+            >
+            ["at0128"] = <
+                text = <"Indeterminate">
+                description = <"It is not possible to tell if the test is positive or negative.">
+            >
+            ["at0130"] = <
+                text = <"Fasting">
+                description = <"">
+            >
+            ["at0133"] = <
+                text = <"Specimen">
+                description = <"Simple description about the specimen tested.">
+                comment = <"For example: nasal swab; blood; or urine.">
+            >
+            ["at0134"] = <
+                text = <"Device">
+                description = <"Description of the device used for carrying out the test.">
+                comment = <"For example: 'ACME pregnancy test'; or 'glucometer'.">
+            >
+            ["ac9000"] = <
+                text = <"Result (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0124", "at0127", "at0128">
+        >
+    >

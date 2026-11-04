@@ -1,0 +1,187 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=2253ddf7-db00-3164-b57f-315b18b0c0dc; build_uid=15cde6e0-3850-462a-a533-a2ff8a2e5c05)
+    openEHR-EHR-CLUSTER.hip_arthroplasty_component.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics, UK">
+        ["email"] = <"ian.mcnicoll@freshEHR.com">
+        ["date"] = <"2014-03-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Ian McNicoll, ian.mcnicoll@freshEHR.com">
+        ["MD5-CAM-1.0.1"] = <"9DD425AC9CD5626FFDBFE158A3D08A34">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record additional details of a hip arthropasty component.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Hip arthroplasty component
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0008] matches {    -- Material
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Size
+                value matches {
+                    DV_QUANTITY[at9004] matches {
+                        property matches {[at9002]}    -- Length
+                        magnitude matches {|0.0..20.0|}
+                        units matches {"mm"}
+                        precision matches {1}
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Cement name
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- HA-Coating
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Depth of cement
+                value matches {
+                    DV_QUANTITY[at9005] matches {
+                        property matches {[at9002]}    -- Length
+                        magnitude matches {|>=0.0|}
+                        units matches {"mm"}
+                    }
+                }
+            }
+            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Fixation type
+                value matches {
+                    DV_CODED_TEXT[at9009] matches {
+                        defining_code matches {[ac9008]}    -- Fixation type (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Fixation sub-type
+                value matches {
+                    DV_TEXT[at9010]
+                }
+            }
+            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Tesla level
+                value matches {
+                    DV_COUNT[at9011] matches {
+                        magnitude matches {|0..5|}
+                    }
+                }
+            }
+            ELEMENT[at0010] matches {    -- Potential safety issue
+                value matches {
+                    DV_TEXT[at9007]
+                }
+            }
+            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Manufacturer safety information
+                value matches {
+                    DV_URI[at9008]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Antibacterial in cement?
+                value matches {
+                    DV_BOOLEAN[at9006]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Hip arthroplasty component">
+                description = <"Additional details of hip arthropasty component.">
+            >
+            ["at0002"] = <
+                text = <"Cement name">
+                description = <"The name of the cement used.">
+            >
+            ["at0005"] = <
+                text = <"HA-Coating">
+                description = <"The name of the coating used.">
+            >
+            ["at0006"] = <
+                text = <"Depth of cement">
+                description = <"The depth of cement applied.">
+            >
+            ["at0007"] = <
+                text = <"Antibacterial in cement?">
+                description = <"True if antibiotics/antibacterials were added to the cement.">
+            >
+            ["at0008"] = <
+                text = <"Material">
+                description = <"The material  used in the manufacture of the arthroplasty component.">
+            >
+            ["at0009"] = <
+                text = <"Size">
+                description = <"The size of the component.">
+            >
+            ["at0010"] = <
+                text = <"Potential safety issue">
+                description = <"Issues identified or excluded that may have a safety impact e.g MRI risk.">
+            >
+            ["at0011"] = <
+                text = <"Manufacturer safety information">
+                description = <"Link to manufacturer safety information.">
+            >
+            ["at0012"] = <
+                text = <"Fixation type">
+                description = <"The type of fixation used.">
+            >
+            ["at0013"] = <
+                text = <"Fixation sub-type">
+                description = <"The fixation sub-type.">
+            >
+            ["at0014"] = <
+                text = <"Cemented">
+                description = <"Cemented.">
+            >
+            ["at0015"] = <
+                text = <"Non-cemented">
+                description = <"Non-cemented.">
+            >
+            ["at0016"] = <
+                text = <"Tesla level">
+                description = <"The tested MRI Tesla safety level.">
+            >
+            ["at9002"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac9008"] = <
+                text = <"Fixation type (synthesised)">
+                description = <"The type of fixation used. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9002"] = <http://openehr.org/id/122>
+        >
+    >
+    value_sets = <
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0014", "at0015">
+        >
+    >

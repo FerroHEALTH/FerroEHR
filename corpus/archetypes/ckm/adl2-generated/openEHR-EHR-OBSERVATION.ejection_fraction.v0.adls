@@ -1,0 +1,226 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b1d28202-b67f-4b6b-b687-3b2ed6a1b9f6; build_uid=58a4e5f2-78b3-4cd2-9f22-80e3bff1d0c3)
+    openEHR-EHR-OBSERVATION.ejection_fraction.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Alina Rehberg">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"rehberg.alina@mh-hannover.de">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-01-29">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"3F599DCC940FB904615E85371C64F7DA">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Dokumentation der berechneten Ejektionsfraktion aus einer Kammer im Körper.">
+            keywords = <"Ejektionsfraktion", "Ejektion", "Auswurffraktion", "Fraktion", "ef">
+            use = <"Zur Darstellung der berechneten Ejektionsfraktion aus einer Kammer im Körper. Es kann verwendet werden, um die Effizienz der Kontraktion der Vorhöfe und Ventrikel des Herzens, der Gallenblase oder der Beinvenen abzuschätzen.
+
+Die Volumenmessungen wird dokumentiert.
+
+Messungen der Ejektionsfraktion für dieselbe Kammer, jedoch mit unterschiedlichen Modalitäten, sind nicht austauschbar.">
+            misuse = <"Nicht zur Darstellung der Ejektionsfraktion für die linke Herzkammer zu verwenden - verwenden Sie zu diesem Zweck den spezielle Archetyp OBSERVATION.ejection_fraction-left_ventricule.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the calculated ejection fraction from a chamber in the body.">
+            keywords = <"ejection", "fraction", "ef">
+            use = <"Use to record the calculated ejection fraction from a chamber in the body. It can used to estimate the efficiency of contraction of the atria and ventricles of the heart, gall bladder, or leg veins.
+
+The volume measurements will be recorded 
+
+Measurements of ejection fraction for the same chamber, but by different modalities, are not interchangeable.">
+            misuse = <"Not to be used to record the ejection fraction for the left ventricle - use the specialised archetype OBSERVATION.ejection_fraction-left_ventricule for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Ejection fraction
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Chamber
+                                        value matches {
+                                            DV_TEXT[at9001]
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Specific site
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {1} matches {    -- Ejection fraction
+                                        value matches {
+                                            DV_QUANTITY[at9003] matches {
+                                                property matches {[at9000]}    -- Proportion
+                                                magnitude matches {|0.0..100.0|}
+                                                units matches {"%"}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0007] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9004]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0009] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Modality
+                        value matches {
+                            DV_TEXT[at9005]
+                        }
+                    }
+                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Equation
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0012] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Ejektionsfraktion">
+                description = <"Die Berechnung des volumetrischen Anteils des Flüssigkeitsvolumens, das aus einer Kammer ausgestoßen wird, wenn sie sich zusammenzieht.">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardwert, ein undefinierter/s Zeitpunkt oder Intervallereignis, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Kammer">
+                description = <"Das Organ oder der Teil des Organs, in dem die Volumina gemessen wurden.">
+                comment = <"Zum Beispiel: Vorhof; linke Herzkammer; Gallenblase; Beinvene">
+            >
+            ["at0005"] = <
+                text = <"Spezifische Seite">
+                description = <"Spezifische anatomische Lokalisierung der Volumenmessungen, wenn die Identifizierung der \"Kammer\" nicht ausreicht.">
+                comment = <"Zum Beispiel: Identifizierung von bestimmten Beinvenen.">
+            >
+            ["at0006"] = <
+                text = <"Ejektionsfraktion">
+                description = <"Der berechnete volumetrische Anteil auf der Grundlage von Volumenmessungen, die an der identifizierten Kammer oder spezifischen Stelle vorgenommen wurden.">
+            >
+            ["at0008"] = <
+                text = <"Störfaktoren">
+                description = <"Probleme oder Faktoren, die sich auf die Berechnung der Ejektionsfraktion auswirken können und in anderen Feldern nicht erfasst werden.">
+            >
+            ["at0010"] = <
+                text = <"Modalität">
+                description = <"Die Modalität, die zur Messung des Volumens der Ejektionsfraktion verwendet wird.">
+                comment = <"Zum Beispiel: Echokardiographie, MRT oder nuklearmedizinische Untersuchung. Messungen mit verschiedenen Modalitäten sind in der Regel nicht austauschbar.">
+            >
+            ["at0011"] = <
+                text = <"Gleichung">
+                description = <"Die Gleichung, die zur Berechnung der Ejektionsfraktion verwendet wird.">
+            >
+            ["at0012"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+            ["at9000"] = <
+                text = <"* Proportion (en)">
+                description = <"* Proportion (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Ejection fraction">
+                description = <"The calculation of the volumetric fraction of fluid volume ejected from a chamber when it contracts.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Chamber">
+                description = <"The organ or part of organ where the volumes were measured.">
+                comment = <"For example: atrium; left ventricle; gall bladder; leg vein">
+            >
+            ["at0005"] = <
+                text = <"Specific site">
+                description = <"Specific anatomical location of volume measurements when identification of the 'Chamber' is not sufficient.">
+                comment = <"For example: identification of specific leg veins.">
+            >
+            ["at0006"] = <
+                text = <"Ejection fraction">
+                description = <"The calculated volumetric fraction based on volume measurements taken from the identified chamber or specific site.">
+            >
+            ["at0008"] = <
+                text = <"Confounding factors">
+                description = <"Issues or factors that may impact on the calculation of ejection fraction, not captured in other fields.">
+            >
+            ["at0010"] = <
+                text = <"Modality">
+                description = <"The modality used to measure the ejection fraction volumes.">
+                comment = <"For example: echocardiography; MRI; or nuclear medicine scan. Measurements by different modalities are usually not interchangeable.">
+            >
+            ["at0011"] = <
+                text = <"Equation">
+                description = <"The equation used to calculate the ejection fraction.">
+            >
+            ["at0012"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at9000"] = <
+                text = <"Proportion">
+                description = <"Proportion">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/507>
+        >
+    >

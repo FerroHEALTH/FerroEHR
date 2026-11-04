@@ -1,0 +1,402 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=48c573e7-e5bc-4fe4-af1d-0e93f8e7aa4a; build_uid=fc2cf5d1-34d8-45fc-8b72-fa5549e51aeb)
+    openEHR-EHR-CLUSTER.inspired_oxygen.v1.0.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Jasmin Buck, Sebastian Garde, Alina Rehberg">
+                ["organisation"] = <"University of Heidelberg, Central Queensland University, Medizinische Hochschule Hannover">
+                ["email"] = <"rehberg.alina@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Erik Sundvall">
+                ["organisation"] = <"Region Östergötland + Linköping University">
+                ["email"] = <"erik.sundvall@regionostergotland.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Lars Bitsch-Larsen, Vebjørn Arntzen">
+                ["organisation"] = <"Haukeland University Hospital of Bergen / Oslo University Hospital, Norway">
+            >
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Dr. Leonardo Der Jachadurian">
+                ["organisation"] = <"Bitios.com">
+            >
+            accreditation = <"Medical Doctor (Internal Medicine Specialist)">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"2009-06-08">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Tomas Alme, DIPS ASA, Norway", "Nadim Anani, Karolinska Institutet, Sweden", "Vebjørn Arntzen, Oslo University Hospital, Norway", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Marcus Baw, openGPSoC / BawMedical Ltd, United Kingdom", "Ivar Berge, Oslo Universitetssykehus, Norway", "Kristian Berg, Vestvågøy kommune - Fagutviklingsavdelingen, Norway", "SBhusan Bhattacharyya, Sudisa Consultancy Services, India", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Marja Buur, Medisch Centrum Alkmaar, Netherlands", "Gregory Caulton PatientOS Inc., USA", "Bjørn Christensen, Helse Bergen HF, Norway", "Stig Erik Hegrestad, Helse Førde, Norway", "Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway", "Sebastian Garde, Ocean Informatics, Germany", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)", "Heather Grain, Llewelyn Grain Informatics, Australia", "Cecilie Graver, Oslo universitetssykehus HF, Norway", "Anne Harbison, CPCER, Australia", "Sam Heard, Ocean Informatics, Australia", "Annette Hole Sjøborg, DIPS ASA, Norway", "Hilde Hollås, DIPS ASA, Norway", "Omer Hotomargolu,, Turkey", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Sundarasan Jaganathan NHS Scotland, United Kingdom", "Andrew James, University of Toronto, Canada", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Shinji Kobayashi, Kyoto University, Japan", "Heather Leslie, Ocean Health Systems, Australia (openEHR Editor)", "Marit Ludvigsen, St Olavs Hospital, Norway", "Siv Marie Lien, DIPS ASA, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Bjoern Naess, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Anne Pauline Anderssen, Helse Nord RHF, Norway", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Ingrid Skard, Edproof, Norway", "Rafa Sotoca, Spanish Ministry of Health, Spain", "Roy Støle, OUS, Norway", "Tesfay Teame, Folkehelseinstituttet, Norway", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Stian Torleif Varpe, Helse Bergen, Norway", "Karl Trygve Kalleberg, Oslo Universitetssykehus, Norway", "Marc Twagirumukiza, Agfa HealthCare, Belgium", "Gro-Hilde Ulriksen, Norwegian center for ehealthresearch, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Oxygen therapy. In: Wikipedia, the free encyclopedia [Internet]. 2015 [cited 2015 Dec 4]. Available from: https://en.wikipedia.org/w/index.php?title=Oxygen_therapy&oldid=689103828">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"FD258D2DF9BB47912DE45DD61C7DFC12">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Dokumentation der Sauerstoffmenge in der Luft, die die Person zum Zeitpunkt der Beobachtung einatmet oder die Sauerstoffmenge, die als Teil einer Behandlung verabreicht werden soll.
+einer Anordnung">
+            keywords = <"Atmung", "Sauerstoff", "Luft", "Beatmung", "Respiration", "Flussrate", "Therapie", "O2", "O₂", "PaO2", "FiO2">
+            use = <"Diesen Archetypen innerhalb eines INSTRUCTION-Archetyps zur Angabe einer Behandlung mit Sauerstoffs, innerhalb eines ACTION-Archetyps zur Aufzeichnung der durchgeführten Sauerstofftherapie oder innerhalb eines OBSERVATION-Archetyps wie Blutgase oder Atmung als Teil des Patientenzustands, bei dem die Kenntnis des Luftsauerstoffstatus für die Interpretation der Beobachtung entscheidend ist.
+
+Der SLOT \"Details zur Sauerstoffzufuhr\" kann verwendet werden, um zusätzliche strukturierte Informationen über die Sauerstoffzufuhr zu spezifizieren, z.B. Befeuchtung oder assistierte Beatmung. Dies ist dann relevant, wenn ein OBSERVATION-Archetyp auf der obersten Ebene gibt, wo dieser Archetyp verschachtelt ist, z.B. OBSERVATION.indirect_oximetry. In anderen Anwendungsfällen in denen die Sauerstoffzufuhr selbst das Konzept ist, z.B. bei einem Archetyp über mechanische Beatmung, ist dieser Archetyp sinnvoll, um die Sauerstoffmenge zu erfassen, die die Person empfängt.
+
+Der Archetyp kann auch bei der Berechnung des Verhältnisses FiO₂/PaO₂, zusätzlich zu anderen Algorithmen in der Intensivmedizin z.B. dem Sauerstoff-Extraktionsverhältnis usw. verwendet werden
+
+Sofern nicht anders angegeben, wird angenommen, dass der Luftdruck dem Durck auf Meereshöhe entspricht. 
+
+Wo nicht ausdrücklich angegeben, können die Werte O₂, FiO₂ von 0,21 und die Sauerstoffdurchflussrate von Null angenommen werden.
+
+'Eingeatmeter Sauerstoff' impliziert die Sauerstoffmenge, die verordnet oder verabreicht wurde und normalerweise in den klinischen Aufzeichnungen angegeben wird, z.B. \"der Patient ist auf 30% Sauerstoff\" und ist nicht dazu gedacht die tatsächliche \"physiologische\" Sauerstoffmenge, die der Patient erhält, zu erfassen, die je nach Verabreichungsmethode und anderen äußeren Bedingungen variiert, wie z.B. ob die Person flach atmet oder häufig die Nasensonde entfernt.">
+            misuse = <"Nicht zur Darstellen von anderen eingeatmeten Gasen wie Distickstoffoxid verwenden.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Andel administrerad eller ordinerad syrgas i inandningsluft.">
+            keywords = <"andning", "oxygen", "syre", "syrgas", "luft", "respiration", "flöde", "flödeshastighet", "syrgastillförsel", "syrgasbehandling", "O2", "O₂", "FiO2">
+            use = <"Kan användas i INSTRUCTION-arketyper för att specificera ordination av syrgas, i ACTION-arketyper för att registrera syrgasbehandling. 
+Kan även användas i OBSERVATION-arketyper (exempelvis Andning) som del av patientens tillstånd (state) när kunskap om syrgaskoncentration är viktig för att kunna tolka observationen.
+
+Fältet \"Detaljer om administrationssätt\" kan användas för att ange strukturerad information om syretillförseln, exempelvis befuktning eller assisterad ventilation. Detta är relevant om det finns en OBSERVATION-arketyp på toppnivå där den här arketypen är inkapslad, exempelvis Pulsoximetri (OBSERVATION.pulse_oximetry). I andra användningsfall, där själva syretillförseln är begreppet i fokus, till exempel en arketyp om mekanisk ventilation, kan denna arketyp att vara användbar för att registrera mängden syre som individen får.
+
+Kan även användas vid beräkning av förhållandet FiO₂/PaO₂, i tillägg till andra algoritmer inom intensivvård, exempelvis syreextraktionskvot.
+
+Atmosfärstrycket antas motsvara trycket vid havsnivån, om inget annat anges.
+
+Om inget annat anges så antas värden på 21% O₂, FiO₂ på 0,21 och syrgasflöde på noll liter per minut antas.
+
+\"Inandad syrekoncentration\" innebär mängden syre som har ordinerats eller administrerats som normalt registreras i patientjournal t.ex. \"patienten är på 30% syre\" och är inte avsedd att fånga den faktiska \"fysiologiska\" mängden syre som patienten får, vilket kan variera beroende på administrationssätt och andra yttre förhållanden, till exempel om personen andas ytligt eller är tar ofta bort näsgrimman.">
+            misuse = <"Använd ej för andra gaser, exempelvis lustgas.">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Para registrar la cantidad de oxígeno administrada al sujeto en el momento de la observación. Se asumen valores de 21% de O2, FiO2 de 0,21 y velocidad de flujo de oxígeno de cero.">
+            keywords = <"respirando", "oxígeno", "ambiental", "FiO2">
+            use = <"Puede ser usado dentro de un arquetipo ACTION para especificar oxígenoterapia o dentro de arquetipos OBSERVATION tales como Gases arteriales o Respiraciones, como parte del estado del paciente, donde el conocimiento de la concentración de oxígeno ambiental es crítica para la interpretación de la observación.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For registrering av andel oksygen tilgjengelig i den luften pasienten innånder på observasjonstidspunktet, eller mengden oksygen som skal gis dersom registreringen er del av en forordning.">
+            keywords = <"pusting", "respirasjon", "luft", "oksygen", "O2", "innpust", "inspirasjon", "FiO2", "oksygentilførsel", "ånding", "O₂", "PaO2">
+            use = <"Brukes i en INSTRUCTION-arketype for å spesifisere en oksygenforordning, i en ACTION-arketype for å dokumentere oksygenterapi utført, eller i en OBSERVATION-arketype, som for eksempel \"Oksimetri\" eller \"Åndedrett\" som en del av pasientstatus, hvor kunnskap om eventuell oksygentilførsel er kritisk for tolking av observasjonen.
+
+SLOT'et \"Detaljer om administrasjonsmåte\" kan bli brukt til å legge til ytterligere strukturert informasjon om administrasjon av oksygen, for eksempel om det er med luftfukting eller mekanisk ventilering. Dette vil være relevant om det er en OBSERVATION-arketype på toppnivå der denne arketypen er nøstet, for eksempel OBSERVATION.indirect_oximetry. I andre brukstilfeller, der oksygentilførsel i seg selv er konseptet, for eksempel i en arketype som omhandler respiratorbehandling, vil denne arketypen være nyttig for å registrere mengden oksygen individet får tilført.
+
+Brukes også i kalkulasjoner av FiO₂/PaO₂-ratio i tillegg til andre algoritmer, som for eksempel oksygenekstrasjonsratio, etc.
+
+Atmosfærisk trykk er antatt å være tilsvarende som ved havoverflaten, dersom det ikke er nærmere angitt.
+
+Hvis det ikke er angitt nærmere og ingen ekstra oksygentilførsel er gitt, kan det antas at individet er i omgivelser der det er 21% O₂, FiO₂ er 0.21.
+
+Selv om konseptnavnet i denne arketypen er \"Innåndet oksygen\" betyr det ikke at individet nødvendigvis puster inn den mengden oksygen/oksygenblanding som er ordinert eller gitt. 
+ For eksempel kan det være rapportert i kliniske journaler at \"pasienten får 3 liter O₂ på nesekateter\". Den faktisk innpustede oksygenblandingen vil variere med administrasjonsmåte eller andre utenomforliggende faktorer, for eksempel om individet puster overfladisk eller til stadighet fjerner nesekateter.">
+            misuse = <"Skal ikke brukes for andre innpustede gasser, som for eksempel nitrogenoksid.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the amount of oxygen available in the air the subject inspires at the time of observation, or the amount of oxygen that is to be delivered, if part of an order.">
+            keywords = <"breathing", "oxygen", "air", "respiration", "flow rate", "therapy", "O2", "O₂", "PaO2", "FiO2">
+            use = <"Use within an INSTRUCTION archetype to specify an order of oxygen, in an ACTION archetype to record performed oxygen therapy, or within OBSERVATION archetypes such as Blood gases or Respirations, as part of patient state, where knowledge of ambient oxygen status is critical to interpretation of the observation.
+
+The SLOT 'Oxygen delivery detail' can be used to specify additional structured information on the oxygen delivery, for example humidification or assisted ventilation. This will be relevant when there is an OBSERVATION archetype at top level, where this archetype is nested, for example OBSERVATION.pulse_oximetry. In other use cases, where the oxygen delivery itself is the concept, for example an archetype about mechanical ventilation, this archetype will be useful to record the amount of oxygen the individual is receiving.
+
+Also use in calculation of FiO₂/PaO₂ ratio, in addition to other algorithms in intensive care medicine, for example oxygen extraction ratio, etc.
+
+Atmospheric pressure is assumed to equivalent to sea-level pressure, unless otherwise specified.
+
+Where not specifically recorded values of 21% O₂, FiO₂ of 0.21 and oxygen flow rate of zero may be assumed.
+
+'Inspired oxygen' implies the amount of oxygen that was ordered or actioned, and normally reported in clinical records e.g.' the patient is on 30% Oxygen' and is not intended to capture the actual 'physiological' amount of oxygen that the patient receives, which will vary depending on the delivery method and other external conditions, such as whether the individual is breathing shallowly or is frequently removing the nasal prongs.">
+            misuse = <"Do not use for other inhaled gases such as nitrous oxide.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Inspired oxygen
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0051] occurrences matches {0..1} matches {    -- Flow rate
+                value matches {
+                    DV_QUANTITY[at9001] matches {
+                        property matches {[at9000]}    -- Flow rate, volume
+                        [magnitude, units, precision] matches {
+                            [{|0.0..50000.0|}, {"ml/min"}, {2}],
+                            [{|0.0..50.0|}, {"l/min"}, {2}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0052] occurrences matches {0..1} matches {    -- FiO₂
+                value matches {
+                    DV_PROPORTION[at9002] matches {
+                        numerator matches {|0.0..1.0|}
+                        type matches {1}
+                    }
+                }
+            }
+            ELEMENT[at0053] occurrences matches {0..1} matches {    -- Percent O₂
+                value matches {
+                    DV_PROPORTION[at9003] matches {
+                        numerator matches {|0.0..100.0|}
+                        type matches {2}
+                    }
+                }
+            }
+            ELEMENT[at0057] occurrences matches {0..1} matches {    -- On air
+                value matches {
+                    DV_BOOLEAN[at9004]
+                }
+            }
+            ELEMENT[at0054] matches {    -- Method of oxygen delivery
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            allow_archetype CLUSTER[at0058] matches {    -- Oxygen delivery detail
+                include
+                    archetype_id/value matches {/.*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Eingeatmeter Sauerstoff">
+                description = <"Die Sauerstoffmenge, die dem Patienten als Fraktion, als Prozentsatz oder indirekt als Flussrate verabreicht wird oder verabreicht werden soll.
+
+">
+            >
+            ["at0051"] = <
+                text = <"Flussrate">
+                description = <"Sauerstoffflussrate, die einer Person gegeben wird.">
+                comment = <"Zum Beispiel '5 l/min'.">
+            >
+            ["at0052"] = <
+                text = <"FiO₂">
+                description = <"Anteil des Sauerstoffs in der eingeatmeten Luft.">
+                comment = <"Zum Beispiel: '0.28'.">
+            >
+            ["at0053"] = <
+                text = <"Prozent O₂">
+                description = <"Prozentualer Anteil des Sauerstoffs in der eingeatmeten Luft.">
+                comment = <"Zum Beispiel: '24 %'">
+            >
+            ["at0054"] = <
+                text = <"Methode der Sauerstoffzufuhr">
+                description = <"Die benutzte Methode mit der Sauerstoff zugeführt wird.">
+                comment = <"Nur zur Erfassung einfacher Beschreibungen/Begriffe gedacht, z.B.: 'Nasensonde'. Der Slot 'Details zur Sauerstoffzufuhr' kann für detailliertere oder komplexere Erfassung verwendet werden.">
+            >
+            ["at0057"] = <
+                text = <"On air">
+                description = <"Der Patient erhält Luft, entsprechend 21% O₂ oder 0,21 FiO₂ und eine Sauerstoff-Flussrate von 0 Liter pro Minute.">
+                comment = <"Wenn \"On air\" auf \"true\" gesetzt ist, sollten die Flussrate, FiO₂ und Prozent O₂ nicht aufgezeichnet werden. Umgekehrt sollte 'On air' weggelassen werden, wenn Durchflussrate, FiO₂ oder Prozent O₂ aufgezeichnet werden.">
+            >
+            ["at0058"] = <
+                text = <"Details zur Sauerstoffzufuhr">
+                description = <"Weitere Details über die Methode der Sauerstoffzufuhr.">
+                comment = <"Zum Beispiel Details der Befeuchtung oder der assistierten Beatmung.">
+            >
+            ["at9000"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Inandad syrgas">
+                description = <"Mängden syre som ges eller ordineras till patienten, angivet som andel, procent, eller indirekt som syrgasflöde.">
+            >
+            ["at0051"] = <
+                text = <"Syrgasflöde">
+                description = <"Syrgasflöde (flödeshastighet) som ges till en individ.">
+                comment = <"Exempelvis \"5 l/min\"">
+            >
+            ["at0052"] = <
+                text = <"FiO₂">
+                description = <"Andel syre i inandningsluften.">
+                comment = <"Exempelvis \"0.28\"">
+            >
+            ["at0053"] = <
+                text = <"Procent O₂">
+                description = <"Procentandel syre i inandningsluften.">
+                comment = <"Exempelvis \"24%\"">
+            >
+            ["at0054"] = <
+                text = <"Administrationssätt för syrgas">
+                description = <"Metoden för att ge (administrera) syrgasen.">
+                comment = <"Avsett för att registrera enkla beskrivningar, exempelvis \"näsgrimma\". Om mer detaljerad beskrivning krävs så kan fältet \"Detaljer om administrationssätt\" (ett \"archetype SLOT\") användas .
+">
+            >
+            ["at0057"] = <
+                text = <"På luft">
+                description = <"Patienten andas vanlig luft, motsvarande 21% O₂ eller 0.21 FiO₂ eller syrgasflöde 0 liter per minut">
+                comment = <"Om \"på Luft\" är valt (sant) så ska varken syrgasflöde, procent O₂ eller FiO₂ anges. Omvänt gäller att \"på Luft\" ej ska anges om syrgasflöde, procent O₂ eller FiO₂ anges.">
+            >
+            ["at0058"] = <
+                text = <"Detaljer om administrationssätt">
+                description = <"Ytterligare detaljer om administrationssätt för syrgas.">
+                comment = <"Exempelvis detaljer om befuktning eller assisterad ventilation.">
+            >
+            ["at9000"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"*Inspired oxygen(en)">
+                description = <"*The amount of oxygen being delivered, or to be delivered, to the patient.(en)">
+            >
+            ["at0051"] = <
+                text = <"*Oxygen flow rate(en)">
+                description = <"*Flow rate of inspired oxygen.(en)">
+                comment = <"*For example '5l/min'.(en)">
+            >
+            ["at0052"] = <
+                text = <"*FiO2(en)">
+                description = <"*Fraction of inspired oxygen.(en)">
+                comment = <"*For example: '0.28'.(en)">
+            >
+            ["at0053"] = <
+                text = <"*Percent O2(en)">
+                description = <"*Percentage of inspired oxygen.(en)">
+                comment = <"*For example: '24%'(en)">
+            >
+            ["at0054"] = <
+                text = <"*Method of oxygen delivery(en)">
+                description = <"*The method used to delivery the oxygen.(en)">
+                comment = <"*Intended to capture only simple description / terms, for example: 'nasal prongs'. The 'Oxygen delivery detail' slot may be used for more detailed or complex recording.  (en)">
+            >
+            ["at0057"] = <
+                text = <"*On air(en)">
+                description = <"*The patient is receiving air, equivalent to 21% O2, 0.21 FiO2 and an oxygen flow rate  of 0.(en)">
+                comment = <"*Where 'On air' is set to true, Oxygen flow rate, FiO2 and Percent O2 should not be recorded. Conversely 'On air'should omitted if Oxygen flow rate, FiO2 or Percent O2 are recorded.(en)">
+            >
+            ["at0058"] = <
+                text = <"*Oxygen delivery detail(en)">
+                description = <"*Further details of the method of oxygen delivery.(en)">
+                comment = <"*For example, details of assisted ventilation (CPAP etc), tubing, humidification.(en)">
+            >
+            ["at9000"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Innåndet oksygen">
+                description = <"Andel administrert eller forordnet oksygen, angitt i fraksjon, prosent eller indirekte som flow.
+">
+            >
+            ["at0051"] = <
+                text = <"Flow">
+                description = <"Oksygenflow gitt til et individ.">
+                comment = <"For eksempel '5 l/min'.">
+            >
+            ["at0052"] = <
+                text = <"FiO₂">
+                description = <"Fraksjonen av oksygen i inspirasjonsluft.">
+                comment = <"For eksempel \"0,28\".">
+            >
+            ["at0053"] = <
+                text = <"Prosent O₂">
+                description = <"Prosent av oksygen i inspirasjonsluft.">
+                comment = <"For eksempel \"24 %\".">
+            >
+            ["at0054"] = <
+                text = <"Administrasjonsmåte for oksygen">
+                description = <"Administrasjonsmåter for oksygenet.">
+                comment = <"Hensikten er å registrere enkle beskrivelser, for eksempel 'nesekateter'. Skal mer detaljer registreres, skal SLOT'et \"Detaljer om administrasjonsmåte\" brukes.">
+            >
+            ["at0057"] = <
+                text = <"På romluft">
+                description = <"Individet får luft som tilsvarer 21 % O₂ (alternativt 0.21 FiO₂) og en oksygenflow på 0 liter per minutt.">
+                comment = <"Hvis \"På romluft\" er satt som Sann, bør ikke Flow, FiO₂ og Prosent O₂ registreres. Motsatt: \"På romluft\" bør være uutfyllt eller satt til Usann, dersom FiO₂ eller Prosent O₂ er registrert.">
+            >
+            ["at0058"] = <
+                text = <"Detaljer om administrasjonsmåte">
+                description = <"Ytterligere detaljer om administrasjonsmåter for oksygentilførselen.">
+                comment = <"For eksempel detaljer om fukting eller assistert ventilering.">
+            >
+            ["at9000"] = <
+                text = <"* Flow rate, volume (en)">
+                description = <"* Flow rate, volume (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Inspired oxygen">
+                description = <"The amount of oxygen being delivered, or to be delivered, to the patient given as a fraction, percentage or indirectly as a flow rate.">
+            >
+            ["at0051"] = <
+                text = <"Flow rate">
+                description = <"Oxygen flow rate given to an individual.">
+                comment = <"For example '5 l/min'.">
+            >
+            ["at0052"] = <
+                text = <"FiO₂">
+                description = <"Fraction of oxygen in inspired air.">
+                comment = <"For example: '0.28'.">
+            >
+            ["at0053"] = <
+                text = <"Percent O₂">
+                description = <"Percentage of oxygen in inspired air.">
+                comment = <"For example: '24 %'">
+            >
+            ["at0054"] = <
+                text = <"Method of oxygen delivery">
+                description = <"The method used to deliver the oxygen.">
+                comment = <"Intended to capture only simple description / terms, for example: 'nasal prongs'. The 'Oxygen delivery detail' slot may be used for more detailed or complex recording.">
+            >
+            ["at0057"] = <
+                text = <"On air">
+                description = <"The patient is receiving air, equivalent to 21% O₂ or 0.21 FiO₂ and an oxygen flow rate of 0 litres per minute.">
+                comment = <"Where 'On air' is set to true, Flow rate, FiO₂ and Percent O₂ should not be recorded. Conversely 'On air' should be omitted if Flow rate, FiO₂ or Percent O₂ are recorded.">
+            >
+            ["at0058"] = <
+                text = <"Oxygen delivery detail">
+                description = <"Further details of the method of oxygen delivery.">
+                comment = <"For example details of humidification or assisted ventilation.">
+            >
+            ["at9000"] = <
+                text = <"Flow rate, volume">
+                description = <"Flow rate, volume">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/126>
+        >
+    >

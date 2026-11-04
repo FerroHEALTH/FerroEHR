@@ -1,0 +1,158 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=249834af-d572-4302-91a7-c691c317fa50; build_uid=b183b788-6cd4-4538-bef9-c860260b9dd6)
+    openEHR-EHR-SECTION.diagnostic_test_planning.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2016-07-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"7F54BD92424DE93764BAC7CD8896F203">
+    >
+    details = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Gestionar todas las pruebas complementarias que participan en un proceso clínico que requiere la coordinación de diversas pruebas para formular un diagnóstico válido de una enfermedad específica.
+Incluirá las órdenes para cualquier prueba con fines diagnósticos (pruebas de laboratorio, imágenes médicas, monitorización del paciente ...).">
+            use = <"Este arquetipo reúne cada solicitud para las diferentes pruebas diagnósticas necesarias para determinar o confirmar el diagnóstico durante el estudio de una enfermedad específica.
+Toda solicitud de órdenes médicas electrónicas (CPOE) en un proceso de cuidado de la salud se puede definir utilizando este arquetipo.">
+            misuse = <"No está diseñado para programar procedimientos terapéuticos tales como intervenciones quirúrgicas.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To provide a framework to define a care plan, aimed at registering the progression of every complementary test involved in a healthcare process that requires coordinating diverse diagnostic tests to formulate a valid diagnosis for a specific disease.
+It will include orders for any test with diagnostic purposes (lab tests, medical imaging, patient monitoring...).">
+            keywords = <"diagnostic tests", "instruction", "planning">
+            use = <"This archetype coordinates, within the same care plan, the different diagnostic tests involved on the same clinical study.
+In those cases, the set of diagnostic tests must be assessed jointly, even if they have been carried out separately. 
+Therefore, this archetype gathers every order and the resulting action for the diagnostic tests necessary for diagnosing a specific disease.
+In fact, every computerized physician order entries (CPOE) in a healthcare process can be defined using this archetype.">
+            misuse = <"It is not designed to schedule therapeutic procedures such as surgical interventions.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Diagnostic test planning
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype INSTRUCTION[at0006] matches {    -- Care plan
+                include
+                    archetype_id/value matches {/openEHR-EHR-INSTRUCTION\.care_plan(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype ACTION[at0007] matches {    -- Care plan
+                include
+                    archetype_id/value matches {/openEHR-EHR-ACTION\.care_plan(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype INSTRUCTION[at0001] matches {    -- Referral request
+                include
+                    archetype_id/value matches {/openEHR-EHR-INSTRUCTION\.request-referral(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype INSTRUCTION[at0002] matches {    -- Imaging examination request
+                include
+                    archetype_id/value matches {/openEHR-EHR-INSTRUCTION\.request-imaging_exam(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype INSTRUCTION[at0005] matches {    -- Laboratory test request
+                include
+                    archetype_id/value matches {/openEHR-EHR-INSTRUCTION\.request-lab_test(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype INSTRUCTION[at0004] matches {    -- Other service request
+                include
+                    archetype_id/value matches {/openEHR-EHR-INSTRUCTION\.request(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Diagnostic test planning">
+                description = <"Schedules each patient to perform the diagnostic tests necessary to assess a specific disease.">
+            >
+            ["at0001"] = <
+                text = <"Referral request">
+                description = <"Request for provision of specific diagnostic test by another healthcare provider or organisation.">
+            >
+            ["at0002"] = <
+                text = <"Imaging examination request">
+                description = <"Generic request for any imaging examination request.">
+            >
+            ["at0004"] = <
+                text = <"Other service request">
+                description = <"Request of another healthcare service not considered in the slots above.">
+            >
+            ["at0005"] = <
+                text = <"Laboratory test request">
+                description = <"Generic request for any laboratory or pathology test request.">
+            >
+            ["at0006"] = <
+                text = <"Care plan">
+                description = <"Order or instruction for the creation and sequence of activities to achieve a specified management goal or treatment outcome, carried out by health professionals and/or the subject.">
+            >
+            ["at0007"] = <
+                text = <"Care plan">
+                description = <"Plan or sequence of discrete activities developed to achieve a specified management goal or treatment outcome, carried out by health professionals and/or the patient.">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Diagnostic test planning">
+                description = <"Programa citas para cada paciente en las pruebas diagósticas necesarias para evaluar una enfermedad específica.">
+            >
+            ["at0001"] = <
+                text = <"Solicitud de volante">
+                description = <"Solicitud para la prestación de una prueba diagnóstica específica por otro proveedor de salud u organización.">
+            >
+            ["at0002"] = <
+                text = <"Solicitud de examen imagenológico">
+                description = <"Solicitud genérica para programar un examen imagenológico.">
+            >
+            ["at0004"] = <
+                text = <"Solicitud de otro servicio">
+                description = <"Solicitud de otro servicio de salud no considerado en los slots anteriores.">
+            >
+            ["at0005"] = <
+                text = <"Solicitud test de laboratorio">
+                description = <"Petición genérica para cualquier solicitud de prueba de laboratorio o patología.">
+            >
+            ["at0006"] = <
+                text = <"Plan clínico">
+                description = <"Orden o instrucción para la creación y coordinación de actividades para lograr un objetivo específico en la gestión o en el tratamiento, llevado a cabo por profesionales de la salud y/o el propio paciente.">
+            >
+            ["at0007"] = <
+                text = <"Plan clínico">
+                description = <"Planificación o coordinación de actividades discretas desarrolladas a fin de lograr un objetivo en la gestión o en el tratamiento, llevado a cabo por profesionales de la salud y/o el propio paciente.">
+            >
+        >
+    >

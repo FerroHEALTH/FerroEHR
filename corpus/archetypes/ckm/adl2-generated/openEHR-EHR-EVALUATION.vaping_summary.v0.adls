@@ -1,0 +1,1123 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d0b028bd-a208-4aa1-bc14-d22b3b932e17; build_uid=a0b7b24f-a406-452d-969b-06f83ea17d88)
+    openEHR-EHR-EVALUATION.vaping_summary.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Caroline Thoms, Eva-Maria Rieß, Natalia Strauch">
+                ["organisation"] = <"UMG, Universitätsmedizin Göttingen, Medizinische Hochschule Hannover">
+                ["email"] = <"Caroline.Thoms@med.uni-goettingen.de, eva-maria.riess@med.uni-goettingen.de, Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Erik Sundvall, Oscar Karlsson">
+                ["organisation"] = <"Region Östergötland + Linköping University, Karolinska Universitetssjukhuset">
+                ["email"] = <"erik.sundvall@regionostergotland.se, oscar.karlsson@regionstockholm.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand">
+                ["organisation"] = <"Helse Bergen HF">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-05-20">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Tobacco smoking summary, Published archetype [Internet]. openEHR Foundation, openEHR Clinical Knowledge Manager [cited: 2020-05-20]. Available from: https://ckm.openehr.org/ckm/archetypes/1013.1.2466.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"6EE1D3AAB57B516F90657E1A8CC65849">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To record summary information about the individual's pattern of vaping. (en)">
+            keywords = <"*electronic (en)", "*cigarettes (en)", "*e-cigs (en)", "*cigs (en)", "*nicotine (en)", "*ENDS (en)", "*ENNDS (en)", "*ANDS (en)", "*vaporisers (en)", "*e-hookahs (en)", "*hookahs (en)", "*vape (en)", "*pens (en)", "*vapes (en)", "*delivery (en)">
+            use = <"*Use to record summary information about the individual's use of devices that aerosolise nicotine or other substances for inhalation.
+
+This archetype is to be used to record information about both current and previous vaping behaviour.
+
+Use to incorporate the narrative descriptions of vaping within existing or legacy clinical systems, using the 'Overall description' data element.
+
+The history of waxing and waning of use for each type of substance or e-liquid over time can be captured using the repeatable 'Per episode' cluster. 
+
+Triggers for closing one episode and commencing a new one will largely reflect local data collection preferences, including if the individual: 
+- quits for a significant period of time (which will likely be locally defined); or
+- significantly changes their amount of use or pattern of their vaping. (en)">
+            misuse = <"*Not to be used to record summary-based information about tobacco smoking, such as the pattern of smoking habits - use the EVALUATION.tobacco_smoking_summary archetype for this purpose.
+
+Not to be used to record summary-based information about substance use - use the EVALUATION.substance_use_summary for this purpose.
+
+Not to be used to record summary-based information about smokeless tobacco use - for example: snus; snuff; chewing tobacco; dip; and gutka. Use the archetype EVALUATION.smokeless_tobacco_summary archetype for this purpose.
+
+Not to be used to record event-or period-based information about tobacco smoking, such as actual daily use or the average use over a specified period of time - use the OBSERVATION.tobacco_smoking archetype.
+
+Not to be used to record evidence of nicotine dependency. Use the OBSERVATION.fagerstrom for this purpose.
+
+Not to be used to record details about unintended exposure to tobacco smoke or passive smoking. Use the archetype EVALUATION.exposure for this purpose.
+
+Not to be used for recording any other administration of nicotine, such as nicotine patches or nicotine chewing gum. The need for a specific archetype for this purpose is acknowledged but had not yet been developed at the time of the publication of this archetype. (en)">
+            copyright = <"*© openEHR Foundation (en)">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"*To record summary information about the individual's pattern of vaping.(en)">
+            keywords = <"*electronic(en)", "*cigarettes(en)", "*e-cigs(en)", "*cigs(en)", "*nicotine(en)", "*ENDS(en)", "*ENNDS(en)", "*ANDS(en)", "*vaporisers(en)", "*e-hookahs(en)", "*hookahs(en)", "*vape(en)", "*pens(en)", "*vapes(en)", "*delivery(en)">
+            use = <"*Use to record summary information about the individual's use of devices that aerosolise nicotine or other substances for inhalation.
+
+This archetype is to be used to record information about both current and previous vaping behaviour.
+
+Use to incorporate the narrative descriptions of vaping within existing or legacy clinical systems, using the 'Overall description' data element.
+
+The history of waxing and waning of use for each type of substance or e-liquid over time can be captured using the repeatable 'Per episode' cluster. 
+
+Triggers for closing one episode and commencing a new one will largely reflect local data collection preferences, including if the individual: 
+- quits for a significant period of time (which will likely be locally defined); or
+- significantly changes their amount of use or pattern of their vaping.(en)">
+            misuse = <"*Not to be used to record summary-based information about tobacco smoking, such as the pattern of smoking habits - use the EVALUATION.tobacco_smoking_summary archetype for this purpose.
+
+Not to be used to record summary-based information about substance use - use the EVALUATION.substance_use_summary for this purpose.
+
+Not to be used to record summary-based information about smokeless tobacco use - for example: snus; snuff; chewing tobacco; dip; and gutka. Use the archetype EVALUATION.smokeless_tobacco_summary archetype for this purpose.
+
+Not to be used to record event-or period-based information about tobacco smoking, such as actual daily use or the average use over a specified period of time - use the OBSERVATION.tobacco_smoking archetype.
+
+Not to be used to record evidence of nicotine dependency. Use the OBSERVATION.fagerstrom for this purpose.
+
+Not to be used to record details about unintended exposure to tobacco smoke or passive smoking. Use the archetype EVALUATION.exposure for this purpose.
+
+Not to be used for recording any other administration of nicotine, such as nicotine patches or nicotine chewing gum. The need for a specific archetype for this purpose is acknowledged but had not yet been developed at the time of the publication of this archetype.(en)">
+            copyright = <"*© openEHR Foundation (en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"*To record summary information about the individual's pattern of vaping. (en)">
+            keywords = <"*electronic (en)", "*cigarettes (en)", "*e-cigs (en)", "*cigs (en)", "*nicotine (en)", "*ENDS (en)", "*ENNDS (en)", "*ANDS (en)", "*vaporisers (en)", "*e-hookahs (en)", "*hookahs (en)", "*vape (en)", "*pens (en)", "*vapes (en)", "*delivery (en)">
+            use = <"*Use to record summary information about the individual's use of devices that aerosolise nicotine or other substances for inhalation.
+
+This archetype is to be used to record information about both current and previous vaping behaviour.
+
+Use to incorporate the narrative descriptions of vaping within existing or legacy clinical systems, using the 'Overall description' data element.
+
+The history of waxing and waning of use for each type of substance or e-liquid over time can be captured using the repeatable 'Per episode' cluster. 
+
+Triggers for closing one episode and commencing a new one will largely reflect local data collection preferences, including if the individual: 
+- quits for a significant period of time (which will likely be locally defined); or
+- significantly changes their amount of use or pattern of their vaping. (en)">
+            misuse = <"*Not to be used to record summary-based information about tobacco smoking, such as the pattern of smoking habits - use the EVALUATION.tobacco_smoking_summary archetype for this purpose.
+
+Not to be used to record summary-based information about substance use - use the EVALUATION.substance_use_summary for this purpose.
+
+Not to be used to record summary-based information about smokeless tobacco use - for example: snus; snuff; chewing tobacco; dip; and gutka. Use the archetype EVALUATION.smokeless_tobacco_summary archetype for this purpose.
+
+Not to be used to record event-or period-based information about tobacco smoking, such as actual daily use or the average use over a specified period of time - use the OBSERVATION.tobacco_smoking archetype.
+
+Not to be used to record evidence of nicotine dependency. Use the OBSERVATION.fagerstrom for this purpose.
+
+Not to be used to record details about unintended exposure to tobacco smoke or passive smoking. Use the archetype EVALUATION.exposure for this purpose.
+
+Not to be used for recording any other administration of nicotine, such as nicotine patches or nicotine chewing gum. The need for a specific archetype for this purpose is acknowledged but had not yet been developed at the time of the publication of this archetype. (en)">
+            copyright = <"*© openEHR Foundation (en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record summary information about the individual's pattern of vaping.">
+            keywords = <"electronic", "cigarettes", "e-cigs", "cigs", "nicotine", "ENDS", "ENNDS", "ANDS", "vaporisers", "e-hookahs", "hookahs", "vape", "pens", "vapes", "delivery">
+            use = <"Use to record summary information about the individual's use of devices that aerosolise nicotine or other substances for inhalation.
+
+This archetype is to be used to record information about both current and previous vaping behaviour.
+
+Use to incorporate the narrative descriptions of vaping within existing or legacy clinical systems, using the 'Overall description' data element.
+
+The history of waxing and waning of use for each type of substance or e-liquid over time can be captured using the repeatable 'Per episode' cluster. 
+
+Triggers for closing one episode and commencing a new one will largely reflect local data collection preferences, including if the individual: 
+- quits for a significant period of time (which will likely be locally defined); or
+- significantly changes their amount of use or pattern of their vaping.">
+            misuse = <"Not to be used to record summary-based information about tobacco smoking, such as the pattern of smoking habits - use the EVALUATION.tobacco_smoking_summary archetype for this purpose.
+
+Not to be used to record summary-based information about substance use - use the EVALUATION.substance_use_summary for this purpose.
+
+Not to be used to record summary-based information about smokeless tobacco use - for example: snus; snuff; chewing tobacco; dip; and gutka. Use the archetype EVALUATION.smokeless_tobacco_summary archetype for this purpose.
+
+Not to be used to record event-or period-based information about tobacco smoking, such as actual daily use or the average use over a specified period of time - use the OBSERVATION.tobacco_smoking archetype.
+
+Not to be used to record evidence of nicotine dependency. Use the OBSERVATION.fagerstrom for this purpose.
+
+Not to be used to record details about unintended exposure to tobacco smoke or passive smoking. Use the archetype EVALUATION.exposure for this purpose.
+
+Not to be used for recording any other administration of nicotine, such as nicotine patches or nicotine chewing gum. The need for a specific archetype for this purpose is acknowledged but had not yet been developed at the time of the publication of this archetype.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Vaping summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0089] occurrences matches {0..1} matches {    -- Overall status
+                        value matches {
+                            DV_CODED_TEXT[at9003] matches {
+                                defining_code matches {[ac9000]}    -- Overall status (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0043] occurrences matches {0..1} matches {    -- Overall description
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Regular vaping commenced
+                        value matches {
+                            DV_DATE[at9005]
+                        }
+                    }
+                    ELEMENT[at0080] occurrences matches {0..1} matches {    -- Daily vaping commenced
+                        value matches {
+                            DV_DATE[at9006]
+                        }
+                    }
+                    CLUSTER[at0029] matches {    -- Per substance
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0095] occurrences matches {1} matches {    -- Substance name
+                                value matches {
+                                    DV_TEXT[at9007]
+                                }
+                            }
+                            ELEMENT[at0052] occurrences matches {0..1} matches {    -- Status
+                                value matches {
+                                    DV_CODED_TEXT[at9008] matches {
+                                        defining_code matches {[ac9001]}    -- Status (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0053] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9009]
+                                }
+                            }
+                            CLUSTER[at0064] matches {    -- Per episode
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0081] occurrences matches {0..1} matches {    -- Episode label
+                                        value matches {
+                                            DV_COUNT[at9010] matches {
+                                                magnitude matches {|>=1|}
+                                            }
+                                            DV_TEXT[at9011]
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Episode start date
+                                        value matches {
+                                            DV_DATE[at9012]
+                                        }
+                                    }
+                                    ELEMENT[at0082] occurrences matches {0..1} matches {    -- Episode end date
+                                        value matches {
+                                            DV_DATE[at9013]
+                                        }
+                                    }
+                                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- Pattern
+                                        value matches {
+                                            DV_CODED_TEXT[at9014] matches {
+                                                defining_code matches {[ac9002]}    -- Pattern (synthesised)
+                                            }
+                                            DV_TEXT[at9015]
+                                        }
+                                    }
+                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- ???Typical use (units)
+                                        value matches {
+                                            DV_QUANTITY[at9016] matches {
+                                                [magnitude, units, precision] matches {
+                                                    [{|>=0.0|}, {"1/d"}, {1}],
+                                                    [{|>=0.0|}, {"1/wk"}, {1}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Number of quit attempts
+                                        value matches {
+                                            DV_COUNT[at9017] matches {
+                                                magnitude matches {|>=0|}
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0026] matches {    -- Episode details
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.cessation_attempts(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                                    }
+                                    ELEMENT[at0087] occurrences matches {0..1} matches {    -- Episode comment
+                                        value matches {
+                                            DV_TEXT[at9018]
+                                        }
+                                    }
+                                }
+                            }
+                            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Quit date
+                                value matches {
+                                    DV_DATE[at9019]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0077] matches {    -- Substance details
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                            ELEMENT[at0069] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_TEXT[at9020]
+                                }
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0086]    -- Additional details
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Overall quit date
+                        value matches {
+                            DV_DATE[at9021]
+                        }
+                    }
+                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Overall comment
+                        value matches {
+                            DV_TEXT[at9022]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0021] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0073] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0071] matches {    -- Quit date definition
+                        value matches {
+                            DV_TEXT[at9023]
+                        }
+                    }
+                    ELEMENT[at0085] occurrences matches {0..1} matches {    -- Quit attempt definition
+                        value matches {
+                            DV_TEXT[at9024]
+                        }
+                    }
+                    ELEMENT[at0075] matches {    -- Current vpaer definition
+                        value matches {
+                            DV_TEXT[at9025]
+                        }
+                    }
+                    ELEMENT[at0076] matches {    -- Former vaper definition
+                        value matches {
+                            DV_TEXT[at9026]
+                        }
+                    }
+                    ELEMENT[at0079] matches {    -- Never vaped definition
+                        value matches {
+                            DV_TEXT[at9027]
+                        }
+                    }
+                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9028]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"*Vaping summary (en)">
+                description = <"*Summary or persistent information about an individual’s use of devices that aerosolise nicotine or other substances for inhalation. (en)">
+            >
+            ["at0003"] = <
+                text = <"*Current vape user (en)">
+                description = <"*The individual is a current vape user. (en)">
+            >
+            ["at0005"] = <
+                text = <"*Former vape user (en)">
+                description = <"*The individual has previously vaped but is not a current user. (en)">
+            >
+            ["at0006"] = <
+                text = <"*Lifetime non-user (en)">
+                description = <"*The Individual has never vaped any type of substance. (en)">
+            >
+            ["at0013"] = <
+                text = <"Startdatum der Episode">
+                description = <"Datum, an dem die Episode begann.">
+                comment = <"Kann ein Teildatum sein, z.B. nur ein Jahr.">
+            >
+            ["at0014"] = <
+                text = <"Zeitpunkt des Aufhörens">
+                description = <"*Date when the individual last vaped the specified substance or e-liquid. (en)">
+                comment = <"Kann ein Teildatum sein, z.B. nur ein Jahr. Die Definitionen für ein \"Zeitpunkt des Aufhörens\" sind sehr unterschiedlich und können über das Datenelement \"Definition Zeitpunkts des Aufhörens\" im Abschnitt \"Protokoll\" dieses Archetyps definiert werden. Dieses Datum ist identisch mit dem \"Enddatum der Episode\" der letzten Episode. Dieses Datum könnte von der Entscheidungshilfe genutzt werden, um festzustellen, ob die Person, zum Beispiel in den ersten 12 Monaten nach der Kündigung, einem Rückfallrisiko ausgesetzt ist.
+
+">
+            >
+            ["at0015"] = <
+                text = <"*Regular vaping commenced (en)">
+                description = <"*The date or partial date when the individual first started frequent or regular, but usually non-daily, vaping of any substance. (en)">
+                comment = <"*Can be a partial date, for example, only a year. For example, this date could represent when the individual commenced vaping every Friday night or at parties.  (en)">
+            >
+            ["at0016"] = <
+                text = <"Zeitpunkt des Aufhörens gesamt">
+                description = <"*The date when the individual last ceased vaping of any substance or e-liquid. (en)">
+                comment = <"Kann ein Teildatum sein, z.B. nur ein Jahr. Dieses Datum könnte von Entscheidungshilfen genutzt werden, um festzustellen, ob die Person, zum Beispiel in den ersten 12 Monaten nach dem Aufhören, einem Rückfallrisiko ausgesetzt ist.">
+            >
+            ["at0019"] = <
+                text = <"Zusätzliche Anmerkungen">
+                description = <"*Additional narrative about all vaping that has not been captured in other fields. (en)">
+                comment = <"*For example: stopped vaping or reduced amount on becoming pregnant. (en)">
+            >
+            ["at0022"] = <
+                text = <"Zuletzt aktualisiert">
+                description = <"*The date when this vaping summary was last updated. (en)">
+            >
+            ["at0023"] = <
+                text = <"*???Typical use (units) (en)">
+                description = <"*Estimate of number of units of the specified type of substance or e-liquid consumed. (en)">
+                comment = <"*This data element is redundant if a value is recorded for 'Typical use(mass)'. (en)">
+            >
+            ["at0025"] = <
+                text = <"Anzahl Versuche mit dem Rauchen aufzuhören">
+                description = <"*Total number of times the individual has attempted to stop vaping the specified substance or e-liquid within this episode. (en)">
+            >
+            ["at0026"] = <
+                text = <"Details der Episode">
+                description = <"*Additional structured details about the specified episode of vaping. (en)">
+            >
+            ["at0029"] = <
+                text = <"*Per substance (en)">
+                description = <"*Details about smoking activity for a specified type of substance or e-liquid. (en)">
+            >
+            ["at0030"] = <
+                text = <"Rauchmuster">
+                description = <"*The typical pattern of vaping for the specified substance or e-liquid. (en)">
+            >
+            ["at0043"] = <
+                text = <"Allgemeine Beschreibung">
+                description = <"*Narrative description about the individual’s overall vaping pattern and history. (en)">
+                comment = <"*Use this data element to record a narrative description of the vaping habits for this individual or to incorporate unstructured vaping information from existing or legacy clinical systems. (en)">
+            >
+            ["at0052"] = <
+                text = <"Status">
+                description = <"*Statement about current vaping behaviour for the specified substance or e-liquid. (en)">
+            >
+            ["at0053"] = <
+                text = <"Beschreibung">
+                description = <"*Narrative summary about vaping behaviour for the specified substance or e-liquid. (en)">
+            >
+            ["at0059"] = <
+                text = <"*Former vaper(en)">
+                description = <"*Die Person hat früher die angegebene Tabakart geraucht, ist jedoch derzeit kein Raucher.">
+            >
+            ["at0061"] = <
+                text = <"*Current vaper(en)">
+                description = <"*Die Person ist derzeitiger Raucher der angegebenen Tabakart.">
+            >
+            ["at0064"] = <
+                text = <"Pro Episode">
+                description = <"Angaben zu einem bestimmten Zeitraum des Rauchens der angegebenen Tabakart.">
+            >
+            ["at0069"] = <
+                text = <"Kommentar">
+                description = <"*Additional narrative about vaping of the specified substance or e-liquid, not captured in other fields. (en)">
+            >
+            ["at0071"] = <
+                text = <"Definition Zeitpunkts des Aufhörens">
+                description = <"Die angewendete Definition für das Datenelement \"Zeitpunkt des Aufhörens\" das in diesem Archetyp verwendet wird.">
+            >
+            ["at0073"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+            ["at0075"] = <
+                text = <"*Current vpaer definition(en)">
+                description = <"*The applied definition for the 'Current vaper' value in each of the 'Status' data elements used in this archetype.">
+                comment = <"*Definition may need to be specified per type. Current vaper definitions vary in different jurisdictions. 
+ (en)">
+            >
+            ["at0076"] = <
+                text = <"*Former vaper definition(en)">
+                description = <"*The applied definition for the 'Former vaper' value in each of the 'Status' data elements used in this archetype.">
+                comment = <"*Former vaper definitions vary in different jurisdictions. (en)">
+            >
+            ["at0077"] = <
+                text = <"*Substance details (en)">
+                description = <"*Additional structured details about the specified type of substance or e-liquid vaped. (en)">
+            >
+            ["at0079"] = <
+                text = <"*Never vaped definition(en)">
+                description = <"*The applied definition for the 'Never vaped' value in each of the 'Status' data elements used in this archetype.">
+                comment = <"*For example, the definition may not be zero, but less than a specified amount (as units or mass) smoked during a specified time interval. (en)">
+            >
+            ["at0080"] = <
+                text = <"*Daily vaping commenced (en)">
+                description = <"*The date or partial date when the individual first started daily vaping of any substance. (en)">
+                comment = <"Kann ein Teildatum sein, z.B. nur ein Jahr.">
+            >
+            ["at0081"] = <
+                text = <"Episodenlabel">
+                description = <"*Identification of an episode of vaping activity - either as a number in a sequence and/or a named event. (en)">
+                comment = <"*For example: '2' as the second episode within a sequence of episodes; or 'Pregnancy with twins' if describing the vaping activity during a health event such as during a specific pregnancy. (en)">
+            >
+            ["at0082"] = <
+                text = <"Enddatum der Episode">
+                description = <"Datum, an dem die Episode endet.">
+                comment = <"Kann ein Teildatum sein, z.B. nur ein Jahr. Das Datenelement ist leer, wenn die Episode aktuell und noch nicht beendet ist.">
+            >
+            ["at0083"] = <
+                text = <"Täglich">
+                description = <"Die angegebene Tabakart wird mindestens einmal täglich geraucht.">
+            >
+            ["at0084"] = <
+                text = <"Nicht täglich">
+                description = <"Die angegebene Tabakart wird nicht jeden Tag geraucht.">
+            >
+            ["at0085"] = <
+                text = <"Defintion Versuch des Aufhörens">
+                description = <"Die angewendete Definition für einen Versuch mit dem Rauchen aufzuhören. Dient zur Bestimmung des Wertes für das in diesem Archetyp verwendete Datenelement \"Anzahl Versuche mit dem Rauchen aufzuhören\".">
+                comment = <"*For example: 'stopped vaping for one day or longer with the intention of quitting'. (en)">
+            >
+            ["at0086"] = <
+                text = <"*Additional details (en)">
+                description = <"*Additional structured details about the overall vaping behaviour. (en)">
+            >
+            ["at0087"] = <
+                text = <"Kommentar zur Episode">
+                description = <"*Additional narrative about vaping during the specified episode, not captured in other fields. (en)">
+            >
+            ["at0089"] = <
+                text = <"Allgemeiner Status">
+                description = <"*Statement about an individual’s current use of vaping devices. (en)">
+                comment = <"*Coding with a terminology is recommended.  Free text entry should only be permitted if no appropriate coded value is available. (en)">
+            >
+            ["at0091"] = <
+                text = <"*Never vaped(en)">
+                description = <"*Die Person hat noch nie die angegebene Tabakart geraucht.">
+            >
+            ["at0095"] = <
+                text = <"*Substance name (en)">
+                description = <"*The name of the substance or e-liquid vaped by the individual. (en)">
+            >
+            ["ac9000"] = <
+                text = <"Allgemeiner Status (synthesised)">
+                description = <"*Statement about an individual’s current use of vaping devices. (en) (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Status (synthesised)">
+                description = <"*Statement about current vaping behaviour for the specified substance or e-liquid. (en) (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Rauchmuster (synthesised)">
+                description = <"*The typical pattern of vaping for the specified substance or e-liquid. (en) (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Sammanfattning av vaping">
+                description = <"Sammanställning eller bestående information om en individs användning av e-cigaretter (vaping).">
+            >
+            ["at0003"] = <
+                text = <"Nuvarande vaper">
+                description = <"Individen röker någon typ av substans.">
+            >
+            ["at0005"] = <
+                text = <"Före detta vaper">
+                description = <"Individen har tidigare rökt någon form av substans, men gör det inte nu.">
+            >
+            ["at0006"] = <
+                text = <"Har aldrig vapat">
+                description = <"Individen har aldrig rökt någon typ av substans.">
+            >
+            ["at0013"] = <
+                text = <"Episodens startdatum">
+                description = <"Datum när den här episoden startade.">
+                comment = <"Kan vara del av ett datum, till exempel bara ett årtal.">
+            >
+            ["at0014"] = <
+                text = <"Slutdatum">
+                description = <"*Date when the individual last vaped the specified substance or e-liquid.(en)">
+                comment = <"Kan vara del av ett datum, till exempel bara ett årtal.
+
+Definitionen av vad som menas med ett \"Slutdatum\" kan variera enormt och kan preciseras/definieras med hjälp av dataelementet \"Definition av slutdatum\" i protokolldelen i den här arketypen. Detta datum kommer att vara identiskt med \"Episodens slutdatum\" för den senaste episoden. Detta datum kan användas av beslutsstödssystem för att avgöra om individen är i riskzonen för återfall, till exempel under de första 12 månaderna sedan hen slutade röka.">
+            >
+            ["at0015"] = <
+                text = <"*Regular vaping commenced(en)">
+                description = <"*The date or partial date when the individual first started frequent or regular, but usually non-daily, vaping of any substance.(en)">
+                comment = <"*Can be a partial date, for example, only a year. For example, this date could represent when the individual commenced vaping every Friday night or at parties. (en)">
+            >
+            ["at0016"] = <
+                text = <"Övergripande slutdatum">
+                description = <"*The date when the individual last ceased vaping of any substance or e-liquid.(en)">
+                comment = <"Kan vara del av ett datum, till exempel bara ett årtal. Detta datum kan användas av beslutsstödssystem för att avgöra om individen är i riskzonen för återfall, till exempel under de första 12 månaderna sedan hen slutade röka.
+
+">
+            >
+            ["at0019"] = <
+                text = <"Övergripande kommentar">
+                description = <"*Additional narrative about all vaping that has not been captured in other fields.(en)">
+                comment = <"*For example: stopped vaping or reduced amount on becoming pregnant.(en)">
+            >
+            ["at0022"] = <
+                text = <"Senaste uppdatering">
+                description = <"*The date when this vaping summary was last updated.(en)">
+            >
+            ["at0023"] = <
+                text = <"*???Typical use (units)(en)">
+                description = <"*Estimate of number of units of the specified type of substance or e-liquid consumed.(en)">
+                comment = <"*This data element is redundant if a value is recorded for 'Typical use(mass)'.(en)">
+            >
+            ["at0025"] = <
+                text = <"Antal försök att sluta">
+                description = <"*Total number of times the individual has attempted to stop vaping the specified substance or e-liquid within this episode.(en)">
+            >
+            ["at0026"] = <
+                text = <"Episoddetaljer">
+                description = <"*Additional structured details about the specified episode of vaping.(en)">
+            >
+            ["at0029"] = <
+                text = <"*Per substance(en)">
+                description = <"*Details about vaping activity for a specified type of substance or e-liquid.(en)">
+            >
+            ["at0030"] = <
+                text = <"Mönster">
+                description = <"*The typical pattern of vaping for the specified substance or e-liquid.(en)">
+            >
+            ["at0043"] = <
+                text = <"Övergripande beskrivning">
+                description = <"Beskrivande sammanfattning av en individs rökvanor och rökhistorik.">
+                comment = <"Använd endast det här fältet för att ge en beskrivande sammanfattning om de strukturerade fälten inte ger en adekvat bild av individens rökvanor, eller för att införliva ostrukturerad information om rökvanor från befintliga eller gamla vård-IT-system till arketyp-baserade system.">
+            >
+            ["at0052"] = <
+                text = <"Status">
+                description = <"Redogörelse för nuvarande vapingvanor för den specificerade substansen eller e-vätskan.">
+            >
+            ["at0053"] = <
+                text = <"Beskrivning">
+                description = <"*Narrative summary about vaping behaviour for the specified substance or e-liquid.(en)">
+            >
+            ["at0059"] = <
+                text = <"Före detta vaper">
+                description = <"Individen har tidigare rökt den här sortens substans eller e-vätska, men gör det inte nu.">
+            >
+            ["at0061"] = <
+                text = <"Nuvarande vaper">
+                description = <"Individen röker denna typ av substans eller e-vätska.">
+            >
+            ["at0064"] = <
+                text = <"Per episod">
+                description = <"Detaljerad beskrivning av en specifik konsumtionsperiod för den angivna typen av tobak.">
+            >
+            ["at0069"] = <
+                text = <"Kommentar">
+                description = <"*Additional narrative about vaping of the specified substance or e-liquid, not captured in other fields.(en)">
+            >
+            ["at0071"] = <
+                text = <"Definition av slutdatum">
+                description = <"Definitionen av \"slutdatum\" som använts i denna arketyps fält/dataelement
+">
+            >
+            ["at0073"] = <
+                text = <"Tilläggsinformation">
+                description = <"Plats för att infoga tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.">
+                comment = <"Exempelvis lokala informationskrav eller metadata för anpassning till FHIR- eller CIMI-motsvarigheter.
+
+">
+            >
+            ["at0075"] = <
+                text = <"Definition av nuvarande vaper">
+                description = <"Den tillämpade definitionen för värdet ”Nuvarande vaper” i varje av de ”Status”-dataelement som används i denna arketyp.">
+                comment = <"Definitionen kan behöva anges för varje typ. Definitionen av ”Nuvarande vaper” kan skilja sig mellan olika regioner och regelverk.">
+            >
+            ["at0076"] = <
+                text = <"Definition av före detta vaper">
+                description = <"Den tillämpade definitionen för värdet ”Före detta vaper” i varje av de ”Status”-dataelement som används i denna arketyp.">
+                comment = <"Definitionen av ”Före detta vaper” kan skilja sig mellan olika regioner och regelverk.">
+            >
+            ["at0077"] = <
+                text = <"*Substance details(en)">
+                description = <"*Additional structured details about the specified type of substance or e-liquid vaped.(en)">
+            >
+            ["at0079"] = <
+                text = <"Definition av har aldrigt vapat">
+                description = <"Den tillämpade definitionen för värdet ”Har aldrig vapat” i varje av de ”Status”-dataelement som används i denna arketyp.">
+                comment = <"Till exempel kan definitionen innebära att värdet inte är noll, utan mindre än en specificerad mängd (i enheter eller vikt) som röks under ett angivet tidsintervall.">
+            >
+            ["at0080"] = <
+                text = <"*Daily vaping commenced(en)">
+                description = <"*The date or partial date when the individual first started daily vaping of any substance.(en)">
+                comment = <"Det kan vara del av ett datum, t.ex. bara ett årtal.">
+            >
+            ["at0081"] = <
+                text = <"Episodbeteckning">
+                description = <"*Identification of an episode of vaping activity - either as a number in a sequence and/or a named event.(en)">
+                comment = <"*For example: '2' as the second episode within a sequence of episodes; or 'Pregnancy with twins' if describing the vaping activity during a health event such as during a specific pregnancy.(en)">
+            >
+            ["at0082"] = <
+                text = <"Episodens slutdatum">
+                description = <"Datum när den här episoden slutade.">
+                comment = <"Kan vara del av ett datum, till exempel bara ett årtal. Det här fältet kommer att vara tomt om epsioden är aktuell och pågående.">
+            >
+            ["at0083"] = <
+                text = <"Dagligen">
+                description = <"Röker denna sorts tobak minst en gång varje dag.">
+            >
+            ["at0084"] = <
+                text = <"Inte dagligen">
+                description = <"Röker inte denna sorts tobak varje dag.">
+            >
+            ["at0085"] = <
+                text = <"Definition av avslutningsförsök">
+                description = <"Definitionen av avslutningsförsök som använts i denna arketyps fält \"Antal försök att sluta\".
+">
+                comment = <"*For example: 'stopped vaping for one day or longer with the intention of quitting'.(en)">
+            >
+            ["at0086"] = <
+                text = <"Övergripande detaljer">
+                description = <"*Additional structured details about the overall vaping behaviour.(en)">
+            >
+            ["at0087"] = <
+                text = <"Kommentarer om episoden">
+                description = <"*Additional narrative about vaping during the specified episode, not captured in other fields.(en)">
+            >
+            ["at0089"] = <
+                text = <"Övergripande status">
+                description = <"*Statement about an individual’s current use of vaping devices.(en)">
+                comment = <"*Coding with a terminology is recommended.  Free text entry should only be permitted if no appropriate coded value is available.(en)">
+            >
+            ["at0091"] = <
+                text = <"Har aldrig vapat">
+                description = <"Individen har aldrig rökt denna typ av substans eller e-vätska.">
+            >
+            ["at0095"] = <
+                text = <"*Substance name(en)">
+                description = <"*The name of the substance or e-liquid vaped by the individual.(en)">
+            >
+            ["ac9000"] = <
+                text = <"Övergripande status (synthesised)">
+                description = <"*Statement about an individual’s current use of vaping devices.(en) (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Status (synthesised)">
+                description = <"Redogörelse för nuvarande vapingvanor för den specificerade substansen eller e-vätskan. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Mönster (synthesised)">
+                description = <"*The typical pattern of vaping for the specified substance or e-liquid.(en) (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"*Vaping summary (en)">
+                description = <"*Summary or persistent information about an individual’s use of devices that aerosolise nicotine or other substances for inhalation. (en)">
+            >
+            ["at0003"] = <
+                text = <"*Current vape user (en)">
+                description = <"*The individual is a current vape user. (en)">
+            >
+            ["at0005"] = <
+                text = <"*Former vape user (en)">
+                description = <"*The individual has previously vaped but is not a current user. (en)">
+            >
+            ["at0006"] = <
+                text = <"*Lifetime non-user (en)">
+                description = <"*The Individual has never vaped any type of substance. (en)">
+            >
+            ["at0013"] = <
+                text = <"Episodens startdato">
+                description = <"Dato da episoden startet.">
+                comment = <"Kan være en deldato, for eksempel kun årstall.">
+            >
+            ["at0014"] = <
+                text = <"Sluttdato">
+                description = <"*Date when the individual last vaped the specified substance or e-liquid. (en)">
+                comment = <"Kan være en deldato, for eksempel årstall. Definisjoner for \"Sluttdato\" varierer enormt og kan defineres ved å bruke datalementet \"Definisjon på Sluttdato\" i protokolldelen av denne arketypen. Denne datoen vil være identisk med \"Episodens sluttdato\" for den siste episoden. Denne datoen kan brukes av beslutningsstøttesystemer for å beregne om individet er i faresonen for tilbakefall, for eksempel i løpet av de først 12 månedene etter å ha sluttet.">
+            >
+            ["at0015"] = <
+                text = <"*Regular vaping commenced (en)">
+                description = <"*The date or partial date when the individual first started frequent or regular, but usually non-daily, vaping of any substance. (en)">
+                comment = <"*Can be a partial date, for example, only a year. For example, this date could represent when the individual commenced vaping every Friday night or at parties.  (en)">
+            >
+            ["at0016"] = <
+                text = <"Samlet sluttdato">
+                description = <"*The date when the individual last ceased vaping of any substance or e-liquid. (en)">
+                comment = <"Kan være en deldato, for eksempel årstall. Denne datoen kan brukes av beslutningsstøttesystemer for å beregne om individet er i faresonen for tilbakefall, for eksempel i løpet av de først 12 månedene etter å ha sluttet.">
+            >
+            ["at0019"] = <
+                text = <"Samlet kommentar">
+                description = <"*Additional narrative about all vaping that has not been captured in other fields. (en)">
+                comment = <"*For example: stopped vaping or reduced amount on becoming pregnant. (en)">
+            >
+            ["at0022"] = <
+                text = <"Sist oppdatert">
+                description = <"*The date when this vaping summary was last updated. (en)">
+            >
+            ["at0023"] = <
+                text = <"*???Typical use (units) (en)">
+                description = <"*Estimate of number of units of the specified type of substance or e-liquid consumed. (en)">
+                comment = <"*This data element is redundant if a value is recorded for 'Typical use(mass)'. (en)">
+            >
+            ["at0025"] = <
+                text = <"Antall forsøk på å slutte">
+                description = <"*Total number of times the individual has attempted to stop vaping the specified substance or e-liquid within this episode. (en)">
+            >
+            ["at0026"] = <
+                text = <"Episodedetaljer">
+                description = <"*Additional structured details about the specified episode of vaping. (en)">
+            >
+            ["at0029"] = <
+                text = <"*Per substance (en)">
+                description = <"*Details about smoking activity for a specified type of substance or e-liquid. (en)">
+            >
+            ["at0030"] = <
+                text = <"Mønster">
+                description = <"*The typical pattern of vaping for the specified substance or e-liquid. (en)">
+                comment = <"Bruksmønster kan kodes med en terminologi eller med et lokalt verdisett i et templat.">
+            >
+            ["at0043"] = <
+                text = <"Overordnet beskrivelse">
+                description = <"*Narrative description about the individual’s overall vaping pattern and history. (en)">
+                comment = <"*Use this data element to record a narrative description of the vaping habits for this individual or to incorporate unstructured vaping information from existing or legacy clinical systems. (en)">
+            >
+            ["at0052"] = <
+                text = <"Status">
+                description = <"*Statement about current vaping behaviour for the specified substance or e-liquid. (en)">
+            >
+            ["at0053"] = <
+                text = <"Beskrivelse">
+                description = <"*Narrative summary about vaping behaviour for the specified substance or e-liquid. (en)">
+            >
+            ["at0059"] = <
+                text = <"*Former vaper(en)">
+                description = <"*Individet har tidligere røykt den spesifiserte typen tobakk, men er ikke en nåværende røyker.">
+            >
+            ["at0061"] = <
+                text = <"*Current vaper(en)">
+                description = <"*Individet er en nåværende røyker av den spesifiserte typen tobakk.">
+            >
+            ["at0064"] = <
+                text = <"Per episode">
+                description = <"Detaljer om en avgrenset periode med røyking av den spesifiserte tobakkstypen.">
+            >
+            ["at0069"] = <
+                text = <"Kommentar">
+                description = <"*Additional narrative about vaping of the specified substance or e-liquid, not captured in other fields. (en)">
+            >
+            ["at0071"] = <
+                text = <"Definisjon på Sluttdato">
+                description = <"Den anvendte definisjonen på dataelementet \"Sluttdato\" benyttet i denne arketypen.">
+            >
+            ["at0073"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at0075"] = <
+                text = <"*Current vpaer definition(en)">
+                description = <"*The applied definition for the 'Current vaper' value in each of the 'Status' data elements used in this archetype.">
+                comment = <"*Definition may need to be specified per type. Current vaper definitions vary in different jurisdictions. 
+ (en)">
+            >
+            ["at0076"] = <
+                text = <"*Former vaper definition(en)">
+                description = <"*The applied definition for the 'Former vaper' value in each of the 'Status' data elements used in this archetype.">
+                comment = <"*Former vaper definitions vary in different jurisdictions. (en)">
+            >
+            ["at0077"] = <
+                text = <"*Substance details (en)">
+                description = <"*Additional structured details about the specified type of substance or e-liquid vaped. (en)">
+            >
+            ["at0079"] = <
+                text = <"*Never vaped definition(en)">
+                description = <"*The applied definition for the 'Never vaped' value in each of the 'Status' data elements used in this archetype.">
+                comment = <"*For example, the definition may not be zero, but less than a specified amount (as units or mass) smoked during a specified time interval. (en)">
+            >
+            ["at0080"] = <
+                text = <"*Daily vaping commenced (en)">
+                description = <"*The date or partial date when the individual first started daily vaping of any substance. (en)">
+                comment = <"Kan være en deldato, for eksempel kun årstall.">
+            >
+            ["at0081"] = <
+                text = <"Episodenavn">
+                description = <"*Identification of an episode of vaping activity - either as a number in a sequence and/or a named event. (en)">
+                comment = <"*For example: '2' as the second episode within a sequence of episodes; or 'Pregnancy with twins' if describing the vaping activity during a health event such as during a specific pregnancy. (en)">
+            >
+            ["at0082"] = <
+                text = <"Episodens sluttdato">
+                description = <"Datoen episoden opphørte.">
+                comment = <"Kan være en deldato, for eksempel årstall. Dette dataelementet vil være tomt om episoden er pågående.">
+            >
+            ["at0083"] = <
+                text = <"Daglig">
+                description = <"Individet røyker den spesifiserte tobakkstypen minst en gang per dag.">
+            >
+            ["at0084"] = <
+                text = <"Ikke daglig">
+                description = <"Individet røyker ikke den spesifiserte tobakkstypen daglig.">
+            >
+            ["at0085"] = <
+                text = <"Definisjon på Forsøk på å slutte">
+                description = <"Den anvendte definisjonen på dataelementet \"Antall forsøk på å slutte\" benyttet i denne arketypen.">
+                comment = <"*For example: 'stopped vaping for one day or longer with the intention of quitting'. (en)">
+            >
+            ["at0086"] = <
+                text = <"*Additional details (en)">
+                description = <"*Additional structured details about the overall vaping behaviour. (en)">
+            >
+            ["at0087"] = <
+                text = <"Kommentar til episoden">
+                description = <"*Additional narrative about vaping during the specified episode, not captured in other fields. (en)">
+            >
+            ["at0089"] = <
+                text = <"Overordnet status">
+                description = <"*Statement about an individual’s current use of vaping devices. (en)">
+                comment = <"*Coding with a terminology is recommended.  Free text entry should only be permitted if no appropriate coded value is available. (en)">
+            >
+            ["at0091"] = <
+                text = <"*Never vaped(en)">
+                description = <"*Individet har aldri røykt den spesifiserte typen tobakk.">
+            >
+            ["at0095"] = <
+                text = <"*Substance name (en)">
+                description = <"*The name of the substance or e-liquid vaped by the individual. (en)">
+            >
+            ["ac9000"] = <
+                text = <"Overordnet status (synthesised)">
+                description = <"*Statement about an individual’s current use of vaping devices. (en) (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Status (synthesised)">
+                description = <"*Statement about current vaping behaviour for the specified substance or e-liquid. (en) (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Mønster (synthesised)">
+                description = <"*The typical pattern of vaping for the specified substance or e-liquid. (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Vaping summary">
+                description = <"Summary or persistent information about an individual’s use of devices that aerosolise nicotine or other substances for inhalation.">
+            >
+            ["at0003"] = <
+                text = <"Current vape user">
+                description = <"The individual is a current vape user.">
+            >
+            ["at0005"] = <
+                text = <"Former vape user">
+                description = <"The individual has previously vaped but is not a current user.">
+            >
+            ["at0006"] = <
+                text = <"Lifetime non-user">
+                description = <"The Individual has never vaped any type of substance.">
+            >
+            ["at0013"] = <
+                text = <"Episode start date">
+                description = <"Date when this episode commenced.">
+                comment = <"Can be a partial date, for example, only a year.">
+            >
+            ["at0014"] = <
+                text = <"Quit date">
+                description = <"Date when the individual last vaped the specified substance or e-liquid.">
+                comment = <"Can be a partial date, for example, only a year. Definitions for a 'Quit date' vary enormously and can be defined using the 'Quit data definition' data element in the Protocol section of this archetype. This date will be identical to the 'Episode end date' for the most recent episode. This date could be used by decision support guidance to determine if the  individual is at risk of relapse, for example in the first 12 months since quitting.">
+            >
+            ["at0015"] = <
+                text = <"Regular vaping commenced">
+                description = <"The date or partial date when the individual first started frequent or regular, but usually non-daily, vaping of any substance.">
+                comment = <"Can be a partial date, for example, only a year. For example, this date could represent when the individual commenced vaping every Friday night or at parties. ">
+            >
+            ["at0016"] = <
+                text = <"Overall quit date">
+                description = <"The date when the individual last ceased vaping of any substance or e-liquid.">
+                comment = <"Can be a partial date, for example, only a year. This date could be used by decision support guidance to determine if the  individual is at risk of relapse, for example in the first 12 months since quitting.">
+            >
+            ["at0019"] = <
+                text = <"Overall comment">
+                description = <"Additional narrative about all vaping that has not been captured in other fields.">
+                comment = <"For example: stopped vaping or reduced amount on becoming pregnant.">
+            >
+            ["at0022"] = <
+                text = <"Last updated">
+                description = <"The date when this vaping summary was last updated.">
+            >
+            ["at0023"] = <
+                text = <"???Typical use (units)">
+                description = <"Estimate of number of units of the specified type of substance or e-liquid consumed.">
+                comment = <"This data element is redundant if a value is recorded for 'Typical use(mass)'.">
+            >
+            ["at0025"] = <
+                text = <"Number of quit attempts">
+                description = <"Total number of times the individual has attempted to stop vaping the specified substance or e-liquid within this episode.">
+            >
+            ["at0026"] = <
+                text = <"Episode details">
+                description = <"Additional structured details about the specified episode of vaping.">
+            >
+            ["at0029"] = <
+                text = <"Per substance">
+                description = <"Details about vaping activity for a specified type of substance or e-liquid.">
+            >
+            ["at0030"] = <
+                text = <"Pattern">
+                description = <"The typical pattern of vaping for the specified substance or e-liquid.">
+            >
+            ["at0043"] = <
+                text = <"Overall description">
+                description = <"Narrative description about the individual’s overall vaping pattern and history.">
+                comment = <"Use this data element to record a narrative description of the vaping habits for this individual or to incorporate unstructured vaping information from existing or legacy clinical systems.">
+            >
+            ["at0052"] = <
+                text = <"Status">
+                description = <"Statement about current vaping behaviour for the specified substance or e-liquid.">
+            >
+            ["at0053"] = <
+                text = <"Description">
+                description = <"Narrative summary about vaping behaviour for the specified substance or e-liquid.">
+            >
+            ["at0059"] = <
+                text = <"Former vaper">
+                description = <"Individual has previously vaped the specified substance or e-liquid but is not a current vaper.">
+            >
+            ["at0061"] = <
+                text = <"Current vaper">
+                description = <"Individual is a current vaper of the specified substance or e-liquid.">
+            >
+            ["at0064"] = <
+                text = <"Per episode">
+                description = <"Details about a discrete period of vaping activity for the specified substance or e-liquid.">
+            >
+            ["at0069"] = <
+                text = <"Comment">
+                description = <"Additional narrative about vaping of the specified substance or e-liquid, not captured in other fields.">
+            >
+            ["at0071"] = <
+                text = <"Quit date definition">
+                description = <"The applied definition for the 'Quit date' data elements used in this archetype.">
+            >
+            ["at0073"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0075"] = <
+                text = <"Current vpaer definition">
+                description = <"The applied definition for the 'Current vaper' value in each of the 'Status' data elements used in this archetype.">
+                comment = <"Definition may need to be specified per type. Current vaper definitions vary in different jurisdictions. 
+">
+            >
+            ["at0076"] = <
+                text = <"Former vaper definition">
+                description = <"The applied definition for the 'Former vaper' value in each of the 'Status' data elements used in this archetype.">
+                comment = <"Former vaper definitions vary in different jurisdictions.">
+            >
+            ["at0077"] = <
+                text = <"Substance details">
+                description = <"Additional structured details about the specified type of substance or e-liquid vaped.">
+            >
+            ["at0079"] = <
+                text = <"Never vaped definition">
+                description = <"The applied definition for the 'Never vaped' value in each of the 'Status' data elements used in this archetype.">
+                comment = <"For example, the definition may not be zero, but less than a specified amount vaped during a specified time interval.">
+            >
+            ["at0080"] = <
+                text = <"Daily vaping commenced">
+                description = <"The date or partial date when the individual first started daily vaping of any substance.">
+                comment = <"Can be a partial date, for example, only a year.">
+            >
+            ["at0081"] = <
+                text = <"Episode label">
+                description = <"Identification of an episode of vaping activity - either as a number in a sequence and/or a named event.">
+                comment = <"For example: '2' as the second episode within a sequence of episodes; or 'Pregnancy with twins' if describing the vaping activity during a health event such as during a specific pregnancy.">
+            >
+            ["at0082"] = <
+                text = <"Episode end date">
+                description = <"Date when this episode ceased.">
+                comment = <"Can be a partial date, for example, only a year. This data field will be empty if the episode is current and ongoing.">
+            >
+            ["at0083"] = <
+                text = <"Daily">
+                description = <"Vaping the specified substance or e-liquid at least once every day.">
+            >
+            ["at0084"] = <
+                text = <"Non-daily">
+                description = <"Not vaping the specified substance or e-liquid every day.">
+            >
+            ["at0085"] = <
+                text = <"Quit attempt definition">
+                description = <"The applied definition for a Quit attempt used to determine value for the 'Number of quit attempts' data element used in this archetype.">
+                comment = <"For example: 'stopped vaping for one day or longer with the intention of quitting'.">
+            >
+            ["at0086"] = <
+                text = <"Additional details">
+                description = <"Additional structured details about the overall vaping behaviour.">
+            >
+            ["at0087"] = <
+                text = <"Episode comment">
+                description = <"Additional narrative about vaping during the specified episode, not captured in other fields.">
+            >
+            ["at0089"] = <
+                text = <"Overall status">
+                description = <"Statement about an individual’s current use of vaping devices.">
+                comment = <"Coding with a terminology is recommended.  Free text entry should only be permitted if no appropriate coded value is available.">
+            >
+            ["at0091"] = <
+                text = <"Never vaped">
+                description = <"Individual has never vaped the specified substance or e-liquid.">
+            >
+            ["at0095"] = <
+                text = <"Substance name">
+                description = <"The name of the substance or e-liquid vaped by the individual.">
+            >
+            ["ac9000"] = <
+                text = <"Overall status (synthesised)">
+                description = <"Statement about an individual’s current use of vaping devices. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Status (synthesised)">
+                description = <"Statement about current vaping behaviour for the specified substance or e-liquid. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Pattern (synthesised)">
+                description = <"The typical pattern of vaping for the specified substance or e-liquid. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0083", "at0084">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0061", "at0059", "at0091">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0006", "at0003", "at0005">
+        >
+    >

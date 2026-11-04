@@ -1,0 +1,85 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=a9975a46-5bca-489a-a60b-0cb835ba955b; build_uid=5978f0ed-96ed-4f87-a896-5321d0436891)
+    openEHR-EHR-EVALUATION.personal_safety_summary.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-12-17">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"14C26C21C7BEDF7E6F0954E04E7C9088">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record issue and concerns about personal safety in the broadest sense including experience of, or risk of, violence in their home, work or community.">
+            use = <"Use to record issue and concerns about personal safety in the broadest sense, including experience of, or risk of, violence in their home, work or community.
+
+Record as a single instance in a health record; updated and revised over time as a new version.">
+            misuse = <"">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Personal safety summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Overall description
+                        value matches {
+                            DV_TEXT[at9000]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0003] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9001]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0005] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Personal safety summary">
+                description = <"Summary or persistent information about an individual's perception about their personal safety.">
+            >
+            ["at0002"] = <
+                text = <"Overall description">
+                description = <"Narrative description about the personal safety situation for the individual.">
+            >
+            ["at0004"] = <
+                text = <"Last updated">
+                description = <"The date this personal safety summary was last updated.">
+            >
+            ["at0005"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+        >
+    >

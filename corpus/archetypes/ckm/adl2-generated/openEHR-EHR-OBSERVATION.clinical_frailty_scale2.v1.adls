@@ -1,0 +1,321 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=793d8a74-be1f-4a25-9799-d8a686e31207; build_uid=0c2f2654-f74b-4625-822a-5564d96beb1d)
+    openEHR-EHR-OBSERVATION.clinical_frailty_scale2.v1.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Marit Alice Venheim, Silje Ljosland Bakke, John Tore Valand, Vebjørn Arntzen">
+                ["organisation"] = <"Helse Vest IKT, Helse Vest IKT AS, Helse Bergen, Oslo University Hospital">
+                ["email"] = <"marit.alice.venheim@helse-vest-ikt.no, silje.ljosland.bakke@helse-vest-ikt.no, john.tore.valand@helse-vest-ikt.no, varntzen@ous-hf.no">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Joost Holslag">
+                ["organisation"] = <"Nedap">
+                ["email"] = <"joost.holslag@nedap.com">
+            >
+            accreditation = <"MD">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"John Tore Valand">
+        ["organisation"] = <"Helse Vest IKT">
+        ["email"] = <"john.tore.valand@helse-vest-ikt.no">
+        ["date"] = <"2022-01-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Erling Are Hole, Helse Bergen, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Astrid Askeland, Dips AS, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Hans Flaatten, Helse Bergen HF, Norway", "Tormod Førland, Dips Front, Norway", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (openEHR Editor)", "Merete Havn Torland, Helse Vest IKT, Norway", "Lise Kristin Knutsen, Oslo universitetssykehus, Norway", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia", "Ian McNicoll, NDS, Scotland", "Bjørn Næss, DIPS ASA, Norway", "Dr Paul Miller, NDS, Scotland", "Elisabeth Skaar, Helse Bergen, Norway", "Arild Stangeland, Helse Bergen, Norway", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: Clinical Frailty Scale (CFS), Published archetype [Internet]. openEHR Foundation, openEHR Clinical Knowledge Manager [cited: 2022-01-27]. Available from: https://ckm.openehr.org/ckm/archetypes/1013.1.4691">
+        ["2"] = <"Rockwood K, Song X, MacKnight C, Bergman H, Hogan DB, McDowell I, Mitnitski A. A global clinical measure of fitness and frailty in elderly people. CMAJ. 2005 Aug 30;173(5):489-95. doi: 10.1503/cmaj.050051. PMID: 16129869; PMCID: PMC1188185. Available from: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1188185/.">
+        ["3"] = <"Pulok MH, Theou O, van der Valk AM, Rockwood K. The role of illness acuity on the association between frailty and mortality in emergency department patients referred to internal medicine. Age Ageing. 2020;49(6):1071-1079. ">
+        ["4"] = <"Rockwood K, Theou O. Using the Clinical Frailty Scale in Allocating Scarce Health Care Resources. Can Geriatr J. 2020:23(3):210-215.">
+        ["5"] = <"Clinical Frailty Scale [Internet]. Dalhousie University. Dalhousie University; 2019 [cited 2022 Jan 27]. Available from: https://www.dal.ca/sites/gmr/our-tools/clinical-frailty-scale.html.">
+        ["6"] = <"Clinical Frailty Scale [Internet]. Norsk forening for geriatri. Den norske legeforening. Norwegian translation [cited 2021 08.12.21]. Available from: https://www.legeforeningen.no/foreningsledd/fagmed/norsk-forening-for-geriatri/fag/tester-og-registreringsskjemaer/">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"38477BE944B93CD0F61B76C148A6F724">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere vurdering av skrøpelighet i henhold til Clinical Frailty Scale 2.0.">
+            keywords = <"skrøpelighet, geriatrisk, gammel, høy alder, aktivitet, terminal, eldre, aldring, Rockwood, svekket, svekkelse", ...>
+            use = <"Brukes for å registrere vurdering av skrøpelighet i henhold til Clinical Frailty Scale 2.0.
+
+I 2020 ble CFS revidert (versjon 2.0) med mindre endringer i navn på de ulike gradene og beskrivelsen av disse. Grad 4 ble endret fra fra \"Sårbar\" til \"Lever med svært mild skrøpelighet\", og grad 5-8 ble omarbeidet til \"Lever med...\" henholdsvis mild, moderat, alvorlig og svært alvorlig skrøpelighet.
+
+openEHR-arketyper er fritt tilgjengelige under en åpen lisens, men det spesifikke innholdet i denne Clinical Frailty Scale-arketypen er opphavsrettslig beskyttet. All bruk av denne arketypen i implementasjoner må gjøres i henhold til vilkår gitt av innehaverne av opphavsretten.
+Erklæring om opphavsrett: Clinical Frailty Scale ©2005-2020 Rockwood, Version 2.0(EN). All rights reserved. 
+Informasjon om opphavsretten: https://www.geriatricmedicineresearch.ca.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the Clinical Frailty Scale (CFS) 2.0 assessment.">
+            keywords = <"frailty, geriatric, old age, activity, end of life, rockwood, elderly, aging", ...>
+            use = <"Use to record the Clinical Frailty Scale (CFS) 2.0 assessment.
+
+In 2020 the CFS was revised (version 2.0) with minor clarifying edits to the level descriptions and their corresponding labels. Most notably, CFS level 2 changed from \"Well\" to \"Fit\", level 4 from \"Vulnerable\" to \"Living with Very Mild Frailty\", and levels 5-8 were each restated as \"Living with...\"and added their respective grades of frailty.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this Clinical Frailty Scale archetype is copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners.
+Copyright statement: Clinical Frailty Scale ©2005-2020 Rockwood, Version 2.0(EN). All rights reserved. 
+For permission: https://www.geriatricmedicineresearch.ca.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"Het vastleggen van de Clinical Frailty Scale (CFS) 2.0">
+            use = <"Gebruik voor het vastleggen van de Clinical Frailty Scale (CFS) 2.0.
+In 2020 is de CFS herzien (versie 2.0) met beperkte verduidelijkende aanpassing van de beschrijvingen en kopjes. Meest noemenswaardig zijn, CFS level 2 is aangepast van \"Well\" naar \"Fit\" (in Nederlandse vertaling niet van toepassing), level 4 van \"vulnerable\" (Risico op kwetsbaarheid) naar">
+            misuse = <"">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Clinical Frailty Scale (CFS 2.0)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Any point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Assessment
+                                        value matches {
+                                            DV_ORDINAL[at9001] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0034]}],    -- Very fit
+                                                    [{2}, {[at0035]}],    -- Fit
+                                                    [{3}, {[at0036]}],    -- Managing well
+                                                    [{4}, {[at0037]}],    -- Living with very mild frailty
+                                                    [{5}, {[at0038]}],    -- Living with mild frailty
+                                                    [{6}, {[at0039]}],    -- Living with moderate frailty
+                                                    [{7}, {[at0040]}],    -- Living with severe frailty
+                                                    [{8}, {[at0041]}],    -- Living with very severe frailty
+                                                    [{9}, {[at0042]}]    -- Terminally Ill
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0014] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0015] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Clinical Frailty Scale (CFS 2.0)">
+                description = <"Clinical Frailty Scale er en vurderingsskala for å gradere skrøpelighet hos de over 65 år ved å kartlegge graden av kondisjon og skrøpelighet.">
+                comment = <"Også kjent som \"Klinisk skrøpelighetsskala\" og \"Rockwood Clinical Frailty Scale\".
+">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert tidspunkthendelse">
+                description = <"Standard, uspesifisert tidspunkt som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Vurdering">
+                description = <"Vurdering av skrøpelighetsnivå.">
+            >
+            ["at0015"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0034"] = <
+                text = <"Veldig sprek">
+                description = <"Personer som er robuste, aktive, energiske og motiverte. De trener gjerne regelmessig, og er blant de sprekeste i sin aldersgruppe.">
+            >
+            ["at0035"] = <
+                text = <"Sprek">
+                description = <"Personer som ikke har aktive sykdomssymptomer, men er mindre spreke enn kategori 1. De kan ofte trene eller være veldig aktive av og til, f.eks. sesongbasert.">
+            >
+            ["at0036"] = <
+                text = <"Klarer seg bra">
+                description = <"Personer med velkontrollerte medisinske problemer, selv om de kan ha symptomer av og til. De er ikke regelmessig aktive utover vanlig gange.">
+            >
+            ["at0037"] = <
+                text = <"Lever med svært mild skrøpelighet">
+                description = <"Tidligere \"sårbar\". Denne kategorien markerer en overgang fra å være helt selvhjulpen. Selv om de ikke er avhengig av daglig hjelp fra andre, vil symptomer begrense aktivitet. De klager ofte over at de er \"langsomme\" og/eller blir slitne/trøtte ila. dagen.">
+            >
+            ["at0038"] = <
+                text = <"Lever med mild skrøpelighet">
+                description = <"Disse er mer tydelig langsomme, og trenger hjelp til komplekse aktiviteter i dagliglivet (personlig økonomi, transport, tungt husarbeid). Vanligvis vil mild skrøpelighet i økende grad føre til problemer med å handle eller gå utenfor hjemmet alene, lage mat, håndtere medisiner, og begynner å begrense lett husarbeid.">
+            >
+            ["at0039"] = <
+                text = <"Lever med moderat skrøpelighet">
+                description = <"Personer som må ha hjelp til alle aktiviteter utendørs og med å stelle hjemmet. Innendørs har de ofte problemer med trapper, trenger hjelp til bading/dusj og kan trenge litt hjelp til å kle på seg (veiledning, tilsyn).">
+            >
+            ["at0040"] = <
+                text = <"Lever med alvorlig skrøpelighet">
+                description = <"Helt avhengige av hjelp til personlig stell uansett årsak (fysisk eller kognitiv). Likevel fremstår de som stabile uten høy risiko for å dø (innen ~6 måneder).">
+            >
+            ["at0041"] = <
+                text = <"Lever med svært alvorlig skrøpelighet">
+                description = <"Helt avhengige av hjelp til personlig stell og nærmer seg livets slutt. Vanligvis vil de ikke komme seg igjen selv etter mild sykdom.">
+            >
+            ["at0042"] = <
+                text = <"Terminalt syk">
+                description = <"Nærmer seg livets slutt. I denne kategorien inngår personer med en forventet levetid &lt;6 måneder uten at de lever med alvorlig skrøpelighet. (Mange terminalt syke pasienter kan være fysisk aktive inntil de er svært nær døden).">
+            >
+            ["ac9001"] = <
+                text = <"Vurdering (synthesised)">
+                description = <"Vurdering av skrøpelighetsnivå. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Clinical Frailty Scale (CFS 2.0)">
+                description = <"An assessment scale used to screen for frailty and to broadly stratify degrees of fitness and frailty in an individual over the age of 65.">
+                comment = <"Also known as the Rockwood Clinical Frailty Scale.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time event">
+                description = <"Default, unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Assessment">
+                description = <"Assessed level of frailty.">
+            >
+            ["at0015"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0034"] = <
+                text = <"Very fit">
+                description = <"People who are robust, active, energetic and motivated. They tend to exercise regularly and are among the fittest for their age.">
+            >
+            ["at0035"] = <
+                text = <"Fit">
+                description = <"People who have no active disease symptoms but are less fit than category 1. Often, they exercise or are very active occasionally, e.g., seasonally.">
+            >
+            ["at0036"] = <
+                text = <"Managing well">
+                description = <"People whose medical problems are well controlled, even if occasionally symptomatic, but often are not regularly active beyond routine walking.">
+            >
+            ["at0037"] = <
+                text = <"Living with very mild frailty">
+                description = <"Previously 'Vulnerable', this category marks early transition from complete independence. While not dependent on others for daily help, often symptoms limit activities. A common complaint is being 'slowed up' and/or being tired during the day.">
+            >
+            ["at0038"] = <
+                text = <"Living with mild frailty">
+                description = <"People who often have more evident slowing, and need help with high order instrumental activities of daily living (finances, transportation, heavy housework). Typically, mild frailty progressively impairs shopping and walking outside alone, meal preparation, medications and begins to restrict light housework.">
+            >
+            ["at0039"] = <
+                text = <"Living with moderate frailty">
+                description = <"People who need help with all outside activities and with keeping house. Inside, they often have problems with stairs and need help with bathing and might need minimal assistance (cuing, standby) with dressing.">
+            >
+            ["at0040"] = <
+                text = <"Living with severe frailty">
+                description = <"Completely dependent for personal care, from whatever cause (physical or cognitive). Even so, they seem stable and not at high risk of dying (within ~6 months).">
+            >
+            ["at0041"] = <
+                text = <"Living with very severe frailty">
+                description = <"Completely dependent for personal care and approaching end of life. Typically, they could not recover even from a minor illness.">
+            >
+            ["at0042"] = <
+                text = <"Terminally Ill">
+                description = <"Approaching the end of life. This category applies to people with a life expectancy <6 months, who are not otherwise living with severe frailty. (Many terminally ill people can still exercise until very close to death).">
+            >
+            ["ac9001"] = <
+                text = <"Assessment (synthesised)">
+                description = <"Assessed level of frailty. (synthesised)">
+            >
+        >
+        ["nl"] = <
+            ["at0000"] = <
+                text = <"*Clinical Frailty Scale (CFS 2.0)(en)">
+                description = <"*An assessment scale used to screen for frailty and to broadly stratify degrees of fitness and frailty in an individual over the age of 65.(en)">
+            >
+            ["at0002"] = <
+                text = <"*Any point in time event(en)">
+                description = <"*Default, unspecified point in time event which may be explicitly defined in a template or at run-time.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Assessment(en)">
+                description = <"*Assessed level of frailty.(en)">
+            >
+            ["at0015"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models/formalisms.(en)">
+            >
+            ["at0034"] = <
+                text = <"*Very fit(en)">
+                description = <"*People who are robust, active, energetic and motivated. They tend to exercise regularly and are among the fittest for their age.(en)">
+            >
+            ["at0035"] = <
+                text = <"*Fit(en)">
+                description = <"*People who have no active disease symptoms but are less fit than category 1. Often, they exercise or are very active occasionally, e.g., seasonally.(en)">
+            >
+            ["at0036"] = <
+                text = <"*Managing well(en)">
+                description = <"*People whose medical problems are well controlled, even if occasionally symptomatic, but often are not regularly active beyond routine walking.(en)">
+            >
+            ["at0037"] = <
+                text = <"*Living with very mild frailty(en)">
+                description = <"*Previously 'Vulnerable', this category marks early transition from complete independence. While not dependent on others for daily help, often symptoms limit activities. A common complaint is being 'slowed up' and/or being tired during the day.(en)">
+            >
+            ["at0038"] = <
+                text = <"*Living with mild frailty(en)">
+                description = <"*People who often have more evident slowing, and need help with high order instrumental activities of daily living (finances, transportation, heavy housework). Typically, mild frailty progressively impairs shopping and walking outside alone, meal preparation, medications and begins to restrict light housework.(en)">
+            >
+            ["at0039"] = <
+                text = <"*Living with moderate frailty(en)">
+                description = <"*People who need help with all outside activities and with keeping house. Inside, they often have problems with stairs and need help with bathing and might need minimal assistance (cuing, standby) with dressing.(en)">
+            >
+            ["at0040"] = <
+                text = <"*Living with severe frailty(en)">
+                description = <"*Completely dependent for personal care, from whatever cause (physical or cognitive). Even so, they seem stable and not at high risk of dying (within ~6 months).(en)">
+            >
+            ["at0041"] = <
+                text = <"*Living with very severe frailty(en)">
+                description = <"*Completely dependent for personal care and approaching end of life. Typically, they could not recover even from a minor illness.(en)">
+            >
+            ["at0042"] = <
+                text = <"*Terminally Ill(en)">
+                description = <"*Approaching the end of life. This category applies to people with a life expectancy <6 months, who are not otherwise living with severe frailty. (Many terminally ill people can still exercise until very close to death).(en)">
+            >
+            ["ac9001"] = <
+                text = <"*Assessment(en) (synthesised)">
+                description = <"*Assessed level of frailty.(en) (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0034", "at0035", "at0036", "at0037", "at0038", "at0039", "at0040", "at0041", "at0042">
+        >
+    >

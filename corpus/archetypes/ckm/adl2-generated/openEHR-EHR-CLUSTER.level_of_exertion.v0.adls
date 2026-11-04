@@ -1,0 +1,326 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=06ad50b7-b6e0-4fad-8dec-8d29678bb953; build_uid=8c1b0ea0-439c-406d-a7a9-f5f0b392965f)
+    openEHR-EHR-CLUSTER.level_of_exertion.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Ramona Wellmann">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"wellmann.ramona@mh-hannover.de">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2008-10-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Ian McNicoll, Ocean Informatics,UK", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"27606DDC8BC11CD99B544D4C7D992C00">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Dokumentation der Anstrengung/Belastung, der der Patient ausgesetzt ist oder ausgesetzt war.">
+            keywords = <"Übung", "Bewegung", "körperliche Anstrengung", "Belastung", "Belastungsgrad", "Belastungsintensität", "Tätigkeit", "Beschäftigung", "Betätigung", "Kraftanstrengung", "Anstrengung", "Ausübung", "Aktivität", "Maßnahme", "Energie", "Tatkraft", "Kraft">
+            use = <"Zur Dokumentation des Belastungsgrads und der Phase der Belastung (Zeitpunkt) - zur Bereitstellung von Status- und Kontextinformationen innerhalb einer OBSERVATION-Klasse wie z.B. Blutdruckmessung.">
+            misuse = <"Dient nicht der Dokumentation der eigentlichen Übungen/Aktivitäten und Messungen. Diese sollten in der dafür vorgesehenen OBSERVATION-Klasse erfasst werden.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Record information about the amount of energy expenditure that has been, or is being, experienced by the patient.">
+            keywords = <"exercise", "work", "exertion", "activity", "energy">
+            use = <"Record information about phase and levels of exertion - to provide state/context information within OBSERVATIONS such as Blood Pressure.">
+            misuse = <"Not to be used to record actual exercise activities and measurements which should be recorded as OBSERVATIONS in their own right.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل معلومات حول كمية إنفاق الطاقة التي مر/ أو يمر بها المريض">
+            keywords = <"التمرين", "العمل", "المجهود", "النشاط", "الطاقة">
+            use = <"لتسجيل معلومات حول طور و مستويات المجهود - للإمداد بمعلومات حول السياق/الحالة في داخل الملاحظات مثل ضغط الدم.">
+            misuse = <"لا يستخدم لتسجيل نشاطات التمرين الفعلي و القياسات التي ينبغي تسجيلها على هيئة ملاحظات منفردة بذاتها">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Level of exertion
+        items cardinality matches {1..*; unordered} matches {
+            CLUSTER[at0010] occurrences matches {0..1} matches {    -- Exercise intensity
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Intensity
+                        value matches {
+                            DV_CODED_TEXT[at9004] matches {
+                                defining_code matches {[ac9000]}    -- Intensity (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Measured
+                        value matches {
+                            DV_QUANTITY[at9005] matches {
+                                property matches {[at9001]}    -- Work
+                                magnitude matches {|0.0..1000.0|}
+                                units matches {"J/min"}
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Phase
+                value matches {
+                    DV_CODED_TEXT[at9006] matches {
+                        defining_code matches {[ac9002]}    -- Phase (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Belastungsgrad">
+                description = <"Aufzeichnung von Informationen zum Belastungsgrad/Zustand des Patienten.">
+            >
+            ["at0005"] = <
+                text = <"Messwert">
+                description = <"Gemessener Grad der körperlichen Anstrengung.">
+            >
+            ["at0006"] = <
+                text = <"In Ruhe">
+                description = <"Die Person befindet sich im Ruhezustand vor Beginn der Übung/körperlichen Anstrengung.">
+            >
+            ["at0007"] = <
+                text = <"Während der Kraftanstrengung">
+                description = <"Die Person übt gerade die körperliche Anstrengung aus.">
+            >
+            ["at0008"] = <
+                text = <"Nach der körperlichen Anstrengung">
+                description = <"Die Messung wird nach Abschluss der Belastung durchgeführt.">
+            >
+            ["at0009"] = <
+                text = <"Phase">
+                description = <"Die Phase oder der Kontext zur Übung/körperlichen Anstrengung.">
+            >
+            ["at0010"] = <
+                text = <"Intensität der Übung">
+                description = <"Die körperliche Anstrengung/Intensität, die während der Übung geleistet wird.">
+            >
+            ["at0011"] = <
+                text = <"Intensität">
+                description = <"Semiquantitative Beschreibung der Intensität der körperlichen Anstrengung.">
+            >
+            ["at0012"] = <
+                text = <"Geringe Intensität">
+                description = <"Bis zu 80 % der maximalen Herzfrequenz.">
+            >
+            ["at0013"] = <
+                text = <"Mittlere Intensität">
+                description = <"80-85 % der maximalen Herzfrequenz.">
+            >
+            ["at0014"] = <
+                text = <"Hohe Intensität">
+                description = <"85-90 % der maximalen Herzfrequenz.">
+            >
+            ["at0015"] = <
+                text = <"Völlige Anstrengung/\"auf Hochtouren arbeiten\"/\"Vollgas\"">
+                description = <"90-100 % der maximalen Herzfrequenz.">
+            >
+            ["at0016"] = <
+                text = <"Beschreibung">
+                description = <"Beschreibung der körperlichen Anstrengung.">
+            >
+            ["at9001"] = <
+                text = <"* Work (en)">
+                description = <"* Work (en)">
+            >
+            ["ac9000"] = <
+                text = <"Intensität (synthesised)">
+                description = <"Semiquantitative Beschreibung der Intensität der körperlichen Anstrengung. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Phase (synthesised)">
+                description = <"Die Phase oder der Kontext zur Übung/körperlichen Anstrengung. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Level of exertion">
+                description = <"Record information about level of exertion.">
+            >
+            ["at0005"] = <
+                text = <"Measured">
+                description = <"The measured level of exertion.">
+            >
+            ["at0006"] = <
+                text = <"At rest">
+                description = <"The person is at rest, prior to undertaking exercise.">
+            >
+            ["at0007"] = <
+                text = <"During exertion">
+                description = <"The person is exerting themselves at the time.">
+            >
+            ["at0008"] = <
+                text = <"Post-exertion">
+                description = <"Measurement is taken after exertion has ceased.">
+            >
+            ["at0009"] = <
+                text = <"Phase">
+                description = <"The phase or context of exercise.">
+            >
+            ["at0010"] = <
+                text = <"Exercise intensity">
+                description = <"Amount of work being done during exercise.">
+            >
+            ["at0011"] = <
+                text = <"Intensity">
+                description = <"Semiquantitative description of the intensity of exercise undertaken.">
+            >
+            ["at0012"] = <
+                text = <"Low Intensity">
+                description = <"Up to 80% Maximal Heart Rate.">
+            >
+            ["at0013"] = <
+                text = <"Medium Intensity">
+                description = <"80-85% of Maximal Heart Rate.">
+            >
+            ["at0014"] = <
+                text = <"High Intensity">
+                description = <"85-90% Maximal Heart Rate.">
+            >
+            ["at0015"] = <
+                text = <"Flat Out">
+                description = <"90-100% Maximal Heart Rate.">
+            >
+            ["at0016"] = <
+                text = <"Description">
+                description = <"Description of the exertion.">
+            >
+            ["at9001"] = <
+                text = <"Work">
+                description = <"Work">
+            >
+            ["ac9000"] = <
+                text = <"Intensity (synthesised)">
+                description = <"Semiquantitative description of the intensity of exercise undertaken. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Phase (synthesised)">
+                description = <"The phase or context of exercise. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"مستوى المجهود">
+                description = <"لتسجيل معلومات حول مستوى المجهود">
+            >
+            ["at0005"] = <
+                text = <"تم قياسه">
+                description = <"مستوى المجهود الذي تم قياسه">
+            >
+            ["at0006"] = <
+                text = <"عند الراحة">
+                description = <"الشخص في وضع الراحة, قبل إجراء التمرين">
+            >
+            ["at0007"] = <
+                text = <"في أثناء المجهود">
+                description = <"الشخص يبذل مجهودا في هذا الوقت">
+            >
+            ["at0008"] = <
+                text = <"ما بعد المجهود">
+                description = <"يتم إجراء القياس بعد توقف التمرين">
+            >
+            ["at0009"] = <
+                text = <"الطور">
+                description = <"طور أو سياق التمرين">
+            >
+            ["at0010"] = <
+                text = <"شدة التمرين">
+                description = <"كمية العمل التي يتم فعلها خلال التمرين">
+            >
+            ["at0011"] = <
+                text = <"الشدة">
+                description = <"وصف نصف كمي لشدة التمرين الذي يتم فعله">
+            >
+            ["at0012"] = <
+                text = <"شدة منخفضة">
+                description = <"الحد الأقصى من معدل ضربات القلب يتجاوز 80 %">
+            >
+            ["at0013"] = <
+                text = <"شدة متوسطة">
+                description = <"الحد الأقصى من معدل ضربات القلب بين 80 - 85 %">
+            >
+            ["at0014"] = <
+                text = <"شدة مرتفعة">
+                description = <"الحد الأقصى من معدل ضربات القلب بين 85 - 90%">
+            >
+            ["at0015"] = <
+                text = <"مُسَطَّح">
+                description = <"الحد الأقصى من معدل ضربات القلب بين 90 - 100%">
+            >
+            ["at0016"] = <
+                text = <"الوصف">
+                description = <"وصف المجهود">
+            >
+            ["at9001"] = <
+                text = <"* Work (en)">
+                description = <"* Work (en)">
+            >
+            ["ac9000"] = <
+                text = <"الشدة (synthesised)">
+                description = <"وصف نصف كمي لشدة التمرين الذي يتم فعله (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"الطور (synthesised)">
+                description = <"طور أو سياق التمرين (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/130>
+        >
+        ["SNOMED-CT"] = <
+            ["at0006"] = <http://snomed.info/id/128975004>
+            ["at0007"] = <http://snomed.info/id/128976003>
+            ["at0008"] = <http://snomed.info/id/128978002>
+            ["at0010"] = <http://snomed.info/id/251894003>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0006", "at0007", "at0008">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0012", "at0013", "at0014", "at0015">
+        >
+    >

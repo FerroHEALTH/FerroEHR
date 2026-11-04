@@ -1,0 +1,223 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d3c0dab8-ee9a-4e98-a34e-36905522f3e5; build_uid=f14e63ad-bd1d-47f5-8bc2-fedadf5aad4d)
+    openEHR-EHR-ACTION.notification.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2018-05-01">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"6C91DF25B30EF1BFB80FBF7D7AE269D3">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record detail about information provided as a notice, announcement or warning to an individual.">
+            use = <"Use to record detail about information provided as a notice, announcement or warning to an individual. 
+
+If the notification is about clinical information, record this archetype in a template based on COMPOSITION.notification. The clinical data itself should be included in the same template using standard clinical archetypes.">
+            misuse = <"Not to be used to record information related to precautions, contraindications, adverse reaction risk or other archetypes in the therapeutic precautions family.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ACTION[at0000] matches {    -- Notification
+        ism_transition matches {
+            ISM_TRANSITION[at0012] matches {    -- Need identified
+                current_state matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[at9000]}    -- initial
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9004] matches {
+                        defining_code matches {[at0012]}    -- Need identified
+                    }
+                }
+            }
+            ISM_TRANSITION[at0014] matches {    -- Dictated
+                current_state matches {
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[at9001]}    -- active
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9006] matches {
+                        defining_code matches {[at0014]}    -- Dictated
+                    }
+                }
+            }
+            ISM_TRANSITION[at0015] matches {    -- Created
+                current_state matches {
+                    DV_CODED_TEXT[at9007] matches {
+                        defining_code matches {[at9001]}    -- active
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9008] matches {
+                        defining_code matches {[at0015]}    -- Created
+                    }
+                }
+            }
+            ISM_TRANSITION[at0016] matches {    -- Signed
+                current_state matches {
+                    DV_CODED_TEXT[at9009] matches {
+                        defining_code matches {[at9001]}    -- active
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9010] matches {
+                        defining_code matches {[at0016]}    -- Signed
+                    }
+                }
+            }
+            ISM_TRANSITION[at0017] matches {    -- Sent
+                current_state matches {
+                    DV_CODED_TEXT[at9011] matches {
+                        defining_code matches {[at9002]}    -- complete
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9012] matches {
+                        defining_code matches {[at0017]}    -- Sent
+                    }
+                }
+            }
+        }
+        description matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Type
+                        value matches {
+                            DV_TEXT[at9013]
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Reason
+                        value matches {
+                            DV_TEXT[at9014]
+                        }
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Method
+                        value matches {
+                            DV_DATE_TIME[at9015]
+                        }
+                    }
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Date sent
+                        value matches {
+                            DV_DATE_TIME[at9016]
+                        }
+                    }
+                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9017]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0018] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0019] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    allow_archetype CLUSTER[at0002] matches {    -- Addressee
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.individual_personal(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.individual_professional(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Notification">
+                description = <"Information provided as a notice, announcement or warning.">
+            >
+            ["at0002"] = <
+                text = <"Addressee">
+                description = <"The recipient of the notification.">
+            >
+            ["at0004"] = <
+                text = <"Type">
+                description = <"Type of notification.">
+            >
+            ["at0005"] = <
+                text = <"Reason">
+                description = <"Reason that the activity or care pathway step for the notification was carried out, for example, the reason for the cancellation or suspension of the notification.">
+            >
+            ["at0006"] = <
+                text = <"Method">
+                description = <"The method of notification.">
+            >
+            ["at0007"] = <
+                text = <"Date sent">
+                description = <"The date that the notification was sent.">
+            >
+            ["at0011"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the notification, not captured in other fields.">
+            >
+            ["at0012"] = <
+                text = <"Need identified">
+                description = <"A trigger for the notification has been identified.">
+            >
+            ["at0014"] = <
+                text = <"Dictated">
+                description = <"The notification has been dictated.">
+            >
+            ["at0015"] = <
+                text = <"Created">
+                description = <"The notification has been created.">
+            >
+            ["at0016"] = <
+                text = <"Signed">
+                description = <"The notification has been signed.">
+            >
+            ["at0017"] = <
+                text = <"Sent">
+                description = <"The notification has been sent.">
+            >
+            ["at0019"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at9000"] = <
+                text = <"initial">
+                description = <"initial">
+            >
+            ["at9001"] = <
+                text = <"active">
+                description = <"active">
+            >
+            ["at9002"] = <
+                text = <"complete">
+                description = <"complete">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/524>
+            ["at9001"] = <http://openehr.org/id/245>
+            ["at9002"] = <http://openehr.org/id/532>
+        >
+    >

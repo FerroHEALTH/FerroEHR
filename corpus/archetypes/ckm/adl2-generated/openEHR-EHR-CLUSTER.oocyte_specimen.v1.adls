@@ -1,0 +1,133 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=90ad08a8-97ab-4715-b775-2a9c243bd5b0; build_uid=2eab0b11-4210-458c-89bf-4edd6c1614d3)
+    openEHR-EHR-CLUSTER.oocyte_specimen.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Liv Laugen">
+                ["organisation"] = <"​Oslo University Hospital, Norway">
+                ["email"] = <"liv.laugen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Liv Laugen">
+        ["organisation"] = <"Oslo University Hospital, Norway">
+        ["email"] = <"liv.laugen@ous-hf.no">
+        ["date"] = <"2022-10-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Peter Fedorcsak, University of Oslo, Norway (openEHR Editor)", "Evelyn Hovenga, EJSH Consulting, Australia", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Natalia Strauch, Medizinische Hochschule Hannover, Germany">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Ashford, P., et al., Standard terminology for reproductive tissue and cell products for use in ART. Human Reproduction Open, 2019. 2019(2): p. hoz005.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"F7B0133EEF992BFC92E60191270A2B8E">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljert informasjon om en eller flere uthentede oocytter.">
+            keywords = <"meiose, metafase, germinal vesicle, GV, ivf, assistert reproduksjon, inseminasjon, bioprøve", ...>
+            use = <"Brukes for å registrere detaljert informasjon om en eller flere uthentede oocytter.
+
+Denne arketypen er designet for å registrere mer spesifikke detaljer om oocytter som hentes ut i forbindelse med assistert befruktning, og kan bli nøstet i \"Ytterligere detaljer\" SLOTet i arketypen CLUSTER.specimen (Prøvemateriale).">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To document more detailed information about one or more harvested oocytes.">
+            keywords = <"meiosis, metaphase, germinal vesicle, GV, ivf, artificial insemination, art", ...>
+            use = <"Use to document more detailed information about one or more harvested oocytes.
+
+This archetype has been designed to document more specific details about a harvested oocytes in assisted reproduction treatment and can be nested within the \"Additional details slot\" in the CLUSTER.specimen archetype.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Oocyte specimen
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0018] occurrences matches {0..1} matches {    -- Oocyte maturation stage
+                value matches {
+                    DV_CODED_TEXT[at9001] matches {
+                        defining_code matches {[ac9000]}    -- Oocyte maturation stage (synthesised)
+                    }
+                    DV_TEXT[at9002]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Oocytt prøvemateriale">
+                description = <"For å registrere detaljert informasjon om en eller flere uthentede oocytter.">
+            >
+            ["at0018"] = <
+                text = <"Modenhet av oocytt">
+                description = <"Kjernens status i oocytten etter fjerning av cumulus-corona radiata celler.">
+            >
+            ["at0019"] = <
+                text = <"Metafase 2 [">
+                description = <"Oocytt i metafase 2 (M2) av den meiotiske celledelingen.">
+            >
+            ["at0020"] = <
+                text = <"Meiose 1">
+                description = <"Oocytt i meiose 1.">
+            >
+            ["at0021"] = <
+                text = <"Germinal vesikkel">
+                description = <"Oocytt med en intakt kjerne, germinal vesikkel (GV), i profase 1 av den meiotiske celledelingen.">
+            >
+            ["ac9000"] = <
+                text = <"Modenhet av oocytt (synthesised)">
+                description = <"Kjernens status i oocytten etter fjerning av cumulus-corona radiata celler. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Oocyte specimen">
+                description = <"To document detailed information about one or more harvested oocytes.">
+            >
+            ["at0018"] = <
+                text = <"Oocyte maturation stage">
+                description = <"Nuclear maturity of oocyte after removal of the cumulus-corona cell mass.">
+            >
+            ["at0019"] = <
+                text = <"Metaphase 2">
+                description = <"Oocyte in the metaphase 2 (M2) of the meiotic cell division.">
+            >
+            ["at0020"] = <
+                text = <"Meiosis 1">
+                description = <"Oocyte in meiosis 1.">
+            >
+            ["at0021"] = <
+                text = <"Germinal vesicle">
+                description = <"Oocyte still displaying an intact nucleus, the germinal vesicle (GV), in prophase 1 of meiosis.">
+            >
+            ["ac9000"] = <
+                text = <"Oocyte maturation stage (synthesised)">
+                description = <"Nuclear maturity of oocyte after removal of the cumulus-corona cell mass. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0019", "at0020", "at0021">
+        >
+    >

@@ -1,0 +1,147 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=0e6143ea-715b-4d6a-a5b7-f23b91ccf8cd; build_uid=4b7a5d0a-e304-40d5-a440-19f406e1af59)
+    openEHR-EHR-OBSERVATION.iss-revised.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-OBSERVATION.iss.v0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Maryam Razavi">
+        ["organisation"] = <"Cambio CDS">
+        ["email"] = <"maryam.razavi@cambio.se">
+        ["date"] = <"2020-12-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Durie BG, Salmon SE. A clinical staging system for multiple myeloma. Correlation of measured myeloma cell mass with presenting clinical features, response to treatment, and survival. Cancer. 1975 Sep;36(3):842-54. doi: 10.1002/1097-0142(197509)36:3<842::aid-cncr2820360303>3.0.co;2-u. PMID: 1182674.">
+        ["2"] = <"Greipp PR, San Miguel J, Durie BG, Crowley JJ, Barlogie B, Bladé J, Boccadoro M, Child JA, Avet-Loiseau H, Kyle RA, Lahuerta JJ, Ludwig H, Morgan G, Powles R, Shimizu K, Shustik C, Sonneveld P, Tosi P, Turesson I, Westin J. International staging system for multiple myeloma. J Clin Oncol. 2005 May 20;23(15):3412-20. doi: 10.1200/JCO.2005.04.242. Epub 2005 Apr 4. Erratum in: J Clin Oncol. 2005 Sep 1;23(25):6281. Harousseau, Jean-Luc [corrected to Avet-Loiseau, Herve]. PMID: 15809451.">
+        ["3"] = <"Palumbo A, Avet-Loiseau H, Oliva S, Lokhorst HM, Goldschmidt H, Rosinol L, Richardson P, Caltagirone S, Lahuerta JJ, Facon T, Bringhen S, Gay F, Attal M, Passera R, Spencer A, Offidani M, Kumar S, Musto P, Lonial S, Petrucci MT, Orlowski RZ, Zamagni E, Morgan G, Dimopoulos MA, Durie BG, Anderson KC, Sonneveld P, San Miguel J, Cavo M, Rajkumar SV, Moreau P. Revised International Staging System for Multiple Myeloma: A Report From International Myeloma Working Group. J Clin Oncol. 2015 Sep 10;33(26):2863-9. doi: 10.1200/JCO.2015.61.2267. Epub 2015 Aug 3. PMID: 26240224; PMCID: PMC4846284.">
+    >
+    other_details = <
+        ["current_contact"] = <"maryam.razavi@cambio.se">
+        ["MD5-CAM-1.0.1"] = <"D3CA7BEB1993FE4B9875ED5F320A7A8B">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter and the resulting R-ISS stage.">
+            keywords = <"albumin", "multiple", "myeloma", "staging", "system">
+            use = <"Use to record the results for each component parameter and the resulting R-ISS stage.">
+            misuse = <"">
+            copyright = <"© Cambio CDS, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000.1] matches {    -- Revised International Staging System for Multiple Myeloma (R-ISS)
+        /data[at0001]/events[at0002]/data[at0003]/items matches {
+            ELEMENT[at0.1] occurrences matches {0..1} matches {    -- CA by iFISH
+                value matches {
+                    DV_CODED_TEXT[at0.9003] matches {
+                        defining_code matches {[ac0.9000]}    -- CA by iFISH (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.4] occurrences matches {0..1} matches {    -- Serum LDH
+                value matches {
+                    DV_CODED_TEXT[at0.9004] matches {
+                        defining_code matches {[ac0.9001]}    -- Serum LDH (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.7] occurrences matches {0..1} matches {    -- Revised ISS stage
+                value matches {
+                    DV_CODED_TEXT[at0.9005] matches {
+                        defining_code matches {[ac0.9002]}    -- Revised ISS stage (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.1"] = <
+                text = <"CA by iFISH">
+                description = <"Chromosomal abnormalities (CA) detected by
+interphase fluorescent in situ hybridization (iFISH).">
+            >
+            ["at0.10"] = <
+                text = <"R-ISS III">
+                description = <"ISS stage III and either high-risk CA by iFISH or high LDH.">
+            >
+            ["at0.2"] = <
+                text = <"Standard risk">
+                description = <"No high risk CA.">
+            >
+            ["at0.3"] = <
+                text = <"High risk">
+                description = <"Presence of del(17p) and/or translocation t(4;14) and/or translocation t(14;16).">
+            >
+            ["at0.4"] = <
+                text = <"Serum LDH">
+                description = <"">
+            >
+            ["at0.5"] = <
+                text = <"Normal">
+                description = <"Serum LDH < the upper limit of normal.">
+            >
+            ["at0.6"] = <
+                text = <"High">
+                description = <"Serum LDH > the upper limit of normal.">
+            >
+            ["at0.7"] = <
+                text = <"Revised ISS stage">
+                description = <"">
+            >
+            ["at0.8"] = <
+                text = <"R-ISS I">
+                description = <"ISS stage I and standard-risk CA by iFISH and normal LDH.">
+            >
+            ["at0.9"] = <
+                text = <"R-ISS II">
+                description = <"Not R-ISS stage I or III.">
+            >
+            ["at0000.1"] = <
+                text = <"Revised International Staging System for Multiple Myeloma (R-ISS)">
+                description = <"A staging system for classifying and stratifying patients with multiple myeloma.">
+            >
+            ["ac0.9000"] = <
+                text = <"CA by iFISH (synthesised)">
+                description = <"Chromosomal abnormalities (CA) detected by
+interphase fluorescent in situ hybridization (iFISH). (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Serum LDH (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"Revised ISS stage (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.2", "at0.3">
+        >
+        ["ac0.9001"] = <
+            id = <"ac0.9001">
+            members = <"at0.5", "at0.6">
+        >
+        ["ac0.9002"] = <
+            id = <"ac0.9002">
+            members = <"at0.8", "at0.9", "at0.10">
+        >
+    >

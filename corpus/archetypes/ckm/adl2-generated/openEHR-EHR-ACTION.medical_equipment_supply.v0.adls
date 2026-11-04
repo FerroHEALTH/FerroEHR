@@ -1,0 +1,391 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1c530634-8d9f-42be-8f66-b46511006d26; build_uid=3becd1c2-3d74-4a20-bb9b-28284eb46694)
+    openEHR-EHR-ACTION.medical_equipment_supply.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2025-05-28">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"AUCDI Clinical Design Group (CDG), Sparked FHIR accelerator, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Requirements identified by clinicians, reflecting current clinical practice and workflows.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"E0CD78BF033A125BF0CCC96E77E45AD3">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about the supply of medical equipment at clinically relevant events in the intervention lifecycle, from planning to completion, and including deviations or interruptions.">
+            keywords = <"assistive, mobility, communication, aid, device, diagnostic, prosthetic, orthotic, safety, modification", ...>
+            use = <"Use to record details about the supply of medical equipment at clinically relevant events in the intervention lifecycle, from planning to completion, and including deviations or interruptions.
+
+The scope of this archetype is focused on the supply of general medical equipment, assistive technologies, consumables, and disposables to the individual. It includes, but is not limited to:
+- Mobility and communication aids, such as wheelchairs, walkers, crutches, or a hearing aid
+- Diagnostic equipment, such as blood pressure monitors, a blood glucose meter, or a pulse oximeter
+- Therapeutic devices, such as CPAP machine, a nebuliser, a TENS unit, or an insulin pump
+- Hospital beds and accessories, such as bed rails, or a pressure mattress
+- Home care supplies, such as oxygen concentrators, IV stands and pumps, blood glucose test strips, incontinence pads, oxygen tubing and masks, or a sharps container
+- Prosthetics and orthotics, such as an artificial limb, or braces and supports
+- Safety equipment or modifications, such as shower chairs, grab bars, ramps, stair lifts or vehicle modifications
+
+Record one instance per careflow step or event for each specified type of medical equipment, in a health record. If the equipment to be supplied consists of a single component, the 'Equipment supply delivered' and the 'Equipment supply completed' careflow step may be recorded simultaneously. However, if the supply consists of multiple components, record a separate instance of the 'Equipment supply delivered' careflow step for each component delivered, and record the 'Equipment supply completed' step only after the final component has been delivered.">
+            misuse = <"Not to be used to information about implantation of devices - use the ‘Procedure’ or ‘Implanted device summary’ archetypes for this purpose.
+
+Not to be used to record a summary or longitudinal history about the use of an assistive device, such as a hearing aid or wheelchair. The need for a specific archetype for this purpose is acknowledged but has not yet been developed.
+
+Not to be used to record details about supply chain or logistics beyond the supply of an identified piece of equipment to an individual. The recording of supply chain logistics is out of scope for archetypes.">
+            copyright = <" © Sparked AU FHIR accelerator, openEHR Foundation">
+        >
+    >
+
+definition
+    ACTION[at0000] matches {    -- Medical equipment supply
+        description matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {1} matches {    -- Equipment name
+                        value matches {
+                            DV_TEXT[at9026]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Equipment category
+                        value matches {
+                            DV_TEXT[at9028]
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9030]
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Clinical indication
+                        value matches {
+                            DV_TEXT[at9046]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0006] matches {    -- Equipment details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    allow_archetype CLUSTER[at0007] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Scheduled date/time
+                        value matches {
+                            DV_DATE_TIME[at9047]
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9048]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0013] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Requestor order identifier
+                        value matches {
+                            DV_TEXT[at9049]
+                            DV_IDENTIFIER[at9050]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0021] matches {    -- Requestor
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Receiver order identifier
+                        value matches {
+                            DV_TEXT[at9051]
+                            DV_IDENTIFIER[at9052]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0023] matches {    -- Receiver
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    allow_archetype CLUSTER[at0024] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+        ism_transition matches {
+            ISM_TRANSITION[at0010] matches {    -- Equipment supply planned
+                current_state matches {
+                    DV_CODED_TEXT[at9038] matches {
+                        defining_code matches {[at9000]}    -- planned
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9039] matches {
+                        defining_code matches {[at0010]}    -- Equipment supply planned
+                    }
+                }
+            }
+            ISM_TRANSITION[at0011] matches {    -- Equipment supply request sent
+                current_state matches {
+                    DV_CODED_TEXT[at9040] matches {
+                        defining_code matches {[at9000]}    -- planned
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9041] matches {
+                        defining_code matches {[at0011]}    -- Equipment supply request sent
+                    }
+                }
+            }
+            ISM_TRANSITION[at0012] matches {    -- Equipment supply postponed
+                current_state matches {
+                    DV_CODED_TEXT[at9042] matches {
+                        defining_code matches {[at9001]}    -- postponed
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9043] matches {
+                        defining_code matches {[at0012]}    -- Equipment supply postponed
+                    }
+                }
+            }
+            ISM_TRANSITION[at0014] matches {    -- Equipment supply cancelled
+                current_state matches {
+                    DV_CODED_TEXT[at9012] matches {
+                        defining_code matches {[at9002]}    -- cancelled
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9013] matches {
+                        defining_code matches {[at0014]}    -- Equipment supply cancelled
+                    }
+                }
+            }
+            ISM_TRANSITION[at0015] matches {    -- Equipment supply scheduled
+                current_state matches {
+                    DV_CODED_TEXT[at9014] matches {
+                        defining_code matches {[at9003]}    -- scheduled
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9015] matches {
+                        defining_code matches {[at0015]}    -- Equipment supply scheduled
+                    }
+                }
+            }
+            ISM_TRANSITION[at0016] matches {    -- Equipment supply delivered
+                current_state matches {
+                    DV_CODED_TEXT[at9022] matches {
+                        defining_code matches {[at9004]}    -- active
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9023] matches {
+                        defining_code matches {[at0016]}    -- Equipment supply delivered
+                    }
+                }
+            }
+            ISM_TRANSITION[at0017] matches {    -- Equipment supply suspended
+                current_state matches {
+                    DV_CODED_TEXT[at9020] matches {
+                        defining_code matches {[at9005]}    -- suspended
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9021] matches {
+                        defining_code matches {[at0017]}    -- Equipment supply suspended
+                    }
+                }
+            }
+            ISM_TRANSITION[at0018] matches {    -- Equipment supply abandoned
+                current_state matches {
+                    DV_CODED_TEXT[at9010] matches {
+                        defining_code matches {[at9006]}    -- aborted
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9011] matches {
+                        defining_code matches {[at0018]}    -- Equipment supply abandoned
+                    }
+                }
+            }
+            ISM_TRANSITION[at0019] matches {    -- Equipment supply completed
+                current_state matches {
+                    DV_CODED_TEXT[at9044] matches {
+                        defining_code matches {[at9007]}    -- complete
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9045] matches {
+                        defining_code matches {[at0019]}    -- Equipment supply completed
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Medical equipment supply">
+                description = <"Delivery of medical equipment, assistive technologies, consumables, and disposables to support clinical care and activities of daily living for an individual.">
+            >
+            ["at0002"] = <
+                text = <"Equipment name">
+                description = <"Name of the type of equipment.">
+                comment = <"For example: crutches; hearing aid; commode; sleep apnoea pillow; forearm brace; or enteral feeding pump. Use of a clinical terminology is recommended whenever possible. Free text entry should be allowed only when an appropriate coded value is not available.">
+            >
+            ["at0003"] = <
+                text = <"Equipment category">
+                description = <"An overarching grouping for the equipment identified in 'Equipment name'.">
+                comment = <"For example: mobility and communication aid; diagnostic equipment; therapeutic device; home care supplies; prosthetics and orthotics.">
+            >
+            ["at0004"] = <
+                text = <"Description">
+                description = <"Narrative description about the medical equipment supply, applicable to the careflow step.">
+            >
+            ["at0005"] = <
+                text = <"Clinical indication">
+                description = <"The clinical reason for the medical equipment supply.">
+                comment = <"For example: diabetes control; or cancer treatment'. Coding of the indication with a terminology is preferred, where possible. This data element allows multiple occurrences.">
+            >
+            ["at0006"] = <
+                text = <"Equipment details">
+                description = <"Structured details about the medical equipment being supplied to the individual.">
+            >
+            ["at0007"] = <
+                text = <"Additional details">
+                description = <"Additional structured details about the medical equipment supply.">
+            >
+            ["at0008"] = <
+                text = <"Scheduled date/time">
+                description = <"The intended date and/or time for delivery of the equipment.">
+                comment = <"This data element must only be used in conjunction with the 'Equipment supply scheduled' careflow step.">
+            >
+            ["at0009"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the supply activity or careflow step not captured in other fields.">
+            >
+            ["at0010"] = <
+                text = <"Equipment supply planned">
+                description = <"An intent or need to initiate the equipment supply process has been recognised; active careflow steps have not commenced.">
+            >
+            ["at0011"] = <
+                text = <"Equipment supply request sent">
+                description = <"A request to initiate the equipment supply process has been submitted; active careflow steps have not commenced.">
+            >
+            ["at0012"] = <
+                text = <"Equipment supply postponed">
+                description = <"The planned equipment supply has been temporarily stopped; active careflow steps have not commenced.">
+            >
+            ["at0014"] = <
+                text = <"Equipment supply cancelled">
+                description = <"The planned equipment supply has been permanently stopped; active careflow steps have not commenced.">
+            >
+            ["at0015"] = <
+                text = <"Equipment supply scheduled">
+                description = <"A date and/or time has been scheduled for the planned equipment supply; active careflow steps have not commenced.">
+            >
+            ["at0016"] = <
+                text = <"Equipment supply delivered">
+                description = <"The equipment has been provided; active careflow steps are in process.">
+                comment = <"If the equipment to be supplied consists of a single component, this careflow step and the 'Equipment supply completed' step may be recorded simultaneously.
+If the equipment to be supplied consists of multiple components, record a separate instance of this careflow step for each component delivered, and record the 'Equipment supply completed' step only after the final component has been delivered.">
+            >
+            ["at0017"] = <
+                text = <"Equipment supply suspended">
+                description = <"The active equipment supply process has been temporarily stopped; active careflow steps have been put on hold.">
+            >
+            ["at0018"] = <
+                text = <"Equipment supply abandoned">
+                description = <"The active equipment supply process has been permanently stopped; active careflow steps have been aborted.">
+            >
+            ["at0019"] = <
+                text = <"Equipment supply completed">
+                description = <"All components of the equipment supply have been delivered; active careflow steps have been completed.">
+                comment = <"If the equipment to be supplied consists of a single component, this careflow step and the 'Equipment supply delivered' step may be recorded simultaneously.">
+            >
+            ["at0020"] = <
+                text = <"Requestor order identifier">
+                description = <"The local ID assigned to the order by the 'Requestor'.">
+            >
+            ["at0021"] = <
+                text = <"Requestor">
+                description = <"Details about the healthcare provider or organisation requesting the order.">
+            >
+            ["at0022"] = <
+                text = <"Receiver order identifier">
+                description = <"The ID assigned to the order by the 'Receiver'.">
+                comment = <"This may also be referred to as 'Filler order identifier'.">
+            >
+            ["at0023"] = <
+                text = <"Receiver">
+                description = <"Details about the healthcare provider or organisation who received the request.">
+            >
+            ["at0024"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at9004"] = <
+                text = <"active">
+                description = <"active">
+            >
+            ["at9000"] = <
+                text = <"planned">
+                description = <"planned">
+            >
+            ["at9001"] = <
+                text = <"postponed">
+                description = <"postponed">
+            >
+            ["at9002"] = <
+                text = <"cancelled">
+                description = <"cancelled">
+            >
+            ["at9003"] = <
+                text = <"scheduled">
+                description = <"scheduled">
+            >
+            ["at9005"] = <
+                text = <"suspended">
+                description = <"suspended">
+            >
+            ["at9006"] = <
+                text = <"aborted">
+                description = <"aborted">
+            >
+            ["at9007"] = <
+                text = <"complete">
+                description = <"complete">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9004"] = <http://openehr.org/id/245>
+            ["at9000"] = <http://openehr.org/id/526>
+            ["at9001"] = <http://openehr.org/id/527>
+            ["at9002"] = <http://openehr.org/id/528>
+            ["at9003"] = <http://openehr.org/id/529>
+            ["at9005"] = <http://openehr.org/id/530>
+            ["at9006"] = <http://openehr.org/id/531>
+            ["at9007"] = <http://openehr.org/id/532>
+        >
+    >

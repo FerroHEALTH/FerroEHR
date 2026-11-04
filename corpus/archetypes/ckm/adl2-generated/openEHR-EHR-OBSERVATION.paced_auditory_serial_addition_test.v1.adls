@@ -1,0 +1,365 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=2bb597e4-4918-35ac-b635-6ee1c59e8c23; build_uid=22be31fd-7eb9-4688-a7a4-722311736025)
+    openEHR-EHR-OBSERVATION.paced_auditory_serial_addition_test.v1.0.0
+
+language
+    original_language = <[ISO_639-1::de]>
+    translations = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            author = <
+                ["name"] = <"Michael Braun">
+                ["organisation"] = <"University Medical Center Freiburg, Germany">
+                ["email"] = <"braun@imbi.uni-freiburg.de">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Michael Braun">
+        ["organisation"] = <"University Medical Center Freiburg, Germany">
+        ["email"] = <"braun@imbi.uni-freiburg.de">
+        ["date"] = <"2012-10-17">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Sebastian Bischoff, gfnmediber GmbH, Germany", "Martin Boeker, University Medical Center Freiburg, Germany", "Michael Braun, University Medical Center Freiburg, Germany (Editor)", "Sebastian Garde, Ocean Informatics, Germany", "Heather Leslie, Ocean Informatics, Australia", "Sebastian Mansow-Model, gfnmediber GmbH, Germany", "Catalina Martínez-Costa, Medical University of Graz, Austria", "Vyacheslav Mavrin, JSC Comsoft, Russia", "Ian McNicoll, Ocean Informatics, United Kingdom (Editor)", "Alexander U. Brandt, gfnmediber GmbH, Germany", "Susanne Walter, University Medical Center Freiburg, Germany">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Fischer JS, Jak AJ, Kniker JE, Rudick RA, Cutter G. Multiple Sclerosis Functional Composite (MSFC), Administration and Scoring Manual: National Multiple Sclerosis Society; 2001.">
+        ["2"] = <"Tombaugh TN. A comprehensive review of the Paced Auditory Serial Addition Test (PASAT). Arch Clin Neuropsychol 2006;21(1):53–76.">
+    >
+    other_details = <
+        ["current_contact"] = <"Michael Braun, University Medical Center Freiburg, Germany, braun@imbi.uni-freiburg.de">
+        ["MD5-CAM-1.0.1"] = <"BF5F8C41523DFC25E7FE4E4EA44921D1">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Protokollierung der Messungen, die während eines Paced Auditory Serial Addition Test aufgezeichnet wurden, normalerweise als Teil der Testreihe des Multiple Sclerosis Functional Composite.">
+            keywords = <"PASAT", "Multiple Sclerosis Functional Composite", "MSFC", "Multiple Sklerose", "MS", "Neurologie">
+            use = <"Verwendung zur Protokollierung der Messungen, die während eines Paced Auditory Serial Addition Test aufgezeichnet wurden. Dieser Test wird normalerweise als eine Komponente des Multiple Sclerosis Functional Composite durchgeführt, kann jedoch auch davon unabhängig eingesetzt werden. Dem Probanden werden nacheinander 61 einstelligen Ziffern vorgespielt. Beim PASAT-3'' wird alle drei Sekunden eine neue Zahl präsentiert, beim optionalen PASAT-2'' alle zwei Sekunden. Der Proband soll jeweils die Summe der letzten beiden Ziffern bilden (nicht die fortlaufende Summe). Das heißt, es sind maximal 60 richtige Ergebnisse möglich. 
+
+Verwendung des MSFC-Handbuchs für detaillierte Testanleitungen. Vor der Aufzeichnung des eigentlichen Tests muss wenigstens ein Probelauf durchgeführt werden (diese Übungssequenz ist Bestandteil des PASAT). Wenn dabei weniger als drei richtige Antworten gegeben werden, sollte die Übungssequenz wiederholt werden (max. drei Mal). Wenn mehr als zwei korrekte Antworten gegeben wurden, kann mit dem PASAT-3'' fortgefahren werden (der Patient sollte die Aufgabe hinreichend verstanden haben). Um zusätzliche Informationen über die kognitiven Funktionen zu erhalten, kann der PASAT-2'' optional im Anschluss an den 3''-Test durchgeführt werden. Die Tests sollte nur von einer entsprechend geschulten Person durchgeführt werden.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the measurements recorded during a Paced Auditory Serial Addition Test, normally as part of the Multiple Sclerosis Functional Composite suite of tests.">
+            keywords = <"PASAT", "Multiple Sclerosis Functional Composite", "MSFC", "Multiple Sclerosis", "MS", "Neurology">
+            use = <"Use to record the measurements recorded during a Paced Auditory Serial Addition Test. This test is commonly carried out as one component of the Multiple Sclerosis Functional Composite, but may be performed independently. 61 single-digit numbers are presented to the subject one by one. During PASAT-3'' a new number is presented every three seconds, in the optional PASAT-2'' every two seconds. In each case the subject is asked to respond with the sum of the last two digits (not the running total). That is, there is a maximum of 60 possible correct sums.
+
+Use the MSFC Manual for detailed administration instructions. Prior to the recording of the actual tests at least one practice trial has to be performed (this training sequence is part of the PASAT). If less than three correct answers were given, the practice trial should be repeated (up to three times). If more than two correct answers were given, the PASAT-3'' can be administered (the patient should have understood the task sufficiently). To obtain additional information about the cognitive functions, the PASAT-2'' can be performed optionally after the 3'' test. The tests should only be administered by a suitably trained person.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Paced Auditory Serial Addition Test
+        data matches {
+            HISTORY[at0002] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0064] occurrences matches {0..1} matches {    -- PASAT-3''
+                        data matches {
+                            ITEM_TREE[at0001] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Anzahl korrekter Ergebnisse
+                                        value matches {
+                                            DV_COUNT[at9001] matches {
+                                                magnitude matches {|0..60|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- Anzahl korrekter Ergebnisse in der ersten Hälfte
+                                        value matches {
+                                            DV_COUNT[at9002] matches {
+                                                magnitude matches {|0..30|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0030] occurrences matches {0..1} matches {    -- Anzahl korrekter Ergebnisse in der zweiten Hälfte
+                                        value matches {
+                                            DV_COUNT[at9003] matches {
+                                                magnitude matches {|0..30|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0031] occurrences matches {0..1} matches {    -- Anzahl der Rechenfehler
+                                        value matches {
+                                            DV_COUNT[at9004] matches {
+                                                magnitude matches {|0..60|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0032] occurrences matches {0..1} matches {    -- Anzahl der Auslassungsfehler
+                                        value matches {
+                                            DV_COUNT[at9005] matches {
+                                                magnitude matches {|0..60|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0063] occurrences matches {0..1} matches {    -- Prozentwert korrekter Ergebnisse
+                                        value matches {
+                                            DV_PROPORTION[at9006] matches {
+                                                numerator matches {|0.0..60.0|; 0.0}
+                                                denominator matches {100.0; 100.0}
+                                                type matches {2, 3}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0055] occurrences matches {0..1} matches {    -- Test nicht beendet?
+                                        value matches {
+                                            DV_BOOLEAN[at9007] matches {
+                                                value matches {True}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0049] matches {    -- Grund für Nichtbeenden
+                                        value matches {
+                                            DV_TEXT[at9008]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0050] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0054] matches {    -- Begleitumstände
+                                        value matches {
+                                            DV_TEXT[at9009]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    POINT_EVENT[at0065] occurrences matches {0..1} matches {    -- PASAT-2''
+                        data matches {
+                            use_node ITEM_TREE[at9010] /data[at0002]/events[at0064]/data[at0001]
+                        }
+                        state matches {
+                            use_node ITEM_TREE[at9011] /data[at0002]/events[at0064]/state[at0050]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0007] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Verwendete Zahlensequenz
+                        value matches {
+                            DV_CODED_TEXT[at9012] matches {
+                                defining_code matches {[ac9000]}    -- Verwendete Zahlensequenz (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0068] occurrences matches {0..1} matches {    -- Übungssequenz durchgeführt?
+                        value matches {
+                            DV_BOOLEAN[at9013] matches {
+                                value matches {True}
+                            }
+                        }
+                    }
+                    ELEMENT[at0069] occurrences matches {0..1} matches {    -- Zusätzliche Anläufe?
+                        value matches {
+                            DV_BOOLEAN[at9014] matches {
+                                value matches {True}
+                            }
+                        }
+                    }
+                    ELEMENT[at0070] matches {    -- Grund für zusätzliche Anläufe
+                        value matches {
+                            DV_TEXT[at9015]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Paced Auditory Serial Addition Test">
+                description = <"Der Paced Auditory Serial Addition Test (PASAT) misst die kognitive Verarbeitungsfähigkeit auditiver Informationen hinsichtlich Geschwindigkeit und Flexibilität, sowie die Fähigkeit zum Kopfrechnen eines Patienten. Er bildet die dritte Komponente des Multiple Sclerosis Functional Composite (MSFC), einer Serie von drei Tests zur Verlaufsdokumentation von Multipler Sklerose.">
+            >
+            ["at0012"] = <
+                text = <"Verwendete Zahlensequenz">
+                description = <"Angabe mit welcher Zahlenfolge der Test durchgeführt wurde.">
+            >
+            ["at0013"] = <
+                text = <"Form A">
+                description = <"Die Zahlensequenz von Form A wurde verwendet.">
+            >
+            ["at0014"] = <
+                text = <"Form B">
+                description = <"Die Zahlensequenz von Form B wurde verwendet.">
+            >
+            ["at0015"] = <
+                text = <"Anzahl korrekter Ergebnisse">
+                description = <"Die Anzahl der korrekt addierten Antworten.">
+                comment = <"Nur die Ergebnisse des erfolgreich abgeschlossenen Tests aufzeichnen.">
+            >
+            ["at0029"] = <
+                text = <"Anzahl korrekter Ergebnisse in der ersten Hälfte">
+                description = <"Anzahl der korrekt addierten Antworten in der ersten Hälfte des Tests.">
+            >
+            ["at0030"] = <
+                text = <"Anzahl korrekter Ergebnisse in der zweiten Hälfte">
+                description = <"Anzahl der korrekt addierten Antworten in der zweiten Hälfte des Tests.">
+            >
+            ["at0031"] = <
+                text = <"Anzahl der Rechenfehler">
+                description = <"Die Anzahl der Fälle, in denen der Proband eine Antwort geben konnte, das Ergebnis jedoch fehlerhaft war.">
+            >
+            ["at0032"] = <
+                text = <"Anzahl der Auslassungsfehler">
+                description = <"Die Anzahl der Fälle, in denen es dem Probanden nicht möglich war, die Berechnung auszuführen.">
+            >
+            ["at0049"] = <
+                text = <"Grund für Nichtbeenden">
+                description = <"Wenn der Test vorzeitig abgebrochen wurde, jedwede Gründe angeben, die dazu geführt haben.">
+                comment = <"Beispielhafte Gründe für Nichtbeenden schließen ein (sind jedoch nicht beschränkt auf): \"Test konnte aufgrund geistiger/körperlicher Einschränkungen nicht beendet werden\" (bitte spezifizieren) oder \"Der Patient weigerte sich, den Test zu beenden\".">
+            >
+            ["at0054"] = <
+                text = <"Begleitumstände">
+                description = <"Angabe jedweder Umstände, welche die Leistung des Patienten beeinflusst haben könnten.">
+                comment = <"Beispiele für Begleitumstände schließen ein (sind jedoch nicht beschränkt auf): \"Störende Geräusche außerhalb des Prüfraums\", \"Patient berichtet von Frust oder kleineren Leiden\" oder \"Patient sprach während des Tests (außer um Anworten zu geben)\".">
+            >
+            ["at0055"] = <
+                text = <"Test nicht beendet?">
+                description = <"Konnte der Test nicht beendet werden?">
+                comment = <"Als Wahr markieren, wenn der Test nicht nach Standardvorgehen abgeschlossen werden konnte. Gründe hierfür bitte gesondert angeben. Ein erfolgreicher Test muss nicht eigens gekennzeichnet werden.">
+            >
+            ["at0063"] = <
+                text = <"Prozentwert korrekter Ergebnisse">
+                description = <"Prozentsatz der korrekt addierten Antworten.">
+            >
+            ["at0064"] = <
+                text = <"PASAT-3''">
+                description = <"PASAT bei dem die Stimuli dem Probanden alle drei Sekunden gegeben werden.">
+            >
+            ["at0065"] = <
+                text = <"PASAT-2''">
+                description = <"PASAT bei dem die Stimuli dem Probanden alle zwei Sekunden gegeben werden (nicht einsetzen, wenn der Patient beim PASAT-3'' keine einzige korrekte Antwort geben konnte).">
+            >
+            ["at0068"] = <
+                text = <"Übungssequenz durchgeführt?">
+                description = <"Wurde eine Übungssequenz durchgeführt?">
+                comment = <"Die Übungssequenz (ohne Aufzeichnung der Ergebnisse) ist ein wichtiger Teil des PASAT und für das MSFC-Assessment vorgeschrieben, jedoch nicht in allen Varianten des Tests.">
+            >
+            ["at0069"] = <
+                text = <"Zusätzliche Anläufe?">
+                description = <"Wurde mehr als ein Anlauf benötigt, um den Test erfolgreich abzuschließen?">
+                comment = <"Falls mehr als ein Anläuf benötigt wurde, bitte Gründe im Datenelement \"Grund für zusätzliche Anläufe\" angeben.">
+            >
+            ["at0070"] = <
+                text = <"Grund für zusätzliche Anläufe">
+                description = <"Falls mehr als ein Anlauf benötigt wurde, um den Test erfolgreich abzuschließen, bitte Gründe angeben.">
+                comment = <"Mögliche Gründe für mehr als einen Anlauf schließen ein (sind jedoch nicht beschränkt auf): Testunterbrechung (jemand betrat den Raum oder eine andere größere Störung) oder Fehler durch den Prüfer (wie Starten des Bands an der falschen Stelle oder Verwenden der falschen Zahlenfolge).">
+            >
+            ["ac9000"] = <
+                text = <"Verwendete Zahlensequenz (synthesised)">
+                description = <"Angabe mit welcher Zahlenfolge der Test durchgeführt wurde. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Paced Auditory Serial Addition Test">
+                description = <"The Paced Auditory Serial Addition Test (PASAT) measures the cognitive function that specifically assesses auditory information processing speed and flexibility, as well as calculation ability of a patient. It is the third component of the Multiple Sclerosis Functional Composite (MSFC), a series of three tests to document the course of Multiple Sclerosis.">
+            >
+            ["at0012"] = <
+                text = <"Number Sequence Used">
+                description = <"Record which sequence of numbers was used.">
+            >
+            ["at0013"] = <
+                text = <"Form A">
+                description = <"The Form A number sequence was used.">
+            >
+            ["at0014"] = <
+                text = <"Form B">
+                description = <"The Form B number sequence was used.">
+            >
+            ["at0015"] = <
+                text = <"Total Correct Answers">
+                description = <"The number of correctly summed answers.">
+                comment = <"Record only totals for the successfully completed test.">
+            >
+            ["at0029"] = <
+                text = <"First Half Total Correct Answers">
+                description = <"The number of correctly summed answers in the first half of the test.">
+            >
+            ["at0030"] = <
+                text = <"Second Half Total Correct Answers">
+                description = <"The number of correctly summed answers in the second half of the test.">
+            >
+            ["at0031"] = <
+                text = <"Total Errors of Commission">
+                description = <"The total number of occasions where the subject was able to give a response but the answer was incorrect.">
+            >
+            ["at0032"] = <
+                text = <"Total Errors of Omission">
+                description = <"The total number of occasions where the subject was unable to perform the calculation.">
+            >
+            ["at0049"] = <
+                text = <"Reason for Non-completion">
+                description = <"If the trial was terminated prematurely, record any reasons for this.">
+                comment = <"Example reasons for non-completion include (but are not limited to): \"Unable to complete test due to cognitive/physical limitations\" (please specify), or \"The patient refused to complete the test\".">
+            >
+            ["at0054"] = <
+                text = <"Confounding Factors">
+                description = <"Record any circumstances that may have affected the patient's perfomance.">
+                comment = <"Example confounding factors include (but are not limited to): \"Subtle noises outside of the testing room\", \"Patient reports frustration or mild distress\", or \"Patient talked during test (other than to give answers)\".">
+            >
+            ["at0055"] = <
+                text = <"Test Not Completed?">
+                description = <"Was the test incomplete?">
+                comment = <"Record as True if the test was not able to be completed as directed by the standard methodology. Please specify reasons for this separately. A successful test needs not to be specifically marked.">
+            >
+            ["at0063"] = <
+                text = <"Percentage of Correct Answers">
+                description = <"Percentage of correctly summed answers.">
+            >
+            ["at0064"] = <
+                text = <"PASAT-3''">
+                description = <"PASAT where stimuli are given to the subject every three seconds.">
+            >
+            ["at0065"] = <
+                text = <"PASAT-2''">
+                description = <"PASAT where stimuli are given to the subject every two seconds (not to be used if the subject is unable to give single correct answer on PASAT-3'').">
+            >
+            ["at0068"] = <
+                text = <"Practice Trial Conducted?">
+                description = <"Has a practice trial been conducted?">
+                comment = <"The practice trial (without documenting results) is an important part of the PASAT, and mandatory in the MSFC assessment but not in some variants of the test.">
+            >
+            ["at0069"] = <
+                text = <"Additional Attempts?">
+                description = <"Did it take more than one attempt to achieve one successful trial?">
+                comment = <"If more than one attempt is needed, please specify reasons in \"Reason For Additional Attempts\" data element.">
+            >
+            ["at0070"] = <
+                text = <"Reason for Additional Attempts">
+                description = <"If more than one attempted trial was needed to complete the test, please specify reasons.">
+                comment = <"Example reasons for more than one attempt include (but are not limited to): Test interruption (e.g. someone walked in the room or other major disturbance), or examiner errors (such as starting the tape in the wrong place or using the wrong form).">
+            >
+            ["ac9000"] = <
+                text = <"Number Sequence Used (synthesised)">
+                description = <"Record which sequence of numbers was used. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0013", "at0014">
+        >
+    >

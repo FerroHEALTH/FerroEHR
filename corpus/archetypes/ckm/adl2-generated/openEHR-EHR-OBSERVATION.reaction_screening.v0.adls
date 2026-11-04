@@ -1,0 +1,381 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c11c4c86-b2be-4359-aa60-7d7cc8768634; build_uid=ebbf7b12-eaf4-4a8c-a508-190d7c6e6e98)
+    openEHR-EHR-OBSERVATION.reaction_screening.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Cheng Yexuan">
+        ["date"] = <"2021-07-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    other_details = <
+        ["current_contact"] = <"Cheng Yexuan, <3160100913@zju.edu.cn>">
+        ["MD5-CAM-1.0.1"] = <"F3239B2547D5113903D69BBAF8EC85AC">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung der Antworten in einem Screening-Fragebogen zur Ermittlung von Zuständen.">
+            use = <"Verwenden Sie diesen Archetyp, um die Antworten in einem Screening-Fragebogen zur Ermittlung von Zuständen darzustellen.
+
+Häufige Anwendungsfälle sind unter anderem:
+- Systematische Befragung in einer Beratung; oder
+- Spezifische Befragung im Zusammenhang mit der Überwachung von Infektionskrankheiten.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere responsen i et spørreskjema for tilstander.">
+            use = <"Brukes for å registrere responsen i et spørreskjema, som screener for tilstander.
+
+Vanlige bruksområder inkluderer, men er ikke begrenset til:
+- Systematisk spørring i enhver konsultasjon; eller
+- Spesifikk spørring relatert til overvåkning av infeksjonssykdom.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the responses to a screening questionnaire for reactions.">
+            use = <"Use to record the responses to a screening questionnaire for reactions.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Reaction screening
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0034] occurrences matches {0..1} matches {    -- Screening purpose
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Presence of any reactions?
+                                        value matches {
+                                            DV_CODED_TEXT[at9003] matches {
+                                                defining_code matches {[ac9000]}    -- Presence of any reactions? (synthesised)
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0022] matches {    -- Specific agent
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0004] occurrences matches {1} matches {    -- Agent administered
+                                                value matches {
+                                                    DV_TEXT[at9004]
+                                                }
+                                            }
+                                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Reaction?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9005] matches {
+                                                        defining_code matches {[ac9001]}    -- Reaction? (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            allow_archetype CLUSTER[at0039] matches {    -- Additional detailed questions
+                                                include
+                                                    archetype_id/value matches {/.*/}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9006]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0007] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0021] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"*Reaction screening (en)">
+                description = <"*An screeing questionnaire for adverse reaction. (en)">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardwert, ein undefinierter/s Zeitpunkt oder Intervallereignis, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"*Agent administered (en)">
+                description = <"*Name of the agent related to the adverse reaction being screened. (en)">
+            >
+            ["at0005"] = <
+                text = <"*Reaction? (en)">
+                description = <"*Presence of the reaction. (en)">
+            >
+            ["at0021"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+            ["at0022"] = <
+                text = <"*Specific agent (en)">
+                description = <"*Grouping of data elements related to screening for a single agent. (en)">
+            >
+            ["at0023"] = <
+                text = <"Vorhanden">
+                description = <"Der spezifische Zustand ist vorhanden.">
+            >
+            ["at0024"] = <
+                text = <"Nicht vorhanden">
+                description = <"Der spezifische Zustand ist nicht vorhanden.">
+            >
+            ["at0025"] = <
+                text = <"Kommentar">
+                description = <"*Additional narrative about the reactions, not captured in other fields. (en)">
+            >
+            ["at0027"] = <
+                text = <"Unbekannt">
+                description = <"Es ist nicht bekannt, ob der spezifische Zustand vorhanden oder nicht vorhanden ist.">
+            >
+            ["at0028"] = <
+                text = <"*Presence of any reactions? (en)">
+                description = <"*Presence of any relevant reactions. (en)">
+            >
+            ["at0031"] = <
+                text = <"Vorhanden">
+                description = <"Zustände sind vorhanden.">
+            >
+            ["at0032"] = <
+                text = <"Nicht vorhanden">
+                description = <"Keine Zustände sind vorhanden.">
+            >
+            ["at0033"] = <
+                text = <"Unbekannt">
+                description = <"Es ist nicht bekannt, ob Zustände vorhanden oder nicht vorhanden sind.">
+            >
+            ["at0034"] = <
+                text = <"Zweck des Screenings">
+                description = <"Der Grund für das gesamte Screening.">
+                comment = <"Zum Beispiel: präoperatives Screening.">
+            >
+            ["at0039"] = <
+                text = <"Zusätzliche detaillierte Fragen">
+                description = <"*Additional questionnaire questions directly related to the specific agent. (en)">
+            >
+            ["ac9000"] = <
+                text = <"*Presence of any reactions? (en) (synthesised)">
+                description = <"*Presence of any relevant reactions. (en) (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"*Reaction? (en) (synthesised)">
+                description = <"*Presence of the reaction. (en) (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"*Reaction screening (en)">
+                description = <"*An screeing questionnaire for adverse reaction. (en)">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"*Agent administered (en)">
+                description = <"*Name of the agent related to the adverse reaction being screened. (en)">
+            >
+            ["at0005"] = <
+                text = <"*Reaction? (en)">
+                description = <"*Presence of the reaction. (en)">
+            >
+            ["at0021"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at0022"] = <
+                text = <"*Specific agent (en)">
+                description = <"*Grouping of data elements related to screening for a single agent. (en)">
+            >
+            ["at0023"] = <
+                text = <"Tilstede">
+                description = <"Den spesifikke tilstanden er tilstede.">
+            >
+            ["at0024"] = <
+                text = <"Fraværende">
+                description = <"Den spesifikke tilstanden er fraværende.">
+            >
+            ["at0025"] = <
+                text = <"Kommentar">
+                description = <"*Additional narrative about the reactions, not captured in other fields. (en)">
+            >
+            ["at0027"] = <
+                text = <"Ukjent">
+                description = <"Det er ukjent om tilstanden er tilstede eller fraværende.">
+            >
+            ["at0028"] = <
+                text = <"*Presence of any reactions? (en)">
+                description = <"*Presence of any relevant reactions. (en)">
+            >
+            ["at0031"] = <
+                text = <"Tilstede">
+                description = <"Tilstander er tilstede.">
+            >
+            ["at0032"] = <
+                text = <"Fraværende">
+                description = <"Tilstander er ikke tilstede.">
+            >
+            ["at0033"] = <
+                text = <"Ukjent">
+                description = <"Det er ukjent om noen tilstander er tilstede eller fraværende.">
+            >
+            ["at0034"] = <
+                text = <"Registreringsformål">
+                description = <"Årsaken til registreringen.">
+                comment = <"For eksempel: Pre-operativ screening.">
+            >
+            ["at0039"] = <
+                text = <"Flere detaljerte spørsmål">
+                description = <"*Additional questionnaire questions directly related to the specific agent. (en)">
+            >
+            ["ac9000"] = <
+                text = <"*Presence of any reactions? (en) (synthesised)">
+                description = <"*Presence of any relevant reactions. (en) (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"*Reaction? (en) (synthesised)">
+                description = <"*Presence of the reaction. (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Reaction screening">
+                description = <"An screeing questionnaire for adverse reaction.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Agent administered">
+                description = <"Name of the agent related to the adverse reaction being screened.">
+            >
+            ["at0005"] = <
+                text = <"Reaction?">
+                description = <"Presence of the reaction.">
+            >
+            ["at0021"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0022"] = <
+                text = <"Specific agent">
+                description = <"Grouping of data elements related to screening for a single agent.">
+            >
+            ["at0023"] = <
+                text = <"Present">
+                description = <"The specific condition is present.">
+            >
+            ["at0024"] = <
+                text = <"Absent">
+                description = <"The specific condition is not present.">
+            >
+            ["at0025"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the reactions, not captured in other fields.">
+            >
+            ["at0027"] = <
+                text = <"Unknown">
+                description = <"It is not known whether the condition is present or absent.">
+            >
+            ["at0028"] = <
+                text = <"Presence of any reactions?">
+                description = <"Presence of any relevant reactions.">
+            >
+            ["at0031"] = <
+                text = <"Present">
+                description = <"Conditions are present.">
+            >
+            ["at0032"] = <
+                text = <"Absent">
+                description = <"Conditions are not present.">
+            >
+            ["at0033"] = <
+                text = <"Unknown">
+                description = <"It is not known whether any conditions are present or absent.">
+            >
+            ["at0034"] = <
+                text = <"Screening purpose">
+                description = <"The reason for overall screening.">
+                comment = <"For example: pre-operative screening.">
+            >
+            ["at0039"] = <
+                text = <"Additional detailed questions">
+                description = <"Additional questionnaire questions directly related to the specific agent.">
+            >
+            ["ac9000"] = <
+                text = <"Presence of any reactions? (synthesised)">
+                description = <"Presence of any relevant reactions. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Reaction? (synthesised)">
+                description = <"Presence of the reaction. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0023"] = <http://snomed.info/id/410515003>
+            ["at0024"] = <http://snomed.info/id/410516002>
+            ["at0027"] = <http://snomed.info/id/261665006>
+            ["at0031"] = <http://snomed.info/id/410515003>
+            ["at0032"] = <http://snomed.info/id/410516002>
+            ["at0033"] = <http://snomed.info/id/261665006>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0023", "at0024", "at0027">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0031", "at0032", "at0033">
+        >
+    >

@@ -1,0 +1,339 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c2ed9808-3ddf-4154-bca9-668dabdb89cf; build_uid=e43d119c-2687-4d8a-85ea-80269962e86f)
+    openEHR-EHR-OBSERVATION.food_item.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Silje Ljosland Bakke, Heather Leslie">
+        ["organisation"] = <"Nasjonal IKT, Norway; Ocean Health Systems, Australia">
+        ["email"] = <"silje.ljosland.bakke@nasjonalikt.no, heather.leslie@oceanhealthsystems.com">
+        ["date"] = <"2017-06-29">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Health Systems<heather.leslie@oceanhealthsystems.com>">
+        ["MD5-CAM-1.0.1"] = <"3B3DAE542C2D25B7A481A834E147A252">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record information about a single food item consumed by an individual.">
+            keywords = <"nutrition", "diet", "diary">
+            use = <"Use to record information about a single food item consumed by an individual.
+
+Multiple instances of this archetype could be used to record each food consumed by an individual within a specified timeframe as part of a food diary.
+
+This archetype may be extended using specific CLUSTER archetypes that represent further detail about the food item, such as CLUSTER.macronutrient or CLUSTER.micronutrient and other related archetypes.">
+            misuse = <"Not to be used to record planned consumption of a food item.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Food item
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Food item name
+                                        value matches {
+                                            DV_TEXT[at9005]
+                                        }
+                                    }
+                                    CLUSTER[at0005] occurrences matches {0..1} matches {    -- Amount
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Mass
+                                                value matches {
+                                                    DV_QUANTITY[at9006] matches {
+                                                        property matches {[at9000]}    -- Mass
+                                                        [magnitude, units] matches {
+                                                            [{|>=0.0|}, {"g"}],
+                                                            [{|>=0.0|}, {"kg"}],
+                                                            [{|>=0.0|}, {"[oz_av]"}],
+                                                            [{|>=0.0|}, {"[lb_av]"}]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Volume
+                                                value matches {
+                                                    DV_QUANTITY[at9007] matches {
+                                                        property matches {[at9001]}    -- Volume
+                                                        [magnitude, units] matches {
+                                                            [{|>=0.0|}, {"ml"}],
+                                                            [{|>=0.0|}, {"cl"}],
+                                                            [{|>=0.0|}, {"dl"}],
+                                                            [{|>=0.0|}, {"l"}],
+                                                            [{|>=0.0|}, {"[foz_us]"}],
+                                                            [{|>=0.0|}, {"[pt_us]"}],
+                                                            [{|>=0.0|}, {"[tsp_m]"}],
+                                                            [{|>=0.0|}, {"[tsp_us]"}],
+                                                            [{|>=0.0|}, {"[tbs_m]"}],
+                                                            [{|>=0.0|}, {"[tbs_us]"}],
+                                                            [{|>=0.0|}, {"[cup_m]"}],
+                                                            [{|>=0.0|}, {"[cup_us]"}]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Serving
+                                                value matches {
+                                                    DV_QUANTITY[at9008] matches {
+                                                        property matches {[at9002]}    -- Qualified real
+                                                        magnitude matches {|>=0.0|}
+                                                        units matches {"1"}
+                                                        precision matches {1}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Glycaemic load
+                                        value matches {
+                                            DV_COUNT[at9009] matches {
+                                                magnitude matches {|>=0|}
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0010] matches {    -- Nutrients
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.macronutrients(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.micronutrients(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9010]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    INTERVAL_EVENT[at0023] matches {    -- One day
+                        width matches {
+                            DV_DURATION[at9011] matches {
+                                value matches {PT24H; PT24H}
+                            }
+                        }
+                        data matches {
+                            use_node ITEM_TREE[at9012] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                    INTERVAL_EVENT[at0024] matches {    -- One week
+                        width matches {
+                            DV_DURATION[at9013] matches {
+                                value matches {P7D; P7D}
+                            }
+                        }
+                        data matches {
+                            use_node ITEM_TREE[at9014] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0012] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0013] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Serving size (mass)
+                        value matches {
+                            DV_QUANTITY[at9015] matches {
+                                property matches {[at9000]}    -- Mass
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"g"}],
+                                    [{|>=0.0|}, {"kg"}],
+                                    [{|>=0.0|}, {"[oz_av]"}],
+                                    [{|>=0.0|}, {"[lb_av]"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Serving size (volume)
+                        value matches {
+                            DV_QUANTITY[at9016] matches {
+                                property matches {[at9001]}    -- Volume
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"ml"}],
+                                    [{|>=0.0|}, {"cl"}],
+                                    [{|>=0.0|}, {"dl"}],
+                                    [{|>=0.0|}, {"l"}],
+                                    [{|>=0.0|}, {"[foz_us]"}],
+                                    [{|>=0.0|}, {"[pt_us]"}],
+                                    [{|>=0.0|}, {"[tsp_m]"}],
+                                    [{|>=0.0|}, {"[tsp_us]"}],
+                                    [{|>=0.0|}, {"[tbs_m]"}],
+                                    [{|>=0.0|}, {"[tbs_us]"}],
+                                    [{|>=0.0|}, {"[cup_m]"}],
+                                    [{|>=0.0|}, {"[cup_us]"}]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Method
+                        value matches {
+                            DV_CODED_TEXT[at9017] matches {
+                                defining_code matches {[ac9003]}    -- Method (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Accuracy
+                        value matches {
+                            DV_CODED_TEXT[at9018] matches {
+                                defining_code matches {[ac9004]}    -- Accuracy (synthesised)
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0017] matches {    -- Device
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Food item">
+                description = <"Information about a single food item consumed by an individual.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Food item name">
+                description = <"The name of the item of food being recorded.">
+            >
+            ["at0005"] = <
+                text = <"Amount">
+                description = <"The amount of food consumed.">
+            >
+            ["at0006"] = <
+                text = <"Mass">
+                description = <"The mass of food consumed.">
+            >
+            ["at0007"] = <
+                text = <"Volume">
+                description = <"The volume of food consumed.">
+            >
+            ["at0008"] = <
+                text = <"Serving">
+                description = <"The number of servings of food consumed.">
+                comment = <"Serving sizes should be defined in the Protocol section of this archetype.">
+            >
+            ["at0009"] = <
+                text = <"Glycaemic load">
+                description = <"A number that estimates how much the food will raise an individual's blood glucose level after eating it.">
+            >
+            ["at0010"] = <
+                text = <"Nutrients">
+                description = <"Details about the component nutrients for this food.">
+            >
+            ["at0011"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the food item not captured in other fields.">
+            >
+            ["at0013"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0014"] = <
+                text = <"Serving size (mass)">
+                description = <"Definition of the size of a single serving of the food item, by mass.">
+            >
+            ["at0015"] = <
+                text = <"Serving size (volume)">
+                description = <"Definition of the size of a single serving of the food item, by volume.">
+            >
+            ["at0016"] = <
+                text = <"Method">
+                description = <"The method used to measure the amount of food.">
+            >
+            ["at0017"] = <
+                text = <"Device">
+                description = <"Details about the device used to measure or record the amount of the food item.">
+            >
+            ["at0018"] = <
+                text = <"Estimated">
+                description = <"An approximation of the amount of the food item.">
+            >
+            ["at0019"] = <
+                text = <"Measured">
+                description = <"Actual measurement of the amount of the food item.">
+            >
+            ["at0020"] = <
+                text = <"Memory">
+                description = <"The amount of food was recorded from memory.">
+            >
+            ["at0021"] = <
+                text = <"Observation">
+                description = <"The amount of food was recorded at the time of consumption.">
+            >
+            ["at0022"] = <
+                text = <"Accuracy">
+                description = <"The qualitative precision of the amount of the food item.">
+            >
+            ["at0023"] = <
+                text = <"One day">
+                description = <"One day interval event, which may be further defined in a template or at run-time, for example: specifically named as 'Friday' or 'Saturday'.">
+            >
+            ["at0024"] = <
+                text = <"One week">
+                description = <"One week interval event, which may be further defined in a template or at run-time, for example: specifically named as 'Last week'.">
+            >
+            ["at9000"] = <
+                text = <"Mass">
+                description = <"Mass">
+            >
+            ["at9001"] = <
+                text = <"Volume">
+                description = <"Volume">
+            >
+            ["at9002"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+            ["ac9003"] = <
+                text = <"Method (synthesised)">
+                description = <"The method used to measure the amount of food. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Accuracy (synthesised)">
+                description = <"The qualitative precision of the amount of the food item. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/124>
+            ["at9001"] = <http://openehr.org/id/129>
+            ["at9002"] = <http://openehr.org/id/380>
+        >
+    >
+    value_sets = <
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0018", "at0019">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0020", "at0021">
+        >
+    >

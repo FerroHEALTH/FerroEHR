@@ -1,0 +1,491 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ceb203cf-0f8e-40a0-a124-59871c14d6d8; build_uid=7aadcfa1-d1a0-409c-ac9a-c3ea758b3bbe)
+    openEHR-EHR-OBSERVATION.age_assertion.v1.0.3
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Sarah Ballout, Natalia Strauch, Darin Leonhardt">
+                ["organisation"] = <"MHH-Hannover, Medizinische Hochschule Hannover, PLRI, PLRI für medizinische Informatik/ Medizinische Hochschule">
+                ["email"] = <"ballout.sarah@mh-hannover.de, Strauch.Natalia@mh-hannover.de, leonhardt.darin@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke, Vebjørn Arntzen, John Tore Valand, Hanne Marte Bårholm">
+                ["organisation"] = <"Helse Vest IKT AS, Oslo University Hospital">
+                ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no, varntzen@ous-hf.no, john.tore.valand@helse-vest-ikt.no, hanne.marte.sandal.barholm@helse-vest-ikt.no">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Vanessa Pereira">
+                ["organisation"] = <"Luxembourg Institute of Health (LIH)">
+                ["email"] = <"vanessapereira@protonmail.com">
+            >
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Laura Moral Lopez">
+                ["organisation"] = <"Sistema de Salut de Catalunya">
+                ["email"] = <"lauramoral@catsalut.cat">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Laura Moral Lopez">
+                ["organisation"] = <"Sistema de Salut de Catalunya">
+                ["email"] = <"lauramoral@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2018-07-23">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Nuno Abreu, openEHR Portugal, Portugal", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Ivar Berge, Oslo University Hospital, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Tara Bonet Chinillach, Catalan Health Service, Spain", "Hugo Claudio Briceño García, Catsalut, Spain", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "Clara Calleja Vega, CatSalut. Servei Català de la Salut., Spain", "Christian Chevalley, ADOC, Thailand", "Julio de Sosa, Servei Català de la Salut, Spain", "giovanni delussu, crs4, Italy", "Mona Didriksen, Helse Vest IKT, Norway", "Manuela Domingo, hospital general universitario dr. balmis, Spain", "Stefan Dubois, Dep't of Pathology and Genetics, University Hospitals of Lund and Malmö, Sweden", "Emmanuel Eschmann, CISTEC, Switzerland", "Kåre Flø, DIPS ASA, Norway", "Grant Forrest, Lunaria Ltd, United Kingdom", "Fabian Franzeck, University Hospital Basel, Switzerland", "Santiago Frid, Hospital Clínic de Barcelona, Spain", "Rosane Gotardo, Systema Ltda., Brazil", "Mikkel Johan Gaup Grønmo, Helse Nord IKT, Norway (openEHR Editor)", "Atle Hansen, Universitetssykehuset Nord-Norge, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Ivar Mehlum, Helse Vest IKT AS, Norway", "Mika Kiviaho, Tietoevry, Finland", "June Marie Nepstad Knappskog, Helse Nord IKT AS, Norway (openEHR Editor), Norway (openEHR Editor)", "Ronald Krawec, Alberta Health Services, Canada", "Lise Kristin Knutsen, Oslo universitetssykehus, Norway", "Anjali Kulkarni, Karkinos, India", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "michel laji!, Karolinska Institutet, Sweden", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Brad Littleton, Big Picture Medical, Australia", "Ruth Lochan, Akademiska Sjukhuset Uppsala, Sweden", "June Marie Knappskog, Helse Nord IKT AS, Norway (Nasjonal IKT redaktør), Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Christine Mikalsen, Helse Nord IKT, Norway", "Laura Moral Lopez, Sistema de Salut de Catalunya, Spain", "Arunakiry Natarajan, medondo, Germany", "Svenne Naumann, Finnmarkssykehuset, Norway", "Anne-Berit Norman Paulsen, Universitetssykehuset Nord-Norge, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Mariana Pais, Faculty of Medicine of the University of Porto, Portugal", "Ana Pascual Segura, Catsalut, Spain", "Xavier Pastor, Hospital Clínic - University of Barcelona, Spain", "Terje Sagmyr, Helse Vest IKT, Norway (openEHR Editor)", "Benjamin Senst, Germany", "Videha Sharma, University of Manchester, United Kingdom", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Kanthan Theivendran, NHS, United Kingdom", "Anders Thurin, VGR, Sweden", "John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"60CDC878F9DB9810B55BD0207645BD40">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Aufzeichnung einer Aussage über das Alter einer Person zu einem bestimmten Zeitpunkt als klinischer Kontext für weitere Informationen in derselben COMPOSITION.">
+            keywords = <"chronologisch", "korrigiert", "angepasst", "Alter">
+            use = <"Zur Aufzeichnung einer Aussage über das Alter einer Person zu einem bestimmten Zeitpunkt als klinischer Kontext für weitere Informationen in derselben COMPOSITION.
+
+Dieser Archetyp ist so strukturiert, dass entweder das chronologische oder das angepasste Alter unabhängig voneinander aufgezeichnet werden können, aber auch beide gleichzeitig zu Vergleichszwecken erfasst werden können. 
+
+Sowohl das chronologische Alter als auch das bereinigte Alter werden auf der Grundlage des tatsächlichen oder geschätzten Geburtsdatums und/oder des Geburtstermins berechnet. Die EVENT-Struktur aus dem Referenzmodell kann verwendet werden, um anzugeben, ob sich die Altersangabe auf einen aktuellen oder einen historischen Zeitpunkt bezieht. 
+
+Zu den Anwendungsfällen gehören unter anderem:
+- gleichzeitige Aufzeichnung des chronologischen Alters und des angepassten Alters zusammen mit den Wachstumsparametern des Kindes;
+- Aufzeichnung des Alters einer Person zum Zeitpunkt der Aufzeichnung als Kontext für andere Inhalte in einem Dokument, wie z. B. das Alter eines Kindes zum Zeitpunkt der Überweisung;
+- das Alter der Mutter (die auf der ENTRY-Ebene als Pflegeperson bezeichnet wird) zum Zeitpunkt der Aufnahme in die Akte eines Neugeborenen zu erfassen; oder
+- das Alter einer Person zum Zeitpunkt des Ausfüllens eines Fragebogens zur Gesundheitsbewertung.
+- die Grundlage für die Berechnung von Referenzwerten für physiologische Messungen. Zum Beispiel im Archetyp CHA₂DS₂-VASc-Score.">
+            misuse = <"Nicht zur Darstellung des aktuellen Alters einer Person in der Benutzeroberfläche einer elektronischen Patientenakte zu verwenden. Verwenden Sie zu diesem Zweck ein formales Patientenregister oder Archetypen, die auf dem openEHR-Modell für demografische Informationen basieren.
+
+Nicht für die Erfassung des Skelettalters zu verwenden, verwenden Sie zu diesem Zweck OBSERVATION.skeletal_age.
+
+Nicht zur Erfassung des geschätzten oder bekannten Zeitraums oder der Dauer der Schwangerschaft oder des Schwangerschaftsalters des Fötus oder des Neugeborenen zu verwenden, verwenden Sie zu diesem Zweck OBSERVATION.gestational_age_assertion.
+
+Nicht zu verwenden für die Erfassung des biologischen Alters, das sich auf den Zustand der Körpersysteme einer Person bezieht und angibt, wie gut oder schlecht der Körper im Vergleich zur erwarteten Norm für das chronologische Alter funktioniert - verwenden Sie zu diesem Zweck entsprechende Archetypen.
+
+Nicht zu verwenden für die Aufzeichnung einer Bewertung des mentalen, kognitiven oder Entwicklungsalters oder ähnlicher Einschätzungen, die sich auf das Alter beziehen, das die Funktionen und Fähigkeiten einer Person widerspiegelt. Verwenden Sie für diesen Zweck einen geeigneten Archetyp.
+
+Nicht zur Aufzeichnung eines geschätzten Alters in einem forensischen Bericht oder für eine bewusstlose Person zu verwenden - verwenden Sie für diesen Zweck einen geeigneten Archetyp.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere et utsagn om alderen til et individ på et tidspunkt, for å gi klinisk kontekst til den øvrige informasjonen i samme COMPOSITION.">
+            keywords = <"kronologisk", "justert", "alder">
+            use = <"Brukes for å registrere et utsagn om alderen til et individ på et tidspunkt, for å gi klinisk kontekst til den øvrige informasjonen i samme COMPOSITION.
+
+Denne arketypen er utformet for å støtte registrering av enten kronologisk eller justert alder, samtidig som den også gir muligheten til å registrere begge for sammenligningsformål.
+
+Både kronologisk alder og justert alder beregnes basert på faktisk eller antatt fødselsdato og/eller dato for termin. EVENT strukturen fra referansemodellen kan brukes til å spesifisere om aldersutsagnet gjelder et nåværende tidspunkt eller et historisk tidspunkt.
+
+Eksempler på bruksområder for arketypen:
+- samtidig registrering av kronologisk alder og justert alder sammen med informasjon om vekst hos barn
+- å registrere et individs alder på registreringstidspunktet, som kontekst for det andre innholdet i et dokument, for eksempel et barns alder på henvisningstidspunktet
+- å registrere mors alder på registreringstidspunktet i barnets journal (mor kan her registreres som \"subject of care\" ved hjelp av referansemodell-elementer)
+- et individs alder på tidspunktet for utfylling av et spørreskjema for helsevurdering.
+- grunnlaget for beregnede referanseverdier for fysiologiske målinger. For eksempel i arketypen CHA₂DS₂-VASc score.">
+            misuse = <"Skal ikke brukes til å vise individets nåværende alder i brukergrensesnittet i et elektronisk journalsystem. Bruk et formelt pasientregister eller arketyper basert på openEHR demografisk informasjonsmodell til dette formålet.
+
+Skal ikke brukes til å registrere skjelettalder, bruk OBSERVATION.skeletal_age (Skjelettalder) til dette formålet.
+
+Skal ikke brukes til å registrere et anslag eller den kjente varigheten av et svangerskap, eller svangerskapsalderen til fosteret eller et nyfødt barn, bruk OBSERVATION.gestational_age_assertion for dette formålet.
+
+Skal ikke brukes til å registrere biologisk alder, som refererer til tilstanden til en persons kroppssystemer og indikerer hvor godt eller dårlig kroppen fungerer i forhold til det forventede for deres kronologiske alder. Bruk passende arketyper for dette formålet.
+
+Skal ikke brukes til å registere en vurdering av et individs mentale, kognitive eller utviklingsmessige alder, eller lignende som uttrykk for individets funksjon eller ferdigheter. Bruk en passende arketype for dette formålet.
+
+Skal ikke brukes til å registrere estimert alder i en rettsmedisinsk rapport eller for en bevisstløs person. Bruk en passende arketype for dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a statement about the age of an individual at a point in time, as clinical context for the other information in the same COMPOSITION.">
+            keywords = <"chronological", "corrected", "adjusted", "age">
+            use = <"Use to record a statement about the age of an individual at a point in time, as clinical context for the other information in the same COMPOSITION.
+
+This archetype is structured to support the recording of either chronological or adjusted age independently, while also providing the capability to record both simultaneously for comparison purposes. 
+
+Both the Chronological age and Adjusted age are calculated based on actual or estimated dates of birth and/or due date. The EVENT structure from the reference model can be used to specify whether the age assertion relates to a current point in time or a historical point in time. 
+
+Use cases include, but are not limited to:
+- simultaneously record the chronological age and adjusted age alongside child growth parameters;
+- record the age of an individual at the time of recording as context for the other content in a document, such as the age of a child at the time of referral;
+- record the age of the mother (designated as the subject of care at ENTRY level) at the time of recording within a newborn's record; or
+- the age of an individual at the time of filling out a health assessment questionnaire.
+- the basis for calculated reference values for physiological measurements. For example in the CHA₂DS₂-VASc score archetype.">
+            misuse = <"Not to be used to display the individual's current age in the user interface of an electronic health record. Use a formal patient registry or archetypes based on the openEHR demographic information model for this purpose.
+
+Not to be used to record skeletal age, use OBSERVATION.skeletal_age for this purpose.
+
+Not to be used to record the estimate or known period or duration of the pregnancy or gestational age of the foetus or new born, use OBSERVATION.gestational_age_assertion for this purpose.
+
+Not to be used to record the Biological age, which refers to the condition of an individual's body systems, indicating how well or poorly the body is functioning relative to the expected norm for their chronological age - use approriate archetypes for this purpose.
+
+Not to be used to record an assessment of the mental, cognitive or developmental age, or similar assements, which refers to the age that reflects an individual's functions and abilities. Use an appropriate archetype for this purpose.
+
+Not to be used to record an estimated age in a forensic report or for an unconscious inidividual - use an approriate archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"*To record a statement about the age of an individual at a point in time, as clinical context for the other information in the same COMPOSITION. (en)">
+            keywords = <"chronologique", "corrigé", "âge">
+            use = <"*Use to record a statement about the age of an individual at a point in time, as clinical context for the other information in the same COMPOSITION.
+
+This archetype is structured to support the recording of either chronological or adjusted age independently, while also providing the capability to record both simultaneously for comparison purposes.
+
+The EVENT structure from the reference model can be used to specify whether the age assertion relates to a current point in time or a historical point in time. 
+
+Use cases include, but are not limited to;
+- to simultaneously record the chronological age and adjusted age alongside child growth parameters;
+- to record the age of an individual at the time of recording as context for the other content in a document, such as the age of a child at the time of referral;
+- to record the age of the mother (designated as the subject of care at ENTRY level) at the time of recording within a newborn's record; or
+- the age of an individual at the time of filling out a health assessment questionnaire.
+- as basis for calculated reference values for physiologic measurements. For example in the CHA₂DS₂-VASc score archetype. (en)">
+            misuse = <"*Not to be used to display the individual's current age in the user interface of an electronic health record. Use a formal patient registry or archetypes based on the openEHR demographic information model for this purpose.
+
+Not to be used to record skeletal age, use OBSERVATION.skeletal_age for this purpose.
+
+Not to be used to record the estimate or known period or duration of the pregnancy or gestational age of the foetus or new born, use OBSERVATION.gestational_age_assertion for this purpose.
+
+Not to be used to record the Biological age, which refers to the condition of an individual's body systems, indicating how well or poorly the body is functioning relative to the expected norm for their chronological age - use approriate archetypes for this purpose.
+
+Not to be used to record the Mental age or Cognitive age, which refers to the age that reflects an individual's mental functions and abilities. Use an appropriate archetype for this purpose.
+
+Not to be used to record an estimated age in a forensic report or for an unconscious inidividual - use an approriate archetype for this purpose. (en)">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Registrar una declaració sobre l'edat d'un pacient en un moment donat, com a context clínic per a la resta d'informació de la mateixa COMPOSITION.">
+            keywords = <"cronològic", "corregit", "ajustat", "edat">
+            use = <"Utilitzar per a registrar una declaració sobre l'edat d'un pacient en un moment donat, com a context clínic per a la resta d'informació de la mateixa COMPOSITION.
+
+Aquest arquetip s'estructura per a donar suport a l'enregistrament de l'edat cronològica o ajustada de manera independent, alhora que proporciona la capacitat de registrar tots dos simultàniament amb finalitats comparatives.
+
+Tant l'edat Cronològica com l'edat Ajustada es calculen en funció de les dates reals o estimades de naixement o del part. L'estructura de EVENT del model de referència es pot utilitzar per a especificar si la declaració d'edat es relaciona amb un moment actual en el temps o un moment històric en el temps.
+
+Els casos d'ús inclouen, però no es limiten als següents:
+- registrar simultàniament l'edat cronològica i l'edat ajustada amb els paràmetres de creixement de l’infant;
+- registrar l'edat d'un pacient en el moment de l’enregistrament com a context per a l'altre contingut d'un document, com ara l'edat d'un infant en el moment de la derivació;
+- registrar l'edat de la mare (designada com a pacient a nivell ENTRY) en el moment d’enregistrament dins d'un registre d'un nadó; o
+- l'edat d'un pacient en el moment d'emplenar un qüestionari d'avaluació de la salut.
+- la base dels valors de referència calculats per a les mesures fisiològiques. Per exemple en l'arquetip de puntuació CHA₂DS₂-VASc.">
+            misuse = <"No utilitzar per a mostrar l'edat actual del pacient a la interfície d'usuari d'un registre de salut electrònic. Utilitzar un registre formal de pacients o arquetips basats en el model d'informació demogràfica openEHR per aquesta finalitat.
+
+No utilitzar per a registrar l'edat òssia, utilitzar OBSERVATION.skeletal.age per aquesta finalitat.
+
+No utilitzar per a registrar la durada o el període estimats o coneguts de l'embaràs o l'edat gestacional del fetus o del nadó, utilitzar OBSERVATION.gestational_age_assertion per aquesta finalitat.
+
+No utilitzar per a registrar l'edat Biològica, la qual es refereix a la condició dels sistemes corporals d'un pacient, indicant com de bé o malament el cos està funcionant en relació amb la norma esperada per a la seva edat cronològica - utilitzar arquetips adequats per aquesta finalitat.
+
+No utilitzar per a registrar una avaluació de l'edat mental, cognitiva o del desenvolupament, o avaluacions similars, que es refereix a l'edat que reflecteixen les funcions i habilitats d'un pacient. Utilitzar un arquetip adequat per aquesta finalitat.
+
+No utilitzar per a registrar una edat estimada en un informe forense o per a un pacient inconscient - utilitzar un arquetip apropiat per aquesta finalitat.">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar una declaración sobre la edad de un paciente en un momento dado, como un contexto clínico para el resto de información de la misma COMPOSITION.">
+            keywords = <"cronológico", "corregido", "ajustado", "edad">
+            use = <"Usar para registrar una declaración sobre la edad de un paciente en un momento determinado, como contexto clínico para el resto de la información contenida en la misma COMPOSITION.
+
+Este arquetipo está estructurado para permitir el registro de la edad cronológica o ajustada de forma independiente, y también proporciona la posibilidad de registrar ambas simultáneamente con fines comparativos.
+
+Tanto la edad cronológica como la edad ajustada se calculan en función de fechas reales o estimadas de nacimiento o de parto. La estructura EVENT del modelo de referencia puede utilizarse para especificar si la declaración de edad se refiere a un momento actual o a un momento histórico en el tiempo.
+
+Los casos de uso incluyen, pero no se limitan a:
+
+- Registrar simultáneamente la edad cronológica y la edad ajustada junto con los parámetros de crecimiento del niño;
+- Registrar la edad del paciente en el momento del registro como contexto para otros contenidos de un documento, como por ejemplo, la edad de un niño en el momento de una derivación;
+- Registrar la edad de la madre (designada como paciente a nivel de ENTRY) en el momento del registro dentro de una ficha clínica del recién nacido;
+- Registrar la edad del paciente en el momento de completar un cuestionario de evaluación de salud;
+- Servir como base para los valores de referencia calculados en mediciones fisiológicas, por ejemplo, en el arquetipo de puntuación CHA₂DS₂-VASc.">
+            misuse = <"No debe utilizarse para mostrar la edad actual del individuo en la interfaz de usuario de una historia clínica electrónica. Para este propósito, utilice un registro formal de pacientes o arquetipos basados en el modelo de información demográfica de openEHR.
+
+No debe utilizarse para registrar la edad ósea, utilice OBSERVATION.skeletal_age para este propósito.
+
+No debe utilizarse para registrar el período estimado o conocido del embarazo o la edad gestacional del feto o del recién nacido, utilice OBSERVATION.gestational_age_assertion para este propósito.
+
+No debe utilizarse para registrar la edad biológica, que se refiere al estado de los sistemas corporales de un individuo, indicando qué tan bien o mal funciona el cuerpo en comparación con la norma esperada para su edad cronológica. Utilice arquetipos apropiados para este propósito.
+
+No debe utilizarse para registrar una evaluación de la edad mental, cognitiva o del desarrollo, o evaluaciones similares, que se refieren a la edad que refleja las funciones y capacidades de un individuo. Utilice un arquetipo adecuado para este propósito.
+
+No debe utilizarse para registrar una edad estimada en un informe forense o para un individuo inconsciente, utilice un arquetipo apropiado para este propósito.">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Age assertion
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] matches {    -- Chronological age
+                                        value matches {
+                                            DV_DURATION[at9000] matches {
+                                                value matches {|>=PT0S|}
+                                            }
+                                            DV_QUANTITY[at9001] matches {
+                                                [magnitude, units] matches {
+                                                    [{|0.0..<200.0|}, {"a"}],
+                                                    [{|0.0..<200.0|}, {"a_j"}]
+                                                }
+                                            }
+                                            DV_TEXT[at9002]
+                                            DV_INTERVAL<DV_DURATION>[at9003] matches {
+                                                lower matches {
+                                                    DV_DURATION[at9004] matches {
+                                                        value matches {|PT0S..<P200Y|}
+                                                    }
+                                                }
+                                                upper matches {
+                                                    DV_DURATION[at9005] matches {
+                                                        value matches {|PT0S..<P200Y|}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] matches {    -- Adjusted age
+                                        value matches {
+                                            DV_DURATION[at9006] matches {
+                                                value matches {|>-P1Y|}
+                                            }
+                                            DV_QUANTITY[at9007] matches {
+                                                [magnitude, units] matches {
+                                                    [{|>-1.0..<10.0|}, {"a"}],
+                                                    [{|>-1.0..<10.0|}, {"a_j"}]
+                                                }
+                                            }
+                                            DV_TEXT[at9008]
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9009]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0008] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0009] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Altersangabe">
+                description = <"Eine Aussage über das Alter einer Person zu einem bestimmten Zeitpunkt.">
+            >
+            ["at0002"] = <
+                text = <"Ereigniszeitpunkt">
+                description = <"Standardwert, ein undefinierter Zeitpunkt des Ereignisses, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Chronologisches Alter">
+                description = <"Das Alter einer Person zum Zeitpunkt des Ereignisses, berechnet anhand des Geburtsdatums.">
+                comment = <"In den meisten Anwendungsfällen wird der Datentyp DV_DURATION zur Erfassung des chronologischen Alters verwendet. Der Datentyp DV_INTERVAL_DURATION wird für die Aufzeichnung eines strukturierten Altersintervalls in Fällen verwendet, in denen Unsicherheit über das genaue Alter der Person besteht. Der Datentyp DV_QUANTITY wird für die Erfassung eines dezimalen Alters in Jahren oder mittleren julianischen Jahren (365,25 Tage) verwendet. Der Datentyp DV_TEXT wird für die Aufzeichnung einer textuellen Darstellung des Alters der Person oder einer Alterskategorie verwendet, die häufig in Fragebögen zu finden ist. Zum Beispiel: \"P3M2W\", \"0,2884615384615385 a_j\", \"3 Monate 2 Wochen\" oder \"31-40 Jahre\" oder \"Teenager\".">
+            >
+            ["at0005"] = <
+                text = <"Korrigiertes Alter">
+                description = <"Das Alter eines Frühgeborenen, das anhand des voraussichtlichen Geburtstermins und nicht des tatsächlichen Geburtsdatums berechnet wird.">
+                comment = <"Auch bekannt als 'Korrigiertes Alter'. In den meisten Anwendungsfällen wird der Datentyp DV_DURATION zur Erfassung des korrigierten Alters verwendet. Der Datentyp DV_QUANTITY wird für die Aufzeichnung eines dezimalen Alters in Jahren oder mittleren julianischen Jahren (365,25 Tage) verwendet, und der Datentyp DV_TEXT wird für die Aufzeichnung einer textuellen Darstellung des Alters der Person verwendet. Zum Beispiel: \"P3M2W\", \"0,2884615384615385 a_j\" oder \"3 Monate 2 Wochen\".">
+            >
+            ["at0006"] = <
+                text = <"Kommentar">
+                description = <"Beschreibung des Alters einer Person, das nicht in anderen Datenelementen dargestellt wird.">
+            >
+            ["at0009"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Alder">
+                description = <"Angivelse av et individs alder, definert som tiden som har løpt fra fødsel eller termindato til et gitt tidspunkt.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert tidspunkthendelse">
+                description = <"Uspesifisert tidspunkt som kan defineres mer eksplisitt i en templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Kronologisk alder">
+                description = <"Alderen til et individ ved hendelsestidspunktet, beregnet ut fra fødselsdatoen.">
+                comment = <"I de fleste tilfeller benyttes datatypen DV_DURATION for å registrere den kronologiske alderen. Datatypen DV_INTERVAL_DURATION brukes for å registrere et strukturert aldersintervall i tilfeller der det er usikkerhet om individets nøyaktige alder. Datatypen DV_QUANTITY brukes til å registrere en alder med desimaler i år eller gjennomsnittlige julianske år (365,25 dager), datatypen DV_TEXT brukes til å registrere en tekstlig representasjon av individets alder eller alderskategori ofte benyttet i spørreskjema. 
+For eksempel: \"P3M2W\", \"0,2884615384615385 a_j\" eller \"3 måneder 2 uker\", \"31-40 år\" eller \"Tenåring\".">
+            >
+            ["at0005"] = <
+                text = <"Justert alder">
+                description = <"Alderen til et prematurt spedbarn, beregnet ut fra forventet fødselsdato i stedet for den faktiske fødselsdatoen.">
+                comment = <"I de fleste tilfeller benyttes datatypen DV_DURATION for å registrere justert alder. Datatypen DV_QUANTITY brukes til å registrere en alder med desimaler i år eller gjennomsnittlige julianske år (365,25 dager), datatypen DV_TEXT brukes til å registrere en tekstlig representasjon av individets alder. 
+For eksempel: \"P3M2W\", \"0,2884615384615385 a_j\" eller \"3 måneder 2 uker\".">
+            >
+            ["at0006"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om et individs alder som ikke fanges opp i andre felt.">
+            >
+            ["at0009"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Age assertion">
+                description = <"A statement about the age of an individual at a point in time.">
+            >
+            ["at0002"] = <
+                text = <"Point in time event">
+                description = <"Default, unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Chronological age">
+                description = <"The age of an individual at the event time, calculated from date of birth.">
+                comment = <"In most use cases the DV_DURATION data type is used to record the Chronological age. The DV_INTERVAL_DURATION is used for recording a structured age interval in cases where there's uncertainty about the individual's exact age. The DV_QUANTITY data type is used for recording a decimal age in years or mean Julian years (365.25 days). The DV_TEXT data type is used for recording a textual representation of the individual's age, or age category often found in questionnaires. For example: 'P3M2W', '0,2884615384615385 a_j', '3 months 2 weeks' or '31-40 years' or 'Teenager'.">
+            >
+            ["at0005"] = <
+                text = <"Adjusted age">
+                description = <"The age of a premature infant, calculated from their expected due date rather than their actual date of birth.">
+                comment = <"Also known as 'Corrected age'. In most use cases the DV_DURATION data type is used to record the Adjusted age. The DV_QUANTITY data type is used for recording a decimal age in years or mean Julian years (365.25 days), and the DV_TEXT data type is used for recording a textual representation of the individual's age. For example: 'P3M2W', '0,2884615384615385 a_j' or '3 months 2 weeks'.">
+            >
+            ["at0006"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the age of an individual, not captured in other fields.">
+            >
+            ["at0009"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Assertion d'âge">
+                description = <"*A statement about the age of an individual at a point in time. (en)">
+            >
+            ["at0002"] = <
+                text = <"Événement ponctuel">
+                description = <"Événement par défaut, non spécifié, qui peut être défini explicitement dans un modèle ou lors de l'exécution.">
+            >
+            ["at0004"] = <
+                text = <"Âge chronologique">
+                description = <"*The age of an individual at the event time, calculated from date of birth. (en)">
+                comment = <"Dans la plupart des cas, le type de données DV_DURATION est utilisé pour enregistrer l'âge chronologique. Le type de données DV_INTERVAL_DURATION est utilisé pour enregistrer un intervalle d'âge structuré en cas d'incertitude sur l'âge exact de la personne. Le type de données DV_QUANTITY est utilisé pour enregistrer un âge décimal en années ou en années juliennes moyennes (365,25 jours). Le type de données DV_TEXT est utilisé pour enregistrer une représentation textuelle de l'âge de l'individu ou de la catégorie d'âge souvent utilisée dans les questionnaires. Par exemple : \"P3M2W\", \"0,2884615384615385 a_j\", \"3 mois 2 semaines\" ou \"31-40 ans\" ou \"Adolescent\".">
+            >
+            ["at0005"] = <
+                text = <"Âge ajusté">
+                description = <"*The age of a premature infant, calculated from their expected due date rather than their actual date of birth. (en)">
+                comment = <"Également appelé \"âge corrigé\". Dans la plupart des cas, le type de données DV_DURATION est utilisé pour enregistrer l'âge corrigé. Le type de données DV_QUANTITY est utilisé pour enregistrer un âge décimal en années ou en années juliennes moyennes (365,25 jours), et le type de données DV_TEXT est utilisé pour enregistrer une représentation textuelle de l'âge de l'individu. Par exemple : \"P3M2W\", \"0,2884615384615385 a_j\" ou \"3 mois 2 semaines\".">
+            >
+            ["at0006"] = <
+                text = <"Commentaire">
+                description = <"Informations supplémentaires sur l'âge d'un individu, qui ne figurent pas dans d'autres champs.">
+            >
+            ["at0009"] = <
+                text = <"Extension">
+                description = <"Informations supplémentaires nécessaires pour étendre le modèle au contenu local ou pour l'aligner sur d'autres modèles de référence ou formalismes.">
+                comment = <"Par exemple : exigences locales en matière d'information ou métadonnées supplémentaires pour s'aligner sur FHIR.">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Declaració d'edat">
+                description = <"Una declaració sobre l'edat d'un pacient en un moment donat.">
+            >
+            ["at0002"] = <
+                text = <"Esdeveniment d’un moment donat">
+                description = <"Esdeveniment predeterminat i no especificat d’un moment donat que es pot definir explícitament en una plantilla o en temps d’execució.">
+            >
+            ["at0004"] = <
+                text = <"Edat cronològica">
+                description = <"L'edat d'un pacient en el moment de l'esdeveniment, calculada a partir de la data de naixement.">
+                comment = <"En la majoria dels casos d’ús, el tipus de dades DV_DURATION s'utilitza per a registrar l'edat Cronològica. La DV_INTERVAL.DURATION s'utilitza per a registrar un interval estructurat d'edat en els casos en què hi ha incertesa sobre l'edat exacta del pacient. El tipus de dades DV_QUANTITY s'utilitza per a registrar una edat decimal en anys o anys julians (365,25 dies). El tipus de dades DV_TEXT s'utilitza per a registrar una representació textual de l'edat del pacient, o categoria d'edat que sovint es troba en els qüestionaris. Per exemple: «A3M2S», «0,2884615384615385 a_j», «3 mesos 2 setmanes» o «31-40 anys» o «Adolescent».">
+            >
+            ["at0005"] = <
+                text = <"Edat ajustada">
+                description = <"L'edat d'un nadó prematur, calculada a partir de la data del part prevista en lloc de la data real de naixement.">
+                comment = <"També coneguda com «Edat corregida». En la majoria dels casos d’ús, el tipus de dades DV_DURATION s'utilitza per a registrar l'edat Ajustada. El tipus de dades DV_QUANTITY s'utilitza per a registrar una edat decimal en anys o anys julians (365,25 dies), i el tipus de dades DV_TEXT s'utilitza per a registrar una representació textual de l'edat del pacient. Per exemple: «A3M2S», «0,2884615384615385 a_j», «3 mesos 2 setmanes».">
+            >
+            ["at0006"] = <
+                text = <"Observacions">
+                description = <"Informació addicional sobre l'edat d'un pacient, no recollida en altres caselles.">
+            >
+            ["at0009"] = <
+                text = <"Extensió">
+                description = <"Informació addicional necessària per a ampliar el model amb contingut local o per alinear-se amb altres models/formalismes de referència.">
+                comment = <"Per exemple: requisits locals d'informació; o metadades addicionals per alinear-se amb equivalents de FHIR.">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Declaración de edad">
+                description = <"Una declaración sobre la edad de un paciente en un momento dado.">
+            >
+            ["at0002"] = <
+                text = <"Evento de un momento dado">
+                description = <"Evento predeterminado y no especificado de un momento dado que se puede definir explícitamente en una plantilla o en tiempo de ejecución.">
+            >
+            ["at0004"] = <
+                text = <"Edad cronológica">
+                description = <"La edad de un paciente en el momento del evento, calculada a partir de la fecha de nacimiento.">
+                comment = <"En la mayoría de los casos de uso, el tipo de datos DV_DURATION se utiliza para registrar la edad cronológica. La DV_INTERVAL_DURATION se utiliza para registrar un intervalo estructurado de edad en los casos en que hay incerteza sobre la edad exacta del paciente. El tipo de datos DV_QUANTITY se utiliza para registrar una edad decimal en años o años julianos (365.25 días). El tipo de datos DV_TEXT se utiliza para registrar una representación textual de la edad del paciente, o categoría de edad que a menudo se encuentra en los cuestionarios. Por ejemplo: \"A3M2S\", '0,2884615384615385 a_j', \"3 meses 2 semanas\" o \"31-10 años\" o \"Adolescente\".">
+            >
+            ["at0005"] = <
+                text = <"Edad ajustada">
+                description = <"La edad de un bebé prematuro, calculada a partir de la fecha del parto prevista en lugar de la fecha real de nacimiento.">
+                comment = <"También conocida como \"Edad corregida\". En la mayoría de los casos de uso, el tipo de dato DV_DURATION es usado para registrar la \"Edad ajustada\". El tipo de dato DV_QUANTITY es usado para registrar una edad con decimales en años o años julianos (365.25 días), y el tipo de dato DV_TEXT se usa para registrar una representación textual de la edad del individuo. Por ejemplo: \"P3M2W\", \"0,2884615384615385 a_j\" o \"3 meses 2 semanas\".">
+            >
+            ["at0006"] = <
+                text = <"Comentario">
+                description = <"Información adicional sobre la edad de un paciente, no recogida en otros campos.">
+            >
+            ["at0009"] = <
+                text = <"Extensión">
+                description = <"Información adicional necesaria para ampliar el modelo con contenido local o para alinearse con otros modelos/formalismos de referencia.">
+                comment = <"Por ejemplo: requerimientos locales de información; o metadatos adicionales para alinearse con FHIR.">
+            >
+        >
+    >

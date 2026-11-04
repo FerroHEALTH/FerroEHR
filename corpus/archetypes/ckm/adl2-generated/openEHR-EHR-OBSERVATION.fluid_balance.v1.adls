@@ -1,0 +1,550 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3b738daa-034d-49b2-ba40-55b8d169778a; build_uid=a31ec91d-a5f4-4567-9e06-79d056866df5)
+    openEHR-EHR-OBSERVATION.fluid_balance.v1.1.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Kirsi Poikela">
+                ["organisation"] = <"Tieto Sweden Healthcare & Welfare AB">
+                ["email"] = <"ext.kirsi.poikela@tieto.com">
+            >
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            author = <
+                ["name"] = <"Vesa Peltola">
+                ["organisation"] = <"Tieto Finland">
+                ["email"] = <"vesa.peltola@tieto.com">
+            >
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Brenda Marfuresco">
+                ["organisation"] = <"-">
+                ["email"] = <"bmarfuresco@gmail.com">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen">
+                ["organisation"] = <"Oslo Univeristy Hospital HF, Norway">
+                ["email"] = <"varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2013-02-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Tomas Alme, DIPS, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Marcus Baw, openGPSoC / BawMedical Ltd, United Kingdom", "Ingeborg Berge, Direktoratet for e-helse, Norway", "Kristian Berg, Vestvågøy kommune - Fagutviklingsavdelingen, Norway", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Bjørn Christensen, Helse Bergen HF, Norway", "Stig Erik Hegrestad, Helse Førde, Norway", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Cecilie Graver, Oslo universitetssykehus HF, Norway", "Ingrid Heitmann, Oslo universitetssykehus HF, Norway", "Annette Hole Sjøborg, DIPS ASA, Norway", "Hilde Hollås, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Harmony Kosola, Alberta Health Services, Canada", "Anne Kristin Strand, Sykehuspartner HF, Norway", "Heather Leslie, Ocean Health Systems, Australia", "Marit Ludvigsen, St Olavs Hospital, Norway", "Hallvard Lærum, Direktoratet for e-helse, Norway", "Siv Marie Lien, DIPS ASA, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Andrej Orel, Marand d.o.o., Slovenia", "Anne Pauline Anderssen, Helse Nord RHF, Norway", "Vladimir Pizzo, Hospital Sírio Libanês, Brazil", "Navin Ramachandran, NHS, United Kingdom", "Tanja Riise, Nasjonal IKT HF, Norway", "Anoop Shah, University College London, United Kingdom", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Iztok Stotl, UKCLJ, Slovenia", "Roy Støle, OUS, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia", "Tesfay Teame, Folkehelseinstittutet, Norway", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "Gro-Hilde Ulriksen, Norwegian center for ehealthresearch, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Fluid Balance, Draft Archetype [Internet]. Australian Digital Health Agency, Australian Digital Health Agency Clinical Knowledge Manager [cited: 2017-05-04]. Available from: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.1203.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"942ABE6E6D83C6C19727E67650B216F2">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung der kumulierten oder Gesamtmenge der Flüssigkeitszufuhr und -ausscheidung sowie einer Schätzung des Flüssigkeitshaushaltsstatus einer Person über bestimmte Zeiträume.
+
+Zur Darstellung der Schätzung der Differenz zwischen Flüssigkeitszufuhr und -ausscheidung während eines bestimmten Zeitraums.">
+            keywords = <"Flüssigkeit", "Haushalt", "Gleichgewicht", "Zufuhr", "Ausscheidung", "Verlust", "Schweiß", "unmerklich", "insensibel", "Verdunstung", "Schwitzen">
+            use = <"Wird verwendet, um kumulative oder Gesamtmengen an Flüssigkeitszufuhr und -ausscheidung sowie eine Schätzung des Flüssigkeitshaushaltsstatus einer Person über bestimmte Zeiträume darzustellen.
+
+Ein Diagramm über den Flüssigkeitshaushalt erfordert normalerweise eine Kombination mehrerer Instanzen des Archetyps OBSERVATION.fluid_output und des Archetyps OBSERVATION.fluid_input, um alle verschiedenen Ein- und Ausgänge zu erfassen, sowie eine einzelne Instanz des OBSERVATION.fluid_balance, um den gesamten Flüssigkeitsstatus darzustellen.">
+            misuse = <"Nicht zur Darstellung einzelner Messungen der Flüssigkeitszufuhr oder -ausscheidung verwenden. Verwenden Sie für diese Zwecke die Archetypen OBSERVATION.fluid_input oder OBSERVATION.fluid_output.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera de ackumulerade eller totala volymerna av vätskeintag och vätskeutsöndring, samt en statusuppskattning på vätskebalansen för en person under angivna tidsintervallet.
+
+Att registrera en uppskattning av skillnaden mellan vätskeintag och vätskeutsöndring under ett angivet tidsintervall.
+">
+            keywords = <"vätska", "balans", "intag", "utsöndring", "förlust", "svett", "vätskeförlust", "avdunstning", "transpiration">
+            use = <"Används för att registrera ackumulerade eller totala volymer av vätskeintag och vätskeutsöndring, samt för en statusuppskattning på vätskebalansen för en person under angivna tidsperioder.
+
+Ett vätskebalansdiagram kräver vanligtvis en kombination av flera *fall* av både OBSERVATION.fluid_output arketypen och OBSERVATION.fluid_input arketypen för att fånga alla de olika vätskeintag och utsöndringar, samt ett *fall* av OBSERVATION. fluid_balance för att registrera den totala vätskestatusen.
+">
+            misuse = <"Används inte för att registrera enskilda mätningar av vätskeintag och vätskeutsöndringar. Använd OBSERVATION.fluid_input or OBSERVATION.fluid_output arketyper för dessa ändamål.">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"*To record the cumulative or total amounts of fluid input and output, plus an estimation of the fluid balance status of an individual over specified intervals of time.
+
+To record the estimation of the difference between fluid input and output during a specified interval of time.(en)">
+            keywords = <"*fluid(en)", "*balance(en)", "*input(en)", "*output(en)", "*loss(en)", "*sweat(en)", "*insensible(en)", "*evaporation(en)", "*perspiration(en)">
+            use = <"*Use to record cumulative or total amounts of fluid input and output, plus an estimation of the fluid balance status of a subject over specified periods of time.
+
+A fluid balance chart will typically require a combination of multiple instances of both the OBSERVATION.fluid_output archetype and the OBSERVATION.fluid_input archetype to capture all of the various inputs and outputs, plus a single instance of the OBSERVATION.fluid_balance to record the overall fluid status.(en)">
+            misuse = <"*Not to be used to record individual measurements of fluid input or output. Use the OBSERVATION.fluid_input or OBSERVATION.fluid_output archetypes for these purposes.(en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere oppsamlet eller total mengde væskeinntak og væsketap, samt estimat over væskebalansen til et individ i et spesifisert tidsintervall.
+
+For å registrere et estimat over forskjellen mellom væskeinntak og væsketap i et spesifisert tidsintervall.">
+            keywords = <"væske", "balanse", "væskeinntak", "væsketap", "tap", "inntak", "svette", "perspiratio", "fordamping", "drikke", "diurese", "urin", "uttørring", "oppkast", "diare", "væskeregnskap">
+            use = <"Brukes for å registrere oppsamlet eller total mengde væskeinntak og væsketap, samt estimat over væskebalanse til et individ i et spesifisert tidsintervall.
+
+En væskebalanse vil vanligvis bestå av en kombinasjon av flere instanser av både OBSERVATION.fluid_input (Norsk: Væskeinntak) og OBSERVATION.fluid_output (Norsk: Væsketap) for å fange opp alt av inntak og væsketap, pluss en enkelt instans av OBSERVATION.fluid_balance (denne arketypen) for å registrere den overordnede væskebalansen.">
+            misuse = <"Skal ikke brukes for å registrere enkeltmålinger av væskeinntak eller væsketap. Bruk OBSERVATION.fluid_input (Væskeinntak) eller OBSERVATION.fluid_output (Væsketap) for dette.">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation, Nasjonal IKT HF">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Registrar las cantidades acumuladas o totales de ingreso y egreso de fluido, además de una estimación del estado del balance de fluidos de un individuo durante intervalos de tiempo específicos.
+
+Registrar la estimación de la diferencia entre el ingreso y egreso de fluido durante un intervalo de tiempo especificado.">
+            keywords = <"fluido", "balance", "ingreso", "egreso", "pérdida", "sudor", "insensible", "evaporación", "transpiración">
+            use = <"Se usa para registrar cantidades acumuladas o totales de ingreso y egreso de fluido, más una estimación del estado del balance de fluidos de un sujeto durante períodos de tiempo específicos.
+
+Una tabla de balance de fluidos requerirá una combinación de múltiples instancias del arquetipo OBSERVATION.fluid_output y el arquetipo OBSERVATION.fluid_input para capturar todos los diversos ingreso y egreso, más una única instancia de OBSERVATION.fluid_balance para registrar el estado general del fluido .">
+            misuse = <"No debe usarse para registrar mediciones individuales de ingreso o egreso de fluido. Utilice los arquetipos OBSERVATION.fluid_input u OBSERVATION.fluid_output para estos fines.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the cumulative or total amounts of fluid input and output, plus an estimation of the fluid balance status of an individual over specified intervals of time.
+
+To record the estimation of the difference between fluid input and output during a specified interval of time.">
+            keywords = <"fluid", "balance", "input", "output", "loss", "sweat", "insensible", "evaporation", "perspiration">
+            use = <"Use to record cumulative or total amounts of fluid input and output, plus an estimation of the fluid balance status of a subject over specified periods of time.
+
+A fluid balance chart will typically require a combination of multiple instances of both the OBSERVATION.fluid_output archetype and the OBSERVATION.fluid_input archetype to capture all of the various inputs and outputs, plus a single instance of the OBSERVATION.fluid_balance to record the overall fluid status.">
+            misuse = <"Not to be used to record individual measurements of fluid input or output. Use the OBSERVATION.fluid_input or OBSERVATION.fluid_output archetypes for these purposes.">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation, Nasjonal IKT HF">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Fluid balance
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    INTERVAL_EVENT[at0002] matches {    -- Any interval event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Total input
+                                        value matches {
+                                            DV_QUANTITY[at9004] matches {
+                                                property matches {[at9001]}    -- Volume
+                                                [magnitude, units, precision] matches {
+                                                    [{|>=0.0|}, {"ml"}, {|>=0|}],
+                                                    [{|>=0.0|}, {"l"}, {3}],
+                                                    [{|>=0.0|}, {"[foz_us]"}, {|>=0|}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Total output
+                                        value matches {
+                                            DV_QUANTITY[at9005] matches {
+                                                property matches {[at9001]}    -- Volume
+                                                [magnitude, units, precision] matches {
+                                                    [{|>=0.0|}, {"ml"}, {|>=0|}],
+                                                    [{|>=0.0|}, {"l"}, {3}],
+                                                    [{|>=0.0|}, {"[foz_us]"}, {|>=0|}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Insensible loss
+                                        value matches {
+                                            DV_QUANTITY[at9003] matches {
+                                                property matches {[at9001]}    -- Volume
+                                                [magnitude, units, precision] matches {
+                                                    [{|>=0.0|}, {"ml"}, {|>=0|}],
+                                                    [{|>=0.0|}, {"l"}, {3}],
+                                                    [{|>=0.0|}, {"[foz_us]"}, {|>=0|}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Fluid balance
+                                        value matches {
+                                            DV_QUANTITY[at9006] matches {
+                                                property matches {[at9001]}    -- Volume
+                                                [units, precision] matches {
+                                                    [{"ml"}, {|>=0|}],
+                                                    [{"l"}, {3}],
+                                                    [{"[foz_us]"}, {|>=0|}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    INTERVAL_EVENT[at0008] occurrences matches {0..1} matches {    -- 24 hour total
+                        math_function matches {
+                            DV_CODED_TEXT[at9007] matches {
+                                defining_code matches {[at9000]}    -- total
+                            }
+                        }
+                        width matches {
+                            DV_DURATION[at9008] matches {
+                                value matches {PT24H; PT24H}
+                            }
+                        }
+                        data matches {
+                            use_node ITEM_TREE[at9009] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0009] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Insensible loss formula
+                        value matches {
+                            DV_TEXT[at9010]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0011] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Flüssigkeitshaushalt">
+                description = <"Die Differenz zwischen Flüssigkeitszufuhr und -ausscheidung während eines bestimmten Zeitraums.">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Intervallereignis">
+                description = <"Ein undefiniertes Intervallereignis, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Insensibler Verlust">
+                description = <"Die Menge an Flüssigkeitsverlust durch Verdunstung über die Haut und Atemwegen.">
+                comment = <"Der unmerklicher Verlust wird anhand einer Reihe von Parametern berechnet, darunter: Körpergewicht, Körpertemperatur, Zeit in der offenen Chirurgie und Verwendung eines mechanischen Beatmungsgeräts.">
+            >
+            ["at0005"] = <
+                text = <"Gesamtzufuhr">
+                description = <"Die Gesamtmenge an Flüssigkeit, die während eines bestimmten Zeitraums verabreicht oder aufgenommen wurde.">
+            >
+            ["at0006"] = <
+                text = <"Gesamtausscheidung">
+                description = <"Die Gesamtmenge an Flüssigkeit, die während eines bestimmten Zeitraums verloren gegangen oder ausgeschieden wurde.">
+            >
+            ["at0007"] = <
+                text = <"Flüssigkeitshaushalt">
+                description = <"Die Differenz zwischen Flüssigkeitszufuhr und -ausscheidung während eines bestimmten Zeitraums.">
+                comment = <"Flüssigkeitshaushalt = Gesamtflüssigkeitszufuhr- (Gesamtflüssigkeitsausscheidung + Insensibler Verlust).">
+            >
+            ["at0008"] = <
+                text = <"24 Stunden gesamt">
+                description = <"Die gesamte Flüssigkeitsmenge wurde in einem Zeitraum von 24 Stunden erfasst.">
+            >
+            ["at0010"] = <
+                text = <"Formel für insensiblen Verlust">
+                description = <"Die Formel zur Berechnung der Summe des insensiblen Verlusts.">
+                comment = <"Zum Beispiel: \"10 ml/kg/Tag, wenn nicht intubiert\"; \"5 ml/kg/Tag bei Intubation\"; und \"+ 10% pro Grad Celsius über 37 °C\".">
+            >
+            ["at0011"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+            ["at9001"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["at9000"] = <
+                text = <"* total (en)">
+                description = <"* total (en)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Vätskebalans">
+                description = <"Skillnaden mellan vätskeintag och vätskeutsöndring under ett angivet tidsintervall.">
+            >
+            ["at0002"] = <
+                text = <"Ospecificerad intervallhändelse">
+                description = <"Ospecificerad händelse under ett tidsintervall som explicit kan definieras i en mall eller vid körning av applikation.">
+            >
+            ["at0004"] = <
+                text = <"Vätskeförlust">
+                description = <"Vätskevolym som förloras genom avdunstning från hud och andningsvägar.">
+                comment = <"Vätskeförlusten beräknas med hjälp av en rad parametrar som kroppsvikt, kroppstemperatur, tid i öppen kirurgi och användning av en mekanisk ventilator.">
+            >
+            ["at0005"] = <
+                text = <"Totalt vätskeintag">
+                description = <"Den totala mängden vätska som administreras eller intas under ett angivet tidsintervall.">
+            >
+            ["at0006"] = <
+                text = <"Total vätskeutsöndring">
+                description = <"Den totala mängden vätska som förloras eller utsöndras under ett angivet tidsintervall.">
+            >
+            ["at0007"] = <
+                text = <"Vätskebalans">
+                description = <"Skillnaden mellan vätskeintag och vätskeutsöndring under ett angivet tidsintervall.">
+                comment = <"Vätskebalans = Totalvolym vätskeintag - (totalvolym vätskeutsöndring + vätskeförlust).">
+            >
+            ["at0008"] = <
+                text = <"24 timmar totalt">
+                description = <"Totala vätskevolymen registreras under en 24-timmars period.">
+            >
+            ["at0010"] = <
+                text = <"Formel för vätskeförlust">
+                description = <"Formeln som används för att beräkna volymen av vätskeförlust.">
+                comment = <"Exempelvis: \"10 ml/kg/dag vid inte intuberad\"; \"5 ml/kg/dag vid intuberad\"; och \"+ 10% per grad Celsius över 37C\".">
+            >
+            ["at0011"] = <
+                text = <"Övriga upplysningar">
+                description = <"Ytterligare information som krävs för att fånga lokalt innehåll eller för att anpassa sig till andra referensmodeller/formalismer.">
+                comment = <"Exempelvis: lokala informationskrav eller ytterligare metadata för att anpassa sig till FHIR eller CIMI-motsvarigheter.">
+            >
+            ["at9001"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["at9000"] = <
+                text = <"* total (en)">
+                description = <"* total (en)">
+            >
+        >
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"Nestetasapaino">
+                description = <"Nesteiden saannin ja menetyksen välinen erotus tietyllä aikavälillä.">
+            >
+            ["at0002"] = <
+                text = <"Minkä tahansa ajanjakson tapahtuma">
+                description = <"Määrittämätön ajanjaksolla ilmenevä tapahtuma, joka voi olla määritetty tarkasti jossakin mallissa tai suorituksen aikana.">
+            >
+            ["at0004"] = <
+                text = <"Näkymätön menetys">
+                description = <"Nesteiden menetys haihtumalla iholta ja hengitysteistä.">
+                comment = <"The insensible loss is calculated using a range of parameters, including: body weight, body temperature, time in open surgery and use of a mechanical ventilator.">
+            >
+            ["at0005"] = <
+                text = <"Kokonaissaanti">
+                description = <"Määritetyllä ajanjaksolla annettujen tai nautittujen nesteiden kokonaismäärä.">
+            >
+            ["at0006"] = <
+                text = <"Kokonaismenetys">
+                description = <"Määritetyllä ajanjaksolla menetettyjen tai eritettyjen nesteiden kokonaismäärä.">
+            >
+            ["at0007"] = <
+                text = <"Nestetasapaino">
+                description = <"Nesteiden saannin ja menetyksen välinen erotus tietyllä aikavälillä.">
+                comment = <"Fluid Balance = Total Fluid Input - (Total Fluid Output + Insensible Loss).">
+            >
+            ["at0008"] = <
+                text = <"24 tunnin kokonaismäärä">
+                description = <"24 tunnin mittaisen ajanjakson aikana kirjattu nesteiden kokonaismäärä.">
+            >
+            ["at0010"] = <
+                text = <"Näkymättömän menetyksen kaava">
+                description = <"Näkymättömän menetyksen laskennassa käytettävä kaava.">
+                comment = <"For example: \"10 ml/kg/day when not intubated\"; \"5 ml/kg/day when intubated\"; and \"+10% per degree celcius over 37C\". 
+">
+            >
+            ["at0011"] = <
+                text = <"Laajennus">
+                description = <"Lisätiedot, joita tarvitaan paikallisen sisällön kirjaamiseksi tai yhtenäistämiseksi muiden viitemallien tai formalismien kanssa.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at9001"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["at9000"] = <
+                text = <"* total (en)">
+                description = <"* total (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Væskebalanse">
+                description = <"Forskjellen mellom væskeinntak og væsketap i et spesifisert tidsintervall. 
+">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i en template eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Perspiratio">
+                description = <"Mengden væsketap ved fordampning fra hud og luftveier.">
+                comment = <"Væsketap ved perspiratio avhenger av blant annet hudoverflate, kroppstemperatur, lengden på åpen kirurgi og eventuell respiratorbehandling.">
+            >
+            ["at0005"] = <
+                text = <"Totalt væskeinntak">
+                description = <"Den totale mengden væske som er administrert eller drukket i et spesifisert tidsintervall.">
+            >
+            ["at0006"] = <
+                text = <"Totalt væsketap">
+                description = <"Den totale mengden væske som er tapt eller utsondret i et spesifisert tidsintervall.">
+            >
+            ["at0007"] = <
+                text = <"Væskebalanse">
+                description = <"Forskjellen mellom væskeinntak og væsketap i et spesifisert tidsintervall.">
+                comment = <"Væskebalanse = Totalt væskeinntak - (Totalt væsketap + perspiratio).">
+            >
+            ["at0008"] = <
+                text = <"Væskebalanse døgn">
+                description = <"Væskebalansen over en periode på 24 timer.">
+            >
+            ["at0010"] = <
+                text = <"Formel for perspiratio">
+                description = <"Formelen som er brukt for å beregne perspiratio.">
+                comment = <"For eksempel \"10ml/kg/døgn når ikke intubert, 5 ml/kg/døgn når intubert og + 10% for hver grad over 37 C\".">
+            >
+            ["at0011"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at9001"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["at9000"] = <
+                text = <"* total (en)">
+                description = <"* total (en)">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"Balance de fluidos">
+                description = <"La diferencia entre fluidos de ingreso y egreso durante un intervalo de tiempo específico">
+            >
+            ["at0002"] = <
+                text = <"Cualquier evento de intervalo">
+                description = <"Evento de intervalo no especificado que puede definirse explícitamente en una plantilla o en tiempo de ejecución.">
+            >
+            ["at0004"] = <
+                text = <"Pérdida insensible">
+                description = <"Cantidad de fluido perdido por evaporación a través de la piel y tracto respiratorio">
+                comment = <"La pérdida insensible es calculada usando un rango de parámetros, que incluyen: peso corporal, temperatura corporal, tiempo en cirugía abierta y uso de un ventilador mecánico.">
+            >
+            ["at0005"] = <
+                text = <"Ingreso total">
+                description = <"Cantidad total de fluidos administrados o ingeridos durante un intervalo de tiempo específico.">
+            >
+            ["at0006"] = <
+                text = <"Egreso total">
+                description = <"Cantidad total de fluidos perdidos o excretados durante un intervalo de tiempo específico.">
+            >
+            ["at0007"] = <
+                text = <"Balance de fluidos">
+                description = <"La diferencia entre ingreso y egreso de fluidos durante un intervalo de tiempo especifico">
+                comment = <"Balance de fluidos = Ingreso total de fluidos - (Egreso total de fluidos + pérdida insensible)">
+            >
+            ["at0008"] = <
+                text = <"Total de 24 horas">
+                description = <"Volumen total de fluido registrados durante un intervalo de 24 horas de duración">
+            >
+            ["at0010"] = <
+                text = <"Fórmula de pérdida insensible">
+                description = <"La fórmula usada para calcular la cantidad de pérdida insensible">
+                comment = <"Por ejemplo: \"10 ml/kg/día cuando no esta intubado\"; \"5 ml/kg/día cuando esta intubado\"; y \"+10% por grado celcius por encima de 37C\"">
+            >
+            ["at0011"] = <
+                text = <"Extensión">
+                description = <"Información adicional requerida para capturar contenido local o alinear con otros modelos/formalismos de referencia">
+                comment = <"Ejemplo Requerimientos de información local o metadata adicional para alinear con equivalentes a FHIR o CIMI">
+            >
+            ["at9001"] = <
+                text = <"* Volume (en)">
+                description = <"* Volume (en)">
+            >
+            ["at9000"] = <
+                text = <"* total (en)">
+                description = <"* total (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Fluid balance">
+                description = <"The difference between fluid input and output during a specified interval of time.">
+            >
+            ["at0002"] = <
+                text = <"Any interval event">
+                description = <"Unspecified interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Insensible loss">
+                description = <"The amount of fluid loss by evaporation from the skin and respiratory tract.">
+                comment = <"The insensible loss is calculated using a range of parameters, including: body weight, body temperature, time in open surgery and use of a mechanical ventilator.">
+            >
+            ["at0005"] = <
+                text = <"Total input">
+                description = <"The total amount of fluid administered or ingested during a specified interval of time.">
+            >
+            ["at0006"] = <
+                text = <"Total output">
+                description = <"The total amount of fluid lost or excreted during a specified interval of time.">
+            >
+            ["at0007"] = <
+                text = <"Fluid balance">
+                description = <"The difference between fluid input and output during a specified interval of time.">
+                comment = <"Fluid Balance = Total Fluid Input - (Total Fluid Output + Insensible Loss).">
+            >
+            ["at0008"] = <
+                text = <"24 hour total">
+                description = <"Total fluid volume recorded during an interval of 24 hour duration.">
+            >
+            ["at0010"] = <
+                text = <"Insensible loss formula">
+                description = <"The formula used to calculate the amount of insensible loss.">
+                comment = <"For example: \"10 ml/kg/day when not intubated\"; \"5 ml/kg/day when intubated\"; and \"+10% per degree celcius over 37C\". 
+">
+            >
+            ["at0011"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at9001"] = <
+                text = <"Volume">
+                description = <"Volume">
+            >
+            ["at9000"] = <
+                text = <"total">
+                description = <"total">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/129>
+            ["at9000"] = <http://openehr.org/id/148>
+        >
+    >

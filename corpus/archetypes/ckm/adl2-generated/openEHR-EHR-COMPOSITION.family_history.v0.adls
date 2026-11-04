@@ -1,0 +1,124 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6171a04f-3cb5-40ad-a912-324aa0efc5c5; build_uid=31752f6d-a53f-4bb6-9af7-4bb983dd7b46)
+    openEHR-EHR-COMPOSITION.family_history.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Sarah Ballout">
+                ["email"] = <"ballout.sarah@mh-hannover.de">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics, Australia">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2013-06-16">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: Family history, Draft archetype [Internet]. Australian Digital Health Agency (NEHTA), ADHA Clinical Knowledge Manager. Authored: 2013 Jun 16. Available at: http://dcm.nehta.org.au/ckm#showArchetype_1013.1.1297_3 (discontinued).">
+    >
+    other_details = <
+        ["current_contact"] = <"Dr Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"9A5E23F53786AAE75946A1E3EF5D46EE">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Dieser Archetyp wird verwendet, um entweder eine persistente und strukturierte Liste aller relevanten Informationen zur Familienanamnese des Patienten zu erfassen oder positive Aussagen zum Ausschluss oder des tatsächlichen Fehlens von Informationen der Familienanamnese, die sich auf die klinische Entscheidungsfindung und Versorgung auswirken können, darzustellen.">
+            keywords = <"Familie", "Anamnese", "Stammbaum">
+            use = <"Dieser Archetyp wird verwendet, um entweder eine persistente und verwaltende Liste aller relevanten Informationen zur Familienanamnese des Patienten zu erfassen oder positive Aussagen zum Ausschluss oder zur tatsächlichen Abwesenheit von Informationen der Familienanamnese, die sich auf die klinische Entscheidungsfindung und Versorgung auswirken können, darzustellen.
+
+Die Informationen zur Familienanamnese können nicht nur für den Patienten, sondern auch für andere Personen aufgezeichnet werden.
+Informationen über den Vater eines ungeborenen Fötus müssen zum Beispiel bis zur Geburt in den Patientenakten der Mutter gespeichert werden. 
+
+Die Zielsetzung dieser \"COMPOSITION\" ist die Verwendung als persistente Zusammenfassung. Es wurde jedoch festgestellt, dass der Archetyp für die Implementierung auch zusätzliche Attribute benötigt, die sich auf den Zusammenhang des Ereignisses beziehen. Als Ergebnis wurde die \"COMPOSITION\" vorübergehend in eine \"EVENT COMPOSITION\" geändert, wodurch das Hinzufügen eines SLOT-Items möglich ist. In dem SLOT können zusätzliche kontextbezogene Archetypen aufgenommen werden. Diese neue Anforderung für kontextbezogene Attribute in der persistenten COMPOSITION wurde als zukünftiges Update des openEHR-Referenzmodells angefordert.
+">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a persistent and managed list of all relevant family history for an individual or statements about positive exclusion or actual absence of information about family history, that may influence clinical decision-making and care provision.">
+            keywords = <"family", "history", "pedigree">
+            use = <"Use to record a persistent and managed list of all relevant family history for an individual or statements about positive exclusion or actual absence of information about family history, that may influence clinical decision-making and care provision.
+
+It is also possible to record family history information for individuals other than the subject of the health record - for example information about the father of an unborn fetus needs to be stored in the mother's health record until birth. In this situation the subject of care must be explicitly specified.
+
+The intent of this COMPOSITION is for use as a persistent summary, however it has been identified that for implementation the archetype also needs additional attributes related to the context of the event. As a result, the COMPOSITION has been temporarily modified as an EVENT COMPOSITION which allows addition of an Items SLOT into which additional context-related archetypes can be included. This new requirement for context-related attributes in the Persistent COMPOSITION has been requested as a future openEHR Reference Model update.">
+            misuse = <"">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation">
+        >
+    >
+
+definition
+    COMPOSITION[at0000] matches {    -- Family history
+        category matches {
+            DV_CODED_TEXT[at9001] matches {
+                defining_code matches {[at9000]}    -- event
+            }
+        }
+        context matches {
+            EVENT_CONTEXT[at9002] matches {
+                other_context matches {
+                    ITEM_TREE[at0003] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            allow_archetype CLUSTER[at0005] matches {    -- Extension
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Familienanamnese">
+                description = <"Eine persistente und verwaltete Liste über die relevante Familienanamnese des Patienten, die sich auf die klinische Entscheidungsfindung und die klinische Versorgung auswirken kann.">
+            >
+            ["at0005"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen, die erforderlich sind, um den lokalen Kontext zu erfassen oder mit anderen Referenzmodellen/Formalismen abzugleichen.">
+                comment = <"Zum Beispiel: Lokale Informationsanforderungen oder zusätzliche Metadaten zur Anpassung an FHIR- oder CIMI-Äquivalente.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Family history">
+                description = <"A persistent and managed list about relevant family history of the subject that may influence clinical decision-making and care provision.">
+            >
+            ["at0005"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at9000"] = <
+                text = <"event">
+                description = <"event">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/433>
+        >
+    >

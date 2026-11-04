@@ -1,0 +1,123 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=456b6863-cfa4-4435-b3fb-4a2d116f2bed; build_uid=2fdc415e-3952-452b-be04-8dcc31e68458)
+    openEHR-EHR-CLUSTER.microbiology_parasitology.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2024-09-07">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"76BE2D19B7B4604C505701CBD4CB9AD8">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Microbiology parasitology findings
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype CLUSTER[at0002] matches {    -- Specimen
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            CLUSTER[at0003] matches {    -- Interpretation
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Parasite name
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Detected?
+                        value matches {
+                            DV_CODED_TEXT[at9003] matches {
+                                defining_code matches {[ac9000]}    -- Detected? (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Microbiology parasitology findings">
+                description = <"Parasitology">
+            >
+            ["at0001"] = <
+                text = <"Description">
+                description = <"">
+            >
+            ["at0002"] = <
+                text = <"Specimen">
+                description = <"">
+            >
+            ["at0003"] = <
+                text = <"Interpretation">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Parasite name">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Detected?">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Detected">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Not detected">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Indeteminate">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Comment">
+                description = <"">
+            >
+            ["ac9000"] = <
+                text = <"Detected? (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0006", "at0007", "at0008">
+        >
+    >

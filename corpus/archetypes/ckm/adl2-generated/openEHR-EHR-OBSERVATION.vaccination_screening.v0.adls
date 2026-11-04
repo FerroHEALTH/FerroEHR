@@ -1,0 +1,321 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d2581551-5b20-414a-b573-7e9340c13eb8; build_uid=b2f6b468-eb7c-45ad-93a6-e3b9d10ceeed)
+    openEHR-EHR-OBSERVATION.vaccination_screening.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-10-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"D2FAE0A212C8D7C442ED507F3F1FF357">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To create a framework for recording answers to pre-defined screening questions about the use of any specified vaccination or grouping of vaccinations.">
+            keywords = <"vaccination, screening, questionnaire, prevention", ...>
+            use = <"Use to create a framework for recording answers to pre-defined screening questions about the use of any specified vaccination or grouping of vaccinations.
+
+Examples of specific vaccinations and groupings of vaccinations effective against a specific infectious disease are Tetanus toxoid, and COVID-effective vaccinations, respectively.
+
+Common use cases include, but are not limited to:
+- Systematic questioning in any consultation related to patterns of vaccine administration, for example:
+--- Do you ever been vaccinated for tetanus? Yes, No, Unknown.
+--- Have you received a COVID booster in the past 6 months? Yes, No, Unknown.
+-- How many COVID boosters have you received? When was the last one?
+
+The semantics of this archetype are intentionally loose, and querying this archetype would normally only be useful or safe within the context of each specific template. In a template, each data element would usually be renamed to the specific question asked. Where value sets have been proposed for common use cases, these can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.
+
+The EVENT structure from the reference model can be used to specify whether the questions relate to point in time or over a period of time. Use a separate instance of this archetype to distinguish between a questionnaire recording information about a medication that has been used at any time in the past and information about a medication used within a specified time interval - for example the difference between \"Do you use paracetamol?\" compared to \"Have you been using any anticoagulants during the last four weeks?\".
+
+The source of the information in a questionnaire response may vary in different contexts but can be specifically identified using the 'Information provider' element in the Reference Model.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry. If the screening questionnaire identifies the administration of a vaccination it is recommended that the clinical system record and persist the specific details about the vaccination using a relevant archetype, for example the EVALUATION.immunisation_summary to record a detailed snapshot view about the immune status of an individual for a specific infectious disease or a relevant ACTION archetype to record details about a specific administration.">
+            misuse = <"Not to be used for recording an order for a vaccine to be administered - use INSTRUCTION.medication_order for this purpose.
+
+Not to be used for recording the administration, dispensing or consumption of a vaccine - use ACTION.vaccine for this purpose.
+
+Not to be used for recording a summary of use of a vaccine over the lifetime of the individual - use EVALUATION.immunisation_summary for this purpose.
+
+Not to be used to record details about the positive absence of a specific vaccine or grouping of vaccines, outside of a screening context. Use EVALUATION.exclusion_specific for this purpose.
+
+Not to be used to create a framework for recording answers to pre-defined screening questions about adverse reactions, use an appropriate archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Vaccination screening questionnaire
+        data matches {
+            HISTORY[at0022] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0023] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0001] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0040] occurrences matches {0..1} matches {    -- Screening purpose
+                                        value matches {
+                                            DV_TEXT[at9004]
+                                        }
+                                    }
+                                    ELEMENT[at0027] matches {    -- Any vaccinations?
+                                        value matches {
+                                            DV_CODED_TEXT[at9005] matches {
+                                                defining_code matches {[ac9000]}    -- Any vaccinations? (synthesised)
+                                            }
+                                            DV_TEXT[at9006]
+                                            DV_BOOLEAN[at9007]
+                                        }
+                                    }
+                                    ELEMENT[at0043] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at9008]
+                                        }
+                                    }
+                                    CLUSTER[at0026] matches {    -- Specific vaccination
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0021] occurrences matches {1} matches {    -- Vaccination name
+                                                value matches {
+                                                    DV_TEXT[at9009]
+                                                }
+                                                name matches {
+                                                    DV_CODED_TEXT[at9010] matches {
+                                                        defining_code matches {[ac9001]}    -- Vaccination name (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Vaccinated?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9011] matches {
+                                                        defining_code matches {[ac9002]}    -- Vaccinated? (synthesised)
+                                                    }
+                                                    DV_TEXT[at9012]
+                                                    DV_BOOLEAN[at9013]
+                                                }
+                                            }
+                                            ELEMENT[at0046] occurrences matches {0..1} matches {    -- Scar present?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9017] matches {
+                                                        defining_code matches {[ac9003]}    -- Scar present? (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            allow_archetype CLUSTER[at0041] matches {    -- Additional details
+                                                include
+                                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.dosage(-[a-zA-Z0-9_]+)*\.v2\..*/}
+                                            }
+                                            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Comment
+                                                value matches {
+                                                    DV_TEXT[at9018]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0042] matches {    -- Additional details
+                                        include
+                                            archetype_id/value matches {/.*/}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0005] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0050] occurrences matches {0..1} matches {    -- Information source
+                        value matches {
+                            DV_TEXT[at9019]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0019] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Vaccination screening questionnaire">
+                description = <"Series of questions and associated answers used to screen for the administration of vaccination.">
+                comment = <"The answers may be self-reported.">
+            >
+            ["at0019"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0021"] = <
+                text = <"Vaccination name">
+                description = <"Name of vaccination or targeted infectious disease.">
+                comment = <"For example: 'alendronic acid', 'anti osteoporosis medications' or 'bisphosphonates'.
+Coding of the 'Medication name' with a terminology is preferred, where possible.">
+            >
+            ["at0023"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0024"] = <
+                text = <"Vaccinated?">
+                description = <"Is there a history of use of a specific vaccine or group of vaccines.">
+                comment = <"In a template, the data element would usually be renamed to the specific question asked. The proposed value set can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case. 
+For example an alternative valueset using the DV_TEXT datatype can be: 
+Currently using [The individual currently uses the specific medication either on a regular basis or as required.]
+Never used [The individual has never used the specific medication.]
+Used in the past [The individual has used the specific medication in the past, but isn't currently using it.]
+Unknown [It is not known whether the individual uses or has used the specific medication.]">
+            >
+            ["at0025"] = <
+                text = <"Comment">
+                description = <"Narrative description about the Vaccination screening, not otherwise captured in data fields.">
+            >
+            ["at0026"] = <
+                text = <"Specific vaccination">
+                description = <"Details about a specified vaccine or grouping of vaccines relevant for the screening purpose.">
+                comment = <"Use separate instances of this CLUSTER to differentiate between specific medications or groupings of medication.">
+            >
+            ["at0027"] = <
+                text = <"Any vaccinations?">
+                description = <"Is there a history of administration of any vaccinations related to the screening purpose?">
+                comment = <"In a template, the data element would usually be renamed to the specific question asked. The proposed value set can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.">
+            >
+            ["at0028"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Screening purpose">
+                description = <"The context or reason for screening.">
+                comment = <"This data element is intended to provide collection context for the question/answer groups when queried at a later date. It is not expected that this data element will be exposed to the individual, but only stored in data. For example: pre-admission screening, the name of the actual questionnaire or screening for previous use of a class of medications, such as bisphosphonates.">
+            >
+            ["at0041"] = <
+                text = <"Additional details">
+                description = <"Structured details or questions about the specific vaccine or grouping of vaccines.">
+            >
+            ["at0042"] = <
+                text = <"Additional details">
+                description = <"Structured details or questions about vaccination screening.">
+            >
+            ["at0043"] = <
+                text = <"Description">
+                description = <"Narrative description about the history of administration of any vaccinations relevant for the screening purpose.">
+            >
+            ["at0044"] = <
+                text = <"Vaccine name">
+                description = <"Name of the vaccination.">
+            >
+            ["at0045"] = <
+                text = <"Disease name">
+                description = <"Name of the targeted infectious disease.">
+            >
+            ["at0046"] = <
+                text = <"Scar present?">
+                description = <"Presence or absence of an observed vaccine-related scar.">
+            >
+            ["at0047"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Information source">
+                description = <"Source of vaccination information provided.">
+                comment = <"For example: vaccination card, or oral history.">
+            >
+            ["ac9000"] = <
+                text = <"Any vaccinations? (synthesised)">
+                description = <"Is there a history of administration of any vaccinations related to the screening purpose? (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Vaccination name (synthesised)">
+                description = <"Name of vaccination or targeted infectious disease. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Vaccinated? (synthesised)">
+                description = <"Is there a history of use of a specific vaccine or group of vaccines. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Scar present? (synthesised)">
+                description = <"Presence or absence of an observed vaccine-related scar. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0030"] = <http://snomed.info/id/261665006>
+            ["at0028"] = <http://snomed.info/id/373066001>
+            ["at0029"] = <http://snomed.info/id/373067005>
+            ["at0036"] = <http://snomed.info/id/373066001>
+            ["at0037"] = <http://snomed.info/id/373067005>
+            ["at0039"] = <http://snomed.info/id/261665006>
+            ["at0047"] = <http://snomed.info/id/373066001>
+            ["at0048"] = <http://snomed.info/id/373067005>
+            ["at0049"] = <http://snomed.info/id/82334004>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0036", "at0037", "at0039">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0044", "at0045">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0028", "at0029", "at0030">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0047", "at0048", "at0049">
+        >
+    >

@@ -1,0 +1,360 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=4f90827a-f63c-3626-9cb2-5e77a571f9cb; build_uid=2958a7da-3f67-4eb1-82e1-7472a35e6f3a)
+    openEHR-EHR-CLUSTER.environmental_conditions.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Darin Leonhardt">
+                ["organisation"] = <"PLRI für medizinische Informatik/ Medizinische Hochschule Hannover">
+                ["email"] = <"leonhardt.darin@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Lars Bitsch-Larsen">
+                ["organisation"] = <"Haukeland University Hospital of Bergen, Norway">
+                ["email"] = <"lbla@helse-bergen.no">
+            >
+            accreditation = <"MD, DEAA, MBA, spec in anesthesia, spec in tropical medicine.">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2008-07-19">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Knut Bernstein", "Sam Heard">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"7F1455D0B392A59402EBD95AF906F964">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Aufzeichnung von Informationen über Umweltbedingungen, die sich auf das Wohlbefinden der Person auswirken können.">
+            keywords = <"Luftfeuchtigkeit", "Temperatur", "Umgebung", "thermische Belastung", "Wind", "Abkühlung", "Feuchtkugeltemperatur">
+            use = <"Zur Wiederverwendung in verschiedenen Archetypen - z. B. der Zustand im Archetyp Temperatur.">
+            misuse = <"">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"Anvendes til at registrere informasjon om miljømessige forhold som kan ha innvirkning på pasientens velvære.">
+            keywords = <"Fuktighet", "temperatur", "omgivelse", "termisk stress", "vind", "blåst", "chill", "wet bulb globe">
+            use = <"For gjenbruk innen multiple arketyper - fx innen \"State\" (tilstand) innen temperatur arketypen.">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record information about environmental conditions that may be impacting on the individual's wellbeing.">
+            keywords = <"humidity", "temperature", "ambient", "thermal stress", "wind", "chill", "wet bulb globe">
+            use = <"To re-use within multiple archetypes - for example the State within the temperature archetype.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل المعلومات حول الظروف البيئية التي قد تؤثر على سلامة المريض">
+            keywords = <"الرطوبة", "درجة الحرارة", "محيط", "الضغط الحراري", "الريح", "نافِض (حمى مترافقة برعدة)", "كُرة بَصَلية مبللة">
+            use = <"يستخدم كجزء من العديد من النماذج - مثلا: حالة داخل نموذج الحرارة">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Environmental conditions
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Ambient temperature
+                value matches {
+                    DV_QUANTITY[at9003] matches {
+                        property matches {[at9000]}    -- Temperature
+                        [magnitude, units, precision] matches {
+                            [{|>=0.0|}, {"Cel"}, {1}],
+                            [{|>=0.0|}, {"[degF]"}, {1}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Relative humidity
+                value matches {
+                    DV_QUANTITY[at9004] matches {
+                        property matches {[at9010]}    -- Qualified real
+                        magnitude matches {|0.0..100.0|}
+                        units matches {"%"}
+                        precision matches {1}
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Wind velocity
+                value matches {
+                    DV_QUANTITY[at9005] matches {
+                        property matches {[at9002]}    -- Velocity
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"km/h"}],
+                            [{|>=0.0|}, {"m/h"}],
+                            [{|>=0.0|}, {"m/s"}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Wind chill temperature
+                value matches {
+                    DV_QUANTITY[at9006] matches {
+                        property matches {[at9000]}    -- Temperature
+                        [magnitude, units, precision] matches {
+                            [{|>=0.0|}, {"Cel"}, {1}],
+                            [{|>=0.0|}, {"[degF]"}, {1}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Wet bulb globe temperature
+                value matches {
+                    DV_QUANTITY[at9007] matches {
+                        property matches {[at9000]}    -- Temperature
+                        [magnitude, units, precision] matches {
+                            [{|>=0.0|}, {"Cel"}, {1}],
+                            [{|>=0.0|}, {"[degF]"}, {1}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Atmospheric pressure
+                value matches {
+                    DV_QUANTITY[at9009] matches {
+                        property matches {[at9008]}    -- Pressure
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"kPa"}],
+                            [{|>=0.0|}, {"Pa"}],
+                            [{|>=0.0|}, {"bar"}],
+                            [{|>=0.0|}, {"atm"}],
+                            [{|>=0.0|}, {"[psi]"}],
+                            [{|>=0.0|}, {"mbar"}]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Umweltbedingungen">
+                description = <"Die physische Umgebung einer Person.">
+            >
+            ["at0001"] = <
+                text = <"Umgebungstemperatur">
+                description = <"Die Umgebungstemperatur, in der sich die Person aufhält.">
+                comment = <"Wenn dieser Archetyp innerhalb eines Zustandsmodells verwendet wird, beträgt der angenommene Wert 21 Grad Celsius oder 69,8 Grad Fahrenheit.">
+            >
+            ["at0002"] = <
+                text = <"Relative Luftfeuchtigkeit">
+                description = <"Luftfeuchtigkeit der Umgebung, in der sich die Person aufhält.">
+            >
+            ["at0003"] = <
+                text = <"Windstärke">
+                description = <"Maß für die Windstärke.">
+            >
+            ["at0005"] = <
+                text = <"Temperatur der Windabkühlung">
+                description = <"Die gefühlte Temperatur auf der Haut, die von der Lufttemperatur und der Windstärke abhängt.">
+            >
+            ["at0010"] = <
+                text = <"Temperatur der Feuchtkugel">
+                description = <"Eine zusammengesetzte Temperatur, die dazu dient, die Auswirkungen von Temperatur, Feuchtigkeit und Sonneneinstrahlung auf den Menschen abzuschätzen.">
+            >
+            ["at0011"] = <
+                text = <"Atmosphärischer Luftdruck">
+                description = <"Der Luftdruck in der Umgebung einer Person.">
+                comment = <"Zum Beispiel: der Luftdruck beim Sport in der Höhe oder der Druck in einer Überdruckkammer.">
+            >
+            ["at9008"] = <
+                text = <"* Pressure (en)">
+                description = <"* Pressure (en)">
+            >
+            ["at9000"] = <
+                text = <"* Temperature (en)">
+                description = <"* Temperature (en)">
+            >
+            ["at9002"] = <
+                text = <"* Velocity (en)">
+                description = <"* Velocity (en)">
+            >
+            ["at9010"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Omgivelsesbetingelser">
+                description = <"For ressursregistrering av omgivelsebetingelsene som pasienten utsettes for.">
+            >
+            ["at0001"] = <
+                text = <"Omgivende temperatur">
+                description = <"Temperaturen til omgivelsene der pasienten er.">
+                comment = <"Hvis denne arketype brukes innen \"stae mode\" (tilstand) i temperatur arketypen, er default verdien 21 grader celcius eller 68.9 grader Fahrenheit.">
+            >
+            ["at0002"] = <
+                text = <"Relativ fuktighet.">
+                description = <"Fuktigheten i de omgivelser der pasienten er.">
+            >
+            ["at0003"] = <
+                text = <"Vind hastighet.">
+                description = <"Mål for vind hastighet.">
+            >
+            ["at0005"] = <
+                text = <"Vind chill temperatur">
+                description = <"Den temperatur som føles på eksponert hud, som er en funksjon av lufttemperaturen og vindhastighet.">
+            >
+            ["at0010"] = <
+                text = <"Wet bulb globe temperature">
+                description = <"En sammensatt temperatur som anvendes til at anslå virkningen av temperatur, fuktighet og solstråling på mennesker.">
+            >
+            ["at0011"] = <
+                text = <"*Atmospheric pressure (en)">
+                description = <"*">
+                comment = <"*For example: the pressure when exercising at altitude; or pressure within a hyperbaric chamber. (en)">
+            >
+            ["at9008"] = <
+                text = <"* Pressure (en)">
+                description = <"* Pressure (en)">
+            >
+            ["at9000"] = <
+                text = <"* Temperature (en)">
+                description = <"* Temperature (en)">
+            >
+            ["at9002"] = <
+                text = <"* Velocity (en)">
+                description = <"* Velocity (en)">
+            >
+            ["at9010"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Environmental conditions">
+                description = <"The physical environment surrounding an individual.">
+            >
+            ["at0001"] = <
+                text = <"Ambient temperature">
+                description = <"The temperature of the environment in which the individual is situated.">
+                comment = <"If this archetype is used within a state model, the assumed value is 21 degrees Celsius or 69.8 degrees Fahrenheit.">
+            >
+            ["at0002"] = <
+                text = <"Relative humidity">
+                description = <"Humidity of the environment in which the individual is situated.">
+            >
+            ["at0003"] = <
+                text = <"Wind velocity">
+                description = <"Measure of wind velocity.">
+            >
+            ["at0005"] = <
+                text = <"Wind chill temperature">
+                description = <"The apparent temperature felt on exposed skin, which is a function of the air temperature and wind speed.">
+            >
+            ["at0010"] = <
+                text = <"Wet bulb globe temperature">
+                description = <"A composite temperature used to estimate the effect of temperature, humidity, and solar radiation on humans.">
+            >
+            ["at0011"] = <
+                text = <"Atmospheric pressure">
+                description = <"The pressure of the atmosphere surrounding an individual.">
+                comment = <"For example: the pressure when exercising at altitude; or pressure within a hyperbaric chamber.">
+            >
+            ["at9008"] = <
+                text = <"Pressure">
+                description = <"Pressure">
+            >
+            ["at9000"] = <
+                text = <"Temperature">
+                description = <"Temperature">
+            >
+            ["at9002"] = <
+                text = <"Velocity">
+                description = <"Velocity">
+            >
+            ["at9010"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"الظروف البيئية">
+                description = <"تسجيل الظروف البيئية التي يتعرض إليها المريض">
+            >
+            ["at0001"] = <
+                text = <"الحرارة المحيطة">
+                description = <"درجة حرارة البيئة التي يكون فيها المريض.
+إذا كان قد تم استخدام النموذج في نموذج (حالة), فإن القيمةالمفترضة هي 21 درجة مئوية أو 69.8 درجة فيهرينهايت">
+            >
+            ["at0002"] = <
+                text = <"الرطوبة النسبية">
+                description = <"رطوبة البيئة التي يتم وضع المريض فيها">
+            >
+            ["at0003"] = <
+                text = <"سرعة الريح">
+                description = <"قياس سرعة الريح">
+            >
+            ["at0005"] = <
+                text = <"درجة الحرارة المصحوبة بارتعاد عند التعرض للريح">
+                description = <"درجة الحرارة الظاهرية التي يتم الشعور بها على البشرة المُعَرَّضة, و التي هي دالة من درجة الحرارة و سرعة الريح - عادةً في بيئات درجة الحرارة المنخفضة حيث تكون درجة الحرارة الظاهرية أقل من درجة حرارة الهواء التي يتم قياسها">
+            >
+            ["at0010"] = <
+                text = <"درجة حرارة الكُرة البَصَلية المبللة">
+                description = <"درجة حرارة مُرَكَّبة تستخدم لتقدير تأثير الحرارة, الرطوبة, الإشعاع الشمسي على البشر - عادة ما يستخدم في حالات التعرض لدرجات الحرارة المرتفعة">
+            >
+            ["at0011"] = <
+                text = <"*Atmospheric pressure (en)">
+                description = <"*">
+                comment = <"*For example: the pressure when exercising at altitude; or pressure within a hyperbaric chamber. (en)">
+            >
+            ["at9008"] = <
+                text = <"* Pressure (en)">
+                description = <"* Pressure (en)">
+            >
+            ["at9000"] = <
+                text = <"* Temperature (en)">
+                description = <"* Temperature (en)">
+            >
+            ["at9002"] = <
+                text = <"* Velocity (en)">
+                description = <"* Velocity (en)">
+            >
+            ["at9010"] = <
+                text = <"* Qualified real (en)">
+                description = <"* Qualified real (en)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9008"] = <http://openehr.org/id/125>
+            ["at9000"] = <http://openehr.org/id/127>
+            ["at9002"] = <http://openehr.org/id/338>
+            ["at9010"] = <http://openehr.org/id/380>
+        >
+    >

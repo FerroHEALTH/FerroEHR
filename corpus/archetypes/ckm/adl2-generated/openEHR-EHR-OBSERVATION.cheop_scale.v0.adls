@@ -1,0 +1,553 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=2f815ae3-d248-4f89-ab3c-5e6c38af938e; build_uid=c547c8be-3c1c-4753-a2cc-e8dc62f8a94b)
+    openEHR-EHR-OBSERVATION.cheop_scale.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Dennis Forslund">
+                ["organisation"] = <"Cambio Healthcare Systems">
+                ["email"] = <"models@cambiocds.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Syeeda S Farruque">
+        ["organisation"] = <"Cambio Healthcare Systems">
+        ["email"] = <"models@cambiocds.com">
+        ["date"] = <"2017-11-12">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Blount RL, Loiselle KA. Behavioural assessment of pediatric pain. Pain Res Manag. 2009 Jan-Feb;14(1):47-52. doi: 10.1155/2009/348184. PMID: 19262916; PMCID: PMC2706564.">
+        ["2"] = <"McGrath PJ, Johnson G, Goodman JT, Dunn J, Chapman J. CHEOPS: A behavioral scale for rating postoperative pain in children. In: Fields HL, Dubner R, Cervero F, eds. Advances in Pain Research and Therapy. New York: Raven Press, 1985:395-402.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"347C3AA043D2ABE6BA10AFFB57FABE6A">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"*To record each assessment parament and the total score for CHEOPS. (en)">
+            keywords = <"*pain (en)", "*assessment (en)", "*pediatric (en)">
+            use = <"*Use to record the results for each of the 6 parameters of the CHEOPS assessment. (en)">
+            misuse = <"">
+            copyright = <"© Cambio Healthcare Systems, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record each assessment parament and the total score for CHEOPS.">
+            keywords = <"pain", "assessment", "pediatric">
+            use = <"Use to record the results for each of the 6 parameters of the CHEOPS assessment.">
+            misuse = <"">
+            copyright = <"© Cambio Healthcare Systems, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Children's Hospital of Eastern Ontario Pain Scale (CHEOPS)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items matches {
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Cry
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0016]}],    -- No crying
+                                                    [{2}, {[at0017]}],    -- Moaning
+                                                    [{2}, {[at0031]}],    -- Crying
+                                                    [{3}, {[at0018]}]    -- Screaming
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Facial expression
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0019]}],    -- Smiling
+                                                    [{1}, {[at0020]}],    -- Composed, neutral
+                                                    [{2}, {[at0021]}]    -- Grimace
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Child verbal
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0022]}],    -- Positive statements
+                                                    [{1}, {[at0023]}],    -- Not talking
+                                                    [{1}, {[at0032]}],    -- Complains but not about pain
+                                                    [{2}, {[at0024]}],    -- Complains about pain
+                                                    [{2}, {[at0033]}]    -- Complains about pain and other subjects
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Torso
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0025]}],    -- Neutral
+                                                    [{2}, {[at0026]}],    -- Shifting
+                                                    [{2}, {[at0034]}],    -- Tense
+                                                    [{2}, {[at0035]}],    -- Shivering
+                                                    [{2}, {[at0036]}],    -- Upright
+                                                    [{2}, {[at0037]}]    -- Restrained
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Wound evaluation
+                                        value matches {
+                                            DV_ORDINAL[at9010] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0027]}],    -- Child not touching their wound
+                                                    [{2}, {[at0028]}],    -- Reaching for their wound
+                                                    [{2}, {[at0038]}],    -- Touching their wound
+                                                    [{2}, {[at0039]}],    -- Grabbing vigorously at wound
+                                                    [{2}, {[at0040]}]    -- Arms are restrained
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Legs
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0029]}],    -- Neutral position
+                                                    [{2}, {[at0030]}],    -- Squirm/kicking
+                                                    [{2}, {[at0041]}],    -- Drawn up/tensed legs
+                                                    [{2}, {[at0042]}],    -- Standing/kneeling
+                                                    [{2}, {[at0043]}]    -- Legs are restrained
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9012] matches {
+                                                magnitude matches {|0..13|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0044] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0045] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"*Children's Hospital of Eastern Ontario Pain Scale (CHEOPS) (en)">
+                description = <"*Assessment tool used to asses post-operative pain in children between the age of 1 to 5 years. (en)">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"**(en)">
+            >
+            ["at0008"] = <
+                text = <"Gråt">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"*Facial expression (en)">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Verbalt uttryck">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Kroppsposition">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"*Wound evaluation (en)">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Benposition">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"*Total score (en)">
+                description = <"*The total sum of each component parameter for CHEOPS. (en)">
+            >
+            ["at0016"] = <
+                text = <"Ingen gråt">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"Stönar eller gråter">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"Skriker">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"Ler">
+                description = <"Endast om säkert fastställt positivt uttryck.">
+            >
+            ["at0020"] = <
+                text = <"Samlad">
+                description = <"Neutralt ansiktsuttryck">
+            >
+            ["at0021"] = <
+                text = <"Grimaserar">
+                description = <"Endast om säkert fastställt negativt uttryck.">
+            >
+            ["at0022"] = <
+                text = <"Positivt">
+                description = <"Barnet uttrycker sig positivt eller pratar om annat än bekymmer.">
+            >
+            ["at0023"] = <
+                text = <"Inget eller annat klagomål">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Smärta eller båda typer av klagande">
+                description = <"Barnet klagar över smärta och annat">
+            >
+            ["at0025"] = <
+                text = <"Neutral">
+                description = <"Kroppen (ej extremiteter) i vila; bålen är avslappnad.">
+            >
+            ["at0026"] = <
+                text = <"Byter position, darrar, upprätt eller fastspänd">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Ingen aktiv beröring">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Sträcker sig, berör, greppar eller fastspänd">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Neutral">
+                description = <"I vilken position som helst, men avslappnat.">
+            >
+            ["at0030"] = <
+                text = <"Skruvar/sparker, sträckta, stående, eller fastspänd">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"*Crying (en)">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"*Complains but not about pain (en)">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"*Complains about pain and other subjects (en)">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"*Tense (en)">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"*Shivering (en)">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"*Upright (en)">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"*Restrained (en)">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"*Touching their wound (en)">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"*Grabbing vigorously at wound (en)">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"*Arms are restrained (en)">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"*Drawn up/tensed legs (en)">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"*Standing/kneeling (en)">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"*Legs are restrained (en)">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"*Extension (en)">
+                description = <"">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["ac9012"] = <
+                text = <"Gråt (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"*Facial expression (en) (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Verbalt uttryck (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Kroppsposition (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"*Wound evaluation (en) (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Benposition (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Children's Hospital of Eastern Ontario Pain Scale (CHEOPS)">
+                description = <"Assessment tool used to asses post-operative pain in children between the age of 1 to 5 years.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0008"] = <
+                text = <"Cry">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Facial expression">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Child verbal">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Torso">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Wound evaluation">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Legs">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Total score">
+                description = <"The total sum of each component parameter for CHEOPS.">
+            >
+            ["at0016"] = <
+                text = <"No crying">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Moaning">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Screaming">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Smiling">
+                description = <"Score only if definite positive facial expression.">
+            >
+            ["at0020"] = <
+                text = <"Composed, neutral">
+                description = <"Neutral facial expression.">
+            >
+            ["at0021"] = <
+                text = <"Grimace">
+                description = <"Score only if definite negative facial expression.">
+            >
+            ["at0022"] = <
+                text = <"Positive statements">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Not talking">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Complains about pain">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Neutral">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Shifting">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Child not touching their wound">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Reaching for their wound">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Neutral position">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Squirm/kicking">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Crying">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Complains but not about pain">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Complains about pain and other subjects">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Tense">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Shivering">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Upright">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Restrained">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Touching their wound">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Grabbing vigorously at wound">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Arms are restrained">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Drawn up/tensed legs">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Standing/kneeling">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Legs are restrained">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9012"] = <
+                text = <"Cry (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Facial expression (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Child verbal (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Torso (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Wound evaluation (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Legs (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0019", "at0020", "at0021">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0016", "at0017", "at0031", "at0018">
+        >
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0029", "at0030", "at0041", "at0042", "at0043">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0027", "at0028", "at0038", "at0039", "at0040">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0025", "at0026", "at0034", "at0035", "at0036", "at0037">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0022", "at0023", "at0032", "at0024", "at0033">
+        >
+    >

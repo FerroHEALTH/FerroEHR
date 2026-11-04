@@ -1,0 +1,843 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=5de4453a-8c11-4e39-9a3e-2fbb97118ad4; build_uid=c5af18fe-4674-4058-a8c1-852b861091c2)
+    openEHR-EHR-OBSERVATION.cow_score.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Dennis Forslund">
+                ["organisation"] = <"Cambio Healthcare Systems">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Syeeda S Farruque">
+        ["organisation"] = <"Cambio Healthcare Systems">
+        ["email"] = <"models@cambiocds.com">
+        ["date"] = <"2017-02-20">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Tompkins DA, Bigelow GE, Harrison JA, Johnson RE, Fudala PJ, Strain EC. Concurrent validation of the Clinical Opiate Withdrawal Scale (COWS) and single-item indices against the Clinical Institute Narcotic Assessment (CINA) opioid withdrawal instrument. Drug Alcohol Depend. 2009 Nov 1;105(1-2):154-9. doi: 10.1016/j.drugalcdep.2009.07.001. Epub 2009 Aug 3. PMID: 19647958; PMCID: PMC2774236.">
+        ["2"] = <"Wesson DR, Ling W. The Clinical Opiate Withdrawal Scale (COWS). J Psychoactive Drugs. 2003 Apr-Jun;35(2):253-9. doi: 10.1080/02791072.2003.10400007. PMID: 12924748.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"4BC979782EEC8BA1B81546657C76C1A3">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"*To record individual COWS parameters and total score. (en)">
+            use = <"*Use to record individual COWS parameters and total score as part of an objective and subjective opiate withdrawal assessment. (en)">
+            misuse = <"">
+            copyright = <"© Cambio Healthcare Systems, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record individual COWS parameters and total score.">
+            use = <"Use to record individual COWS parameters and total score as part of an objective and subjective opiate withdrawal assessment.">
+            misuse = <"">
+            copyright = <"© Cambio Healthcare Systems, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Clinical Opiate Withdrawal Scale (COWS)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Resting pulse rate (BPM)
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- ≤ 80
+                                                    [{1}, {[at0018]}],    -- 81-100
+                                                    [{2}, {[at0019]}],    -- 101-120
+                                                    [{4}, {[at0020]}]    -- > 120
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Sweating
+                                        value matches {
+                                            DV_ORDINAL[at9012] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0021]}],    -- No report of chills or flushing
+                                                    [{1}, {[at0022]}],    -- Subjective report of chills or flushing
+                                                    [{2}, {[at0023]}],    -- Flushed or observable moistness on face
+                                                    [{3}, {[at0024]}],    -- Beads of sweat on brow or face
+                                                    [{4}, {[at0025]}]    -- Sweat streaming off face
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Restlessness observation during assessment
+                                        value matches {
+                                            DV_ORDINAL[at9013] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0026]}],    -- Able to sit still
+                                                    [{1}, {[at0027]}],    -- Reports difficulty sitting still, but is able to do so
+                                                    [{3}, {[at0028]}],    -- Frequent shifting or extraneous movements of legs/arms
+                                                    [{5}, {[at0029]}]    -- Unable to sit still for more than a few seconds
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Pupil size
+                                        value matches {
+                                            DV_ORDINAL[at9014] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0030]}],    -- Pupils pinned or normal size for room light
+                                                    [{1}, {[at0031]}],    -- Pupils possibly larger than normal for room light
+                                                    [{2}, {[at0032]}],    -- Pupils moderately dilated
+                                                    [{5}, {[at0033]}]    -- Pupils so dilated that only the rim of the iris is visible
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Bone or joint aches
+                                        value matches {
+                                            DV_ORDINAL[at9015] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0034]}],    -- Not present
+                                                    [{1}, {[at0035]}],    -- Mild diffuse discomfort
+                                                    [{2}, {[at0036]}],    -- Patient reports severe diffuse aching of joints/ muscles
+                                                    [{4}, {[at0037]}]    -- Patient is rubbing joints or muscles and is unable to sit still because of discomfort
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Runny nose or tearing
+                                        value matches {
+                                            DV_ORDINAL[at9016] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0038]}],    -- Not present
+                                                    [{1}, {[at0039]}],    -- Nasal stuffiness or unusually moist eyes
+                                                    [{2}, {[at0040]}],    -- Nose running or tearing
+                                                    [{4}, {[at0041]}]    -- Nose constantly running or tears streaming down cheeks
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- GI upset
+                                        value matches {
+                                            DV_ORDINAL[at9017] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0042]}],    -- No GI symptoms
+                                                    [{1}, {[at0043]}],    -- Stomach Cramps
+                                                    [{2}, {[at0044]}],    -- Nausea or loose stool
+                                                    [{3}, {[at0045]}],    -- Vomiting or diarrhea
+                                                    [{5}, {[at0046]}]    -- Multiple episodes of vomiting or diarrhea
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Tremor observation of outstretched hands
+                                        value matches {
+                                            DV_ORDINAL[at9018] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0047]}],    -- No tremor
+                                                    [{1}, {[at0048]}],    -- Tremor can be felt, but not observed
+                                                    [{2}, {[at0049]}],    -- Slight tremor observable
+                                                    [{4}, {[at0050]}]    -- Gross tremor or muscle twitching
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Yawning observation during assessment
+                                        value matches {
+                                            DV_ORDINAL[at9019] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0051]}],    -- No yawning
+                                                    [{1}, {[at0052]}],    -- Yawning once or twice during assessment
+                                                    [{2}, {[at0053]}],    -- Yawning three or more times during assessment
+                                                    [{4}, {[at0054]}]    -- Yawning several times/minute
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Anxiety or irritability
+                                        value matches {
+                                            DV_ORDINAL[at9020] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0055]}],    -- None
+                                                    [{1}, {[at0056]}],    -- Patient reports increasing irritability or anxiousness
+                                                    [{2}, {[at0057]}],    -- Patient obviously irritable/anxious
+                                                    [{4}, {[at0058]}]    -- Patient so irritable or anxious that participation in the assessment is difficult
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Gooseflesh skin
+                                        value matches {
+                                            DV_ORDINAL[at9021] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0059]}],    -- Skin is smooth
+                                                    [{3}, {[at0060]}],    -- Piloerection of skin can be felt or hairs standing up on arms
+                                                    [{5}, {[at0061]}]    -- Prominent piloerection
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9022] matches {
+                                                magnitude matches {|0..48|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0062] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0063] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"*Clinical Opiate Withdrawal Scale (COWS) (en)">
+                description = <"*Assessment tool used to measures the severity of opiate withdrawal. (en)">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time. (en)">
+            >
+            ["at0004"] = <
+                text = <"*Resting pulse rate (BPM) (en)">
+                description = <"*Measure pulse rate after patient is sitting or lying down for 1 minute. (en)">
+            >
+            ["at0005"] = <
+                text = <"Svettning">
+                description = <"*Sweating not accounted for by room temperature or patient activity over the last 0.5 hours. (en)">
+            >
+            ["at0006"] = <
+                text = <"Rastlöshet under utvärdering">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Pupillstorlek">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Ben- eller ledvärk">
+                description = <"*If patient was having pain previously, only the additional component attributed to opiate withdrawal is scored. (en)">
+            >
+            ["at0009"] = <
+                text = <"Rinnande näsa eller tårande ögon">
+                description = <"*Not accounted for by cold symptoms or allergies. (en)">
+            >
+            ["at0010"] = <
+                text = <"*GI upset (en)">
+                description = <"Magbesvär senaste halvtimmen.">
+            >
+            ["at0011"] = <
+                text = <"Tremor vid utsträckta händer">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Gäspning under utvärdering">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Ångest eller irritabilitet">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Piloerektion">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Total poäng">
+                description = <"*The total sum of each component parameter for COWS. (en)">
+            >
+            ["at0017"] = <
+                text = <"≤ 80">
+                description = <"Slag per minut">
+            >
+            ["at0018"] = <
+                text = <"81-100">
+                description = <"Slag per minut">
+            >
+            ["at0019"] = <
+                text = <"101-120">
+                description = <"Slag per minut">
+            >
+            ["at0020"] = <
+                text = <"> 120">
+                description = <"Slag per minut">
+            >
+            ["at0021"] = <
+                text = <"Ingen frossa eller flush">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Subjektiv frossa eller flush">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Flush eller synlig fuktighet i ansikte">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Svettpärlor i panna eller ansikte">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Rinnande svett">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Sitter still">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Säger sig ha svårt att sitta still men kan göra det">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Frekvent skiftning av position eller överdrivet rörelsemönster med armar/ben">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Oförmögen att sitta still längre än ett par sekunder">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Nålstora eller av rimlig storlek med tanke på ljus i rummet">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Möjligen förstorade givet ljus i rummet">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Måttligt dilaterade">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Dilaterade till den grad att endast kanten av iris synd">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Ingen värk">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Lindrigt diffust obehag">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Patienten rapporterar svår diffus ben- eller ledvärk">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Patienten gnider ben eller leder alternativt är oförmögen att sitta still på grund av värk">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Ej förekommande">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Nästäppa eller abnormalt vattniga ögon">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Rinnande näsa eller tårande ögon">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Konstant rinnande näsa eller flödande tårar">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Ej förekommande">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Magkramp">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Illamående eller lös avföring">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Kräkning eller diarré">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Flertal kräkningar eller diarrér">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Ingen tremor">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Tremor kan kännas men ej observeras">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Lätt synlig tremor">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Kraftig tremor eller muskelspasm">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Ingen gäspning">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Gäspar en eller två gånger under utvärdering">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Gäspar tre eller fyra gånger under utvärdering">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Gäspar flera gånger per minut">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"Ej förekommande">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"Patienten rapporterar ökande irritabilitet eller ångest">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"Patienten är uppenbart irritabel eller ängslig">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"Irritabel eller ängslig till den grad att medverkan är svår">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Slät hud.">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Piloerektion kan kännas, alternativt stående hårstrån">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Tydlig piloerektion">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"*Extension (en)">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["ac9022"] = <
+                text = <"*Resting pulse rate (BPM) (en) (synthesised)">
+                description = <"*Measure pulse rate after patient is sitting or lying down for 1 minute. (en) (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Svettning (synthesised)">
+                description = <"*Sweating not accounted for by room temperature or patient activity over the last 0.5 hours. (en) (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"Rastlöshet under utvärdering (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"Pupillstorlek (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"Ben- eller ledvärk (synthesised)">
+                description = <"*If patient was having pain previously, only the additional component attributed to opiate withdrawal is scored. (en) (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Rinnande näsa eller tårande ögon (synthesised)">
+                description = <"*Not accounted for by cold symptoms or allergies. (en) (synthesised)">
+            >
+            ["ac9028"] = <
+                text = <"*GI upset (en) (synthesised)">
+                description = <"Magbesvär senaste halvtimmen. (synthesised)">
+            >
+            ["ac9029"] = <
+                text = <"Tremor vid utsträckta händer (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9030"] = <
+                text = <"Gäspning under utvärdering (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"Ångest eller irritabilitet (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"Piloerektion (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Clinical Opiate Withdrawal Scale (COWS)">
+                description = <"Assessment tool used to measures the severity of opiate withdrawal.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Resting pulse rate (BPM)">
+                description = <"Measure pulse rate after patient is sitting or lying down for 1 minute.">
+            >
+            ["at0005"] = <
+                text = <"Sweating">
+                description = <"Sweating not accounted for by room temperature or patient activity over the last 0.5 hours.">
+            >
+            ["at0006"] = <
+                text = <"Restlessness observation during assessment">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Pupil size">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Bone or joint aches">
+                description = <"If patient was having pain previously, only the additional component attributed to opiate withdrawal is scored.">
+            >
+            ["at0009"] = <
+                text = <"Runny nose or tearing">
+                description = <"Not accounted for by cold symptoms or allergies.">
+            >
+            ["at0010"] = <
+                text = <"GI upset">
+                description = <"Over last 0.5 hours.">
+            >
+            ["at0011"] = <
+                text = <"Tremor observation of outstretched hands">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Yawning observation during assessment">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Anxiety or irritability">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Gooseflesh skin">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Total score">
+                description = <"The total sum of each component parameter for COWS.">
+            >
+            ["at0017"] = <
+                text = <"≤ 80">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"81-100">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"101-120">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"> 120">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"No report of chills or flushing">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Subjective report of chills or flushing">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Flushed or observable moistness on face">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Beads of sweat on brow or face">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Sweat streaming off face">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Able to sit still">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Reports difficulty sitting still, but is able to do so">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Frequent shifting or extraneous movements of legs/arms">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Unable to sit still for more than a few seconds">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Pupils pinned or normal size for room light">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Pupils possibly larger than normal for room light">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Pupils moderately dilated">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Pupils so dilated that only the rim of the iris is visible">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Not present">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Mild diffuse discomfort">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Patient reports severe diffuse aching of joints/ muscles">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Patient is rubbing joints or muscles and is unable to sit still because of discomfort">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Not present">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Nasal stuffiness or unusually moist eyes">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Nose running or tearing">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Nose constantly running or tears streaming down cheeks">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"No GI symptoms">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Stomach Cramps">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Nausea or loose stool">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Vomiting or diarrhea">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Multiple episodes of vomiting or diarrhea">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"No tremor">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Tremor can be felt, but not observed">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Slight tremor observable">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Gross tremor or muscle twitching">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"No yawning">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Yawning once or twice during assessment">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Yawning three or more times during assessment">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Yawning several times/minute">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"Patient reports increasing irritability or anxiousness">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"Patient obviously irritable/anxious">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"Patient so irritable or anxious that participation in the assessment is difficult">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Skin is smooth">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Piloerection of skin can be felt or hairs standing up on arms">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Prominent piloerection">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9022"] = <
+                text = <"Resting pulse rate (BPM) (synthesised)">
+                description = <"Measure pulse rate after patient is sitting or lying down for 1 minute. (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Sweating (synthesised)">
+                description = <"Sweating not accounted for by room temperature or patient activity over the last 0.5 hours. (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"Restlessness observation during assessment (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"Pupil size (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"Bone or joint aches (synthesised)">
+                description = <"If patient was having pain previously, only the additional component attributed to opiate withdrawal is scored. (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Runny nose or tearing (synthesised)">
+                description = <"Not accounted for by cold symptoms or allergies. (synthesised)">
+            >
+            ["ac9028"] = <
+                text = <"GI upset (synthesised)">
+                description = <"Over last 0.5 hours. (synthesised)">
+            >
+            ["ac9029"] = <
+                text = <"Tremor observation of outstretched hands (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9030"] = <
+                text = <"Yawning observation during assessment (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"Anxiety or irritability (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"Gooseflesh skin (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9031"] = <
+            id = <"ac9031">
+            members = <"at0055", "at0056", "at0057", "at0058">
+        >
+        ["ac9030"] = <
+            id = <"ac9030">
+            members = <"at0051", "at0052", "at0053", "at0054">
+        >
+        ["ac9032"] = <
+            id = <"ac9032">
+            members = <"at0059", "at0060", "at0061">
+        >
+        ["ac9029"] = <
+            id = <"ac9029">
+            members = <"at0047", "at0048", "at0049", "at0050">
+        >
+        ["ac9024"] = <
+            id = <"ac9024">
+            members = <"at0026", "at0027", "at0028", "at0029">
+        >
+        ["ac9023"] = <
+            id = <"ac9023">
+            members = <"at0021", "at0022", "at0023", "at0024", "at0025">
+        >
+        ["ac9022"] = <
+            id = <"ac9022">
+            members = <"at0017", "at0018", "at0019", "at0020">
+        >
+        ["ac9028"] = <
+            id = <"ac9028">
+            members = <"at0042", "at0043", "at0044", "at0045", "at0046">
+        >
+        ["ac9027"] = <
+            id = <"ac9027">
+            members = <"at0038", "at0039", "at0040", "at0041">
+        >
+        ["ac9026"] = <
+            id = <"ac9026">
+            members = <"at0034", "at0035", "at0036", "at0037">
+        >
+        ["ac9025"] = <
+            id = <"ac9025">
+            members = <"at0030", "at0031", "at0032", "at0033">
+        >
+    >

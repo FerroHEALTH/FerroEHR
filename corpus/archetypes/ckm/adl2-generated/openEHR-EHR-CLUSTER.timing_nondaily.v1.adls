@@ -1,0 +1,685 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=30f325b6-e6cc-42c8-bcaf-df19bc486355; build_uid=2ef82baf-6b4f-4485-9308-810aaae13914)
+    openEHR-EHR-CLUSTER.timing_nondaily.v1.1.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Caroline Bönisch, Natalia Strauch">
+                ["organisation"] = <"UMG, Medizinische Hochschule Hannover">
+                ["email"] = <"Caroline.Thoms@med.uni-goettingen.de, Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Nasjonal IKT HF, Helse Vest IKT AS">
+                ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Osmeire Chamelette Sanzovo">
+                ["organisation"] = <"Hospital Sírio Libanês - SP">
+                ["email"] = <"osmeire.acsanzovo@hsl.org.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"ian@freshehr.com">
+        ["date"] = <"2015-09-11">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Syed Ajaz, Alberta Health Services, Canada", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Laila Bruun, Oslo universitetssykehus HF, Norway", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom", "Heather Grain, Llewelyn Grain Informatics, Australia", "Kristian Heldal, Telemark Hospital Trust, Norway", "Annette Hole Sjøborg, DIPS ASA, Norway", "Hilde Hollås, DIPS AS, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Heather Leslie, Ocean Health Systems, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Isaiah Nyabuto, GIZ, Kenya", "Andrej Orel, Marand d.o.o., Slovenia", "Anne Pauline Anderssen, Helse Nord RHF, Norway", "Vladimir Pizzo, Hospital Sírio Libanês, Brazil", "Anoop Shah, University College London, United Kingdom", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "Anders Thurin, SU, Sweden", "Stian Torleif Varpe, Helse Bergen, Norway", "Karl Trygve Kalleberg, Oslo Universitetssykehus, Norway", "Gro-Hilde Ulriksen, Norwegian center for ehealthresearch, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Lars Ivar Mehlum, Nasjonal IKT HF, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"95309E1587F2F9A3D1845B07B1011799">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Repräsentation strukturierter Informationen über das geplante Zeitablaufmuster einer therapeutischen oder diagnostischen Aktivität, die über Tage, Wochen, Monate oder Jahre erfolgt.">
+            keywords = <"Zeitablauf,", "Zeitpunkt,", "Verabreichung,", "Applikation,", "Dosierung,", "Häufigkeit,", "Frequenz,", "Intervall,", "Verordnung,", "Rezept,", "Empfehlung,", "Zeitplan,", "Plan,", "Wiederholung">
+            use = <"Zur Repräsentation strukturierter Informationen über das geplante Zeitablaufmuster einer therapeutischen oder diagnostischen Aktivität, die sich über Tage, Wochen, Monate oder Jahre erstreckt. 
+
+Dieser Archetyp ist für die Verwendung innerhalb des SLOTs \"Wiederholungszeitpunkte\" innerhalb des Archetyps CLUSTER.therapeutic_direction vorgesehen, kann aber auch in anderen CLUSTER- und ENTRY-Archetypen verwendet werden, wenn dies klinisch sinnvoll ist.
+
+In Anwendungsfällen, in denen es sinnvoll ist, ausdrücklich festzulegen, dass eine Aktivität jeden Tag stattfinden soll, kann das Element \"Wiederholungsintervall\" auf \"1 Tag\" gesetzt werden.
+">
+            misuse = <"Nicht zur Darstellung von Angaben zum Zeitablauf innerhalb eines Zeitraums von 24 Stunden verwenden. Verwenden Sie dazu den Archetyp CLUSTER.timing_daily. 
+
+In Anwendungsfällen, in denen davon ausgegangen werden kann, dass eine Aktivität jeden Tag ausgeführt werden sollte, ist dieser Archetyp überflüssig.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere strukturert informasjon om planlagt timing av en terapeutisk eller diagnostisk aktivitet som forekommer over dager, uker, måneder eller år.">
+            keywords = <"timing, administrering, administrasjon, dosering, frekvens, intervall, ordinering, forskriving, foreskriving, anbefaling, plan, behandlingsintervall", ...>
+            use = <"Brukes for å registrere strukturert informasjon om planlagt timing av en terapeutisk eller diagnostisk aktivitet som forekommer over dager, uker, måneder eller år.
+
+Arketypen er laget for å brukes i SLOTet \"Anvisningsrepetisjon\" i arketypen CLUSTER.therapeutic_direction (Terapeutisk anvisning), men kan også brukes i andre CLUSTER- og ENTRY-arketyper der det er klinisk passende.
+
+I brukstilfeller der det er nødvendig å eksplisitt spesifisere at en aktivitet skal forekomme hver dag, kan elementet \"Repetisjonsintervall\" settes til \"1 dag\".">
+            misuse = <"Skal ikke brukes til å registrere detaljer om timing innenfor et døgn. Bruk arketypen CLUSTER.timing_daily for dette formålet.
+
+I tilfeller der det trygt kan antas at en aktivitet skal utføres hver eneste dag, er denne arketypen overflødig.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*To record structured information about the intended timing of a therapeutic activity over a time period longer than 24 hours.(en)">
+            use = <"*Use to record structured information about the intended timing of a therapeutic activity over a time period longer than 24 hours.
+
+This archetype is designed to be used within the 'Direction repetition' SLOT within the CLUSTER.therapeutic_direction archetype, but can also be used in other CLUSTER and ENTRY class archetypes where clinically appropriate.(en)">
+            misuse = <"*Not to be used for recording timing details within a single 24 hour time period. Use the CLUSTER.timing_daily archetype for this purpose.(en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record structured information about the intended timing pattern for a therapeutic or diagnostic activity occurring over days, weeks, months or years.">
+            keywords = <"timing, administration, dosing, frequency, interval, order, recommendation, schedule, plan, repetition", ...>
+            use = <"Use to record structured information about the intended timing pattern for a therapeutic or diagnostic activity occurring over days, weeks, months or years.
+
+This archetype is designed to be used within the 'Direction repetition' SLOT within the CLUSTER.therapeutic_direction archetype, but can also be used in other CLUSTER and ENTRY class archetypes where clinically appropriate.
+
+In use cases where it's necessary to specify explicitly that an activity is to take place every day, the \"Repetition interval\" element can be set to \"1 day\".">
+            misuse = <"Not to be used to record timing details within a single 24 hour time period. Use the CLUSTER.timing_daily archetype for this purpose.
+
+In use cases where it can be safely assumed that an activity should be carried out every single day, this archetype is redundant.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Timing - non-daily
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Repetition interval
+                value matches {
+                    DV_DURATION[at9002] matches {
+                        value matches {PYMWD/|>P0D|}
+                    }
+                }
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Days per time period
+                value matches {
+                    DV_QUANTITY[at9003] matches {
+                        [magnitude, units, precision] matches {
+                            [{|1.0..7.0|}, {"1/wk"}, {0}],
+                            [{|1.0..31.0|}, {"1/mo"}, {0}],
+                            [{|1.0..366.0|}, {"1/a"}, {0}]
+                        }
+                    }
+                    DV_INTERVAL<DV_QUANTITY>[at9004] matches {
+                        lower matches {
+                            DV_QUANTITY[at9006] matches {
+                                [magnitude, units, precision] matches {
+                                    [{|1.0..7.0|}, {"1/wk"}, {0}],
+                                    [{|1.0..31.0|}, {"1/mo"}, {0}],
+                                    [{|1.0..366.0|}, {"1/a"}, {0}]
+                                }
+                            }
+                        }
+                        upper matches {
+                            DV_QUANTITY[at9005] matches {
+                                [magnitude, units, precision] matches {
+                                    [{|1.0..7.0|}, {"1/wk"}, {0}],
+                                    [{|1.0..31.0|}, {"1/mo"}, {0}],
+                                    [{|1.0..366.0|}, {"1/a"}, {0}]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Activities per time period
+                value matches {
+                    DV_QUANTITY[at9022] matches {
+                        [magnitude, units, precision] matches {
+                            [{|>=1.0|}, {"1/wk"}, {0}],
+                            [{|>=1.0|}, {"1/mo"}, {0}],
+                            [{|>=1.0|}, {"1/a"}, {0}]
+                        }
+                    }
+                    DV_INTERVAL<DV_QUANTITY>[at9023] matches {
+                        lower matches {
+                            DV_QUANTITY[at9024] matches {
+                                [magnitude, units, precision] matches {
+                                    [{|>=1.0|}, {"1/wk"}, {0}],
+                                    [{|>=1.0|}, {"1/mo"}, {0}],
+                                    [{|>=1.0|}, {"1/a"}, {0}]
+                                }
+                            }
+                        }
+                        upper matches {
+                            DV_QUANTITY[at9025] matches {
+                                [magnitude, units, precision] matches {
+                                    [{|>=1.0|}, {"1/wk"}, {0}],
+                                    [{|>=1.0|}, {"1/mo"}, {0}],
+                                    [{|>=1.0|}, {"1/a"}, {0}]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0001] matches {    -- Specific date
+                value matches {
+                    DV_DATE[at9007]
+                    DV_INTERVAL<DV_DATE>[at9008] matches {
+                        upper matches {
+                            DV_DATE[at9009]
+                        }
+                        lower matches {
+                            DV_DATE[at9010]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..7} matches {    -- Specific day of week
+                value matches {
+                    DV_CODED_TEXT[at9011] matches {
+                        defining_code matches {[ac9001]}    -- Specific day of week (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..31} matches {    -- Specific day of month
+                value matches {
+                    DV_COUNT[at9012] matches {
+                        magnitude matches {|1..31|}
+                    }
+                    DV_INTERVAL<DV_COUNT>[at9013] matches {
+                        upper matches {
+                            DV_COUNT[at9014] matches {
+                                magnitude matches {|1..31|}
+                            }
+                        }
+                        lower matches {
+                            DV_COUNT[at9015] matches {
+                                magnitude matches {|1..31|}
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0021] occurrences matches {0..1} matches {    -- Timing description
+                value matches {
+                    DV_TEXT[at9016]
+                }
+            }
+            CLUSTER[at0006] matches {    -- Specific event
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Event name
+                        value matches {
+                            DV_TEXT[at9017]
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Time offset
+                        value matches {
+                            DV_DURATION[at9018] matches {
+                                value
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0010] occurrences matches {0..1} matches {    -- On / off cycle
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- On
+                        value matches {
+                            DV_DURATION[at9019] matches {
+                                value matches {PYMWD/|>P0D|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Off
+                        value matches {
+                            DV_DURATION[at9020] matches {
+                                value matches {PYMWD/|>P0D|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Repetitions
+                        value matches {
+                            DV_COUNT[at9021] matches {
+                                magnitude matches {|>=0|}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Zeitablauf - nicht täglich">
+                description = <"Strukturierte Informationen über das geplante Zeitablaufmuster für eine therapeutische oder diagnostische Aktivität, die sich über Tage, Wochen, Monate oder Jahre erstreckt.">
+            >
+            ["at0001"] = <
+                text = <"Bestimmtes Datum">
+                description = <"Die Aktivität sollte an einem bestimmten Datum oder in einem bestimmten Datumsbereich stattfinden.">
+                comment = <"Zum Beispiel: \"am 12. Januar 2017\" oder \"vom 30. Oktober 2017 bis 6. November 2017\"">
+            >
+            ["at0002"] = <
+                text = <"Wiederholungsintervall">
+                description = <"Das Intervall zwischen den Wiederholungen der Aktivität.">
+                comment = <"Zum Beispiel: \"Alle 3 Wochen\". Falls erforderlich, kann mit diesem Element explizit angegeben werden, dass eine Aktivität jeden einzelnen Tag stattfinden soll, indem es auf \"1 Tag\" gesetzt wird.">
+            >
+            ["at0003"] = <
+                text = <"Bestimmter Wochentag">
+                description = <"Die Aktivität sollte an einem bestimmten Wochentag stattfinden.">
+                comment = <"Zum Beispiel: \"Am Montag, Mittwoch und Freitag\".">
+            >
+            ["at0004"] = <
+                text = <"Bestimmter Tag des Monats">
+                description = <"Die Aktivität sollte an einem bestimmten Tag im Monat oder in einem Intervall von mehreren Tagen in dem Monat stattfinden.">
+                comment = <"Zum Beispiel: \"am 3., 13. und 23. jedes Monats\" oder \"vom 1. bis zum 10. jedes Monats\"">
+            >
+            ["at0005"] = <
+                text = <"Name des Ereignisses">
+                description = <"Der Name des Ereignisses, das die Aktivität auslöst.">
+                comment = <"Dieses Element ist für Ereignisse gedacht, die zu verschiedenen Zeitpunkten auftreten können, wie z.B. Beginn der Menstruation, und nicht für Dosis oder Aktivitäten, die von einer anderen Variable abhängen. Bei Bedarf kann der Name des Ereignisses mit einer Terminologie kodiert werden, mit der die Anwendung ein bestimmtes Datum für die Aktivität festlegen kann.">
+            >
+            ["at0006"] = <
+                text = <"Bestimmtes Ereignis">
+                description = <"Ein bestimmtes, benanntes Zeitereignis, auf das sich die Aktivität bezieht und stattfinden soll.">
+            >
+            ["at0007"] = <
+                text = <"Montag">
+                description = <"Die Aktivität sollte am Montag stattfinden.">
+            >
+            ["at0008"] = <
+                text = <"Dienstag">
+                description = <"Die Aktivität sollte am Dienstag stattfinden.">
+            >
+            ["at0009"] = <
+                text = <"Zeitspanne">
+                description = <"Das Zeitintervall vor oder nach dem Ereignis, in dem die Aktivität stattfinden sollte. Negative Intervalle können verwendet werden, damit signalisiert werden kann, dass die Aktivität vor dem genannten Ereignis stattfinden soll.">
+                comment = <"Zum Beispiel: \"3 Tage nach Beginn der Menstruation = Beginn der Menstruation + 3 Tage\", \"2 Wochen vor der Aufnahme = Aufnahme - 2 Wochen\".">
+            >
+            ["at0010"] = <
+                text = <"Ein/Aus-Zyklus">
+                description = <"Ein Aktivitätszyklus, bei dem ein Ein/Aus-Zyklus erforderlich ist.">
+                comment = <"Zum Beispiel: \"1 Woche nehmen, 2 Wochen auslassen, 4 Mal wiederholen\".">
+            >
+            ["at0011"] = <
+                text = <"Ein">
+                description = <"Der Zeitraum, in dem die Aktivität ausgeführt werden soll.">
+            >
+            ["at0012"] = <
+                text = <"Aus">
+                description = <"Der Zeitraum, in dem die Aktivität NICHT stattfinden soll.">
+            >
+            ["at0013"] = <
+                text = <"Wiederholungen">
+                description = <"Die Häufigkeit, mit der der Ein/Aus-Zyklus wiederholt werden soll.">
+            >
+            ["at0014"] = <
+                text = <"Tage pro Zeitintervall">
+                description = <"Die Anzahl der Tage pro Zeitintervall, an denen die Aktivität stattfindet.">
+                comment = <"Zum Beispiel: „3 Tage pro Woche“, „2–4 Tage pro Monat“. Spezifische Angaben zum zeitlichen Ablauf innerhalb jedes 24-Stunden-Zeitraums werden im Archetyp CLUSTER.timing_daily angegeben.">
+            >
+            ["at0016"] = <
+                text = <"Mittwoch">
+                description = <"Die Aktitvität sollte am Mittwoch stattfinden.">
+            >
+            ["at0017"] = <
+                text = <"Donnerstag">
+                description = <"Die Aktivität sollte am Donnerstag stattfinden.">
+            >
+            ["at0018"] = <
+                text = <"Freitag">
+                description = <"Die Aktivität sollte am Freitag stattfinden.">
+            >
+            ["at0019"] = <
+                text = <"Samstag">
+                description = <"Die Aktivität sollte am Samstag stattfinden.">
+            >
+            ["at0020"] = <
+                text = <"Sonntag">
+                description = <"Die Aktivität sollte am Sonntag stattfinden.">
+            >
+            ["at0021"] = <
+                text = <"Beschreibung des Zeitablaufs">
+                description = <"Freitextbeschreibung des Zeitablaufs.">
+                comment = <"Zum Beispiel: \"Eine Woche verwenden, dann zwei Wochen pausieren und dann wiederholen\". Dieses Element soll es ermöglichen, die Strukturen für tägliche Zeitabläufe zu verwenden, ohne notwendigerweise die Struktur der nicht-täglichen Zeitabläufe angeben zu müssen.">
+            >
+            ["at0022"] = <
+                text = <"Aktivitäten pro Zeitintervall">
+                description = <"Die Anzahl der Aktivitäten pro Zeitintervall.">
+                comment = <"Zum Beispiel: „3 Aktivitäten pro Woche“, „2-4 Mal pro Monat“.">
+            >
+            ["ac9001"] = <
+                text = <"Bestimmter Wochentag (synthesised)">
+                description = <"Die Aktivität sollte an einem bestimmten Wochentag stattfinden. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Timing - utover et døgn">
+                description = <"Strukturert informasjon om planlagt timing av en terapeutisk eller diagnostisk aktivitet som forekommer over dager, uker, måneder eller år.">
+            >
+            ["at0001"] = <
+                text = <"Spesifikk dato">
+                description = <"Aktiviteten skal utføres på en spesifikk dato eller i henhold til et spesifikt datointervall.">
+                comment = <"For eksempel \"12. jan 2017\" eller \"30 okt 2017 til 6 nov 2017\".">
+            >
+            ["at0002"] = <
+                text = <"Repetisjonsintervall">
+                description = <"Intervallene mellom repetisjoner av aktiviteten.">
+                comment = <"For eksempel \"hver 3. uke\". Om nødvendig kan dette elementet brukes for å eksplisitt spesifisere at aktiviteten skal forekomme hver eneste dag, ved å sette elementet til \"1 dag\".">
+            >
+            ["at0003"] = <
+                text = <"Spesifikk ukedag">
+                description = <"Aktiviteten skal utføres på en spesifikk ukedag.">
+                comment = <"For eksempel \"på mandag, onsdag og fredag\".">
+            >
+            ["at0004"] = <
+                text = <"Spesifikk dag av måneden">
+                description = <"Aktiviteten skal utføres på en spesifikk dag eller i henhold til et intervall av dager i løpet av måneden.">
+                comment = <"For eksempel \"på 3., 13. og 23. hver måned\" eller \"på 1.-10. av hver måned\".">
+            >
+            ["at0005"] = <
+                text = <"Hendelsesnavn">
+                description = <"Navnet på hendelsen aktiviteten skal uføres i sammenheng med.">
+                comment = <"Dette elementet er ment for hendelser som kan forekomme på varierende datoer, som for eksempel starten på menstruasjon, og ikke for doser og aktiviteter som er betinget av en annen variabel. Der det er påkrevd kan hendelsesnavnet kodes med en terminologi, som kan benyttes for å få en applikasjon til å sette en konkret dato for aktiviteten.">
+            >
+            ["at0006"] = <
+                text = <"Spesifikk hendelse">
+                description = <"Aktiviteten skal utføres i sammenheng med en spesifikk navngitt hendelse.">
+            >
+            ["at0007"] = <
+                text = <"Mandag">
+                description = <"Aktiviteten skal utføres på mandag.">
+            >
+            ["at0008"] = <
+                text = <"Tirsdag">
+                description = <"Aktiviteten skal utføres på tirsdag.">
+            >
+            ["at0009"] = <
+                text = <"Tidsforskyvelse">
+                description = <"Tidsintervallet før eller etter hendelsen når aktiviteten skal utføres. Negative intervaller kan benyttes for å spesifisere at aktiviteten skal utføres før den navngitte hendelsen.">
+                comment = <"For eksempel \"3 dager etter første menstruasjonsdag = første menstruasjonsdag + 3 dager\", \"2 uker før innleggelse = innleggelse - 2 uker\".">
+            >
+            ["at0010"] = <
+                text = <"På / av-syklus">
+                description = <"En aktivitetssyklus som krever et på/av-mønster.">
+                comment = <"For eksempel \"ta i 1 uke, hopp over 2 uker, gjenta 4 ganger\".">
+            >
+            ["at0011"] = <
+                text = <"På">
+                description = <"Tidsperioden da aktiviteten skal utføres.">
+            >
+            ["at0012"] = <
+                text = <"Av">
+                description = <"Tidsperioden da aktiviteten IKKE skal utføres.">
+            >
+            ["at0013"] = <
+                text = <"Repetisjoner">
+                description = <"Antall ganger på/av-syklusen skal repeteres.">
+            >
+            ["at0014"] = <
+                text = <"Døgn per tidsintervall">
+                description = <"Antall døgn per tidsintervall aktiviteten skal utføres.">
+                comment = <"For eksempel \"3 døgn per uke\" eller \"2-4 døgn per måned\". Spesifikke detaljer om timingen innenfor hvert døgn spesifiseres ved hjelp av arketypen CLUSTER.timing_daily.">
+            >
+            ["at0016"] = <
+                text = <"Onsdag">
+                description = <"Aktiviteten skal utføres på onsdag.">
+            >
+            ["at0017"] = <
+                text = <"Torsdag">
+                description = <"Aktiviteten skal utføres på torsdag.">
+            >
+            ["at0018"] = <
+                text = <"Fredag">
+                description = <"Aktiviteten skal utføres på fredag.">
+            >
+            ["at0019"] = <
+                text = <"Lørdag">
+                description = <"Aktiviteten skal utføres på lørdag.">
+            >
+            ["at0020"] = <
+                text = <"Søndag">
+                description = <"Aktiviteten skal utføres på søndag.">
+            >
+            ["at0021"] = <
+                text = <"Timingbeskrivelse">
+                description = <"Tekstbeskrivelse av timingen.">
+                comment = <"For eksempel \"bruk i en uke, stopp i to uker, gjenta\". Dette elementet er ment for å tillate programvareleverandører å bruke strukturene for timing innenfor 24 timer, uten nødvendigvis å spesifisere timingen utover et døgn på en strukturert måte.">
+            >
+            ["at0022"] = <
+                text = <"Aktiviteter per tidsintervall">
+                description = <"Antall ganger per tidsintervall aktiviteten skal utføres.">
+                comment = <"For eksempel \"3 aktiviteter per uke\" eller \"2-4 ganger per måned\".">
+            >
+            ["ac9001"] = <
+                text = <"Spesifikk ukedag (synthesised)">
+                description = <"Aktiviteten skal utføres på en spesifikk ukedag. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"*Timing - non-daily(en)">
+                description = <"*Structured information about the intended timing pattern for a therapeutic activity occurring over days, weeks, months or years.(en)">
+            >
+            ["at0001"] = <
+                text = <"Data específica">
+                description = <"A atividade deve ocorrer em uma data específica.">
+                comment = <"por exemplo: \"em 12 de janeiro de 2017\".">
+            >
+            ["at0002"] = <
+                text = <"Intervalo de repetição">
+                description = <"O intervalo de tempo entre repetições de atividades.">
+                comment = <"por exemplo: \"Cada 3 semanas\"">
+            >
+            ["at0003"] = <
+                text = <"*Specific day of week(en)">
+                description = <"*The activity should take place on a specific day of the week.(en)">
+                comment = <"*For example: 'On Monday, Wednesday and Friday'.(en)">
+            >
+            ["at0004"] = <
+                text = <"Dia do mês específico">
+                description = <"A atividade deverá ser realizada em um dia específico do mês.">
+                comment = <"Por exemplo: \"no 3º dia, 13º dia e 23º de cada mês\".">
+            >
+            ["at0005"] = <
+                text = <"Nome do evento">
+                description = <"O nome do evento que desencadeia a atividade para tomar o lugar.">
+            >
+            ["at0006"] = <
+                text = <"Evento específico">
+                description = <"A atividade deve ocorrer em relação a um determinado evento de chamada.">
+            >
+            ["at0007"] = <
+                text = <"*Monday(en)">
+                description = <"*The activity should take place on Monday.(en)">
+            >
+            ["at0008"] = <
+                text = <"*Tuesday(en)">
+                description = <"*The activity should take place on Tuesday.(en)">
+            >
+            ["at0009"] = <
+                text = <"Início do intervalo">
+                description = <"O período de tempo antes ou depois o evento nomeado, quando a atividade deve ocorrer. Durações negativas podem ser utilizadas para indicar que a atividade deve ser realizada antes do evento conhecido.">
+                comment = <"por exemplo: \"3 dias depois do início da menstruação = início da menstruação + 3 dias\", \"2 semanas antes da admissão = admissão - 2 semanas\".">
+            >
+            ["at0010"] = <
+                text = <"Ciclo dentro/fora">
+                description = <"Um ciclo de atividades em que é exigido um padrão on-off.">
+                comment = <"Por exemplo: \"tomar 3 comprimidos diariamente por 1 semana, pular uma semana, então tomar 3 comprimidos diariamente por 1 semana, repetir por 4 ciclos\".">
+            >
+            ["at0011"] = <
+                text = <"Dentro">
+                description = <"O período de tempo em que a atividade deve ser realizada.">
+            >
+            ["at0012"] = <
+                text = <"Fora">
+                description = <"O período de tempo em que a atividade não deve ocorrer.">
+            >
+            ["at0013"] = <
+                text = <"Repetições">
+                description = <"O número de repetições do ciclo on/off.">
+            >
+            ["at0014"] = <
+                text = <"*Days per time period (en)">
+                description = <"*The number of days per time period on which the activity takes place. (en)">
+                comment = <"*For example: '3 days per week', '2-4 days per month'. Specific details about the timing within each 24 hour period is specified within the CLUSTER.timing_daily archetype. (en)">
+            >
+            ["at0016"] = <
+                text = <"*Wednesday(en)">
+                description = <"*The activity should take place on Wednesday.(en)">
+            >
+            ["at0017"] = <
+                text = <"*Thursday(en)">
+                description = <"*The activity should take place on Thursday.(en)">
+            >
+            ["at0018"] = <
+                text = <"*Friday(en)">
+                description = <"*The activity should take place on Friday.(en)">
+            >
+            ["at0019"] = <
+                text = <"*Saturday(en)">
+                description = <"*The activity should take place on Saturday.(en)">
+            >
+            ["at0020"] = <
+                text = <"*Sunday(en)">
+                description = <"*The activity should take place on Sunday.(en)">
+            >
+            ["at0021"] = <
+                text = <"*Timing description(en)">
+                description = <"*Text description of the timing repetition. This element is intended to allow implementers to use the structures for different timings without necessarily specifying the timings in a structured way.(en)">
+                comment = <"*For example: \"Use for one week, then stop for two weeks, then repeat\".(en)">
+            >
+            ["at0022"] = <
+                text = <"*Activities per time period (en)">
+                description = <"*The number of activities per time period. (en)">
+                comment = <"*For example: '3 activities per week', '2-4 times per month'. (en)">
+            >
+            ["ac9001"] = <
+                text = <"*Specific day of week(en) (synthesised)">
+                description = <"*The activity should take place on a specific day of the week.(en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Timing - non-daily">
+                description = <"Structured information about the intended timing pattern for a therapeutic or diagnostic activity occurring over days, weeks, months or years.">
+            >
+            ["at0001"] = <
+                text = <"Specific date">
+                description = <"The activity should take place on a specific date or a specific range of dates.">
+                comment = <"For example: 'on 12 Jan 2017' or 'on 30 Oct 2017 to 6 Nov 2017'.">
+            >
+            ["at0002"] = <
+                text = <"Repetition interval">
+                description = <"The interval between repetitions of the activity.">
+                comment = <"For example: 'Every 3 weeks'. If necessary, this element can be used to explicity specify that an activity is to take place every single day, by setting it to \"1 day\".">
+            >
+            ["at0003"] = <
+                text = <"Specific day of week">
+                description = <"The activity should take place on a specific day of the week.">
+                comment = <"For example: 'On Monday, Wednesday and Friday'.">
+            >
+            ["at0004"] = <
+                text = <"Specific day of month">
+                description = <"The activity should take place on a specific day or interval of days of the month.">
+                comment = <"For example: 'on the 3rd, 13th and 23rd of each month' or 'on the 1st to the 10th of each month'.">
+            >
+            ["at0005"] = <
+                text = <"Event name">
+                description = <"The name of the event that triggers the activity to take place.">
+                comment = <"This element is intended for events that can occur at variable dates, such as onset of menstruation, and not for doses or activities that are conditional on a different varable. If required, the event name can be coded using a terminology, which could potentially be used to trigger an application to set a concrete date for the activity.">
+            >
+            ["at0006"] = <
+                text = <"Specific event">
+                description = <"The activity should take place in relation to a specific named event.">
+            >
+            ["at0007"] = <
+                text = <"Monday">
+                description = <"The activity should take place on Monday.">
+            >
+            ["at0008"] = <
+                text = <"Tuesday">
+                description = <"The activity should take place on Tuesday.">
+            >
+            ["at0009"] = <
+                text = <"Time offset">
+                description = <"The period of time before or after the named event when the activity should take place. Negative durations can be used to signify that the activity should be taken before a known event.">
+                comment = <"For example: '3 days after onset of menstruation = menstrual onset + 3 days', '2 weeks prior to admission= admission -2 weeks'.">
+            >
+            ["at0010"] = <
+                text = <"On / off cycle">
+                description = <"A cycle of activity where an on-off pattern is required.">
+                comment = <"For example: 'take for 1 week, omit 2 weeks, repeat 4 times'">
+            >
+            ["at0011"] = <
+                text = <"On">
+                description = <"The period of time for which the activity should take place.">
+            >
+            ["at0012"] = <
+                text = <"Off">
+                description = <"The period of time for which the activity should NOT take place.">
+            >
+            ["at0013"] = <
+                text = <"Repetitions">
+                description = <"The number of repetitions of the on/off cycle.">
+            >
+            ["at0014"] = <
+                text = <"Days per time period">
+                description = <"The number of days per time period on which the activity takes place.">
+                comment = <"For example: '3 days per week', '2-4 days per month'. Specific details about the timing within each 24 hour period is specified within the CLUSTER.timing_daily archetype.">
+            >
+            ["at0016"] = <
+                text = <"Wednesday">
+                description = <"The activity should take place on Wednesday.">
+            >
+            ["at0017"] = <
+                text = <"Thursday">
+                description = <"The activity should take place on Thursday.">
+            >
+            ["at0018"] = <
+                text = <"Friday">
+                description = <"The activity should take place on Friday.">
+            >
+            ["at0019"] = <
+                text = <"Saturday">
+                description = <"The activity should take place on Saturday.">
+            >
+            ["at0020"] = <
+                text = <"Sunday">
+                description = <"The activity should take place on Sunday.">
+            >
+            ["at0021"] = <
+                text = <"Timing description">
+                description = <"Text description of the timing.">
+                comment = <"For example: 'Use for one week, then stop for two weeks, then repeat'. This element is intended to allow implementers to use the structures for daily timings without necessarily specifying the non-daily timings in a structured way.">
+            >
+            ["at0022"] = <
+                text = <"Activities per time period">
+                description = <"The number of activities per time period.">
+                comment = <"For example: '3 activities per week', '2-4 times per month'.">
+            >
+            ["ac9001"] = <
+                text = <"Specific day of week (synthesised)">
+                description = <"The activity should take place on a specific day of the week. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0007", "at0008", "at0016", "at0017", "at0018", "at0019", "at0020">
+        >
+    >

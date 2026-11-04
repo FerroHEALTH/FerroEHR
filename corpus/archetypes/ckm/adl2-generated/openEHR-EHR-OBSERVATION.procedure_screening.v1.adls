@@ -1,0 +1,1078 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7d2adbd4-0ab6-4def-af0a-00c722cc180e; build_uid=10c432a4-61ee-4ead-b5d7-2c33ea6ca307)
+    openEHR-EHR-OBSERVATION.procedure_screening.v1.0.6
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Nina Schewe, Natalia Strauch, Darin Leonhardt">
+                ["organisation"] = <"Medizinische Hochschule Hannover, PLRI für medizinische Informatik/ Medizinische Hochschule">
+                ["email"] = <"nina.schewe@plri.de, Strauch.Natalia@mh-hannover.de, leonhardt.darin@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Marit Alice Venheim, Silje Ljosland Bakke, John Tore Valand, Liv Laugen">
+                ["organisation"] = <"Helse Vest IKT, Helse Vest IKT AS, Helse Bergen, ​Oslo University Hospital, Norway">
+                ["email"] = <"marit.alice.venheim@helse-vest-ikt.no, silje.ljosland.bakke@helse-vest-ikt.no, john.tore.valand@helse-bergen.no, john.tore.valand@helse-vest-ikt.no, liv.laugen@ous-hf.no">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Vanessa Pereira">
+                ["organisation"] = <"Luxembourg Institute of Health (LIH)">
+                ["email"] = <"vanessapereira@protonmail.com">
+            >
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"TRADCREA - Clara Calleja Vega">
+                ["organisation"] = <"CatSalut. Servei Català de la Salut.">
+                ["email"] = <"ccalleja@catsalut.cat">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Clara Calleja Vega">
+                ["organisation"] = <"CatSalut. Servei Català de la Salut.">
+                ["email"] = <"ccalleja@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-03-13">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Astrid Askeland, Dips AS, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Yexuan Cheng, 浙江大学, China", "Are Edvardsen, SKDE, Helse Nord RHF, Norway", "Alexander Eikrem-Lüthi, Lovisenberg Diakonale Sykehus, Norway", "Kåre Flø, DIPS ASA, Norway", "Grant Forrest, Lunaria Ltd, United Kingdom", "Heather Grain, Llewelyn Grain Informatics, Australia", "Anca Heyd, DIPS ASA, Norway", "Joost Holslag, Nedap, Netherlands", "Evelyn Hovenga, EJSH Consulting, Australia", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway", "Gunnar Jårvik, Helse Vest IKT AS, Norway", "Anjali Kulkarni, Karkinos, India", "Kanika Kuwelker, Helse Vest IKT, Norway", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, ​Oslo University Hospital, Norway, Norway", "Øygunn Leite Kallevik, Helse Bergen, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Per Meinich, Helse Sør-Øst RHF, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Erik Skjemstad, Helse Nord RHF, Norway", "Andre Smitt-Ingebretsen, Sørlandet sykehus HF, Norway", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Martijn van Eenennaam, Nedap Healthcare, Netherlands", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Ina Wille, Helse-Vest RHF, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Avgrenet fra: Procedure screening questionnaire, Published archetype [Internet]. openEHR Foundation, openEHR Clinical Knowledge Manager [cited: 2023-07-12]. Available from: https://ckm.openehr.org/ckm/archetypes/1013.1.4439">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"5860FF5470219DF112E9B113832703C7">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Schaffung von Rahmenbedingungen für die Darstellung von Antworten auf vordefinierte Screening-Fragen über das klinische Management im Zusammenhang mit chirurgischen/operativen Prozeduren, die in der Vergangenheit durchgeführt wurden.">
+            keywords = <"Prozedur, Verfahren, Eingriff, Operation, Beurteilung, Untersuchung, Fragebogen, Screening", ...>
+            use = <"Zur Schaffung von Rahmenbedingungen für die Darstellung von Antworten auf vordefinierte Screening-Fragen über das klinische Management im Zusammenhang mit chirurgischen/operativen Prozeduren, die in der Vergangenheit durchgeführt wurden.
+
+Häufige Anwendungsfälle umfassen, sind aber nicht beschränkt auf:
+- Gezielte Befragung zu bisherigen Eingriffen vor Aufnahme in ein Krankenhaus.
+- Systematische Befragung in jedem Beratungsgespräch, zum Beispiel:
+--- Hatten Sie jemals eine Appendektomie? Ja, Nein, Unbekannt.
+--- Hatten Sie in den letzten zwölf Monaten einen Hüft- oder Kniegelenkersatz? Ja, Nein, Unbekannt.
+
+Die Semantik dieses Archetyps ist mit Absicht etwas locker definiert und diesen Archetyp zu verwenden ist nur sinnvoll im Kontext eines spezifischen Templates. In einem Template würde jedes Datenelement in eine der spezifischen Fragen umbenannt werden. Wenn für bestimmte Anwendungsfälle Gruppen an Werten vorgesehen sind, können diese für den lokalen Gebrauch auf den jeweiligen Anwendungsfall mit den Datentypen DV_TEXT oder DV_BOOLEAN angepasst werden.
+
+Die EVENT-Struktur vom Referenzmodell kann verwendet werden, um weiter zu spezifizieren, ob die Fragen sich auf einen bestimmten Zeitpunkt oder eher eine Zeitspanne beziehen. Eine seperate Instanz dieses Archetyps wird verwendet, um zwischen einer Befragung zur Prozedur zu irgendeinem bestimmten Zeitpunkt in der Vergangenheit und Informationen zu Prozeduren, die in einer bestimmten Zeitspanne durchgeführt wurden - zum Beispiel den Unterschied zwischen \"Haben Sie jemals eine Hüft- oder Knieoperation gehabt?\" im Vergleich zu „Haben Sie in den letzten 12 Monaten eine Hüft- oder Knieoperation gehabt?
+
+Die Quelle der Informationen in einer Fragebogenantwort kann in verschiedenen Kontexten variieren, kann jedoch mithilfe des Elements „Information provider“ im Referenzmodell spezifisch identifiziert werden.
+
+Dieser Archetyp wurde entwickelt, um als Screening-Tool oder zur Darstellung einfacher Daten im Fragebogenformat zur Verwendung in Situationen wie einem Krankheitsregister verwendet zu werden. Wenn der Screening-Fragebogen die abgeschlossene Prozedur identifiziert, wird empfohlen, dass das klinische System die spezifischen Details über die Prozedur (z. B. die Dauer der Prozedur) unter Verwendung des Archetyps ACTION.procedure aufzeichnet und beibehält.">
+            misuse = <"Der Archetyp darf nicht verwendet werden, um Details über das Vorhandensein oder Nichtvorhandensein einer Prozedur außerhalb eines Screening-Kontexts darzustellen. Verwenden Sie für diese Zwecke ACTION.procedure oder EVALUATION.exclusion_specific.
+
+Nicht zur Darstellung von nicht-chirurgischem oder nicht-invasivem klinischen Managementaktivitäten verwenden. Verwenden Sie zu diesem Zweck OBSERVATION.management_screening.
+
+Darf nicht verwendet werden, um Details zu einer einfachen Auswahlliste darzustellen, in der eine Frage entweder als \"vorhanden\" oder \"unbestimmt\" aufgezeichnet werden kann. Verwenden Sie dazu OBSERVATION.selection_list.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å lage et rammeverk for registrering av svar på forhåndsdefinerte spørsmål om kirurgiske/operative prosedyrer som er utført tidligere.">
+            keywords = <"prosedyre, operasjon, kirurgi, spørreskjema, kartlegging", ...>
+            use = <"Brukes for å lage et rammeverk for registrering av svar på forhåndsdefinerte spørsmål om kirurgiske/operative prosedyrer som er utført tidligere.
+
+Vanlige bruksområder inkluderer, men er ikke begrenset til:
+- Spesifikke spørsmål før innleggelse ved sykehuset.
+- Systematiske spørsmål ved konsultasjoner, for eksempel:
+--- Har du gjennomgått en appendektomi? Ja, Nei, Ukjent.
+--- Har du fått gjennomført en hofte eller kneoperasjon de siste tolv månedene? Ja, Nei, Ukjent.
+
+Semantikken til denne arketypen er med vilje løst definert, og spørringer etter data i denne arketypen vil normalt bare være hensiktsmessig eller sikkert i konteksten av det spesifikke templatet. I et templat vil hvert dataelement vanligvis døpes om til det (spesifikke) spørsmålet man ønsker svar på. Flere steder er det foreslått verdisett som passer til de vanligste bruksområder, men det er allikevel mulig å tilpasse/endre verdisett for lokal bruk ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN for å harmonere verdisettet til hvert enkelt brukstilfelle.
+
+EVENT-strukturen fra arketypens referansemodell kan brukes for å spesifisere om spørsmålene relateres til et tidspunkt eller til et tidsintervall.
+Bruk egne instanser av denne arketypen for å skille mellom spørsmål om prosedyrer som er gjennomførte på et hvilket som helst tidspunkt og spørsmål om prosedyrer som er gjennomført i et tidsintervall. For eksempel; \"Har du noen sinne fått utført en hofte eller kneoperasjon?\" sammenlignet med \"Har du fått gjennomført en hofte- eller kneoperasjon i løpet av de siste 12 månedene?\".
+
+Kilden til informasjonen i et spørreskjema kan variere i ulike kontekster, men kan identifiseres spesifikt ved å benytte \"Information provider\" elementet i openEHR referansemodellen.
+
+Denne arketypen er laget for å bli brukt i et spørreskjema eller for å registrere enkle strukturerte data til for eksempel et sykdomsregister. Dersom det i kartleggingen identifiseres at en prosedyre er gjennomført, anbefales det at spesifikke detaljer om prosedyren (som for eksempel når og/eller hvor prosedyren ble gjort) registreres og lagres i pasientjournalen i arketypen Prosedyre (ACTION.procedure).">
+            misuse = <"Brukes ikke for å registrere detaljer om tilstedeværelse eller fravær av en prosedyre utenfor konteksten av kartleggingen. Bruk arketypen ACTION.procedure (Prosedyre) eller EVALUATION.exclusion_specific (Eksklusjonsutsagn - spesifikt) for dette formålet.
+
+Brukes ikke for å registrere detaljer om ikke kirugisk eller noninvasiv sykdomshåndtering. Bruk arketypen OBSERVATION.management_screening (Kartleggingsspørsmål om sykdomshåndtering) for dette formålet.
+
+Brukes ikke for å registrere detaljer om en enkel utvalgsliste der et spørsmål kan registreres som enten \"Tilstede\" eller \"Ubestemt\". Bruk arketypen OBSERVATION.selection_list for dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To create a framework for recording answers to pre-defined screening questions about clinical management related to surgical/operative procedures that have been carried out in the past.">
+            keywords = <"Procedure, surgery, operation, assessment, investigation, questionnaire, screening", ...>
+            use = <"Use to create a framework for recording answers to pre-defined screening questions about clinical management related to surgical/operative procedures that have been carried out in the past.
+
+Common use cases include, but are not limited to:
+- Specific questioning about previous procedures before admission to a hospital.
+- Systematic questioning in any consultation, for example:
+--- Have you ever had an appendectomy? Yes, No, Unknown.
+--- Have you had a hip or knee replacement in the past twelve months? Yes, No, Unknown.
+
+The semantics of this archetype are intentionally loose, and querying this archetype would normally only be useful or safe within the context of each specific template. In a template, each data element would usually be renamed to the specific question asked. Where value sets have been proposed for common use cases, these can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.
+
+The EVENT structure from the reference model can be used to specify whether the questions relate to point in time or over a period of time. Use a separate instance of this archetype to distinguish between a questionnaire recording information about a procedure that has been performed at any time in the past and information about a procedure performed within a specified time interval - for example the difference between \"Have you ever had any hip or knee surgery?\" compared to \"Have you had any hip or knee surgery in the last 12 months?
+
+The source of the information in a questionnaire response may vary in different contexts but can be specifically identified using the 'Information provider' element in the Reference Model.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry. If the screening process identifies a completed procedure, it is recommended that clinical system record and persist the specific details about the procedure (such as the duration of the procedure) using the ACTION.procedure archetype.">
+            misuse = <"Not to be used to record details about the presence or absence of a procedure, outside of a screening context. Use ACTION.procedure or EVALUATION.exclusion_specific for these purposes.
+
+Not to be used to record non-surgical or non-invasive clinical management. Use OBSERVATION.management_screening for this purposes.
+
+Not to be used to record details about a simple selection list where a question may be recorded as either \"present\" or \"indeterminate\". Use OBSERVATION.selection_list for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"*To create a framework for recording answers to pre-defined screening questions about clinical management related to specific invasive interventions or surgical/operative procedures that have been carried out in the past. (en)">
+            keywords = <"*Procedure, surgery, operation, assessment, investigation, questionnaire, screening (en)", ...>
+            use = <"*Use to create a framework for recording answers to pre-defined screening questions about clinical management related to specific invasive interventions or surgical/operative procedures that have been carried out in the past.
+
+Common use cases include, but are not limited to:
+- Specific questioning about previous procedures before admission to a hospital.
+- Systematic questioning in any consultation, for example:
+--- Have you ever had an appendectomy? Yes, No, Unknown.
+--- Have you had a hip or knee replacement in the past twelve months? Yes, No, Unknown.
+
+The semantics of this archetype are intentionally loose, and querying this archetype would normally only be useful or safe within the context of each specific template. In a template, each data element would usually be renamed to the specific question asked. Where value sets have been proposed for common use cases, these can be adapted for local use by using the 'text' choice to match each specific use case.
+
+The EVENT structure from the reference model can be used to specify whether the questions relate to point in time or over a period of time. Use a separate instance of this archetype to distinguish between a questionnaire recording information about a procedure that has been performed at any time in the past and information about a procedure performed within a specified time interval - for example the difference between \"Have you ever had any hip or knee surgery?\" compared to \"Have you had any hip or knee surgery in the last 12 months?
+
+The source of the information in a questionnaire response may vary in different contexts but can be specifically identified using the 'Information provider' element in the Reference Model.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry. If the screening process identifies a completed procedure, it is recommended that clinical system record and persist the specific details about the procedure (such as the duration of the procedure) using the ACTION.procedure archetype. (en)">
+            misuse = <"*Not to be used to record details about the presence or absence of a procedure, outside of a screening context. Use ACTION.procedure or EVALUATION.exclusion_specific for these purposes.
+
+Not to be used to record non-surgical or non-invasive clinical management. Use OBSERVATION.management_screening for this purposes.
+
+Not to be used to record details about a simple selection list where a question may be recorded as either \"present\" or \"indeterminate\". Use OBSERVATION.selection_list for this purpose. (en)">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Créer un cadre pour l'enregistrement des réponses à des questions de sélection prédéfinies sur la gestion clinique liée aux procédures chirurgicales/opératoires qui ont été effectuées dans le passé.">
+            keywords = <"Procédure, chirurgie, opération, évaluation, enquête, questionnaire, dépistage", ...>
+            use = <"A utiliser pour créer un cadre permettant d'enregistrer les réponses à des questions prédéfinies sur la gestion clinique liée à des procédures chirurgicales/opératoires qui ont été effectuées dans le passé.
+
+Les cas d'utilisation les plus courants sont, entre autres, les suivants
+- des questions spécifiques sur les interventions antérieures avant l'admission à l'hôpital
+- Interrogation systématique lors d'une consultation, par exemple : --- Avez-vous déjà eu une appendicite ?
+--- Avez-vous déjà subi une appendicectomie ? Oui, Non, Inconnu.
+--- Avez-vous subi une arthroplastie de la hanche ou du genou au cours des douze derniers mois ? Oui, Non, Inconnu.
+
+La sémantique de cet archétype est intentionnellement floue, et l'interrogation de cet archétype ne serait normalement utile ou sûre que dans le contexte de chaque modèle spécifique. Dans un modèle, chaque élément de données est généralement renommé en fonction de la question spécifique posée. Lorsque des ensembles de valeurs ont été proposés pour des cas d'utilisation courants, ils peuvent être adaptés à un usage local en utilisant les types de données DV_TEXT ou DV_BOOLEAN pour correspondre à chaque cas d'utilisation spécifique.
+
+La structure EVENT du modèle de référence peut être utilisée pour spécifier si les questions se rapportent à un moment donné ou à une période de temps. Utilisez une instance distincte de cet archétype pour faire la distinction entre un questionnaire enregistrant des informations sur une procédure effectuée à tout moment dans le passé et des informations sur une procédure effectuée dans un intervalle de temps donné - par exemple la différence entre \"Avez-vous déjà subi une opération de la hanche ou du genou ?\" et \"Avez-vous subi une opération de la hanche ou du genou au cours des 12 derniers mois ?
+
+La source des informations contenues dans une réponse à un questionnaire peut varier selon le contexte, mais elle peut être spécifiquement identifiée à l'aide de l'élément \"Fournisseur d'informations\" du modèle de référence.
+
+Cet archétype a été conçu pour être utilisé comme outil de dépistage ou pour enregistrer des données simples sous forme de questionnaire en vue d'une utilisation dans des situations telles qu'un registre des maladies. Si le processus de dépistage identifie une procédure terminée, il est recommandé que le système clinique enregistre et conserve les détails spécifiques de la procédure (tels que la durée de la procédure) à l'aide de l'archétype ACTION.procedure.">
+            misuse = <"Ne pas utiliser pour enregistrer des détails sur la présence ou l'absence d'une procédure, en dehors d'un contexte de dépistage. Utiliser ACTION.procedure ou EVALUATION.exclusion_specific à cette fin.
+
+Ne doit pas être utilisé pour enregistrer une prise en charge clinique non chirurgicale ou non invasive. Utilisez OBSERVATION.management_screening à cette fin.
+
+Ne pas utiliser pour enregistrer les détails d'une simple liste de sélection où une question peut être enregistrée comme \"présente\" ou \"indéterminée\". Utiliser OBSERVATION.selection_list à cette fin.">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Crear un marc per a l'enregistrament de respostes a preguntes predefinides de cribratge sobre la gestió clínica relacionada amb els procediments quirúrgics/operatius que s'han dut a terme en el passat.">
+            keywords = <"Procediment", "cirurgia", "operació", "avaluació", "investigació", "qüestionari", "cribratge">
+            use = <"Creació d'un marc per a l'enregistrament de respostes a preguntes predefinides de cribratge sobre la gestió clínica relacionada amb els procediments quirúrgics/operatius que s'han dut a terme en el passat.
+
+Els casos d'ús comuns inclouen, però no es limiten a:
+- Qüestionari específic sobre els procediments previs abans de l'ingrés a un hospital.
+- Qüestionari sistemàtic en qualsevol consulta, per exemple:
+--- Alguna vegada has tingut una apendectomia? Sí, no, desconegut.
+--- Has tingut un reemplaçament de maluc o genoll en els últims dotze mesos? Sí, no, desconegut.
+
+La semàntica d'aquest arquetip és intencionadament laxa, i la consulta d'aquest arquetip normalment només seria útil o segur dins del context de cada plantilla específica. En una plantilla, cada element de dades normalment es reanomena segons la pregunta específica formulada. Quan s'han proposat conjunts de valors per a casos d'ús comuns, aquests es poden adaptar per a ús local utilitzant el DV_TEXT o els tipus de dades DV_BOOLEAN per a coincidir amb cada cas d'ús específic.
+
+L'estructura de l'EVENT a partir del model de referència es pot utilitzar per especificar si les preguntes es relacionen amb un punt en el temps o durant un període de temps. Utilitzeu una instància separada d'aquest arquetip per distingir entre un qüestionari que registra informació sobre un procediment que s'ha realitzat en qualsevol moment del passat i informació sobre un procediment realitzat en un interval de temps especificat - per exemple la diferència entre \"Has tingut alguna cirurgia de maluc o genoll?\" en comparació amb \"Has tingut alguna cirurgia de maluc o genoll en els últims 12 mesos?\".
+
+La font de la informació en una resposta de qüestionari pot variar en diferents contextos, però es pot identificar específicament utilitzant l'element 'Proveïdor d'informació' del Model de Referència.
+
+Aquest arquetip ha estat dissenyat per ser utilitzat com a eina de cribratge o per registrar dades simples en format qüestionari per al seu ús en situacions com un registre de malalties. Si el procés de cribratge identifica un procediment completat, es recomana que el sistema clínic registri i persisteixi els detalls específics sobre el procediment (com la durada del procediment) utilitzant l'arquetip ACTION.procedure.">
+            misuse = <"No s'ha d'utilitzar per registrar detalls sobre la presència o absència d'un procediment, fora d'un context de cribratge. Utilitzar ACTION.procedure o EVALUATION.exclusion_specific per a aquestes finalitats.
+
+No s'ha d'utilitzar per registrar una gestió clínica no quirúrgica o no invasiva. Utilitzar OBSERVATION.management_screening per a aquestes finalitats.
+
+No s'ha d'utilitzar per a enregistrar detalls sobre una llista de selecció senzilla on una pregunta es pot enregistrar com a «present» o «indeterminada». Utilitzeu OBSERVATION.selection_list per a aquesta finalitat">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Crear un marco para registrar respuestas a preguntas de detección predefinidas sobre el manejo clínico relacionado con procedimientos quirúrgicos/operatorios que se han llevado a cabo en el pasado.">
+            keywords = <"Procedimiento", "cirugía", "operación", "evaluación", "investigación", "cuestionario", "cribado">
+            use = <"Se utiliza para crear un marco para registrar las respuestas a preguntas de cribado predefinidas sobre la gestión clínica relacionada con procedimientos quirúrgicos/operatorios realizados en el pasado.
+
+Los casos de uso comunes incluyen, entre otros:
+- Preguntas específicas sobre procedimientos previos al ingreso hospitalario.
+- Preguntas sistemáticas en cualquier consulta, por ejemplo:
+--- ¿Se ha sometido alguna vez a una apendicectomía? Sí, No, Desconocido.
+--- ¿Se ha sometido a un reemplazo de cadera o rodilla en los últimos doce meses? Sí, No, Desconocido.
+
+La semántica de este arquetipo es intencionadamente imprecisa, y consultarlo normalmente solo sería útil o seguro en el contexto de cada plantilla específica. En una plantilla, cada elemento de datos se renombraría generalmente según la pregunta específica formulada. Cuando se han propuesto conjuntos de valores para casos de uso comunes, estos se pueden adaptar para uso local utilizando los tipos de datos DV_TEXT o DV_BOOLEAN para que coincidan con cada caso de uso específico.
+
+La estructura EVENT del modelo de referencia se puede utilizar para especificar si las preguntas se relacionan con un punto en Tiempo o durante un período de tiempo. Utilice una instancia separada de este arquetipo para distinguir entre un cuestionario que registra información sobre un procedimiento realizado en cualquier momento del pasado y la información sobre un procedimiento realizado dentro de un intervalo de tiempo específico; por ejemplo, la diferencia entre \"¿Se ha sometido alguna vez a una cirugía de cadera o rodilla?\" y \"¿Se ha sometido a alguna cirugía de cadera o rodilla en los últimos 12 meses?\".
+
+La fuente de información en una respuesta al cuestionario puede variar según el contexto, pero se puede identificar específicamente mediante el elemento \"Proveedor de información\" del Modelo de Referencia.
+
+Este arquetipo se ha diseñado para utilizarse como herramienta de cribado o para registrar datos sencillos en formato de cuestionario para su uso en situaciones como un registro de enfermedades. Si el proceso de cribado identifica un procedimiento completado, se recomienda que el sistema clínico registre y conserve los detalles específicos del procedimiento (como su duración) utilizando el arquetipo ACTION.procedure.">
+            misuse = <"No debe utilizarse para registrar detalles sobre la presencia o ausencia de un procedimiento fuera del contexto de un cribado. Utilice ACTION.procedure o EVALUATION.exclusion_specific para estos fines.
+
+No debe utilizarse para registrar el manejo clínico no quirúrgico o no invasivo. Utilice OBSERVATION.management_screening para estos fines.
+
+No debe utilizarse para registrar detalles sobre una lista de selección simple donde una pregunta pueda registrarse como \"presente\" o \"indeterminada\". Utilice OBSERVATION.selection_list para este fin.">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Procedure screening questionnaire
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0034] occurrences matches {0..1} matches {    -- Screening purpose
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                    ELEMENT[at0028] matches {    -- Any previous procedures?
+                                        value matches {
+                                            DV_CODED_TEXT[at9003] matches {
+                                                defining_code matches {[ac9020]}    -- Any previous procedures? (synthesised)
+                                            }
+                                            DV_TEXT[at9011]
+                                            DV_BOOLEAN[at9019]
+                                        }
+                                    }
+                                    ELEMENT[at0041] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at9014]
+                                        }
+                                    }
+                                    CLUSTER[at0022] matches {    -- Specific procedure
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0004] occurrences matches {1} matches {    -- Procedure name
+                                                value matches {
+                                                    DV_TEXT[at9004]
+                                                }
+                                            }
+                                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Carried out?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9005] matches {
+                                                        defining_code matches {[ac9021]}    -- Carried out? (synthesised)
+                                                    }
+                                                    DV_TEXT[at9012]
+                                                    DV_BOOLEAN[at9020]
+                                                }
+                                            }
+                                            ELEMENT[at0037] matches {    -- Timing
+                                                value matches {
+                                                    DV_DATE_TIME[at9013]
+                                                    DV_TEXT[at9015]
+                                                    DV_DURATION[at9016]
+                                                    DV_INTERVAL<DV_DURATION>[at9017]
+                                                    DV_INTERVAL<DV_DATE_TIME>[at9018]
+                                                }
+                                            }
+                                            allow_archetype CLUSTER[at0036] matches {    -- Additional details
+                                                include
+                                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation\.v1\..*/}
+                                            }
+                                            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Comment
+                                                value matches {
+                                                    DV_TEXT[at9009]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0040] matches {    -- Additional details
+                                        include
+                                            archetype_id/value matches {/.*/}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0007] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0021] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Screening-Fragebogen zur Prozeduren">
+                description = <"Eine Reihe von Fragen und zugehörigen Antworten, die zum Screening auf Prozeduren, die in der Vergangenheit durchgeführt wurden, verwendet werden.">
+                comment = <"Die Antworten können selbst berichtet werden.">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardwert, ein undefinierter/s Zeitpunkt oder Intervallereignis, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Name der Prozedur">
+                description = <"Name einer Prozedur oder einer Gruppe von Prozeduren.">
+                comment = <"Die Codierung des „Name der Prozedur“ mit einer Terminologie wird nach Möglichkeit bevorzugt.">
+            >
+            ["at0005"] = <
+                text = <"Durchgeführt?">
+                description = <"Gibt es eine Historie, in der das identifizierte Verfahren durchgeführt oder ausgeführt wurde?">
+                comment = <"In einem Template würde das Datenelement normalerweise in die spezifisch gestellte Frage umbenannt. Der vorgeschlagene Wertesatz kann für die lokale Verwendung angepasst werden, indem der Choice-Datentyp DV_TEXT oder DV_BOOLEAN verwendet wird, um jedem spezifischen Anwendungsfall zu entsprechen.">
+            >
+            ["at0021"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen.">
+            >
+            ["at0022"] = <
+                text = <"Spezifische Prozedur">
+                description = <"Details zu einer bestimmten Prozedur oder zu einer bestimmten Gruppe von Prozeduren, die für das Screening relevant sind.">
+            >
+            ["at0023"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Nein">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Beschreibung über die spezifische Frage zur Prozedur, die nicht in anderen Bereichen erfasst wird.">
+            >
+            ["at0028"] = <
+                text = <"Irgendwelche frühere Prozeduren?">
+                description = <"Gibt es eine Vorgeschichte von früheren Prozeduren, die für den Screening-Zweck relevant sind?">
+                comment = <"In einem Template würde das Datenelement normalerweise in die spezifisch gestellte Frage umbenannt. Der vorgeschlagene Wertesatz kann für die lokale Verwendung angepasst werden, indem der Choice-Datentyp DV_TEXT oder DV_BOOLEAN verwendet wird, um jedem spezifischen Anwendungsfall zu entsprechen.">
+            >
+            ["at0031"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Nein">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Zweck des Screenings">
+                description = <"Der Kontext oder Grund für das Screening.">
+                comment = <"Dieses Datenelement soll bei einer späteren Abfrage den Erhebungskontext für die Frage/Antwort-Gruppen bereitstellen. Es wird nicht erwartet, dass dieses Datenelement der Person belichtet wird, sondern nur in Daten gespeichert wird. Zum Beispiel: \"Screening vor der Aufnahme\" oder der Name des eigentlichen Fragebogens.">
+            >
+            ["at0036"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Strukturierte Angaben oder Fragen zur konkreten Prozedur.">
+                comment = <"Zum Beispiel: Krankenhaus, wo behandelt wurde.">
+            >
+            ["at0037"] = <
+                text = <"Zeitangaben">
+                description = <"Zeitpunkt der Prozedur.">
+                comment = <"Angabe des Zeitplans im Zusammenhang mit der Untersuchung. Kommentar: Das Datenelement „Zeitpunkt“ wurde bewusst locker modelliert, um die unzähligen Möglichkeiten zu unterstützen, mit denen es in Fragebögen zur Erfassung des Zeitpunkts der Durchführung eines Verfahrens verwendet werden kann. Die spezifische und beabsichtigte Semantik kann in einem Template weiter geklärt werden. Zum Beispiel: das tatsächliche Datum und/oder die tatsächliche Uhrzeit; die Start- und Endzeit des Verfahrens; das Zeitintervall, in dem das Verfahren durchgeführt wurde; die Dauer des Verfahrens; das Alter der Person zum Zeitpunkt des Verfahrens; oder die Zeitdauer seit dem Verfahren. Ein Teildatum ist unter Verwendung des Datentyps DV_DATE_TIME gültig, um nur ein Jahr zu erfassen.">
+            >
+            ["at0038"] = <
+                text = <"Unbekannt">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Unbekannt">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Strukturierte Angaben oder Fragen zum Screening zur Prozeduren.">
+            >
+            ["at0041"] = <
+                text = <"Beschreibung">
+                description = <"Beschreibung über die Geschichte von früheren Prozeduren, die für das Screening relevant sind.">
+            >
+            ["at0042"] = <
+                text = <"Unsicher">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Unsicher">
+                description = <"">
+            >
+            ["ac9020"] = <
+                text = <"Irgendwelche frühere Prozeduren? (synthesised)">
+                description = <"Gibt es eine Vorgeschichte von früheren Prozeduren, die für den Screening-Zweck relevant sind? (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Durchgeführt? (synthesised)">
+                description = <"Gibt es eine Historie, in der das identifizierte Verfahren durchgeführt oder ausgeführt wurde? (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Kartleggingsspørsmål om prosedyrer">
+                description = <"Spørsmål og tilhørende svar som brukes til å kartlegge prosedyrer som er utført.">
+                comment = <"Svarene kan være selvrapporterte.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Prosedyrenavn">
+                description = <"Navnet på en prosedyre eller gruppe av prosedyrer.">
+                comment = <"Koding av \"Prosedyrenavn\" med en terminologi foretrekkes der det er mulig.">
+            >
+            ["at0005"] = <
+                text = <"Utført?">
+                description = <"Har den identifiserte prosedyren vært utført?">
+                comment = <"Navnet på dataelementet kan omformuleres til det spesifikke spørsmålet i et templat eller brukergrensesnitt. Det foreslåtte verdisettet kan tilpasses/endres i det enkelte bruksområde ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN.">
+            >
+            ["at0021"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0022"] = <
+                text = <"Spesifikk prosedyre">
+                description = <"Detaljer om en spesifikk prosedyre eller gruppe av prosedyrer som er innenfor kartleggingsformålet.">
+            >
+            ["at0023"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om det spesifikke prosedyrespørsmålet som ikke er omfattet av andre felt.">
+            >
+            ["at0028"] = <
+                text = <"Noen tidligere prosedyrer?">
+                description = <"Finnes det noen tidligere gjennomførte prosedyrer som som er innenfor kartleggingsformålet?">
+                comment = <"Navnet på dataelementet kan omformuleres til det spesifikke spørsmålet i et templat eller brukergrensesnitt. Det foreslåtte verdisettet kan tilpasses/endres i det enkelte bruksområde ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN.">
+            >
+            ["at0031"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Kartleggingsformål">
+                description = <"Konteksten eller årsaken for kartleggingen.">
+                comment = <"Dette dataelementet er ment for å sette en kontekst for spørsmålene, dersom man senere ønsker å gjøre spørringer på dataene. Det er ikke forventet at dette dataelementet skal være synlig for en bruker av skjemaet, men kun tilgjengelig i de lagrede dataene. For eksempel: \"Preoperativ screening\" eller navnet på det faktiske spørreskjemaet.">
+            >
+            ["at0036"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Strukturerte detaljer eller spørsmål om den spesifikke prosedyren.">
+                comment = <"For eksempel: Behandlende sykehus.">
+            >
+            ["at0037"] = <
+                text = <"Tidsangivelse">
+                description = <"Tidsangivelse for prosedyren.">
+                comment = <"Dataelementet \"Tidsangivelse\" er med hensikt løst modellert for å støtte ulike måter å angi tidsangivelser for prosedyrer i et spørreskjema. Den konkrete semantikken defineres i templatet. For eksempel: Prosedyrens faktiske dato og/eller klokkeslett, start- og slutttid for prosedyren, et tidsintervall for når prosedyren ble gjort, varigheten av prosedyren, individets alder på tidspunktet for prosedyren, eller hvor lenge det siden den ble gjort. Kan være en deldato, for eksempel bare år, ved å bruke datatypen DV_DATE_TIME.">
+            >
+            ["at0038"] = <
+                text = <"Ukjent">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Ukjent">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Strukturerte detaljer eller spørsmål om kartleggingen av prosedyrer.">
+            >
+            ["at0041"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse om prosedyrer som er tidligere utført og som er innenfor kartleggingsformålet.">
+            >
+            ["at0042"] = <
+                text = <"Usikker">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Usikker">
+                description = <"">
+            >
+            ["ac9020"] = <
+                text = <"Noen tidligere prosedyrer? (synthesised)">
+                description = <"Finnes det noen tidligere gjennomførte prosedyrer som som er innenfor kartleggingsformålet? (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Utført? (synthesised)">
+                description = <"Har den identifiserte prosedyren vært utført? (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Procedure screening questionnaire">
+                description = <"Series of questions and associated answers used to screen for procedures that has been carried out in the past.">
+                comment = <"The answers may be self-reported.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Procedure name">
+                description = <"Name of a procedure or grouping of procedures.">
+                comment = <"Coding of the 'Procedure name' with a terminology is preferred, where possible.">
+            >
+            ["at0005"] = <
+                text = <"Carried out?">
+                description = <"Is there a history of the identified procedure being done or carried out?">
+                comment = <"In a template, the data element would usually be renamed to the specific question asked. The proposed value set can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.">
+            >
+            ["at0021"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0022"] = <
+                text = <"Specific procedure">
+                description = <"Details about a specific procedure or grouping of procedures relevant for the screening purpose.">
+            >
+            ["at0023"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the specific procedure question, not captured in other fields.">
+            >
+            ["at0028"] = <
+                text = <"Any previous procedures?">
+                description = <"Is there a history of any past procedures relevant for the screening purpose?">
+                comment = <"In a template, the data element would usually be renamed to the specific question asked. The proposed value set can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.">
+            >
+            ["at0031"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Screening purpose">
+                description = <"The context or reason for screening.">
+                comment = <"This data element is intended to provide collection context for the question/answer groups when queried at a later date. It is not expected that this data element will be exposed to the individual, but only stored in data. For example: pre-admission screening or the name of the actual questionnaire.">
+            >
+            ["at0036"] = <
+                text = <"Additional details">
+                description = <"Structured details or questions about the specific procedure.">
+                comment = <"For example: hospital where treated.">
+            >
+            ["at0037"] = <
+                text = <"Timing">
+                description = <"Timing of the procedure.">
+                comment = <"Indication of timing related to the investigation.Comment: The 'Timing' data element has deliberately been loosely modelled to support the myriad of ways that it can be used in questionnaires to capture when an procedure was carried out. The specific and intended semantics can be further clarified in a template. For example: the actual date and/or time; the start and stop time for the procedure ; the interval of time during which the procedure was carried out; the duration of the procedure; the age of the individual at the time of the procedure; or the duration of time since it occurred. A partial date is valid, using the DV_DATE_TIME data type, to record only a year.">
+            >
+            ["at0038"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Additional details">
+                description = <"Structured details or questions about screening for procedures.">
+            >
+            ["at0041"] = <
+                text = <"Description">
+                description = <"Narrative description about the history of any past procedures relevant for the screening purpose.">
+            >
+            ["at0042"] = <
+                text = <"Unsure">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Unsure">
+                description = <"">
+            >
+            ["ac9020"] = <
+                text = <"Any previous procedures? (synthesised)">
+                description = <"Is there a history of any past procedures relevant for the screening purpose? (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Carried out? (synthesised)">
+                description = <"Is there a history of the identified procedure being done or carried out? (synthesised)">
+            >
+        >
+        ["it"] = <
+            ["at0000"] = <
+                text = <"Questionario di screening della procedura">
+                description = <"*Series of questions and associated answers used to screen for procedures that has been carried out in the past. (en)">
+                comment = <"*The answers may be self-reported. (en)">
+            >
+            ["at0002"] = <
+                text = <"Qualsiasi evento">
+                description = <"Evento predefinito, non specificato nel tempo o nell'intervallo di tempo, che può essere definito esplicitamente in un modello o in fase di esecuzione. ">
+            >
+            ["at0004"] = <
+                text = <"Nome della procedura">
+                description = <"*Name of a procedure or grouping of procedures. (en)">
+                comment = <"*Coding of the 'Procedure name' with a terminology is preferred, where possible. (en)">
+            >
+            ["at0005"] = <
+                text = <"*Carried out? (en)">
+                description = <"*Is there a history of the identified procedure being done or carried out? (en)">
+                comment = <"*In a template, the data element would usually be renamed to the specific question asked. The proposed value set can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case. (en)">
+            >
+            ["at0021"] = <
+                text = <"Estensione">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0022"] = <
+                text = <"Procedura specifica">
+                description = <"*Details about a specific procedure or grouping of procedures relevant for the screening purpose. (en)">
+            >
+            ["at0023"] = <
+                text = <"*Yes (en)">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"*No (en)">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Commento">
+                description = <"*Additional narrative about the specified procedure, not captured in other fields. (en)">
+            >
+            ["at0028"] = <
+                text = <"*Any previous procedures? (en)">
+                description = <"*Is there a history of any past procedures relevant for the screening purpose? (en)">
+                comment = <"*In a template, the data element would usually be renamed to the specific question asked. The proposed value set can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case. (en)">
+            >
+            ["at0031"] = <
+                text = <"*Yes (en)">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"*No (en)">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Scopo dello screening">
+                description = <"*The context or reason for screening. (en)">
+                comment = <"*This data element is intended to provide collection context for the question/answer groups when queried at a later date. It is not expected that this data element will be exposed to the individual, but only stored in data. For example: pre-admission screening or the name of the actual questionnaire. (en)">
+            >
+            ["at0036"] = <
+                text = <"*Additional details (en)">
+                description = <"*Structured details or questions about the specific procedure. (en)">
+                comment = <"*For example: The result of a performed laboratory analyte test.(en)">
+            >
+            ["at0037"] = <
+                text = <"*Timing (en)">
+                description = <"*Timing of the procedure. (en)">
+                comment = <"*Indication of timing related to the investigation.Comment: The 'Timing' data element has deliberately been loosely modelled to support the myriad of ways that it can be used in questionnaires to capture when an procedure was carried out. The specific and intended semantics can be further clarified in a template. For example: the actual date and/or time; the start and stop time for the procedure ; the interval of time during which the procedure was carried out; the duration of the procedure; the age of the individual at the time of the procedure; or the duration of time since it occurred. A partial date is valid, using the DV_DATE_TIME data type, to record only a year. (en)">
+            >
+            ["at0038"] = <
+                text = <"*Unknown (en)">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"*Unknown (en)">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"*Additional details (en)">
+                description = <"*Structured details or questions about screening for procedures. (en)">
+            >
+            ["at0041"] = <
+                text = <"*Description (en)">
+                description = <"*Narrative description about the history of any past procedures relevant for the screening purpose. (en)">
+            >
+            ["at0042"] = <
+                text = <"*Unsure (en)">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"*Unsure (en)">
+                description = <"">
+            >
+            ["ac9020"] = <
+                text = <"*Any previous procedures? (en) (synthesised)">
+                description = <"*Is there a history of any past procedures relevant for the screening purpose? (en) (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"*Carried out? (en) (synthesised)">
+                description = <"*Is there a history of the identified procedure being done or carried out? (en) (synthesised)">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Questionnaire d'évaluation de la procédure">
+                description = <"Série de questions et de réponses associées utilisées pour vérifier si des procédures ont été effectuées dans le passé.">
+                comment = <"Les réponses peuvent être autodéclarées.">
+            >
+            ["at0002"] = <
+                text = <"Tout événement">
+                description = <"Par défaut, point dans le temps non spécifié ou événement d'intervalle qui peut être explicitement défini dans un modèle ou au moment de l'exécution.">
+            >
+            ["at0004"] = <
+                text = <"Nom de la procédure">
+                description = <"Nom d'une procédure ou d'un groupe de procédures.">
+                comment = <"Dans la mesure du possible, il est préférable de coder le \"nom de la procédure\" à l'aide d'une terminologie.">
+            >
+            ["at0005"] = <
+                text = <"*Carried out? (en)">
+                description = <"*Is there a history of the identified procedure being done or carried out? (en)">
+                comment = <"Dans un modèle, l'élément de données est généralement renommé en fonction de la question spécifique posée. L'ensemble de valeurs proposé peut être adapté à un usage local en utilisant les types de données DV_TEXT ou DV_BOOLEAN pour répondre à chaque cas d'utilisation spécifique.">
+            >
+            ["at0021"] = <
+                text = <"Extension">
+                description = <"Informations supplémentaires nécessaires pour étendre le modèle au contenu local ou pour l'aligner sur d'autres modèles de référence ou formalismes.">
+                comment = <"Par exemple : exigences locales en matière d'information ou métadonnées supplémentaires pour s'aligner sur FHIR.">
+            >
+            ["at0022"] = <
+                text = <"Procédure spécifique">
+                description = <"Détails d'une procédure spécifique ou d'un groupe de procédures en rapport avec l'objectif de la sélection.">
+            >
+            ["at0023"] = <
+                text = <"Oui">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Non">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Commentaire">
+                description = <"Description supplémentaire de la question de procédure spécifique, qui n'est pas saisie dans d'autres champs.">
+            >
+            ["at0028"] = <
+                text = <"Y a-t-il eu des procédures antérieures ?">
+                description = <"Existe-t-il des antécédents de procédures antérieures en rapport avec l'objectif du dépistage ?">
+                comment = <"Dans un modèle, l'élément de données est généralement renommé en fonction de la question spécifique posée. L'ensemble de valeurs proposé peut être adapté à un usage local en utilisant les types de données DV_TEXT ou DV_BOOLEAN pour répondre à chaque cas d'utilisation spécifique.">
+            >
+            ["at0031"] = <
+                text = <"Oui">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Non">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Objectif du dépistage">
+                description = <"Le contexte ou la raison du dépistage.">
+                comment = <"Cet élément de données est destiné à fournir un contexte de collecte pour les groupes de questions/réponses lors d'une interrogation ultérieure. Il n'est pas prévu que cet élément de données soit exposé à l'individu, mais seulement stocké dans les données. Par exemple : la sélection préalable à l'admission ou le nom du questionnaire proprement dit.">
+            >
+            ["at0036"] = <
+                text = <"Détails supplémentaires">
+                description = <"Détails structurés ou questions sur la procédure spécifique.">
+                comment = <"Par exemple : hôpital où le patient a été traité.">
+            >
+            ["at0037"] = <
+                text = <"Timing">
+                description = <"Moment de la procédure.">
+                comment = <"Indication du moment de l'enquête Commentaire : L'élément de données \"Timing\" a été délibérément modélisé de manière souple afin de prendre en charge la myriade de façons dont il peut être utilisé dans les questionnaires pour saisir la date à laquelle une procédure a été effectuée. La sémantique spécifique et prévue peut être précisée dans un modèle. Par exemple : la date et/ou l'heure réelle ; l'heure de début et de fin de la procédure ; l'intervalle de temps pendant lequel la procédure a été effectuée ; la durée de la procédure ; l'âge de l'individu au moment de la procédure ; ou la durée écoulée depuis qu'elle a eu lieu. Une date partielle est valable, en utilisant le type de données DV_DATE_TIME, pour enregistrer seulement une année.">
+            >
+            ["at0038"] = <
+                text = <"Inconnu">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Inconnu">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Détails supplémentaires">
+                description = <"Détails ou questions structurées sur le dépistage des procédures.">
+            >
+            ["at0041"] = <
+                text = <"Description">
+                description = <"Description narrative des antécédents de toute procédure antérieure pertinente pour l'objectif du dépistage.">
+            >
+            ["at0042"] = <
+                text = <"*Unsure (en)">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"*Unsure (en)">
+                description = <"">
+            >
+            ["ac9020"] = <
+                text = <"Y a-t-il eu des procédures antérieures ? (synthesised)">
+                description = <"Existe-t-il des antécédents de procédures antérieures en rapport avec l'objectif du dépistage ? (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"*Carried out? (en) (synthesised)">
+                description = <"*Is there a history of the identified procedure being done or carried out? (en) (synthesised)">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Qüestionari de cribratge de procediments">
+                description = <"Sèries de preguntes i respostes associades utilitzades per a analitzar els procediments que s'han dut a terme en el passat.">
+                comment = <"Les respostes poden ser autoinformades.">
+            >
+            ["at0002"] = <
+                text = <"Qualsevol esdeveniment">
+                description = <"Per defecte, un punt no especificat en l'esdeveniment de temps o interval que es pot definir explícitament en una plantilla o en temps d'execució.">
+            >
+            ["at0004"] = <
+                text = <"Nom del procediment">
+                description = <"Nom d'un procediment o agrupació de procediments.">
+                comment = <"Es prefereix la codificació del 'nom del procés' amb una terminologia, quan sigui possible.">
+            >
+            ["at0005"] = <
+                text = <"Realitzat?">
+                description = <"S'està fent o duent a terme un historial del procediment identificat?">
+                comment = <"En una plantilla, l'element de dades normalment es reanomenaria segons la pregunta específica formulada. El conjunt de valors proposat es pot adaptar per a l'ús local utilitzant el DV_TEXT o l'elecció dels tipus de dades DV_BOOLEAN per a cada cas d'ús específic.">
+            >
+            ["at0021"] = <
+                text = <"Extensió">
+                description = <"Informació addicional necessària per ampliar el model amb contingut local o per alinear-se amb altres models de referència o formalismes.">
+                comment = <"Per exemple: requisits d'informació local; o metadades addicionals per alinear-se amb FHIR.">
+            >
+            ["at0022"] = <
+                text = <"Procediment específic">
+                description = <"Detalls sobre un procediment específic o agrupació de procediments rellevants per a la finalitat del cribratge.">
+            >
+            ["at0023"] = <
+                text = <"Sí">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Comentari">
+                description = <"Narrativa addicional sobre la qüestió del procediment específic, no capturada en altres camps.">
+            >
+            ["at0028"] = <
+                text = <"Hi ha algun procediment previ?">
+                description = <"Hi ha algun historial de procediments anteriors rellevants per a l'objectiu de la detecció?">
+                comment = <"En una plantilla, l'element de dades normalment es canviaria el nom a la pregunta específica formulada. El conjunt de valors proposat es pot adaptar per a l'ús local utilitzant el DV_TEXT o l'elecció dels tipus de dades DV_BOOLEAN per a cada cas d'ús específic.">
+            >
+            ["at0031"] = <
+                text = <"Sí">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Motiu del cribratge">
+                description = <"El context o motiu del cribratge.">
+                comment = <"Aquest element de dades està destinat a proporcionar context de recollida per als grups de preguntes/respostes quan es consulti en una data posterior. No s'espera que aquest element de dades estigui exposat a l'individu, sinó només emmagatzemat en dades. Per exemple: el cribratge previ a l'admissió o el nom del qüestionari real.">
+            >
+            ["at0036"] = <
+                text = <"Dades addicionals">
+                description = <"Detalls estructurats o preguntes sobre el procediment concret.">
+                comment = <"Per exemple: l'hospital on es tracta.">
+            >
+            ["at0037"] = <
+                text = <"Temps">
+                description = <"Temps del procediment.">
+                comment = <"Indicació del temps relacionat amb la investigació.Comentari: L'element de dades \"Temps\" s'ha modelat laxament deliberadament per donar suport a la infinitat de maneres que es poden utilitzar en qüestionaris per capturar quan es va dur a terme un procediment. La semàntica específica i pretesa es pot aclarir en una plantilla. Per exemple: la data i/o hora reals; l'hora d'inici i finalització del procediment; l'interval de temps durant el qual es va dur a terme el procediment; la durada del procediment; l'edat de l'individu en el moment del procediment; o la durada del temps des que es va produir. Una data parcial és vàlida, utilitzant el tipus de dades DV_DATE_TIME, per registrar només un any.">
+            >
+            ["at0038"] = <
+                text = <"Desconegut">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Desconegut">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Dades addicionals">
+                description = <"Detalls estructurats o preguntes sobre el cribratge per a procediments.">
+            >
+            ["at0041"] = <
+                text = <"Descripció">
+                description = <"Descripció narrativa sobre la història de qualsevol procediment anterior rellevant per a la finalitat del cribratge.">
+            >
+            ["at0042"] = <
+                text = <"No n'està segur">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"No n'està segur">
+                description = <"">
+            >
+            ["ac9020"] = <
+                text = <"Hi ha algun procediment previ? (synthesised)">
+                description = <"Hi ha algun historial de procediments anteriors rellevants per a l'objectiu de la detecció? (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Realitzat? (synthesised)">
+                description = <"S'està fent o duent a terme un historial del procediment identificat? (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Cuestionario de cribado de procedimientos">
+                description = <"Serie de preguntas y respuestas asociadas que se utilizan para filtrar procedimientos realizados en el pasado.">
+                comment = <"Las respuestas pueden ser auto-reportadas.">
+            >
+            ["at0002"] = <
+                text = <"Cualquier evento">
+                description = <"Evento predeterminado, no especificado, en un punto temporal o intervalo, que puede definirse explícitamente en una plantilla o en tiempo de ejecución.">
+            >
+            ["at0004"] = <
+                text = <"Nombre del procedimiento">
+                description = <"Nombre de un procedimiento o grupo de procedimientos.">
+                comment = <"Se prefiere codificar el \"Nombre del procedimiento\" con una terminología, siempre que sea posible.">
+            >
+            ["at0005"] = <
+                text = <"¿Realizado?">
+                description = <"¿Existe un historial de la ejecución o ejecución del procedimiento identificado?">
+                comment = <"En una plantilla, el elemento de datos normalmente se renombraría según la pregunta específica formulada. El conjunto de valores propuesto puede adaptarse para uso local utilizando los tipos de datos DV_TEXT o DV_BOOLEAN para cada caso de uso específico.">
+            >
+            ["at0021"] = <
+                text = <"Extensión">
+                description = <"Información adicional necesaria para ampliar el modelo con contenido local o para alinearse con otros modelos de referencia o formalismos.">
+                comment = <"Por ejemplo: requisitos de información local; o metadatos adicionales para alinearse con FHIR.">
+            >
+            ["at0022"] = <
+                text = <"Procedimiento específico">
+                description = <"Detalles sobre un procedimiento específico o un grupo de procedimientos relevantes para el propósito de la filtración.">
+            >
+            ["at0023"] = <
+                text = <"Sí">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Comentario">
+                description = <"Narrativa adicional sobre la cuestión del procedimiento específico, no capturada en otros campos.">
+            >
+            ["at0028"] = <
+                text = <"¿Algún procedimiento previo?">
+                description = <"¿Existen antecedentes de algún procedimiento previo que sea relevante para el propósito de la evaluación?">
+                comment = <"En una plantilla, el elemento de datos normalmente se renombraría según la pregunta específica formulada. El conjunto de valores propuesto puede adaptarse para uso local mediante los tipos de datos DV_TEXT o DV_BOOLEAN para cada caso de uso específico.">
+            >
+            ["at0031"] = <
+                text = <"Sí">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Objetivo del cribado">
+                description = <"El contexto o el motivo de la evaluación.">
+                comment = <"Este elemento de datos proporciona contexto de recopilación para los grupos de preguntas y respuestas cuando se consulten posteriormente. No se espera que este elemento de datos se exponga a la persona, sino que solo se almacene en los datos. Por ejemplo: evaluación previa al ingreso o el nombre del cuestionario.">
+            >
+            ["at0036"] = <
+                text = <"Detalles adicionales">
+                description = <"Detalles o preguntas estructuradas sobre el procedimiento específico.">
+                comment = <"Por ejemplo: hospital donde se realizó el tratamiento.">
+            >
+            ["at0037"] = <
+                text = <"Fecha de inicio">
+                description = <"Momento del procedimiento.">
+                comment = <"Indicación del momento relacionado con la investigación. Comentario: El elemento de datos \"Tiempo\" se ha modelado de forma flexible para facilitar su uso en cuestionarios para registrar cuándo se realizó un procedimiento. La semántica específica y prevista se puede aclarar con más detalle en una plantilla. Por ejemplo: la fecha y/o hora real; la hora de inicio y finalización del procedimiento; el intervalo de tiempo durante el cual se realizó el procedimiento; la duración del procedimiento; la edad de la persona en el momento del procedimiento; o el tiempo transcurrido desde que se realizó. Una fecha parcial es válida, utilizando el tipo de dato DV_DATE_TIME, para registrar solo un año.">
+            >
+            ["at0038"] = <
+                text = <"Desconocido">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Desconocido">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Detalles adicionales">
+                description = <"Detalles estructurados o preguntas sobre la selección de procedimientos.">
+            >
+            ["at0041"] = <
+                text = <"Descripción">
+                description = <"Descripción narrativa sobre el historial de cualquier procedimiento pasado relevante para el propósito de la evaluación.">
+            >
+            ["at0042"] = <
+                text = <"Dudoso">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Dudoso">
+                description = <"">
+            >
+            ["ac9020"] = <
+                text = <"¿Algún procedimiento previo? (synthesised)">
+                description = <"¿Existen antecedentes de algún procedimiento previo que sea relevante para el propósito de la evaluación? (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"¿Realizado? (synthesised)">
+                description = <"¿Existe un historial de la ejecución o ejecución del procedimiento identificado? (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0023"] = <http://snomed.info/id/373066001>
+            ["at0024"] = <http://snomed.info/id/373067005>
+            ["at0031"] = <http://snomed.info/id/373066001>
+            ["at0032"] = <http://snomed.info/id/373067005>
+            ["at0038"] = <http://snomed.info/id/261665006>
+            ["at0039"] = <http://snomed.info/id/261665006>
+        >
+    >
+    value_sets = <
+        ["ac9020"] = <
+            id = <"ac9020">
+            members = <"at0031", "at0032", "at0038", "at0042">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0023", "at0024", "at0039", "at0043">
+        >
+    >

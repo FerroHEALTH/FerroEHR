@@ -1,0 +1,100 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-CLUSTER.person_name_isa.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics">
+        ["email"] = <"ian@freshehr.com">
+        ["date"] = <"2014-07-11">
+    >
+    lifecycle_state = <"0">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"05B27C76383002F3959B99CEEF20E1BA">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Person name (ISA)
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Full Name
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Family Name
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Given Name
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Patronymic Name
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Birth Name
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Alternative Name
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Person name (ISA)">
+                description = <"Personal name compliant with European ISA standard.">
+            >
+            ["at0001"] = <
+                text = <"Family Name">
+                description = <"A family name is usually shared by members of a family. This attribute also carries prefixes or suffixes which are part of the Family Name, e.g. “de Boer”, “van de Putte”, “von und zu Orlow”.">
+                comment = <" Multiple family names, such as are commonly found in Hispanic countries, are recorded in the single Family Name field so that, for example, Miguel de Cervantes Saavedra's Family Name would be recorded as \"de Cervantes Saavedra.">
+            >
+            ["at0002"] = <
+                text = <"Given Name">
+                description = <"A given name, or multiple given names, are the denominator(s) that identify an individual within a family. These are given to a person by his or her parents at birth or may be legally recognised as 'given names' through a formal process.">
+                comment = <"All given names are ordered in one field so that, for example, the Given Name for Johan Sebastian Bach is 'Johan Sebastian.'">
+            >
+            ["at0003"] = <
+                text = <"Birth Name">
+                description = <"Name given to the person at birth.">
+                comment = <"There is no granularity for birth name - the full name should be recorded in a single field.">
+            >
+            ["at0004"] = <
+                text = <"Full Name">
+                description = <"The full name (fullName) property contains the complete name of a person as one string. In addition to the content of given name, family name and, in some systems, patronymic name, this can carry additional parts of a person’s name such as titles, middle names or suffixes like “the third” or names which are neither a given nor a family name.">
+            >
+            ["at0005"] = <
+                text = <"Patronymic Name">
+                description = <"Patronymic names are important in some countries. Iceland does not have a concept of 'family name' in the way that many other European countries do, for example. Erik Magnusson and Erika Magnusdottir are siblings, both offspring of Mangnus, irrespective of his patronymic name. In Bulgaria and Russia, patronymic names are in every day usage, for example, the Sergeyevich in 'Mikhail Sergeyevich Gorbachev.'">
+                comment = <"Note that patronymic names refer to a father's given name, not the family name inherited from the mother and father as is the case in countries such as Spain and Portugal. Again referring to the example of Miguel de Cervantes Saavedra's, the patronymic name element would be unused.">
+            >
+            ["at0006"] = <
+                text = <"Alternative Name">
+                description = <"Any name by which an individual is known other than their full name.">
+            >
+        >
+    >

@@ -1,0 +1,381 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c641a63d-c6a9-4994-9fb1-fc926de84136; build_uid=7e6fa172-db89-4024-a0e1-296bded46223)
+    openEHR-EHR-CLUSTER.inspection_body_fluid-sputum.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-CLUSTER.inspection_body_fluid.v0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Kristian Berg, John Tore Valand">
+                ["organisation"] = <"Helse Nord, Helse Vest">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2015-06-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Morten Aas, Oslo Universitetssykehus, Norway", "Kerstin Adolfsson, Sweden", "Stine Nyheim Andreassen, DIPS ASA, Norway", "Vebjørn Arntzen, Oslo universitetssykehus HF, Norway (Nasjonal IKT redaktør)", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (Nasjonal IKT redaktør)", "Kristian Berg, Universitetssykehuset Nord Norge, Norway", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Kate Bryan, Stalis Ltd, United Kingdom", "David Burns, East Kent Hospitals University Foundation NHS Trust, United Kingdom", "B Christensen, HUS, Norway", "Peter Coates, NHS England, United Kingdom", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Kristian Heldal, Telemark Hospital Trust, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Tom Jarl Jakobsen, Helse Bergen, Norway", "Lars Karlsen, DIPS ASA, Norway", "Dave Kilroy, Application Insight Ltd, United Kingdom", "Shinji Kobayashi, Kyoto University, Japan", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Sabine Leh, Haukeland University Hospital, Department of Pathology, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Siv Marie Lien, DIPS ASA, Norway", "Kelvin Lok, Stalis Ltd, United Kingdom", "Ole Kristian Losvik, Losol AS, Norway", "Mark McEvoy, SITS International, Sweden", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Colin Newell, OpusVL, United Kingdom", "Andrej Orel, Marand d.o.o., Slovenia", "Rob Organ, Yeovil District Hospital NHS Foundation Trust, United Kingdom", "Petra Palm, Region Östergötland, Sweden", "Mike Pargeter, Across Health Ltd, United Kingdom", "Martin Paulson, Sykehuset i Vestfold, Norway", "Rune Pedersen, Universitetssykehuset i Nord Norge, Norway", "John Pyle, self, United Kingdom", "Navin Ramachandran, NHS, United Kingdom", "Cecilia Revelj, Landstinget i Kalmar län, Sweden", "Ingela Sammeli, Landstinget i Värmland, Sweden", "Elin Tell, Region Ostergotland, Sweden", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Lina Öfverström, Region Östergötland, Sweden">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"FD0B806F2040EC6B5C1087EF1F842C6A">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For registrering av funn observert under undersøkelse av en kroppsvæske på et kroppssted eller fra en navngitt kroppskilde. Undersøkelsen gjøres vanligvis som en del av en fysisk undersøkelse utført av en kliniker.">
+            keywords = <"kroppsvæske", "fostervann", "blod", "plasma", "cerebrospinal", "væske", "utflod", "urin", "puss", "spytt", "ekspektorat", "leddvæske", "svette", "oppkast", "mage", "diare", "slim", "spinalvæske", "galle", "ekskret", "morsmelk", "mucus", "magesyre", "sæd", "sekret", "ascites", "serøs", "intraokulærvæske", "dialysat", "pericardvæske", "pleuravæske", "tårevæske">
+            use = <"Brukes for å registrere en fritekstbeskrivelse, strukturerte detaljer og klinisk fortolkning av funn observert under en undersøkelse av en kroppsvæske på et navngitt kroppssted eller fra en nanvgitt kroppskilde. Undersøkelsen gjøres vanligvis som en del av en fysisk undersøkelse utført av en kliniker.
+
+Arketypen er utviklet spesifikt for å benyttes som et rammeverk for registrering av detaljer om en undersøkelse av en hvilken som helst kroppsvæske. For å registrere funn for:
+
+- For visse typer væske med spesielle egenskaper som man vil registrere strukturert, er det meningen å nøste spesifikke CLUSTER-arketyper i SLOT'et \"Spesifikke funn\". For eksempel vil ytterligere detaljer knyttet til klare væsker registreres i en egen CLUSTER-arketype for dette formålet. 
+
+- Kroppsvæsker som består av flere komponenter som for eksempel fostervann registrerer man en instans av arketypen for å beskrive fostervannet, ytterligere instanser av den samme arketypen nøstes i dataelementet \"Spesifikke detaljer\" for å representere blod, mekonium og puss.
+
+Kroppsvæsker referer vanligvis til væsker som er utskilt eller sekrert fra menneskekroppen og arketypen støtter detaljert registrering av:
+- Vanlige fysiologiske væsker.
+- Fysiologiske væsker som forandrer seg som følge av en patologisk prosess.
+- Væsker som genereres som en del av en patologisk prosess i kroppen.
+
+Eksempler på kroppsvæsker kan være:
+- Fostervann
+- Blod eller plasma
+- Cerebrospinalvæske
+- Utflod
+- Urin
+- Puss
+- Spytt
+- Ekspektorat
+- Leddvæske
+- Svette
+- Oppkast
+
+Arketypen er vil i de fleste tilfeller brukes i hos levende individer, men den kan også benyttes for registrering av funn ved obduksjon.
+
+Kroppsted eller kroppskilde vil vanligvis identifiseres i konteksten arketypen nøstes i, eksempler på kontekst kan være, men ikke begrenset til:
+- I SLOT'et \"Funn ved undersøkelse\" i mange av de spesifikke undersøkelsesarketypene og relaterterte inspeksjons- og palpasjonsarketypene.
+- i SLOT'et for \"Physical properties\" i arketypen CLUSTER.specimen 
+- I SLOTet \"Tilleggsinformasjon\" i arketypene OBSERVATION.urinanalysis og OBSERVATION.fluid_output
+- I andre OBSERVATION eller CLUSTER arketyper der dette er klinisk formålstjenlig.
+
+Arketypen CLUSTER.exclusion_exam arketypen kan nøstes i SLOTet \"Undersøkelse ikke utført\" for å gi mulighet for en eksplisitt registrering av at en undersøkelse ikke er utført.
+
+Bruk for å innlemme fritekstbeskrivelser av kliniske funn fra eksisterende eller tidligere kliniske systemer i et arketypeformat ved å bruke dataelementet \"Klinisk beskrivelse\".">
+            misuse = <"Brukes ikke for å registrere målinger av væskevolum - bruk OBSERVATION-arketyper for dette formålet. For eksempel OBSERVATION.fluid_output.
+
+Brukes ikke for å registrere detaljer om ikke-fysiologiske væsker som er tilført kroppen eksternt fra, f.eks. kontrastvæske.
+
+Brukes ikke for å registrere en klinisk anamnese. Bruk spesifikke OBSERVATION eller CLUSTER arketyper for dette formålet. For eksempel OBSERVATION.story og CLUSTER.symptom_sign.
+
+Brukes ikke for å registrere resultat av en urinanalyse - bruk OBSERVATION.urinalysis. Denne arketypen kan legges til i SLOT'et \"Ytterliger detaljer\" for å gi ytterligere kontekst til prøveresultatet.
+
+Brukes ikke for å registrere andre detaljer om en prøve for bruk i laboratorier. Bruk CLUSTER.specimen for dette formålet. NB: På tross av dette unntaket, er det hensiktsmessig å benytte denne arketypen i SLOT'et \"Physical properties\" i CLUSTER.specimen for å beskrive de fysiske egenskapene til kroppsvæsken.
+
+Brukes ikke til å registrere detaljer om undersøkelse av fæces - bruk CLUSTER.examination_faeces.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the findings observed during the macroscopic inspection (including odour) of sputum.">
+            keywords = <"sputum", "phlegm", "mucus", "airway", "cough", "haemoptysis", "hemoptysis">
+            use = <"Use to record a narrative description, structured details and clinical interpretation about findings observed during the inspection (including odour) of sputum.
+
+This archetype has been specifically designed to be used as the framework for recording details about examination of sputum. It may be used:
+- in the 'Examination findings' SLOT within many of the CLUSTER.exam family of archetypes and related inspection archetypes;
+- in the 'Physical properties' SLOT within the CLUSTER.specimen archetype; and
+- within other OBSERVATION or CLUSTER archetypes, where clinically appropriate.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+While this archetype will most likely be used in the context of a living subject, it is also appropriate to use in recording autopsy findings.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical description' data element.">
+            misuse = <"Not to be used to record the inspection of body fluids other than sputum - use the parent CLUSTER.inspection_body_fluid or other appropriate specialisations for this purpose.
+
+Not to be used to record the inspection of blood or blood clots, but only to record the presence of blood or blood clots within sputum.
+
+Not to be used for recording measurements of sputum volume - use OBSERVATION archetypes for this purpose. For example: OBSERVATION.fluid_output.
+
+Not to be used to record details about a non-physiological fluid.
+
+Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example: OBSERVATION.story and CLUSTER.symptom_sign.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Inspection of sputum
+        items matches {
+            ELEMENT[at0001.1] matches {    -- Fluid name
+                value matches {
+                    DV_CODED_TEXT[at0.9003] matches {
+                        defining_code matches {[at0.1]}    -- Sputum
+                    }
+                }
+            }
+            ELEMENT[at0018.1] matches {    -- Colour
+                value matches {
+                    DV_CODED_TEXT[at0.9006] matches {
+                        defining_code matches {[ac0.9002]}    -- Colour (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0021.1] matches {    -- Blood clots
+                value matches {
+                    DV_CODED_TEXT[at0.9007] matches {
+                        defining_code matches {[ac9012]}
+                    }
+                }
+            }
+            after [at0003]
+            ELEMENT[at0.5] occurrences matches {0..1} matches {    -- Appearance
+                value matches {
+                    DV_CODED_TEXT[at0.9004] matches {
+                        defining_code matches {[ac0.9000]}    -- Appearance (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.2] occurrences matches {0..1} matches {    -- Consistency
+                value matches {
+                    DV_CODED_TEXT[at0.9005] matches {
+                        defining_code matches {[ac0.9001]}    -- Consistency (synthesised)
+                    }
+                }
+            }
+            after [at0017]
+            ELEMENT[at0022]
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000.1"] = <
+                text = <"*Inspection of a body fluid (en)">
+                description = <"Funn observert under undersøkelse av en kroppsvæske på et kroppssted eller fra en identifisert kroppskilde. Undersøkelsen gjøres vanligvis som en del av en fysisk undersøkelse utført av en kliniker.">
+            >
+            ["at0001.1"] = <
+                text = <"Navn på kroppsvæske">
+                description = <"*The name of the body fluid being examined. (en)">
+                comment = <"Koding av \"Navn på kroppsvæske\" med et kodeverk er ønskelig, dersom tilgjengelig.">
+            >
+            ["at0.1"] = <
+                text = <"*Sputum (en)">
+                description = <"*">
+            >
+            ["at0021.1"] = <
+                text = <"*Blood clots (en)">
+                description = <"*Blood clots are observed within or associated with the body fluid. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Consistency (en)">
+                description = <"*The viscosity of the sputum (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Thin (en)">
+                description = <"*Low viscosity; flowing relatively freely. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Thick (en)">
+                description = <"*Relatively firm or viscous; not flowing freely. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Type (en)">
+                description = <"*">
+            >
+            ["at0.6"] = <
+                text = <"*Mucoid (en)">
+                description = <"*The sputum consists mostly of mucus. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Mucopurulent (en)">
+                description = <"*The sputum consists of both mucus and pus. (en)">
+            >
+            ["at0.8"] = <
+                text = <"*Purulent (en)">
+                description = <"*The sputum consists mostly of pus. (en)">
+            >
+            ["at0018.1"] = <
+                text = <"Farge">
+                description = <"*The colour of the body fluid. (en)">
+                comment = <"*The intent of this data element is to record either a narrative description of the colour or to select one or more codes from a value set, appropriate to the body fluid, in a template. (en)">
+            >
+            ["at0.9"] = <
+                text = <"*Clear (en)">
+                description = <"*Appears transparent. (en)">
+            >
+            ["at0.10"] = <
+                text = <"*White (en)">
+                description = <"*Pale or off white. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Grey (en)">
+                description = <"*Shade between white and charcoal, like ash. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Yellow (en)">
+                description = <"*Shade between cream and mustard. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Green (en)">
+                description = <"*Shade between pale honeydew and olive. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Rust (en)">
+                description = <"*Shade between red and brown. (en)">
+            >
+            ["at0.15"] = <
+                text = <"*Brown (en)">
+                description = <"*Shade between light tan and chocolate. (en)">
+            >
+            ["at0.16"] = <
+                text = <"*Pink (en)">
+                description = <"*Shade between pale pink and watermelon. (en)">
+            >
+            ["at0.17"] = <
+                text = <"*Black (en)">
+                description = <"*Shade between dark grey and jet black. (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Type (en) (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"*Consistency (en) (synthesised)">
+                description = <"*The viscosity of the sputum (en) (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"Farge (synthesised)">
+                description = <"*The colour of the body fluid. (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Inspection of sputum">
+                description = <"Findings observed during the macroscopic inspection of sputum.">
+            >
+            ["at0001.1"] = <
+                text = <"Fluid name">
+                description = <"The name of the body fluid being examined.">
+                comment = <"Coding of the 'Fluid name' with a coding system is desirable, if available.">
+            >
+            ["at0.1"] = <
+                text = <"Sputum">
+                description = <"Sputum is examined.">
+            >
+            ["at0021.1"] = <
+                text = <"Blood clots">
+                description = <"Blood clots are observed within or associated with the body fluid.">
+            >
+            ["at0.2"] = <
+                text = <"Consistency">
+                description = <"The viscosity of the sputum.">
+            >
+            ["at0.3"] = <
+                text = <"Thin">
+                description = <"Low viscosity; flowing relatively freely.">
+            >
+            ["at0.4"] = <
+                text = <"Thick">
+                description = <"Relatively firm or viscous; not flowing freely.">
+            >
+            ["at0.5"] = <
+                text = <"Appearance">
+                description = <"The appearance of the sputum.">
+            >
+            ["at0.6"] = <
+                text = <"Mucoid">
+                description = <"The sputum consists mostly of mucus.">
+            >
+            ["at0.7"] = <
+                text = <"Mucopurulent">
+                description = <"The sputum consists of both mucus and pus.">
+            >
+            ["at0.8"] = <
+                text = <"Purulent">
+                description = <"The sputum consists mostly of pus.">
+            >
+            ["at0018.1"] = <
+                text = <"Colour">
+                description = <"The colour of the body fluid.">
+                comment = <"The intent of this data element is to record either a narrative description of the colour or to select one or more codes from a value set, appropriate to the body fluid, in a template.">
+            >
+            ["at0.9"] = <
+                text = <"Clear">
+                description = <"Appears transparent.">
+            >
+            ["at0.10"] = <
+                text = <"White">
+                description = <"Pale or off white.">
+            >
+            ["at0.11"] = <
+                text = <"Grey">
+                description = <"Shade between white and charcoal, like ash.">
+            >
+            ["at0.12"] = <
+                text = <"Yellow">
+                description = <"Shade between cream and mustard.">
+            >
+            ["at0.13"] = <
+                text = <"Green">
+                description = <"Shade between pale honeydew and olive.">
+            >
+            ["at0.14"] = <
+                text = <"Rust">
+                description = <"Shade between red and brown.">
+            >
+            ["at0.15"] = <
+                text = <"Brown">
+                description = <"Shade between light tan and chocolate.">
+            >
+            ["at0.16"] = <
+                text = <"Pink">
+                description = <"Shade between pale pink and watermelon.">
+            >
+            ["at0.17"] = <
+                text = <"Black">
+                description = <"Shade between dark grey and jet black.">
+            >
+            ["ac0.9000"] = <
+                text = <"Appearance (synthesised)">
+                description = <"The appearance of the sputum. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Consistency (synthesised)">
+                description = <"The viscosity of the sputum. (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"Colour (synthesised)">
+                description = <"The colour of the body fluid. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.6", "at0.7", "at0.8">
+        >
+        ["ac0.9001"] = <
+            id = <"ac0.9001">
+            members = <"at0.3", "at0.4">
+        >
+        ["ac0.9002"] = <
+            id = <"ac0.9002">
+            members = <"at0.9", "at0.10", "at0.11", "at0.12", "at0.13", "at0.14", "at0.15", "at0.16", "at0.17">
+        >
+    >

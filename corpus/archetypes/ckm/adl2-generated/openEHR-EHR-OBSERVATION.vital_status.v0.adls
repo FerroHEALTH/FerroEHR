@@ -1,0 +1,113 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=8af8d91c-6ed1-4f4f-b1c3-9715e915cfb3; build_uid=f89140e0-d746-48d1-ab20-629a6beba148)
+    openEHR-EHR-OBSERVATION.vital_status.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-09-20">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"CCA3A00DE23504D6BC6B9A602A8185EB">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record whether an individual is alive or dead at a specified point in time.">
+            keywords = <"alive", "dead", "deceased", "living", "vital", "status">
+            use = <"Use to record whether an individual is alive or dead at a specified point in time.">
+            misuse = <"Not to be used to record details about the death of an individual - use EVALUATION.death_summary or EVALUATION.cause_of_death for this purpose.">
+            copyright = <"© openEHR Foundation, Ministry of Health and Wellness Jamaica">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] occurrences matches {1..*} matches {    -- Vital status
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Any point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Vital status
+                                        value matches {
+                                            DV_CODED_TEXT[at9001] matches {
+                                                defining_code matches {[ac9000]}    -- Vital status (synthesised)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0007] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0008] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Vital status">
+                description = <"Status of an individual as alive or dead.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time event">
+                description = <"Default, unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Vital status">
+                description = <"Whether an individual is alive or dead.">
+                comment = <"Usually only relevant at a specified point in time. For example: record as alive or dead at the time of recording information within a disease registry.">
+            >
+            ["at0005"] = <
+                text = <"Alive">
+                description = <"The individual is not dead.">
+            >
+            ["at0006"] = <
+                text = <"Dead">
+                description = <"The individual is no longer alive.">
+            >
+            ["at0008"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0009"] = <
+                text = <"Unknown">
+                description = <"It is unknown if the individual is alive or dead.">
+            >
+            ["ac9000"] = <
+                text = <"Vital status (synthesised)">
+                description = <"Whether an individual is alive or dead. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0005", "at0006", "at0009">
+        >
+    >

@@ -1,0 +1,510 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=2ba05447-b01d-4a7e-b891-787e71093252; build_uid=0f9accd7-cc76-4dcd-bcfb-56d69c797828)
+    openEHR-EHR-OBSERVATION.karnofsky_performance_status_scale.v1.0.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["pt"] = <
+            language = <[ISO_639-1::pt]>
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand, Liv Laugen, Kanika Kuwelker, Vebjørn Arntzen">
+                ["organisation"] = <"Helse Vest IKT, Oslo University Hospital, Helse Bergen">
+                ["email"] = <"john.tore.valand@helse-vest-ikt.no, kanika.kuwelker@helse-vest-ikt.no, varntzen@ous-hf.no">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Joost Holslag">
+                ["organisation"] = <"Nedap">
+                ["email"] = <"joost.holslag@nedap.com">
+            >
+            accreditation = <"MD">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Henry Lenzi">
+        ["email"] = <"hank.lenzi@gmail.com">
+        ["date"] = <"2019-06-08">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Nuno Abreu, Oporto Hospital Center, Portugal", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Astrid Askeland, Dips AS, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Kashmira Bhake, Karkinos Healthcare, India", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Samanta Dallagnese, Prontmed, Brazil", "Are Edvardsen, SKDE, Helse Nord RHF, Norway", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (openEHR Editor)", "Joost Holslag, Nedap, Netherlands", "Evelyn Hovenga, EJSH Consulting, Australia", "Anjali Kulkarni, Karkinos, India", "Kanika Kuwelker, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Siri Laronningen, Kreftregisteret, Norway", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Syeeda S Farruque, Cambio Healthcare Systems", "Alexandra Saraiva Leao, Sweden", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Ina Wille, Helse-Vest RHF, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Abernethy AP, Shelby-James T, Fazekas BS, Woods D, Currow DC. The Australia-modified Karnofsky Performance Status (AKPS) scale: a revised scale for contemporary palliative care clinical practice [ISRCTN81117481]. BMC Palliat Care. 2005 Nov 12;4:7. doi: 10.1186/1472-684X-4-7. PMID: 16283937; PMCID: PMC1308820. Available from: https://bmcpalliatcare.biomedcentral.com/articles/10.1186/1472-684X-4-7.">
+        ["2"] = <"ECOG-ACRIN Cancer Research Group [Internet]. Philadelphia: ECOG-ACRIN Cancer Research Group; 2022. ECOG Performance Status Scale; [cited 2022 Jun 03]. Available from: https://ecog-acrin.org/resources/ecog-performance-status/#.">
+        ["3"] = <"Helsedirektoratet. Nasjonalt handlingsprogram for palliasjon i kreftomsorgen. 2019. Available from: https://www.helsedirektoratet.no/retningslinjer/palliasjon-i-kreftomsorgen-handlingsprogram/.">
+        ["4"] = <"Karnofsky DA, Burchenal JH. The clinical evaluation of chemotherapeutic agents in cancer. In: MacLeod CM, ed. Evaluation of Chemotherapeutic Agents. New York, Columbia University Press, 1949.">
+        ["5"] = <"Oncoline [Online]. Integraal Kankercentrum Nederland. Appendix 1 - Karnofsky/ECOG Performance Status. [cited 2022 Jun 05]. Available from: https://www.oncoline.nl/uploaded/docs/Depressie/Bijlage%20Karnofsky.pdf.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"C5295942ACCCC02840EFBECAA609187A">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Um den Karnofsky-Index darzustellen. Im Original Karnofsky Performance Status Scale (KPS).">
+            keywords = <"KPS", "Bewertung", "funktionell", "Leistung", "Onkologie", "Krebs", "Karnofsky", "Status", "Qualität", "Skala", "Score", "Index">
+            use = <"Der Archetyp wird verwendet, um das Ergebnis einer Bewertung nach Karnofsky-Performance Status (KPS)-Skala darzustellen.
+
+Obwohl in diesem Archetyp auf die Originalarbeit von Karnofsky et al. aus dem Jahr 1949 verwiesen wird, war es nicht möglich, eine Nachbildung zu erhalten, um den ursprünglichen Inhalt sicherzustellen. Dieser Archetyp wurde jedoch so konzipiert, dass er eher die praktische Verwendung den Karnofsky-Index als ein akademisches Konstrukt widerspiegelt, und der aktuelle Wortlaut spiegelt Beschreibungen wider, die in den anderen Referenzen allgemein verwendet werden.">
+            misuse = <"Darf nicht verwendet werden, um Variationen der Karnofsky-Performance Status-Skala darzustellen, wie z. B. der Thorne-modified Karnofsky-Performance Status (TKPS) oder der Australian-modified Karnofsky-Performance Status (AKPS). Verwenden Sie dazu zweckspezifische Archetypen.">
+        >
+        ["pt"] = <
+            language = <[ISO_639-1::pt]>
+            purpose = <"*To record the result of a Karnofsky Performance Status (KPS) scale assessment. (en)">
+            keywords = <"*KPS (en)", "*assessment (en)", "*functional (en)", "*performance (en)", "*oncology (en)", "*cancer (en)", "*Karnofsky (en)", "*status (en)", "*quality (en)", "*score (en)", "*index (en)">
+            use = <"*Use to record the result of a Karnofsky Performance Status (KPS) scale assessment.
+
+While the original 1949 paper by Karnofsky et al is referenced in this archetype, it has not been possible to obtain a copy to verify the original content. However, this archetype has been designed to reflect the practical use of Karnofsky Performance Status scale rather than an academic construct, and and the current wording reflects descriptions found in common use within the other references. (en)">
+            misuse = <"*Not to be used to record variations of the KPS scale, such as the Thorne-modified Karnofsky (TKPS) or the Australia-modified Karnofsky (AKPS). Use purpose-specific archetypes for this purpose. (en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere resultatet av Karnofsky Performance Status (KPS) scale.">
+            keywords = <"KPS", "vurdering", "funksjonell", "funksjon", "onkologi", "kreft", "Karnofsky", "status", "ytelse", "aktivitet", "palliativ", "skår", "indeks">
+            use = <"Brukes til å registrere resultatet av Karnofsky Performance Status (KPS) scale.
+
+Selv om den originale artikkelen av Karnofsky et al fra 1949 er referert i denne arketypen, har det ikke vært mulig å finne en kopi av originalartikkelen for å verifisere innholdet opp mot den. Denne arketypen har derfor blitt utarbeidet for å reflektere den praktiske bruken av Karnofsky Performance Status scale, i stedet for å være en ren akademisk konstruksjon. Ordlyden er derfor basert på beskrivelser som er funnet i de andre referansene og som er i praktisk bruk.">
+            misuse = <"Brukes ikke til å registrere variasjoner av KPS skala, slik som Thorne-modifisert Karnofsky (TKPS) eller Australia-modifisert Karnofsky (AKPS). Bruk formålsspesifikke arketyper til dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the result of a Karnofsky Performance Status (KPS) scale assessment.">
+            keywords = <"KPS", "assessment", "functional", "performance", "oncology", "cancer", "Karnofsky", "status", "quality", "score", "index">
+            use = <"Use to record the result of a Karnofsky Performance Status (KPS) scale assessment.
+
+While the original 1949 paper by Karnofsky et al is referenced in this archetype, it has not been possible to obtain a copy to verify the original content. However, this archetype has been designed to reflect the practical use of Karnofsky Performance Status scale rather than an academic construct and the current wording reflects descriptions found in common use within the other references.">
+            misuse = <"Not to be used to record variations of the KPS scale, such as the Thorne-modified Karnofsky (TKPS) or the Australia-modified Karnofsky (AKPS). Use purpose-specific archetypes for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"Voor het vastleggen van het resultaat van een Karnofsky Performance Status (KPS) schaal meting.">
+            keywords = <"KPS", "Meetinstrument", "Functioneel", "Prestatie", "Oncologie", "Kanker", "Karnofsky", "Status", "Kwaliteit", "Score", "Index">
+            use = <"Gebruik voor het vastleggen voor de uitslag van een Karnofsky Performace Status (KPS) schaal meting. 
+
+Hoewel de originele publicatie van Karnofsky er al. uit 1949 als referentie is opgegeven in dit archetype, bleek het niet mogelijk dit origineel te verkrijgen ter verificatie van de originele inhoud. Echter is dit archetype ontwikkeld voor het praktisch gebruik van de KPS in plaats van een academische bron te zijn en de huidige verwoording geeft de beschrijvingen weer zoals gevonden in de andere referenties.">
+            misuse = <"Niet te gebruiken voor het vastleggen van variaties op de KPS schaal, zoals de Thorne-modified Karnofosky (TKPS) of de Australië aangepaste Karnofsky (AKPS). Gebruik archetypes die speciaal daarvoor ontwikkeld zijn.">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Karnofsky Performance Status (KPS) scale
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {1} matches {    -- Karnofsky performance status
+                                        value matches {
+                                            DV_ORDINAL[at9001] matches {
+                                                [value, symbol] matches {
+                                                    [{100}, {[at0015]}],    -- Normal; no complaints; no evidence of disease
+                                                    [{90}, {[at0014]}],    -- Able to carry on normal activity; minor signs or symptoms of disease
+                                                    [{80}, {[at0013]}],    -- Normal activity with effort; some signs or symptoms of disease
+                                                    [{70}, {[at0012]}],    -- Cares for self; unable to carry on normal activity or to do active work
+                                                    [{60}, {[at0011]}],    -- Requires occasional assistance, but is able to care for most of his personal needs
+                                                    [{50}, {[at0010]}],    -- Requires considerable assistance and frequent medical care
+                                                    [{40}, {[at0009]}],    -- Disabled; requires special care and assistance
+                                                    [{30}, {[at0008]}],    -- Severely disabled; hospital admission is indicated although death not imminent
+                                                    [{20}, {[at0007]}],    -- Very sick; hospital admission necessary; active supportive treatment necessary
+                                                    [{10}, {[at0006]}],    -- Moribund; fatal processes progressing rapidly.
+                                                    [{0}, {[at0005]}]    -- Dead
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0016] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0017] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Karnofsky-Performance Status (KPS-Skala)">
+                description = <"Eine Bewertungsskala zur Quantifizierung der funktionellen Leistungsfähigkeit einer Person.">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardwert, ein undefinierter Zeitpunkt, der explizit im Template oder zur Laufzeit der Anwendung definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Karnofsky-Performance Status">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Tot">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Sterbend; fatale Prozesse, die schnell voranschreiten">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Schwerkrank; stationäre Aufnahme erforderlich; aktive supportive Behandlung notwendig">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Schwerbehindert; stationäre Aufnahme ist angezeigt, obwohl der Tod nicht unmittelbar bevorsteht">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Behindert; erfordert qualifizierte Pflege und Hilfe">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Benötigt beträchtliche Unterstützung und häufige medizinische Versorgung">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Benötigt gelegentlich fremde Hilfe, ist aber in der Lage, sich um die meisten seiner persönlichen Bedürfnisse zu kümmern">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Selbstversorgend; unfähig, einer normalen Tätigkeit nachzugehen oder aktiv zu arbeiten">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Normale Aktivität mit Anstrengung; einige Anzeichen oder Symptome der Krankheit">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"In der Lage, normale Aktivitäten fortzusetzen; geringe Anzeichen oder Symptome einer Krankheit">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Normalzustand; weder Beschwerden noch Symptome sind vorhanden">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen, die zur Erfassung lokaler Inhalte oder zur Anpassung an andere Referenzmodelle/Formalismen erforderlich sind.">
+                comment = <"Zum Beispiel: Lokale Informationsanforderungen oder zusätzliche Metadaten, um Verknüpfungen mit FHIR herzustellen.">
+            >
+            ["ac9001"] = <
+                text = <"Karnofsky-Performance Status (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["pt"] = <
+            ["at0000"] = <
+                text = <"*Karnofsky Performance Status (KPS) scale (en)">
+                description = <"*An assessment scale used to quantify functional capacity in an individual. (en)">
+            >
+            ["at0002"] = <
+                text = <"Qualquer evento pontual">
+                description = <"*Default, unspecified point in time event which may be explicitly defined in a template or at run-time. (en-au)">
+            >
+            ["at0004"] = <
+                text = <"Status de desempenho">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"Morto">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"Moribundo, processo fatal progredindo rapidamente">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Incapacitado, necessita de cuidados especiais e assitência">
+                description = <"*">
+            >
+            ["at0008"] = <
+                text = <"Gravemente incapacitado, hospitalização indicada embora morte não seja iminente">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"Hospitalização necessária, muito doente, necessário tratamento ativo de suporte">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Requer assistência considerável e cuidados médicos frequentes">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"Requer assistência ociasional, mas é capa de cuidar da maioria de suas necessidades">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"uida de si, incapaz para atividades normais ou trabalho ativo">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"Atividade normal com esforço, alguns sinais ou sintomas de doença">
+                description = <"*">
+            >
+            ["at0014"] = <
+                text = <"Capaz de conduzir atividades normais, sinais ou sintomas menores de doença">
+                description = <"*">
+            >
+            ["at0015"] = <
+                text = <"Normal, sem queixas ou evidência de doença">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"Extension">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["ac9001"] = <
+                text = <"Status de desempenho (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Karnofsky Performance Status (KPS) scale">
+                description = <"En vurderingsskala for å beskrive funksjonsnivå/status hos et individ.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert tidspunkthendelse">
+                description = <"Standard, uspesifisert tidspunkt som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Karnofsky performance status">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Død.">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Moribund, dødsprosessen er i sterk frammarsj.">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Svært syk, hospitalisering og understøttende behandling nødvendig.">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Helt ufør, hospitalisering nødvendig, men fare for død er ikke overhengende.">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Ufør, trenger spesiell hjelp og omsorg.">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Trenger betydelig hjelp og stadig medisinsk omsorg.">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Trenger noe hjelp, men klarer stort sett å tilfredsstille egne behov.">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Klarer seg selv, ute av stand til normal aktivitet eller aktivt arbeid.">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Klarer med nød normal aktivitet. Sykdommen gir en del symptomer.">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Klarer normal aktivitet, sykdommen gir lite symptomer.">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Normal, ingen plager eller subjektive tegn på sykdom.">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["ac9001"] = <
+                text = <"Karnofsky performance status (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Karnofsky Performance Status (KPS) scale">
+                description = <"An assessment scale used to quantify functional capacity in an individual.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time event">
+                description = <"Default, unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Karnofsky performance status">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Dead">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Moribund; fatal processes progressing rapidly.">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Very sick; hospital admission necessary; active supportive treatment necessary">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Severely disabled; hospital admission is indicated although death not imminent">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Disabled; requires special care and assistance">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Requires considerable assistance and frequent medical care">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Requires occasional assistance, but is able to care for most of his personal needs">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Cares for self; unable to carry on normal activity or to do active work">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Normal activity with effort; some signs or symptoms of disease">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Able to carry on normal activity; minor signs or symptoms of disease">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Normal; no complaints; no evidence of disease">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9001"] = <
+                text = <"Karnofsky performance status (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["nl"] = <
+            ["at0000"] = <
+                text = <"Karnofsky Performance Status (KPS) score">
+                description = <"Een meetinstrument gebruikt om functionele mogelijkheden van een individu te kwantificeren.">
+            >
+            ["at0002"] = <
+                text = <"Willekeurig moment in de tijd">
+                description = <"Standaard, ongespecificeerd moment in de tijd dat expliciet gedefinieerd kan worden in een template of tijdens het vastleggen van de data.">
+            >
+            ["at0004"] = <
+                text = <"Karnofsky Performance Status">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Overleden">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Moribund">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Ernstig ziek; opname in ziekenhuis is noodzakelijk; actieve ondersteuning vereist">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Geheel bedlegerig; heeft totale verzorging nodig; opname in ziekenhuis geïndiceerd; fatale afloop dreigt nog niet">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Grotendeels bedlegerig; heeft zorg en hulp nodig">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Heeft veel hulp en frequente medische zorg nodig">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Heeft af en toe hulp nodig, maar is in staat grotendeels voor zichzelf te zorgen">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"In staat voor zichzelf te zorgen; onmogelijk om normale activiteiten te verrichten of om te werken">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Met inspanning tot normale activiteit in staat">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"In staat tot normale activiteit; minimale verschijnselen van de ziekte">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Geen klachten, geen ziekteverschijnselen">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Uitbreiding">
+                description = <"Extra informatie benodigd voor het uitbreiden van het model met lokale informatie of voor het in lijn brengen met andere referentiemodellen of formalismen. 
+">
+                comment = <"Bijvoorbeeld: lokale informatie eisen of extra metadata om in lijn te brengen met FHIR.">
+            >
+            ["ac9001"] = <
+                text = <"Karnofsky Performance Status (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0000"] = <http://snomed.info/id/273546003>
+            ["at0004"] = <http://snomed.info/id/761869008>
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0015", "at0014", "at0013", "at0012", "at0011", "at0010", "at0009", "at0008", "at0007", "at0006", "at0005">
+        >
+    >

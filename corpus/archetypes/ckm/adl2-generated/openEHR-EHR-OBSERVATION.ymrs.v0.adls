@@ -1,0 +1,973 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=792bcb5d-08be-4d89-a5c7-16f1cff9685d; build_uid=205153bc-efb5-44c4-8b3b-322ffd831760)
+    openEHR-EHR-OBSERVATION.ymrs.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Dennis Forslund">
+                ["organisation"] = <"Cambio Healthcare Systems">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Dennis Forslund">
+        ["organisation"] = <"Cambio Healthcare Systems">
+        ["email"] = <"models@cambiocds.com">
+        ["date"] = <"2016-12-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Atomica Informatics, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Young RC, Biggs JT, Ziegler VE, Meyer DA. A rating scale for mania: reliability, validity and sensitivity. Br J Psychiatry. 1978 Nov;133:429-35. PubMed PMID: 728692.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"896357B7F869A6CEB7ADA1C2F6A0D786">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att uppskatta och registrera allvarlighetsgrad av manisk episod.">
+            keywords = <"YMRS", "Young Mania Rating Scale", "DSM", "mani", "hypomani", "psykiatri">
+            use = <"Använd för att uppskatta och registrera allvarlighetsgrad av manisk episod.
+
+Young Mania Rating Scale (YMRS) används för att uppskatta allvarlighetsgrad av manisk episod. Formuläret består av elva frågor och klinikern värderar patientens svar på en skala. Varje svar bidrar med poäng till totala summan vilken uppgår till maximalt 60p.
+
+- Förhöjt stämningsläge
+- Ökad motorisk aktivitet
+- Sexuellt intresse
+- Sömn
+- Irritabilitet
+- Tal (flöde och mängd)
+- Språk-/och tankestörning
+- Tankeinnehåll
+- Aggressivitet
+- Yttre
+- Insikt
+
+Tolkning av resultat:
+14-19 poäng indikerar hypomani
+20-30 poäng indikerar medelsvår mani
+>30 poäng indikerar svår mani">
+            misuse = <"">
+            copyright = <"© Cambio Healthcare Systems, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To assess and record the severity of a manic episode.">
+            keywords = <"YMRS", "Young Mania Rating Scale", "mania", "hypomania", "DSM", "psychiatry">
+            use = <"Use as a tool to assess and record the severity of a manic episode.
+
+The questionnaire consists of eleven items which the clinician rates based on the assessment of the patients current condition during the course of the interview. Each contributes points to the total score which ranges from 0-60. 
+
+- Elevated mood
+- Increased motor activity-energy
+- Sexual interest
+- Sleep
+- Irritability
+- Speech (rate and amount)
+- Language-thought disorder
+- Content
+- Disruptive-aggressive behaviour
+- Appearance
+- Insight
+
+Score interpretation:
+14-19 points indicate hypomania
+20-30 points indicate moderate mania
+>30 points indicate severe mania.">
+            misuse = <"">
+            copyright = <"© Cambio Healthcare Systems, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Young Mania Rating Scale (YMRS)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Elevated mood
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0016]}],    -- Absent
+                                                    [{1}, {[at0017]}],    -- Mildly or possibly increased on questioning
+                                                    [{2}, {[at0018]}],    -- Definite subjective elevation; optimistic, self-confident; cheerful; appropriate to content
+                                                    [{3}, {[at0019]}],    -- Elevated, inappropriate to content; humorous
+                                                    [{4}, {[at0020]}]    -- Euphoric; inappropriate laughter; singing
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Increased motor activity-energy
+                                        value matches {
+                                            DV_ORDINAL[at9012] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0021]}],    -- Absent
+                                                    [{1}, {[at0022]}],    -- Subjectively increased
+                                                    [{2}, {[at0023]}],    -- Animated; gestures increased
+                                                    [{3}, {[at0024]}],    -- Excessive energy; hyperactive at times; restless (can be calmed)
+                                                    [{4}, {[at0025]}]    -- Motor excitement; continuous hyperactivity (cannot be calmed)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Sexual interest
+                                        value matches {
+                                            DV_ORDINAL[at9013] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0026]}],    -- Normal; not increased
+                                                    [{1}, {[at0027]}],    -- Mildly or possibly increased
+                                                    [{2}, {[at0028]}],    -- Definite subjective increase on questioning
+                                                    [{3}, {[at0029]}],    -- Spontaneous sexual content; elaborates on sexual matters; hypersexual by self-report
+                                                    [{4}, {[at0030]}]    -- Overt sexual acts (toward patients, staff or interviewer)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Sleep
+                                        value matches {
+                                            DV_ORDINAL[at9014] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0031]}],    -- Reports no decrease in sleep
+                                                    [{1}, {[at0032]}],    -- Sleeping less than normal amount by up to one hour
+                                                    [{2}, {[at0033]}],    -- Sleeping less than normal by more than one hour
+                                                    [{3}, {[at0034]}],    -- Reports decreased need for sleep
+                                                    [{4}, {[at0035]}]    -- Denies need for sleep
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Irritability
+                                        value matches {
+                                            DV_ORDINAL[at9015] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0036]}],    -- Absent
+                                                    [{2}, {[at0037]}],    -- Subjectively increased
+                                                    [{4}, {[at0038]}],    -- Irritable at times during interview; recent episodes of anges or annoyance on ward
+                                                    [{6}, {[at0039]}],    -- Frequently irritable during interview; short, curt throughout
+                                                    [{8}, {[at0040]}]    -- Hostile, unco-operative; interview impossible
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Speech (rate and amount)
+                                        value matches {
+                                            DV_ORDINAL[at9016] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0041]}],    -- No increase
+                                                    [{2}, {[at0042]}],    -- Feels talkative
+                                                    [{4}, {[at0043]}],    -- Increased rate or amount at times, verbose at times
+                                                    [{6}, {[at0044]}],    -- Push; consistently increased rate and amount; difficult to interrupt
+                                                    [{8}, {[at0045]}]    -- Pressured; uninterruptible, continuous speech
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Language - thought disorder
+                                        value matches {
+                                            DV_ORDINAL[at9017] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0046]}],    -- Absent
+                                                    [{1}, {[at0047]}],    -- Circumstantial; mild distractibility; quick thoughts
+                                                    [{2}, {[at0048]}],    -- Distractible; loses goal of thought; changes topics frequently; racing thoughts
+                                                    [{3}, {[at0049]}],    -- Flight of ideas; tangentiality; difficult to follow; rhyming, echolalia
+                                                    [{4}, {[at0050]}]    -- Incoherent; communication impossible
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Content
+                                        value matches {
+                                            DV_ORDINAL[at9018] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0051]}],    -- Normal
+                                                    [{2}, {[at0052]}],    -- Questionable plans, new interests
+                                                    [{4}, {[at0053]}],    -- Special project(s); hyperreligous
+                                                    [{6}, {[at0054]}],    -- Grandiose or paranoid ideas; ideas of reference
+                                                    [{8}, {[at0055]}]    -- Delusions; hallucinations
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Disruptive-aggressive behaviour
+                                        value matches {
+                                            DV_ORDINAL[at9019] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0056]}],    -- Absent
+                                                    [{2}, {[at0057]}],    -- Sarcastic; loud at times, guarded
+                                                    [{4}, {[at0058]}],    -- Demanding; threats on ward
+                                                    [{6}, {[at0059]}],    -- Threatens interviewer; shouting; interview difficult
+                                                    [{8}, {[at0060]}]    -- Assaultive; destructive; interview impossible
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Appearance
+                                        value matches {
+                                            DV_ORDINAL[at9020] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0061]}],    -- Appropriate dress and grooming
+                                                    [{1}, {[at0062]}],    -- Minimally unkempt
+                                                    [{2}, {[at0063]}],    -- Poorly groomed; moderately dishevelled; overdressed
+                                                    [{3}, {[at0064]}],    -- Dishevelled; partly clothed; garish make-up
+                                                    [{4}, {[at0065]}]    -- Completely unkempt; decorated; bizarre garb
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Insight
+                                        value matches {
+                                            DV_ORDINAL[at9021] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0066]}],    -- Present; admits illness; agrees with need for treatment
+                                                    [{1}, {[at0067]}],    -- Possibly ill
+                                                    [{2}, {[at0068]}],    -- Admits behaviour change, but denies illness
+                                                    [{3}, {[at0069]}],    -- Admits possible change in behaviour, but denies illness
+                                                    [{4}, {[at0070]}]    -- Denies any behaviour change
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9022] matches {
+                                                magnitude matches {|0..60|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0071] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0072] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Young Mania Rating Scale">
+                description = <"Young Mania Rating Scale (YMRS) används för att uppskatta allvarlighetsgrad av manisk episod. Formuläret består av elva frågor och klinikern värderar patientens svar på en skala. ">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"**(en)">
+            >
+            ["at0004"] = <
+                text = <"Förhöjt stämningsläge">
+                description = <"**(en)">
+            >
+            ["at0005"] = <
+                text = <"Ökad motorisk aktivitet">
+                description = <"**(en)">
+            >
+            ["at0006"] = <
+                text = <"Sexuellt intresse">
+                description = <"**(en)">
+            >
+            ["at0007"] = <
+                text = <"Sömn">
+                description = <"**(en)">
+            >
+            ["at0008"] = <
+                text = <"Irritabilitet">
+                description = <"**(en)">
+            >
+            ["at0009"] = <
+                text = <"Tal (flöde och mängd)">
+                description = <"**(en)">
+            >
+            ["at0010"] = <
+                text = <"Språk-/tankestörning">
+                description = <"**(en)">
+            >
+            ["at0011"] = <
+                text = <"Tankeinnehåll">
+                description = <"**(en)">
+            >
+            ["at0012"] = <
+                text = <"Aggressivitet">
+                description = <"**(en)">
+            >
+            ["at0013"] = <
+                text = <"Yttre">
+                description = <"**(en)">
+            >
+            ["at0014"] = <
+                text = <"Insikt">
+                description = <"**(en)">
+            >
+            ["at0015"] = <
+                text = <"Total poäng">
+                description = <"Summan av samtliga faktorer">
+            >
+            ["at0016"] = <
+                text = <"Ej förhöjt">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"Lätt förhöjt, ibland noterbart först på fråga">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"Subjektivt förhöjt, spontant; optimistisk, självsäker; entusiastisk; adekvat tankeinnehåll">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"Förhöjt, inadekvat tankeinnehåll; skämtsam">
+                description = <"*">
+            >
+            ["at0020"] = <
+                text = <"Euforisk; olämpliga skratt; glatt sjungande">
+                description = <"*">
+            >
+            ["at0021"] = <
+                text = <"Ej ökat">
+                description = <"*">
+            >
+            ["at0022"] = <
+                text = <"Subjektivt ökad">
+                description = <"*">
+            >
+            ["at0023"] = <
+                text = <"Animerad; ökat kroppspråk">
+                description = <"*">
+            >
+            ["at0024"] = <
+                text = <"Överskottsenergi; hyperaktiv; rastlös men avledbar">
+                description = <"*">
+            >
+            ["at0025"] = <
+                text = <"Kontinuerlig hyperaktivitet, ej avledbar">
+                description = <"*">
+            >
+            ["at0026"] = <
+                text = <"Normalt; ej ökat">
+                description = <"*">
+            >
+            ["at0027"] = <
+                text = <"Lätt ökat">
+                description = <"*">
+            >
+            ["at0028"] = <
+                text = <"Subjektivt ökad på fråga">
+                description = <"*">
+            >
+            ["at0029"] = <
+                text = <"Tankar med sexuellt innehåll framkommer spontant; förhöjt självrapporterat intresse ">
+                description = <"*">
+            >
+            ["at0030"] = <
+                text = <"Öppet sexuellt beteende (gentemot andra patienter, personal eller administrerande kliniker)">
+                description = <"*">
+            >
+            ["at0031"] = <
+                text = <"Rapporterar ej minskad sömn">
+                description = <"*">
+            >
+            ["at0032"] = <
+                text = <"Sover upp till en timme mindre än normalt">
+                description = <"*">
+            >
+            ["at0033"] = <
+                text = <"Sover mer än en timme mindre än normalt ">
+                description = <"*">
+            >
+            ["at0034"] = <
+                text = <"Uppger minskat sömnbehov">
+                description = <"*">
+            >
+            ["at0035"] = <
+                text = <"Uppger avsaknad av sömnbehov">
+                description = <"*">
+            >
+            ["at0036"] = <
+                text = <"Ej irritabel">
+                description = <"*(en)">
+            >
+            ["at0037"] = <
+                text = <"Subjektivt ökad">
+                description = <"*(en)">
+            >
+            ["at0038"] = <
+                text = <"Irritabel ibland under samtalet; nyligen haft återkommande episoder av ilska eller irritabilitet">
+                description = <"*(en)">
+            >
+            ["at0039"] = <
+                text = <"Ofta irritabel under samtalet; kortfattad och tvär">
+                description = <"*(en)">
+            >
+            ["at0040"] = <
+                text = <"Fientlig, ej samarbetsvillig; omöjligt genomföra samtal">
+                description = <"*(en)">
+            >
+            ["at0041"] = <
+                text = <"Ej påverkat">
+                description = <"*">
+            >
+            ["at0042"] = <
+                text = <"Känner sig pratsam">
+                description = <"*">
+            >
+            ["at0043"] = <
+                text = <"Ökad talhastighet eller -flöde; omständliga formuleringar">
+                description = <"*">
+            >
+            ["at0044"] = <
+                text = <"Talar näst intill konstant; svår att avbryta">
+                description = <"*">
+            >
+            ["at0045"] = <
+                text = <"Forcerat tal; talar konstant; omöjlig att avbryta">
+                description = <"*">
+            >
+            ["at0046"] = <
+                text = <"Ingen störning">
+                description = <"*">
+            >
+            ["at0047"] = <
+                text = <"Omständlig; något lättdistraherad; snabba tankar">
+                description = <"*">
+            >
+            ["at0048"] = <
+                text = <"Lättdistraherad; tappar tanketråd; byter ofta ämne; uppvarvad tankegång">
+                description = <"*">
+            >
+            ["at0049"] = <
+                text = <"Tankeflykt; irrelevanta svar; svårt att följa tanketråd; ekolali">
+                description = <"*">
+            >
+            ["at0050"] = <
+                text = <"Osammanhängande; kommunikation ej möjlig">
+                description = <"*">
+            >
+            ["at0051"] = <
+                text = <"Normalt">
+                description = <"*">
+            >
+            ["at0052"] = <
+                text = <"Tveksamma planer; nya intressen">
+                description = <"*">
+            >
+            ["at0053"] = <
+                text = <"Speciella projekt; hyperreligiös">
+                description = <"*">
+            >
+            ["at0054"] = <
+                text = <"Grandiosa eller paranoida föreställningar; hänsyftningsidéer">
+                description = <"*">
+            >
+            ["at0055"] = <
+                text = <"Vanföreställningar; hallucinationer">
+                description = <"*">
+            >
+            ["at0056"] = <
+                text = <"Uppvisar inte aggressivt beteende">
+                description = <"*">
+            >
+            ["at0057"] = <
+                text = <"Sarkastisk; högljudd ibland; på sin vakt">
+                description = <"*">
+            >
+            ["at0058"] = <
+                text = <"Krävande; hotfull">
+                description = <"*">
+            >
+            ["at0059"] = <
+                text = <"Hotar intervjuaren; skriker; svårt genomföra samtalet">
+                description = <"*">
+            >
+            ["at0060"] = <
+                text = <"Går till fysiskt angrepp; destruktivt beteende; ej möjligt genomföra samtal">
+                description = <"*">
+            >
+            ["at0061"] = <
+                text = <"Adekvat, vårdat yttre">
+                description = <"*">
+            >
+            ["at0062"] = <
+                text = <"Minimalt ovårdad">
+                description = <"*">
+            >
+            ["at0063"] = <
+                text = <"Påtagligt ovårdad; ovårdad eller slarvigt klädd">
+                description = <"*">
+            >
+            ["at0064"] = <
+                text = <"Vanvårdad; delvis oklädd; uppseendeväckande smink">
+                description = <"*">
+            >
+            ["at0065"] = <
+                text = <"Svårt vanvårdad; bisarr klädsel, smink">
+                description = <"*">
+            >
+            ["at0066"] = <
+                text = <"Insiktsfull; medger sjukdom och behov av behandling">
+                description = <"*">
+            >
+            ["at0067"] = <
+                text = <"Medger möjlig sjukdom">
+                description = <"*">
+            >
+            ["at0068"] = <
+                text = <"Medger beteendeförändring men ej sjukdom">
+                description = <"*">
+            >
+            ["at0069"] = <
+                text = <"Medger möjlig beteendeförändring men ej sjukdom">
+                description = <"*">
+            >
+            ["at0070"] = <
+                text = <"Saknar helt insikt; förnekar beteendeförändring">
+                description = <"*">
+            >
+            ["at0072"] = <
+                text = <"*CLUSTER(en)">
+                description = <"**(en)">
+            >
+            ["ac9022"] = <
+                text = <"Förhöjt stämningsläge (synthesised)">
+                description = <"**(en) (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Ökad motorisk aktivitet (synthesised)">
+                description = <"**(en) (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"Sexuellt intresse (synthesised)">
+                description = <"**(en) (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"Sömn (synthesised)">
+                description = <"**(en) (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"Irritabilitet (synthesised)">
+                description = <"**(en) (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Tal (flöde och mängd) (synthesised)">
+                description = <"**(en) (synthesised)">
+            >
+            ["ac9028"] = <
+                text = <"Språk-/tankestörning (synthesised)">
+                description = <"**(en) (synthesised)">
+            >
+            ["ac9029"] = <
+                text = <"Tankeinnehåll (synthesised)">
+                description = <"**(en) (synthesised)">
+            >
+            ["ac9030"] = <
+                text = <"Aggressivitet (synthesised)">
+                description = <"**(en) (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"Yttre (synthesised)">
+                description = <"**(en) (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"Insikt (synthesised)">
+                description = <"**(en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Young Mania Rating Scale (YMRS)">
+                description = <"Clinical interview scale to assess the severity of manic episodes.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Elevated mood">
+                description = <"*">
+            >
+            ["at0005"] = <
+                text = <"Increased motor activity-energy">
+                description = <"*">
+            >
+            ["at0006"] = <
+                text = <"Sexual interest">
+                description = <"*">
+            >
+            ["at0007"] = <
+                text = <"Sleep">
+                description = <"*">
+            >
+            ["at0008"] = <
+                text = <"Irritability">
+                description = <"*">
+            >
+            ["at0009"] = <
+                text = <"Speech (rate and amount)">
+                description = <"*">
+            >
+            ["at0010"] = <
+                text = <"Language - thought disorder">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"Content">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Disruptive-aggressive behaviour">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"Appearance">
+                description = <"*">
+            >
+            ["at0014"] = <
+                text = <"Insight">
+                description = <"*">
+            >
+            ["at0015"] = <
+                text = <"Total score">
+                description = <"The sum of each ordinal scores recorded for each of the eleven component responses.">
+            >
+            ["at0016"] = <
+                text = <"Absent">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"Mildly or possibly increased on questioning">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"Definite subjective elevation; optimistic, self-confident; cheerful; appropriate to content">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"Elevated, inappropriate to content; humorous">
+                description = <"*">
+            >
+            ["at0020"] = <
+                text = <"Euphoric; inappropriate laughter; singing">
+                description = <"*">
+            >
+            ["at0021"] = <
+                text = <"Absent">
+                description = <"*">
+            >
+            ["at0022"] = <
+                text = <"Subjectively increased">
+                description = <"*">
+            >
+            ["at0023"] = <
+                text = <"Animated; gestures increased">
+                description = <"*">
+            >
+            ["at0024"] = <
+                text = <"Excessive energy; hyperactive at times; restless (can be calmed)">
+                description = <"*">
+            >
+            ["at0025"] = <
+                text = <"Motor excitement; continuous hyperactivity (cannot be calmed)">
+                description = <"*">
+            >
+            ["at0026"] = <
+                text = <"Normal; not increased">
+                description = <"*">
+            >
+            ["at0027"] = <
+                text = <"Mildly or possibly increased">
+                description = <"*">
+            >
+            ["at0028"] = <
+                text = <"Definite subjective increase on questioning">
+                description = <"*">
+            >
+            ["at0029"] = <
+                text = <"Spontaneous sexual content; elaborates on sexual matters; hypersexual by self-report">
+                description = <"*">
+            >
+            ["at0030"] = <
+                text = <"Overt sexual acts (toward patients, staff or interviewer)">
+                description = <"*">
+            >
+            ["at0031"] = <
+                text = <"Reports no decrease in sleep">
+                description = <"*">
+            >
+            ["at0032"] = <
+                text = <"Sleeping less than normal amount by up to one hour">
+                description = <"*">
+            >
+            ["at0033"] = <
+                text = <"Sleeping less than normal by more than one hour">
+                description = <"*">
+            >
+            ["at0034"] = <
+                text = <"Reports decreased need for sleep">
+                description = <"*">
+            >
+            ["at0035"] = <
+                text = <"Denies need for sleep">
+                description = <"*">
+            >
+            ["at0036"] = <
+                text = <"Absent">
+                description = <"*">
+            >
+            ["at0037"] = <
+                text = <"Subjectively increased">
+                description = <"*">
+            >
+            ["at0038"] = <
+                text = <"Irritable at times during interview; recent episodes of anges or annoyance on ward">
+                description = <"*">
+            >
+            ["at0039"] = <
+                text = <"Frequently irritable during interview; short, curt throughout">
+                description = <"*">
+            >
+            ["at0040"] = <
+                text = <"Hostile, unco-operative; interview impossible">
+                description = <"*">
+            >
+            ["at0041"] = <
+                text = <"No increase">
+                description = <"*">
+            >
+            ["at0042"] = <
+                text = <"Feels talkative">
+                description = <"*">
+            >
+            ["at0043"] = <
+                text = <"Increased rate or amount at times, verbose at times">
+                description = <"*">
+            >
+            ["at0044"] = <
+                text = <"Push; consistently increased rate and amount; difficult to interrupt">
+                description = <"*">
+            >
+            ["at0045"] = <
+                text = <"Pressured; uninterruptible, continuous speech">
+                description = <"*">
+            >
+            ["at0046"] = <
+                text = <"Absent">
+                description = <"*">
+            >
+            ["at0047"] = <
+                text = <"Circumstantial; mild distractibility; quick thoughts">
+                description = <"*">
+            >
+            ["at0048"] = <
+                text = <"Distractible; loses goal of thought; changes topics frequently; racing thoughts">
+                description = <"*">
+            >
+            ["at0049"] = <
+                text = <"Flight of ideas; tangentiality; difficult to follow; rhyming, echolalia">
+                description = <"*">
+            >
+            ["at0050"] = <
+                text = <"Incoherent; communication impossible">
+                description = <"*">
+            >
+            ["at0051"] = <
+                text = <"Normal">
+                description = <"*">
+            >
+            ["at0052"] = <
+                text = <"Questionable plans, new interests">
+                description = <"*">
+            >
+            ["at0053"] = <
+                text = <"Special project(s); hyperreligous">
+                description = <"*">
+            >
+            ["at0054"] = <
+                text = <"Grandiose or paranoid ideas; ideas of reference">
+                description = <"*">
+            >
+            ["at0055"] = <
+                text = <"Delusions; hallucinations">
+                description = <"*">
+            >
+            ["at0056"] = <
+                text = <"Absent">
+                description = <"*">
+            >
+            ["at0057"] = <
+                text = <"Sarcastic; loud at times, guarded">
+                description = <"*">
+            >
+            ["at0058"] = <
+                text = <"Demanding; threats on ward">
+                description = <"*">
+            >
+            ["at0059"] = <
+                text = <"Threatens interviewer; shouting; interview difficult">
+                description = <"*">
+            >
+            ["at0060"] = <
+                text = <"Assaultive; destructive; interview impossible">
+                description = <"*">
+            >
+            ["at0061"] = <
+                text = <"Appropriate dress and grooming">
+                description = <"*">
+            >
+            ["at0062"] = <
+                text = <"Minimally unkempt">
+                description = <"*">
+            >
+            ["at0063"] = <
+                text = <"Poorly groomed; moderately dishevelled; overdressed">
+                description = <"*">
+            >
+            ["at0064"] = <
+                text = <"Dishevelled; partly clothed; garish make-up">
+                description = <"*">
+            >
+            ["at0065"] = <
+                text = <"Completely unkempt; decorated; bizarre garb">
+                description = <"*">
+            >
+            ["at0066"] = <
+                text = <"Present; admits illness; agrees with need for treatment">
+                description = <"*">
+            >
+            ["at0067"] = <
+                text = <"Possibly ill">
+                description = <"*">
+            >
+            ["at0068"] = <
+                text = <"Admits behaviour change, but denies illness">
+                description = <"*">
+            >
+            ["at0069"] = <
+                text = <"Admits possible change in behaviour, but denies illness">
+                description = <"*">
+            >
+            ["at0070"] = <
+                text = <"Denies any behaviour change">
+                description = <"*">
+            >
+            ["at0072"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9022"] = <
+                text = <"Elevated mood (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9023"] = <
+                text = <"Increased motor activity-energy (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9024"] = <
+                text = <"Sexual interest (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9025"] = <
+                text = <"Sleep (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9026"] = <
+                text = <"Irritability (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Speech (rate and amount) (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9028"] = <
+                text = <"Language - thought disorder (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9029"] = <
+                text = <"Content (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9030"] = <
+                text = <"Disruptive-aggressive behaviour (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"Appearance (synthesised)">
+                description = <"* (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"Insight (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9031"] = <
+            id = <"ac9031">
+            members = <"at0061", "at0062", "at0063", "at0064", "at0065">
+        >
+        ["ac9030"] = <
+            id = <"ac9030">
+            members = <"at0056", "at0057", "at0058", "at0059", "at0060">
+        >
+        ["ac9032"] = <
+            id = <"ac9032">
+            members = <"at0066", "at0067", "at0068", "at0069", "at0070">
+        >
+        ["ac9029"] = <
+            id = <"ac9029">
+            members = <"at0051", "at0052", "at0053", "at0054", "at0055">
+        >
+        ["ac9024"] = <
+            id = <"ac9024">
+            members = <"at0026", "at0027", "at0028", "at0029", "at0030">
+        >
+        ["ac9023"] = <
+            id = <"ac9023">
+            members = <"at0021", "at0022", "at0023", "at0024", "at0025">
+        >
+        ["ac9022"] = <
+            id = <"ac9022">
+            members = <"at0016", "at0017", "at0018", "at0019", "at0020">
+        >
+        ["ac9028"] = <
+            id = <"ac9028">
+            members = <"at0046", "at0047", "at0048", "at0049", "at0050">
+        >
+        ["ac9027"] = <
+            id = <"ac9027">
+            members = <"at0041", "at0042", "at0043", "at0044", "at0045">
+        >
+        ["ac9026"] = <
+            id = <"ac9026">
+            members = <"at0036", "at0037", "at0038", "at0039", "at0040">
+        >
+        ["ac9025"] = <
+            id = <"ac9025">
+            members = <"at0031", "at0032", "at0033", "at0034", "at0035">
+        >
+    >

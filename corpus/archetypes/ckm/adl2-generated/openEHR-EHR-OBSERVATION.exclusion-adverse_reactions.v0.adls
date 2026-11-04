@@ -1,0 +1,57 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=bca1d98f-ef0b-446a-a6fd-89438e3f1abe; build_uid=aaed24b8-094c-4e95-bee3-c68a29bdb4af)
+    openEHR-EHR-OBSERVATION.exclusion-adverse_reactions.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-OBSERVATION.exclusion.v0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-08-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: Eksklusjonsutsagn - overordnet, Draft archetype [Internet]. Nasjonal IKT, Nasjonal IKT Clinical Knowledge Manager [cited: 2017-03-17]. Available from: http://arketyper.no/ckm/#showArchetype_1078.36.1650">
+        ["2"] = <"Exclusion statement, Deprecated Archetype [Internet]. openEHR Foundation, openEHR Clinical Knowledge Manager [cited: 2017-02-17]. Available from: http://openehr.org/ckm/#showArchetype_1013.1.617">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"DAD6B7CB3A25B718F7CC1BA0EACE39C6">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a positive and explicit statement about exclusion of known adverse reactions.">
+            use = <"Use to enable a clinician, at a specified point of time, to record a clear and unambiguous statement about exclusion of known adverse reactions. This approach is used in preference to relying on flags or terminology to express negation. 
+
+The 'Statement' data element allows for recording of a single statement. Each exclusion should be recorded in a separate instance - for example a separate instance for a statement about medications and another for adverse reactions.
+
+Please note that exclusion statements should only be considered to be current and accurate at the time of recording, and should not be assumed to be correct at a later date. For example, it is possible (and appropriate from a medico-legal point of view) for a clinician to record, based on history-taking, that an individual has NO KNOWN history of any adverse reactions (using an exclusion statement) but a few minutes later needing to record evidence of an adverse reaction that occurred in response to administration of penicillin.">
+            misuse = <"Not to be used to record the exclusion of a specific adverse reaction - use the EVALUATION.exclusion_specific archetype for this purpose.
+
+Not to be used to record the absence of information - use the EVALUATION.absence archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000.1]    -- Exclusion of adverse reactions
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Exclusion of adverse reactions">
+                description = <"A positive and explicit statement about exclusion of known adverse reactions.">
+            >
+        >
+    >

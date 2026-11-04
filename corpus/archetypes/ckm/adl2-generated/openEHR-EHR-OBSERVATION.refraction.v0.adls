@@ -1,0 +1,412 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=098f8a46-e359-4a1d-9fec-5a5afce6dd81; build_uid=5eccc82d-3264-4cef-a11a-16418c247f2d)
+    openEHR-EHR-OBSERVATION.refraction.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Thomas Baerland">
+                ["organisation"] = <"Oslo Universitetssykehus / DIPS ASA">
+                ["email"] = <"tba@dips.no">
+            >
+            accreditation = <"?">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, UK">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"2012-07-18">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Gustavo M Bacelar-Silva, Brazil", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"Visual Acuity [Internet]. Wikipedia. Available from: http://en.wikipedia.org/wiki/Visual_acuity">
+        ["2"] = <"Aylward W [Internet].Coding Visual Acuity, openEyes Project;2012.Available from http://www.openeyes.org.uk/documents/OpenEyes%20Coding%20Visual%20Acuity.pdf">
+        ["3"] = <"IHE Eye Care Domain. General Eye Evaluation (GEE) [Internet]. IHE; 2012. Available from: http://www.ihe.net/Technical_Framework/upload/IHE_EyeCare_Supp_GEE_Rev1-1_TI_2012-06-29.pdf">
+        ["4"] = <"Royal College of Opthalmologists. Cataract National Dataset for Adults [Internet]. 2011. Available from: http://www.rcophth.ac.uk/page.asp?section=583&sectionTitle=Cataract+National+Data+Set+for+Adults">
+        ["5"] = <"CfH, UK. Do Once & Share - Glaucoma [Internet]. [cited 2012 Sep 26]. Available from: http://www.doasglaucoma.org/">
+        ["6"] = <"DICOM Supplement 30 [Internet]. [cited 2012 Sep 26]. Available from: http://medical.nema.org/">
+        ["7"] = <"Practical Ophthalmology: A Manual for Beginning Residents, 6th Edition [Paperback]">
+        ["8"] = <"American Academy Of Ophthalmology (Author), Fred M. Wilson II (Editor), MD (Editor)">
+    >
+    other_details = <
+        ["current_contact"] = <"Ian McNicoll, Ocean Informatics, UK, ian.mcnicoll@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"6BD8C77305478477140978EB190D5AE0">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere resultatet av en refraksjonsundersøkelse. Kan brukes både med pasientens vanlige korreksjon eller ved ny refraksjon av pasienten.">
+            keywords = <"øye", "syn", "oftalmologisk", "refraksjon", "korreksjon">
+            use = <"Brukes til å registrere resultatet av en refraksjonsundersøkelse.
+
+Dataelementet \"Beskrivelse\" kan brukes til å registrere et enkelt sammendrag av undersøkelsen eller for å integrere historiske data.">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For recording the results of a refraction assessment, either performed on the patient's usual correction or by refraction of the patient.">
+            keywords = <"eye", "sight", "vision", "ophthalmic", "visual", "refraction", "refraction", "correction">
+            use = <"Use to record the results of measurement of refraction.
+
+The 'Description' data element can be used to record simple narrative summary or as a means to integrate legacy data.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Refraction assessment
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0134] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0039] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                    CLUSTER[at0053] occurrences matches {0..2} matches {    -- Result details
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0144] occurrences matches {0..1} matches {    -- Test eye
+                                                value matches {
+                                                    DV_CODED_TEXT[at9010] matches {
+                                                        defining_code matches {[ac9009]}    -- Test eye (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            allow_archetype CLUSTER[at0139] occurrences matches {0..1} matches {    -- Refraction details
+                                                include
+                                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.refraction_details(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                            }
+                                            ELEMENT[at0055] occurrences matches {0..1} matches {    -- No test result
+                                                value matches {
+                                                    DV_BOOLEAN[at9011] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0147] occurrences matches {0..1} matches {    -- Reason for no test result
+                                                value matches {
+                                                    DV_TEXT[at9012]
+                                                }
+                                            }
+                                            ELEMENT[at0066] matches {    -- Interpretation
+                                                value matches {
+                                                    DV_TEXT[at9005]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0054] matches {    -- Overall interpretation
+                                        value matches {
+                                            DV_TEXT[at9006]
+                                        }
+                                    }
+                                    ELEMENT[at0040] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9007]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0140] matches {    -- Examination not done
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0041] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0112] matches {    -- Confounding Factors
+                                        value matches {
+                                            DV_TEXT[at9008]
+                                        }
+                                    }
+                                    ELEMENT[at0042] matches {    -- Refractive Correction
+                                        value matches {
+                                            DV_CODED_TEXT[at9009] matches {
+                                                defining_code matches {[ac9001]}    -- Refractive Correction (synthesised)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0020] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0025] occurrences matches {0..1} matches {    -- Device Details
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0141] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Refraksjonsundersøkelse">
+                description = <"Undersøkelse av rett refraksjon for å oppnå optimalt visus.">
+            >
+            ["at0025"] = <
+                text = <"Utstyrsdetaljer">
+                description = <"Detaljer om utstyret brukt til visustesting.">
+            >
+            ["at0039"] = <
+                text = <"Beskrivelse">
+                description = <"En fritekst beskrivelse av svaret på refraksjonsundersøkelsen.">
+            >
+            ["at0040"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekstkommentar om refraksjonsundersøkelsen.">
+            >
+            ["at0042"] = <
+                text = <"Refraktiv korreksjon">
+                description = <"Spesifikk type refraksjon(er) som testen utføres med.">
+                comment = <"For eksempel: Ingen korreksjon eller stenopeisk hull.">
+            >
+            ["at0053"] = <
+                text = <"Resultater undersøkelse">
+                description = <"Detaljerte undersøkelsesresultater for hvert øye.">
+            >
+            ["at0054"] = <
+                text = <"Oppsummering">
+                description = <"En term, vanligvis kodet som utrykker en overordnet tolkning av refraksjonsundersøkelsen.">
+            >
+            ["at0055"] = <
+                text = <"Ikke resultat">
+                description = <"Resultat av refraksjonsunderøkelsen er ikke tilgjengelig for det undersøkte øyet.">
+                comment = <"Settes som sann hvis klinikker ikke oppnådde et resultat for refraksjon for det undersøkte øyet.">
+            >
+            ["at0066"] = <
+                text = <"Tolkning">
+                description = <"Testresultatet gjengitt som en kvalitativ term, vanligvis kodet.">
+                comment = <"For eksempel: Eksessiv myop.">
+            >
+            ["at0071"] = <
+                text = <"Briller">
+                description = <"Visuskorreksjon gjort med briller.">
+            >
+            ["at0072"] = <
+                text = <"Kontaktlinser">
+                description = <"Visuskorreksjon gjort med kontaktlinser.">
+            >
+            ["at0073"] = <
+                text = <"Stenopeisk hull">
+                description = <"Visuskorreksjon gjort med stenopeisk hull.">
+            >
+            ["at0112"] = <
+                text = <"Konfunderende faktorer">
+                description = <"Pasientfeilkilder som innvirker på tolkning av reultatet.">
+                comment = <"Eksempel: Pasient med nedsatt bevissthet eller manglende samarbeidsevne.">
+            >
+            ["at0134"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i en template eller i en applikasjon.">
+            >
+            ["at0139"] = <
+                text = <"Refraksjonsdetaljer">
+                description = <"Detaljer om refraksjonen for et øye.">
+            >
+            ["at0140"] = <
+                text = <"Undersøkelse ikke utført">
+                description = <"Detaljert om hvorfor undersøkelsen ikke ble utført.">
+            >
+            ["at0141"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at0144"] = <
+                text = <"Undersøkt øye">
+                description = <"Identifikasjon av hvilket øye som blir undersøkt.">
+            >
+            ["at0145"] = <
+                text = <"Høyre øye">
+                description = <"Undersøkelse av pasientens høyre øye ble utført.">
+            >
+            ["at0146"] = <
+                text = <"Venstre øye">
+                description = <"Undersøkelse av pasientens venstre øye ble utført.">
+            >
+            ["at0147"] = <
+                text = <"Årsak manglende testresultat">
+                description = <"Årsak til manglende testresultat.">
+                comment = <"For eksempel manglende samarbeid med pasienten, manglende utstyr og ikke nok tid til å gjennomføre undersøkelsen.">
+            >
+            ["at0074"] = <
+                text = <"*Autorefraction(en)">
+                description = <"*The subject's vision was corrected by autorefraction.(en)">
+            >
+            ["at0075"] = <
+                text = <"*Retinoscopy(en)">
+                description = <"*The subject's vision was corrected by retinoscopy.(en)">
+            >
+            ["ac9009"] = <
+                text = <"Undersøkt øye (synthesised)">
+                description = <"Identifikasjon av hvilket øye som blir undersøkt. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Refraktiv korreksjon (synthesised)">
+                description = <"Spesifikk type refraksjon(er) som testen utføres med. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Refraction assessment">
+                description = <"Assessment of the refraction required to achieve optimal visual acuity.">
+            >
+            ["at0025"] = <
+                text = <"Device Details">
+                description = <"Details of the device used to measure refraction.">
+            >
+            ["at0039"] = <
+                text = <"Description">
+                description = <"An overall narrative description of the visual acuity test result.">
+            >
+            ["at0040"] = <
+                text = <"Comment">
+                description = <"Any additional narrative comment about the visual acuity test.">
+            >
+            ["at0042"] = <
+                text = <"Refractive Correction">
+                description = <"The specific type(s) of refractive correction applied.">
+                comment = <"Examples: 'No correction : unaided', 'Pinhole'.">
+            >
+            ["at0053"] = <
+                text = <"Result details">
+                description = <"Details of the refraction result for each eye.">
+            >
+            ["at0054"] = <
+                text = <"Overall interpretation">
+                description = <"A term, commonly coded, expressing an overall interpretation of the visual acuity test.">
+            >
+            ["at0055"] = <
+                text = <"No test result">
+                description = <"No refraction test result is available for the test eye.">
+                comment = <"Record as True if the clinician was unable to record a result for the test eye.">
+            >
+            ["at0066"] = <
+                text = <"Interpretation">
+                description = <"The test result expressed as a qualitative term, normally coded.">
+                comment = <"Example: \"Visual Acuity 20/20\" or \"Jaeger 'J2' score\".">
+            >
+            ["at0071"] = <
+                text = <"Spectacles">
+                description = <"The subject's vision was corrected by spectacles.">
+            >
+            ["at0072"] = <
+                text = <"Contact lenses">
+                description = <"The subject's vision was corrected by contact lenses.">
+            >
+            ["at0073"] = <
+                text = <"Pinhole">
+                description = <"The subject's vision was corrected by use of a pinhole.">
+            >
+            ["at0074"] = <
+                text = <"Autorefraction">
+                description = <"The subject's vision was corrected by autorefraction.">
+            >
+            ["at0075"] = <
+                text = <"Retinoscopy">
+                description = <"The subject's vision was corrected by retinoscopy.">
+            >
+            ["at0112"] = <
+                text = <"Confounding Factors">
+                description = <"Patient circumstances which affect interpretation of the result. Often termed 'reliability' in opthalmological documentation.">
+                comment = <"Examples: 'Patient was confused', 'Low light conditions'.">
+            >
+            ["at0134"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0139"] = <
+                text = <"Refraction details">
+                description = <"Details of refraction for a single eye.">
+            >
+            ["at0140"] = <
+                text = <"Examination not done">
+                description = <"Details to explicitly record that this test was not performed.">
+            >
+            ["at0141"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0144"] = <
+                text = <"Test eye">
+                description = <"Identification of the eye which is being tested.">
+            >
+            ["at0145"] = <
+                text = <"Right eye">
+                description = <"Assessment of the right eye was performed.">
+            >
+            ["at0146"] = <
+                text = <"Left eye">
+                description = <"Assessment of the left eye was performed.">
+            >
+            ["at0147"] = <
+                text = <"Reason for no test result">
+                description = <"Reason why no refraction result is available for the test eye.">
+                comment = <"For example, patient was not cooperative; patient was not capable; ran out of time.">
+            >
+            ["ac9009"] = <
+                text = <"Test eye (synthesised)">
+                description = <"Identification of the eye which is being tested. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Refractive Correction (synthesised)">
+                description = <"The specific type(s) of refractive correction applied. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0000"] = <http://snomed.info/id/252886007>
+            ["at0039"] = <http://snomed.info/id/117364006>
+            ["at0040"] = <http://snomed.info/id/117364006>
+            ["at0054"] = <http://snomed.info/id/366060000>
+            ["at0066"] = <http://snomed.info/id/366060000>
+            ["at0071"] = <http://snomed.info/id/50121007>
+            ["at0072"] = <http://snomed.info/id/57368009>
+            ["at0075"] = <http://snomed.info/id/397524001>
+        >
+    >
+    value_sets = <
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0145", "at0146">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0071", "at0072", "at0073", "at0074", "at0075">
+        >
+    >

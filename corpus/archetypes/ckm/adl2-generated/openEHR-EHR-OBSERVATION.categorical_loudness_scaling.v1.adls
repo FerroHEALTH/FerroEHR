@@ -1,0 +1,564 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3e7380a1-9378-49f3-a2fa-24a40ffcb287; build_uid=09e04bd3-2113-4d62-9107-23827814cf6f)
+    openEHR-EHR-OBSERVATION.categorical_loudness_scaling.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Lena Schell-Majoor">
+        ["organisation"] = <"University of Oldenburg, Cluster of Excellence Hearing4all">
+        ["email"] = <"lena.schell-majoor@uni-oldenburg.de">
+        ["date"] = <"2023-03-23">
+    >
+    original_namespace = <"org.highmed">
+    original_publisher = <"HiGHmed">
+    other_contributors = <"Mareike Buhl, Eugen Kludt, Birger Kollmeier, Antje Wulff", ...>
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.highmed">
+    custodian_organisation = <"HiGHmed">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"ISO (2006). 16832:2006, Acoustics - loudness scaling by means of categories. International Organization for Standardization, Geneva, Switzerland.">
+        ["2"] = <"Brand, T., & Hohmann, V. (2002). An adaptive procedure for categorical loudness scaling. The Journal of the Acoustical Society of America, 112(4), 1597-1604.">
+        ["3"] = <"Hellbrück, J., & Moser, L. M. (1986). Psychophysical measurements of inner ear processes with category scaling of loudness. ORL, 48(2), 135-136.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"E5AAB3A9896DE9CF2B27A23B28206DA0">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the responses from a categorical loudness scaling assessment and the derived loudness perception curve.">
+            keywords = <"hearing, audiology, categorial", ...>
+            use = <"Use to record an individual's responses to a loudness scaling assessment and the corresponding loudness perception curve. Responses may be aided or unaided.">
+            misuse = <"Not to be used to record any other auditory assessment than categorical loudness scaling.
+Use the specific archetypes for these purposes.">
+            copyright = <"© openEHR Foundation, HiGHmed, Hearing4all">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Categorical loudness scaling
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0036] occurrences matches {0..1} matches {    -- Frequency of test stimulus
+                                        value matches {
+                                            DV_QUANTITY[at9036] matches {
+                                                property matches {[at9006]}    -- Frequency
+                                                [magnitude, units, precision] matches {
+                                                    [{|20.0..20000.0|}, {"Hz"}, {0}],
+                                                    [{|0.125..16.0|}, {"kHz"}, {3}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0027] occurrences matches {1} matches {    -- Tested side
+                                        value matches {
+                                            DV_CODED_TEXT[at9037] matches {
+                                                defining_code matches {[ac9001]}    -- Tested side (synthesised)
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0035] matches {    -- Measurement
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0110] occurrences matches {1} matches {    -- Stimulus level
+                                                value matches {
+                                                    DV_QUANTITY[at9009] matches {
+                                                        property matches {[at9000]}    -- Loudness
+                                                        magnitude matches {|-50.0..200.0|}
+                                                        units matches {"dB[SPL]{HL}"}
+                                                        precision matches {2}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0111] occurrences matches {1} matches {    -- Response category
+                                                value matches {
+                                                    DV_QUANTITY[at9010] matches {
+                                                        property matches {[at9035]}    -- Term binding for at9035, translation not known in ADL 1.4 -> ADL 2 converter
+                                                        magnitude matches {|0.0..1000.0|}
+                                                        units matches {"[arb'U]{CU}"}
+                                                        precision matches {1}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0101] matches {    -- Loudness perception curve
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0139] occurrences matches {0..1} matches {    -- Fit procedure name
+                                                value matches {
+                                                    DV_TEXT[at9026]
+                                                }
+                                            }
+                                            CLUSTER[at0136] matches {    -- Curve sample
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0138] occurrences matches {1} matches {    -- Response category
+                                                        value matches {
+                                                            DV_QUANTITY[at9013] matches {
+                                                                property matches {[at9035]}    -- Term binding for at9035, translation not known in ADL 1.4 -> ADL 2 converter
+                                                                magnitude matches {|0.0..1000.0|}
+                                                                units matches {"[arb'U]{CU}"}
+                                                                precision matches {2}
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0137] occurrences matches {1} matches {    -- Stimulus level
+                                                        value matches {
+                                                            DV_QUANTITY[at9012] matches {
+                                                                property matches {[at9000]}    -- Loudness
+                                                                magnitude matches {|-50.0..200.0|}
+                                                                units matches {"dB[SPL]{HL}"}
+                                                                precision matches {0}
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0140] occurrences matches {0..1} matches {    -- Curve equation
+                                                value matches {
+                                                    DV_TEXT[at9027]
+                                                }
+                                            }
+                                            ELEMENT[at0103] occurrences matches {0..1} matches {    -- Lower slope value
+                                                value matches {
+                                                    DV_QUANTITY[at9011] matches {
+                                                        property matches {[at9035]}    -- Term binding for at9035, translation not known in ADL 1.4 -> ADL 2 converter
+                                                        magnitude matches {|0.0..100.0|}
+                                                        units matches {"[arb'U]{CU}/dB[SPL]{HL}"}
+                                                        precision matches {0}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0149] occurrences matches {0..1} matches {    -- Upper slope value
+                                                value matches {
+                                                    DV_QUANTITY[at9038] matches {
+                                                        property matches {[at9035]}    -- Term binding for at9035, translation not known in ADL 1.4 -> ADL 2 converter
+                                                        magnitude matches {|0.0..100.0|}
+                                                        units matches {"[arb'U]{CU}/dB[SPL]{HL}"}
+                                                        precision matches {0}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0150] occurrences matches {0..1} matches {    -- Curve comment
+                                                value matches {
+                                                    DV_TEXT[at9043]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0133] occurrences matches {0..1} matches {    -- Overall comment
+                                        value matches {
+                                            DV_TEXT[at9008]
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0157] matches {    -- No test result
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam\.v1\..*/}
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0119] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    CLUSTER[at0142] matches {    -- Hearing device during test
+                                        items cardinality matches {1..*; unordered} matches {
+                                            allow_archetype CLUSTER[at0083] occurrences matches {1} matches {    -- Hearing device
+                                                include
+                                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.device\.v1\..*/}
+                                            }
+                                            ELEMENT[at0143] occurrences matches {1} matches {    -- Side of hearing device
+                                                value matches {
+                                                    DV_CODED_TEXT[at9028] matches {
+                                                        defining_code matches {[ac9027]}    -- Side of hearing device (synthesised)
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0144] occurrences matches {0..1} matches {    -- Comment
+                                                value matches {
+                                                    DV_TEXT[at9030]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0151] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9042]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0060] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0095] occurrences matches {0..1} matches {    -- Scaling method
+                        value matches {
+                            DV_CODED_TEXT[at9016] matches {
+                                defining_code matches {[ac9034]}    -- Scaling method (synthesised)
+                            }
+                            DV_TEXT[at9031]
+                        }
+                    }
+                    ELEMENT[at0128] occurrences matches {0..1} matches {    -- Presentation method
+                        value matches {
+                            DV_CODED_TEXT[at9017] matches {
+                                defining_code matches {[ac9035]}    -- Presentation method (synthesised)
+                            }
+                            DV_TEXT[at9032]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0082] occurrences matches {0..1} matches {    -- Presentation method details
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device\.v1\..*/}
+                    }
+                    ELEMENT[at0075] occurrences matches {0..1} matches {    -- Type of test stimulus
+                        value matches {
+                            DV_CODED_TEXT[at9019] matches {
+                                defining_code matches {[ac9042]}    -- Type of test stimulus (synthesised)
+                            }
+                            DV_TEXT[at9034]
+                        }
+                    }
+                    ELEMENT[at0134] occurrences matches {0..1} matches {    -- Name of test stimulus
+                        value matches {
+                            DV_TEXT[at9020]
+                        }
+                    }
+                    ELEMENT[at0069] occurrences matches {0..1} matches {    -- Test environment
+                        value matches {
+                            DV_CODED_TEXT[at9018] matches {
+                                defining_code matches {[ac9004]}    -- Test environment (synthesised)
+                            }
+                            DV_TEXT[at9033]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0147] matches {    -- Test environment details
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device\.v1\..*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Categorical loudness scaling">
+                description = <"A psychophysical method used to assess an individual's perception of loudness to acoustic stimuli of varying levels.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0027"] = <
+                text = <"Tested side">
+                description = <"Identification of the tested ear(s).">
+            >
+            ["at0028"] = <
+                text = <"Right ear">
+                description = <"The test stimuli were presented to the right ear.">
+            >
+            ["at0029"] = <
+                text = <"Left ear">
+                description = <"The test stimuli were presented to the left ear.">
+            >
+            ["at0030"] = <
+                text = <"Binaural">
+                description = <"The test stimuli were presented to both ears simultaneously.">
+            >
+            ["at0035"] = <
+                text = <"Measurement">
+                description = <"The reported loudness category for a given stimulus level.">
+            >
+            ["at0036"] = <
+                text = <"Frequency of test stimulus">
+                description = <"Frequency of stimulus tested if applicable.">
+                comment = <"Provide further specification of 'Type of test stimulus', if a frequency is required. For example: frequency of pure tone or center frequency of narrowband noise.
+">
+            >
+            ["at0069"] = <
+                text = <"Test environment">
+                description = <"The environment in which the audiometric test is administered.">
+                comment = <"This data element is commonly used in industry hearing programs.">
+            >
+            ["at0070"] = <
+                text = <"Sound treated room">
+                description = <"Test environment that has been treated acoustically.">
+            >
+            ["at0071"] = <
+                text = <"Non-sound treated room">
+                description = <"Test environment that has not been treated acoustically.">
+            >
+            ["at0075"] = <
+                text = <"Type of test stimulus">
+                description = <"Identification of the stimulus used in the categorical loudness scaling procedure.">
+                comment = <"If the type of stimulus is broadband, use 'Name of test stimulus' for further specification.
+If the type of noise is a tone or a narrowband noise, use 'Frequency of test stimulus' for further specification.">
+            >
+            ["at0076"] = <
+                text = <"Tone burst">
+                description = <"The test stimulus is a tone burst.">
+            >
+            ["at0077"] = <
+                text = <"Click">
+                description = <"The test stimulus is a click.">
+            >
+            ["at0078"] = <
+                text = <"Warble tone">
+                description = <"The test stimulus is a frequency modulated tone.">
+            >
+            ["at0079"] = <
+                text = <"Pure tone">
+                description = <"The test stimulus is a pure tone.">
+            >
+            ["at0080"] = <
+                text = <"Narrowband noise">
+                description = <"The test stimulus is a narrow band noise centred on the specified frequency.">
+            >
+            ["at0081"] = <
+                text = <"Pulsed pure tone">
+                description = <"The test stimulus is a pulsed pure tone.">
+            >
+            ["at0082"] = <
+                text = <"Presentation method details">
+                description = <"Details of device used to present test stimulus as specified in 'Presentation method'.">
+                comment = <"For example: type of headphone or speaker.">
+            >
+            ["at0083"] = <
+                text = <"Hearing device">
+                description = <"Details of the hearing device used.">
+                comment = <"For example: hearing aid or cochlear implant as type of device.">
+            >
+            ["at0095"] = <
+                text = <"Scaling method">
+                description = <"Choice of scaling method.">
+                comment = <"The scaling method includes details on the experimental procedure. For example: verbal descriptions of response categories.">
+            >
+            ["at0096"] = <
+                text = <"Adaptive Categorical Loudness Scaling (ACALOS)">
+                description = <"Method by Brand & Hohmann 2002.">
+            >
+            ["at0097"] = <
+                text = <"Würzburger Hörfeldskalierung">
+                description = <"Method by Hellbrück & Moser 1985.">
+            >
+            ["at0101"] = <
+                text = <"Loudness perception curve">
+                description = <"Loudness perception curve fitted to measured data.">
+                comment = <"It can either be described through sampled data points from the curve (pairs of response category and stimulus level), or the curve equation and corresponding fit parameters (slope values and specific curve samples).">
+            >
+            ["at0103"] = <
+                text = <"Lower slope value">
+                description = <"Slope value for lower section of fitted loudness perception curve corresponding to 'Curve equation'.">
+                comment = <"Use this parameter, if only one slope value is required. For example: in case of a linear curve.">
+            >
+            ["at0110"] = <
+                text = <"Stimulus level">
+                description = <"The level of the stimulus.">
+            >
+            ["at0111"] = <
+                text = <"Response category">
+                description = <"The reported loudness category for a given stimulus level.">
+            >
+            ["at0126"] = <
+                text = <"Free-field">
+                description = <"Room with free-field characteristics, also called 'anechoic room'.">
+            >
+            ["at0127"] = <
+                text = <"Broadband noise">
+                description = <"The test stimulus is a broad band noise.">
+            >
+            ["at0128"] = <
+                text = <"Presentation method">
+                description = <"The method used to present the test stimulus.">
+            >
+            ["at0129"] = <
+                text = <"Loudspeaker">
+                description = <"The stimulus is presented via a loudspeaker.">
+            >
+            ["at0130"] = <
+                text = <"Insert earphone">
+                description = <"The stimulus is presented via insert earphones.">
+            >
+            ["at0131"] = <
+                text = <"Headphone">
+                description = <"The stimulus is presented via external headphones - either circumaural or supraaural.">
+            >
+            ["at0133"] = <
+                text = <"Overall comment">
+                description = <"Additional narrative about the measurement of categorical loudness scaling not captured in other fields.">
+                comment = <"For example: if measurement was not completed or maximum level was reached.">
+            >
+            ["at0134"] = <
+                text = <"Name of test stimulus">
+                description = <"Further specification of test stimulus if applicable.">
+                comment = <"Provides name of test stimulus, if it has an established name or description of natural sound. For example: IFNoise, Icra1 or, for natural sounds, birds.">
+            >
+            ["at0135"] = <
+                text = <"Natural sound">
+                description = <"The test stimulus is a natural/recorded sound.">
+            >
+            ["at0136"] = <
+                text = <"Curve sample">
+                description = <"Data point of fitted loudness perception curve represented by a combination of a given response category and corresponding stimulus level.">
+                comment = <"These data points can be used to describe the curve through sampled data points or as fit parameters included in the curve equation. For example: response category of 2.5 CU, 25 CU and 50 CU. ">
+            >
+            ["at0137"] = <
+                text = <"Stimulus level">
+                description = <"The stimulus level for the chosen CU value of fitted loudness perception curve.">
+            >
+            ["at0138"] = <
+                text = <"Response category">
+                description = <"The chosen loudness category of the curve sample.">
+                comment = <"For example: 2.5 CU, 25 CU, 50 CU.">
+            >
+            ["at0139"] = <
+                text = <"Fit procedure name">
+                description = <"Name of the procedure applied to fit the loudness function to the data.">
+                comment = <"A literature reference could be included if applicable. For example: \"BX\" from Oetting et al. 2014 or exponential fit.">
+            >
+            ["at0140"] = <
+                text = <"Curve equation">
+                description = <"Equation for loudness perception curve with explanation of included variables.">
+                comment = <"Include reference in 'Type of fit' if applicable.">
+            >
+            ["at0142"] = <
+                text = <"Hearing device during test">
+                description = <"Information about hearing device use during loudness scaling test.">
+            >
+            ["at0143"] = <
+                text = <"Side of hearing device">
+                description = <"Identification of the side where the hearing device is worn during the test.">
+            >
+            ["at0144"] = <
+                text = <"Comment">
+                description = <"Additional information about the hearing device that is not captured in \"Hearing device\" or \"Side of hearing device\".">
+                comment = <"For example: information about hearing device settings.">
+            >
+            ["at0145"] = <
+                text = <"Left">
+                description = <"The hearing device is worn at the left side.">
+            >
+            ["at0146"] = <
+                text = <"Right">
+                description = <"The hearing device is worn at the right side.">
+            >
+            ["at0147"] = <
+                text = <"Test environment details">
+                description = <"Additional details of 'Test environment'.">
+                comment = <"For example: specific audiometric booth or a free text description of the room's sound treatment.">
+            >
+            ["at0149"] = <
+                text = <"Upper slope value">
+                description = <"Slope value for upper section of fitted loudness perception curve corresponding to 'Curve equation'.">
+            >
+            ["at0150"] = <
+                text = <"Curve comment">
+                description = <"Additional narrative about the loudness perception curve not captured in other fields.">
+                comment = <"For example: other parameters used to describe the loudness curve.">
+            >
+            ["at0151"] = <
+                text = <"Confounding factors">
+                description = <"Additional issues or factors that may impact loudness scaling tests, not captured in other fields.">
+                comment = <"For example: medication or noise exposure prior to test.">
+            >
+            ["at0152"] = <
+                text = <"Loudness growth in 1/2 octave bands (LGOB)">
+                description = <"Method by Allen et al. 1990.">
+            >
+            ["at0153"] = <
+                text = <"Direct streaming to sound processor">
+                description = <"The stimulus is directly streamed to the sound processor of a hearing device.">
+            >
+            ["at0156"] = <
+                text = <"Low-noise narrowband noise">
+                description = <"The test stimulus is a low-noise narrowband noise centred on the specified frequency.">
+            >
+            ["at0157"] = <
+                text = <"No test result">
+                description = <"">
+            >
+            ["at9000"] = <
+                text = <"Loudness">
+                description = <"Loudness">
+            >
+            ["at9006"] = <
+                text = <"Frequency">
+                description = <"Frequency">
+            >
+            ["at9035"] = <
+                text = <"Term binding for at9035, translation not known in ADL 1.4 -> ADL 2 converter">
+                description = <"Term binding for at9035, translation not known in ADL 1.4 -> ADL 2 converter">
+            >
+            ["ac9001"] = <
+                text = <"Tested side (synthesised)">
+                description = <"Identification of the tested ear(s). (synthesised)">
+            >
+            ["ac9027"] = <
+                text = <"Side of hearing device (synthesised)">
+                description = <"Identification of the side where the hearing device is worn during the test. (synthesised)">
+            >
+            ["ac9034"] = <
+                text = <"Scaling method (synthesised)">
+                description = <"Choice of scaling method. (synthesised)">
+            >
+            ["ac9035"] = <
+                text = <"Presentation method (synthesised)">
+                description = <"The method used to present the test stimulus. (synthesised)">
+            >
+            ["ac9042"] = <
+                text = <"Type of test stimulus (synthesised)">
+                description = <"Identification of the stimulus used in the categorical loudness scaling procedure. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Test environment (synthesised)">
+                description = <"The environment in which the audiometric test is administered. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/123>
+            ["at9006"] = <http://openehr.org/id/382>
+            ["at9035"] = <http://openehr.org/id/755>
+        >
+    >
+    value_sets = <
+        ["ac9042"] = <
+            id = <"ac9042">
+            members = <"at0076", "at0077", "at0078", "at0079", "at0080", "at0081", "at0127", "at0135", "at0156">
+        >
+        ["ac9035"] = <
+            id = <"ac9035">
+            members = <"at0129", "at0130", "at0131", "at0153">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0028", "at0029", "at0030">
+        >
+        ["ac9034"] = <
+            id = <"ac9034">
+            members = <"at0096", "at0097", "at0152">
+        >
+        ["ac9027"] = <
+            id = <"ac9027">
+            members = <"at0145", "at0146">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0070", "at0071", "at0126">
+        >
+    >

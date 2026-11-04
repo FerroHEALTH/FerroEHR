@@ -1,0 +1,196 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c2bd52be-76d4-45de-af3e-263e8fe72cc7; build_uid=7ac3090e-48c9-4094-b03a-c128233263e2)
+    openEHR-EHR-EVALUATION.social_summary.v1.1.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand og Silje Ljosland Bakke">
+                ["organisation"] = <"Helse Bergen og Nasjonal IKT">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            author = <
+                ["name"] = <"Paolo Anedda">
+                ["organisation"] = <"Inpeco">
+                ["email"] = <"paolo.anedda@inpeco.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2011-05-24">
+    >
+    original_namespace = <"au.org.nehta">
+    original_publisher = <"National E-Health Transition Authority">
+    other_contributors = <"Rita Apelt, Department of Health,NT, Australia", "Erling Are Hole, Helse Bergen, Norway", "Vebjørn Arntzen, Oslo universitetssykehus HF, Norway", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Maria Beate Nupen, Oslo Universitetssykehus, Norway", "Stephen Chu, NEHTA, Australia", "Margaret Cotter, AMSANT, Australia", "Bell Eapen, McMaster University, Canada", "Tanya Gardner, CAAC, Australia", "Bente Gjelsvik, Helse Bergen, Norway", "Sam Heard, Ocean Informatics, Australia (Editor)", "Ingrid Heitmann, Oslo universitetssykehus HF, Norway (Nasjonal IKT redaktør)", "Kristian Heldal, Telemark Hospital Trust, Norway", "Anca Heyd, DIPS ASA, Norway", "Hilde Hollås, Norway", "Tom Jarl Jakobsen, Helse Bergen, Norway", "hanne joensen, Helse- bergen HUS, Norway", "Thiago Julio, HIAE, Brazil", "Heather Leslie, Ocean Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Jeremy Oats, NT Health, Australia", "Vladimir Pizzo, Hospital Sírio Libanês, Brazil", "Tanja Riise, Nasjonal IKT HF, Norway", "Steven Schatz, Department of Health (Northern Territory), Australia", "Thomas Schopf, University Hospital of North-Norway, Norway", "Rosalie Schultz, Central Australia Remote Health, Australia", "Anoop Shah, University College London, United Kingdom", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Jo Wright, NT Dept of Health, Australia (Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: Social Summary, Draft Archetype [Internet]. nehta, Australia, nehta Clinical Knowledge Manager [cited: 2016-01-11]. Available from: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.1002">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"42E30743E5A093075AA65AAF9B890DC0">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere et fritekstsammendrag om sosiale omstendigheter, opplevelser eller erfaringer som kan ha en innvirkning på et individs helse. Arketypen gir et rammeverk der en kan nøste detaljerte CLUSTER-arketyper som beskriver ulike aspekter av sosiale omstendigheter, opplevelser eller erfaringer i detalj.">
+            keywords = <"sosial", "familie", "partner", "utdanning", "utdannelse", "arbeid", "jobb", "ansettelse", "miljø", "omgivelser", "bolig", "boforhold", "økonomi", "fritid", "hobby", "aktivitet", "religion", "etnisitet", "språk", "nasjonalitet", "livssyn", "mestringsevne", "erfaringer", "natur", "karakter", "adferdsmønster">
+            use = <"Brukes for å registrere et fritekstsammendrag om sosiale omstendigheter eller opplevelser som kan ha en innvirkning på et individs helse. 
+
+Brukes for å inkludere fritekstbeskrivelser av sosiale omstendigheter eller erfaringer som allerede er registrert i eksisterende kliniske systemer til et arketypeformat.
+
+Bruk som en kontainer arketype for å gi en felles gjenfinnbar ENTRY-arketype som kan inneholde detaljerte CLUSTER-arketyper. Eksempler på passende CLUSTER-arketyper kan være nære relasjoner, sosial støtte, boligforhold, arbeid, utdannelse og livssyn.
+
+Bruken av uttrykket \"Sosialanamnese\" har stor variasjon. Arketypen er utviklet for å tillate representasjon av ulike konsepter som utrykker sosialanamnese i ulike kliniske sammenhenger ved hjelp av en blanding av gjenbrukbare CLUSTER-arketyper.">
+            misuse = <"Brukes ikke for å registrere informasjon relatert til livsstil. For eksempel: Bruk spesifikke arketyper for bruk av alkohol, tobakk og andre substanser, kosthold og ernæring, og fysisk aktivitet.">
+            copyright = <"© National E-Health Transition Authority, openEHR Foundation, Nasjonal IKT HF">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a narrative summary about social circumstances or experiences that may have a potential impact on an individual's health, and to provide a framework in which to nest detailed CLUSTER archetypes, each of which will describe the various aspects of social circumstances or experiences in detail.">
+            keywords = <"social", "family", "education", "occupation", "environment", "housing", "finances", "social history">
+            use = <"Use to record a narrative summary about social circumstances or experiences that may have a potential impact on an individual's health.
+
+Use to incorporate the narrative descriptions of social circumstances or experiences already captured within existing clinical systems into an archetyped format.
+
+Use as a container archetype - to provide a common, queryable ENTRY archetype in which specific, detailed CLUSTER archetypes can be nested. Examples of appropriate CLUSTER archetypes may include, and are not limited to, relationships with others, social supports, living arrangements, employment, education and religion.
+
+The use of the term 'social summary' varies enormously in practice. This archetype has been designed to allow the concepts that express social history in varying clincial contexts to be represented with the appropriate mix of re-useable archetypes.">
+            misuse = <"Not to be used to record Lifestyle-related information - for example, use specific archetypes for alcohol, tobacco and other substance use; diet and nutrition; and physical activity.">
+            copyright = <"© National E-Health Transition Authority, openEHR Foundation, Nasjonal IKT HF">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"Registrare una sintesi narrativa sulle circostanze o esperienze sociali che possono avere un potenziale impatto sulla salute di un individuo, e fornire un quadro in cui annidare gli archetipi dettagliati di CLUSTER, ognuno dei quali descriverà in dettaglio i vari aspetti delle circostanze o delle esperienze sociali.">
+            keywords = <"sociale", "famiglia", "educazione", "occupazione", "ambiente", "Alloggiamento", "finanze", "storia sociale">
+            use = <"Utilizzare per registrare un riassunto narrativo su circostanze o esperienze sociali che possono avere un potenziale impatto sulla salute di un individuo.
+
+Utilizzare per incorporare le descrizioni narrative di circostanze o esperienze sociali già catturate all'interno di sistemi clinici esistenti in un formato archetipizzato.
+
+Uso come archetipo contenitore - per fornire un archetipo comune e interrogabile di ENTRY in cui possono essere annidati specifici e dettagliati archetipi di CLUSTER. Esempi di archetipi di CLUSTER appropriati possono includere, e non sono limitati a, relazioni con gli altri, supporti sociali, organizzazione della vita, occupazione, istruzione e religione.
+
+L'uso del termine \"riassunto sociale\" varia enormemente nella pratica. Questo archetipo è stato progettato per consentire di rappresentare i concetti che esprimono la storia sociale in diversi contesti clinici con il giusto mix di archetipi riutilizzabili.">
+            misuse = <"Da non utilizzare per registrare informazioni relative allo stile di vita - per esempio, utilizzare archetipi specifici per l'uso di alcol, tabacco e altre sostanze; dieta e nutrizione; e attività fisica.">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Social summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Summary
+                        value matches {
+                            DV_TEXT[at9000]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0003] matches {    -- Details
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.education(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.housing(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.household(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.employment(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0004] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9001]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0005] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Sosialanamnese">
+                description = <"Oppsummerende informasjon om sosiale omstendigheter eller erfaringer som kan ha en innvirkning på et individs helse.">
+            >
+            ["at0002"] = <
+                text = <"Sammendrag">
+                description = <"Fritekstsammendrag om sosiale omstendigheter eller erfaringer som kan ha en innvirkning på et individs helse.">
+                comment = <"Kan brukes for å registrere et fritekstsammendrag om de totale sosiale omstendigheter eller erfaringer eller nøkkelaspekter av sosialanamnesen, støttet av ytterligere strukturerte data, eller for å importere fritekstdata fra eksisterende/tidligere kliniske system. Spesifikke strukturerte funn kan struktureres ved bruk av CLUSTER-arketyper i SLOTet \"Strukturert sosialanamnese\".">
+            >
+            ["at0003"] = <
+                text = <"Detaljer">
+                description = <"Strukturerte detaljer om sosiale omstendigheter eller erfaringer.">
+            >
+            ["at0005"] = <
+                text = <"Utvidelse">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at0006"] = <
+                text = <"Sist oppdatert">
+                description = <"Datoen sosialanamnesen sist ble oppdatert.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Social summary">
+                description = <"Summary information about social circumstances or experiences that may have a potential impact on an individual's health.">
+            >
+            ["at0002"] = <
+                text = <"Summary">
+                description = <"Narrative description about social circumstances or experiences that may have a potential impact on an individual's health.">
+                comment = <"May be used to record a narrative summary of the complete social circumstances or experiences or key aspects of the social summary, which will be supported by additional structured data, or to import textual data from existing/legacy clinical systems. Details of specific structured findings can be included using CLUSTER archetypes in the 'Details' slot.">
+            >
+            ["at0003"] = <
+                text = <"Details">
+                description = <"Structured detail about the social circumstances and experiences.">
+            >
+            ["at0005"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0006"] = <
+                text = <"Last updated">
+                description = <"The date this social summary was last updated.">
+            >
+        >
+        ["it"] = <
+            ["at0000"] = <
+                text = <"Riepilogo sociale">
+                description = <"Informazioni sintetiche su circostanze o esperienze sociali che possono avere un potenziale impatto sulla salute di un individuo.">
+            >
+            ["at0002"] = <
+                text = <"Riepilogo">
+                description = <"Descrizione narrativa di circostanze o esperienze sociali che possono avere un potenziale impatto sulla salute di un individuo.">
+                comment = <"Può essere usato per registrare un riassunto narrativo delle circostanze sociali complete o delle esperienze o degli aspetti chiave del riassunto sociale, che sarà supportato da dati strutturati aggiuntivi, o per importare dati testuali da sistemi clinici esistenti/legacy. I dettagli di specifici risultati strutturati possono essere inclusi utilizzando gli archetipi di CLUSTER nello slot \"Dettagli\".">
+            >
+            ["at0003"] = <
+                text = <"Dettagli">
+                description = <"Dettaglio strutturato sulle circostanze e le esperienze sociali.">
+            >
+            ["at0005"] = <
+                text = <"Estensione">
+                description = <"Informazioni aggiuntive necessarie per catturare contenuti locali o per allinearsi con altri modelli/formalismi di riferimento.">
+                comment = <"Per esempio: requisiti informativi locali o metadati aggiuntivi per allinearsi con gli equivalenti FHIR o CIMI.">
+            >
+            ["at0006"] = <
+                text = <"Ultima modifica">
+                description = <"La data in cui questo riassunto sociale è stato aggiornato per l'ultima volta.">
+            >
+        >
+    >

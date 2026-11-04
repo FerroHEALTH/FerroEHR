@@ -1,0 +1,428 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=321ad857-18a8-4efd-887d-478ac7df9571; build_uid=d1711334-eae9-4ae7-ac53-4c946275fea0)
+    openEHR-EHR-CLUSTER.person_anonymised_parent.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Sarah Ballout">
+                ["organisation"] = <"MHH-Hannover">
+                ["email"] = <"ballout.sarah@mh-hannover.de">
+            >
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            author = <
+                ["name"] = <"Paolo Anedda">
+                ["organisation"] = <"Inpeco">
+                ["email"] = <"paolo.anedda@inpeco.com">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Vanessa Pereira">
+                ["organisation"] = <"Better">
+                ["email"] = <"vanessapereira@protonmail.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics">
+        ["email"] = <"ian@freshehr.com">
+        ["date"] = <"2014-07-11">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"6E981F7E2BD74617DB240F31AE129126">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Repräsentation von anonymisierten persönlichen Daten.">
+            keywords = <"Geschlecht", "Alter">
+            use = <"">
+            misuse = <"">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"*To record anonymised personal details.(en)">
+            use = <"">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record anonymised personal details.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"Registrare dati personali anonimi.">
+            use = <"">
+            misuse = <"">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Données anonymes d'une personne.">
+            use = <"">
+            misuse = <"">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Anonymised person (PARENT)
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Administrative Gender
+                value matches {
+                    DV_CODED_TEXT[at9002] matches {
+                        defining_code matches {[ac9000]}    -- Administrative Gender (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Birth Sex
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9000]}    -- Administrative Gender (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Vital Status
+                value matches {
+                    DV_CODED_TEXT[at9004] matches {
+                        defining_code matches {[ac9001]}    -- Vital Status (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Age
+                value matches {
+                    DV_DURATION[at9005] matches {
+                        value matches {|>=PT0S|}
+                    }
+                }
+            }
+            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Anonymised current location
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Anonymisierte Person (PARENT)">
+                description = <"Anonymisierte Angaben zu einer Person.">
+            >
+            ["at0001"] = <
+                text = <"Administratives Geschlecht">
+                description = <"Das aktuelle administrative Geschlecht der Person.">
+            >
+            ["at0002"] = <
+                text = <"Geschlecht bei der Geburt">
+                description = <"Das Geschlecht der Person bei der Geburt.">
+            >
+            ["at0003"] = <
+                text = <"Vitalstatus">
+                description = <"Der Patient lebt oder ist tot.">
+            >
+            ["at0004"] = <
+                text = <"Lebendig">
+                description = <"Der Patient ist am Leben.">
+            >
+            ["at0005"] = <
+                text = <"Tot">
+                description = <"Der Patient ist verstorben.">
+            >
+            ["at0008"] = <
+                text = <"Alter">
+                description = <"Das Alter der Person. Dieses kann berechnet werden.">
+            >
+            ["at0009"] = <
+                text = <"Männlich">
+                description = <"Das Geschlecht / das Geschlecht ist männlich.">
+            >
+            ["at0010"] = <
+                text = <"Weiblich">
+                description = <"Das Geschlecht / das Geschlecht ist weiblich.">
+            >
+            ["at0011"] = <
+                text = <"Unbestimmt">
+                description = <"Das Geschlecht/ das Geschlecht ist unbestimmt.">
+            >
+            ["at0012"] = <
+                text = <"Nicht bekannt">
+                description = <"Das Geschlecht/ das Geschlecht ist unbekannt.">
+            >
+            ["at0013"] = <
+                text = <"Aktueller anonymisierter Standort">
+                description = <"Der aktuelle Aufenthaltsort des Patienten wird anonymisiert.">
+            >
+            ["ac9000"] = <
+                text = <"Administratives Geschlecht (synthesised)">
+                description = <"Das aktuelle administrative Geschlecht der Person. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Vitalstatus (synthesised)">
+                description = <"Der Patient lebt oder ist tot. (synthesised)">
+            >
+        >
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"Anonymisoitu henkilötieto">
+                description = <"Anonymisoitu tieto henkilöstä">
+            >
+            ["at0001"] = <
+                text = <"Ilmoitettu sukupuoli">
+                description = <"Henkilön sukupuoli">
+            >
+            ["at0002"] = <
+                text = <"Sukupuoli syntyessä">
+                description = <"Syntymän aikana todettu sukupuoli">
+            >
+            ["at0003"] = <
+                text = <"Vitaliteetti">
+                description = <"Onko potilas elossa vai menehtynyt">
+            >
+            ["at0004"] = <
+                text = <"Elossa">
+                description = <"Potilas on elossa">
+            >
+            ["at0005"] = <
+                text = <"Menehtynyt">
+                description = <"Potilasn on menehtynyt">
+            >
+            ["at0008"] = <
+                text = <"Ikä">
+                description = <"Henkilön ikä, voi olla laskennallinen">
+            >
+            ["at0009"] = <
+                text = <"Mies">
+                description = <"Sukupuoli mies">
+            >
+            ["at0010"] = <
+                text = <"Nainen">
+                description = <"Sukupuoli nainen">
+            >
+            ["at0011"] = <
+                text = <"Määrittelemätön">
+                description = <"Sukupuoli on määrittelemättä">
+            >
+            ["at0012"] = <
+                text = <"Ei tiedossa">
+                description = <"Sukupuoli  ei ole tiedossa">
+            >
+            ["at0013"] = <
+                text = <"Epäsuora osoite">
+                description = <"Potilaan osoite anonymisoituna , postinumero etc">
+            >
+            ["ac9000"] = <
+                text = <"Ilmoitettu sukupuoli (synthesised)">
+                description = <"Henkilön sukupuoli (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Vitaliteetti (synthesised)">
+                description = <"Onko potilas elossa vai menehtynyt (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Anonymised person (PARENT)">
+                description = <"Anonymised details of a person.">
+            >
+            ["at0001"] = <
+                text = <"Administrative Gender">
+                description = <"Ther current administrative gender of the person.">
+            >
+            ["at0002"] = <
+                text = <"Birth Sex">
+                description = <"The sex of the person at birth.">
+            >
+            ["at0003"] = <
+                text = <"Vital Status">
+                description = <"Whether the patient is alive or dead.">
+            >
+            ["at0004"] = <
+                text = <"Alive">
+                description = <"The patient is alive.">
+            >
+            ["at0005"] = <
+                text = <"Dead">
+                description = <"The patient has died">
+            >
+            ["at0008"] = <
+                text = <"Age">
+                description = <"The age of the person. This may be calculated.">
+            >
+            ["at0009"] = <
+                text = <"Male">
+                description = <"The sex / gender is male.">
+            >
+            ["at0010"] = <
+                text = <"Female">
+                description = <"The sex / gnder is female.">
+            >
+            ["at0011"] = <
+                text = <"Undetermined">
+                description = <"The sex/ gender is indeterminate.">
+            >
+            ["at0012"] = <
+                text = <"Not known">
+                description = <"The sex/ gender is unknown.">
+            >
+            ["at0013"] = <
+                text = <"Anonymised current location">
+                description = <"The patient's current location anonymised.">
+            >
+            ["ac9000"] = <
+                text = <"Administrative Gender (synthesised)">
+                description = <"Ther current administrative gender of the person. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Vital Status (synthesised)">
+                description = <"Whether the patient is alive or dead. (synthesised)">
+            >
+        >
+        ["it"] = <
+            ["at0000"] = <
+                text = <"Persona anonimizzata (GENITORE).">
+                description = <"Dati anonimi di una persona.">
+            >
+            ["at0001"] = <
+                text = <"Genere amministrativo">
+                description = <"L'attuale genere amministrativo della persona. ">
+            >
+            ["at0002"] = <
+                text = <"Sesso alla nascita">
+                description = <"Il sesso della persona alla nascita.">
+            >
+            ["at0003"] = <
+                text = <"Stato vitale">
+                description = <"Se il paziente è vivo o morto.">
+            >
+            ["at0004"] = <
+                text = <"Vivo">
+                description = <"Il paziente è vivo.">
+            >
+            ["at0005"] = <
+                text = <"Morto">
+                description = <"Il paziente è morto.">
+            >
+            ["at0008"] = <
+                text = <"Età">
+                description = <"L'età della persona. Questa può essere calcolata.">
+            >
+            ["at0009"] = <
+                text = <"Maschio">
+                description = <"Il sesso/genere è maschio.">
+            >
+            ["at0010"] = <
+                text = <"Femmina">
+                description = <"Il sesso/genere è femmina.">
+            >
+            ["at0011"] = <
+                text = <"Indeterminato">
+                description = <"Il sesso/genere è indeterminato.">
+            >
+            ["at0012"] = <
+                text = <"Non noto">
+                description = <"Il sesso/genere è sconosciuto.">
+            >
+            ["at0013"] = <
+                text = <"Posizione attuale anonima">
+                description = <"L'attuale posizione del paziente anonimizzata. ">
+            >
+            ["ac9000"] = <
+                text = <"Genere amministrativo (synthesised)">
+                description = <"L'attuale genere amministrativo della persona.  (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Stato vitale (synthesised)">
+                description = <"Se il paziente è vivo o morto. (synthesised)">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Personnes anonymes (PARENT)">
+                description = <"Données anonymes d'une personne.">
+            >
+            ["at0001"] = <
+                text = <"Genre administratif">
+                description = <"Le genre administratif actuel de la personne.">
+            >
+            ["at0002"] = <
+                text = <"Sexe à la naissance">
+                description = <"Le genre de la personne à la naissance.">
+            >
+            ["at0003"] = <
+                text = <"Statut vital">
+                description = <"Que le patient soit vivant ou mort.">
+            >
+            ["at0004"] = <
+                text = <"Vivant">
+                description = <"Le patient est vivant.">
+            >
+            ["at0005"] = <
+                text = <"Décedé">
+                description = <"Le patient est mort.">
+            >
+            ["at0008"] = <
+                text = <"Age">
+                description = <"L'âge de la personne. Il peut être calculé.">
+            >
+            ["at0009"] = <
+                text = <"Masculin">
+                description = <"Le sexe / le genre est masculin.">
+            >
+            ["at0010"] = <
+                text = <"Féminin">
+                description = <"Le sexe / gender est féminin.">
+            >
+            ["at0011"] = <
+                text = <"Indéterminé">
+                description = <"Le sexe/genre est indéterminé.">
+            >
+            ["at0012"] = <
+                text = <"Inconnu">
+                description = <"Le sexe/genre est inconnu.">
+            >
+            ["at0013"] = <
+                text = <"Localisation actuelle anonyme">
+                description = <"La localisation actuelle anonyme du patient.">
+            >
+            ["ac9000"] = <
+                text = <"Genre administratif (synthesised)">
+                description = <"Le genre administratif actuel de la personne. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Statut vital (synthesised)">
+                description = <"Que le patient soit vivant ou mort. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0004", "at0005">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0009", "at0010", "at0011", "at0012">
+        >
+    >

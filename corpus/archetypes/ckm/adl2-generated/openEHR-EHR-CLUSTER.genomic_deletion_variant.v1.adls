@@ -1,0 +1,192 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d8b03cd4-44ab-4ecc-afb4-fd18512e6b65; build_uid=9e865cfb-29dc-4b7f-a816-be2c9c225026)
+    openEHR-EHR-CLUSTER.genomic_deletion_variant.v1.0.3
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Aurelie Tomczak, Natalia Strauch">
+                ["organisation"] = <"Institute of Pathology, University Hospital Heidelberg, Germany, Medizinische Hochschule Hannover">
+                ["email"] = <"au.tomczak@yahoo.com, Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Liv Laugen">
+                ["organisation"] = <"​Oslo University Hospital, Norway">
+                ["email"] = <"liv.laugen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Cecilia Mascia">
+        ["organisation"] = <"CRS4, Italy">
+        ["email"] = <"cecilia.mascia@crs4.it">
+        ["date"] = <"2017-02-23">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Francesca Frexia, CRS4 - Center for advanced studies, research and development in Sardinia, Italy", "Gideon Giacomelli, Charité Berlin, Germany", "Heather Grain, Llewelyn Grain Informatics, Australia", "Evelyn Hovenga, EJSH Consulting, Australia", "Christina Jaeger-Schmidt, Heidelberg University Hospital, Germany", "Florian Kaercher, Charité Berlin, Germany", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Cecilia Mascia, CRS4, Italy (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Andrej Orel, Marand d.o.o., Slovenia", "Simon Schumacher, HiGHmed, Germany", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Aurelie Tomczak, Uniklinikum Heidelberg, Germany", "Paolo Uva, CRS4, Italy", "Gianluigi Zanetti, CRS4, Italy">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"den Dunnen JT, Dalgleish R, Maglott DR, Hart RK, Greenblatt MS, McGowan-Jordan J, Roux AF, Smith T, Antonarakis SE, Taschner PE. HGVS Recommendations for the Description of Sequence Variants: 2016 Update. Hum Mutat. 2016 Jun;37(6):564-9. doi: 10.1002/humu.22981. Epub 2016 Mar 25. PubMed PMID: 26931183.">
+        ["2"] = <"Sequence Variant Nomenclature - DNA Recommendations - Deletion Variant [Internet]. Human Genome Variation Society. [2019] - [cited 2020-02-26]. Available from: https://varnomen.hgvs.org/recommendations/DNA/variant/deletion/">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"4FB63ECCC6FB04AA640F8B2F731487A4">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung von Informationen über die in einer Sequenz beobachteten \"Deletion variant\" menschlicher DNA.">
+            keywords = <"Deletion", "Variation", "genetisch", "genomisch", "Variante", "DNA", "Chromosom", "Mutation", "Nukleotid">
+            use = <"Verwenden Sie diesen Archetyp, um die Details einer \"Deletion variant\" menschlicher DNA darzustellen, die in einer genomischen Sequenz beobachtet wurde.
+
+Dieser Archetyp wurde speziell für die Verwendung im SLOT \"Structured variant\" innerhalb des Archetyps CLUSTER.genomic_variant_result entwickelt, kann aber auch in anderen ENTRY- oder CLUSTER-Archetypen verwendet werden, sofern dies klinisch angemessen ist.
+
+In den Beispielen in diesem Archetyp sollen Nukleotide in Kleinbuchstaben nur die veränderten Positionen der DNA-Sequenz hervorheben.
+
+Alle Definitionen und Beispiele in diesem Archetyp folgen dem HGVS-Standard.">
+            misuse = <"Nicht zur Darstellung von Informationen über Varianten nicht-menschlicher DNA oder jeglicher Art von RNA oder Protein.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljene om en delesjonsvariant i humant DNA, funnet i en genomisk sekvens.">
+            keywords = <"delesjon", "genetikk", "genom", "variant", "allel", "DNA", "kromosom", "mutasjon", "nukleotid", "sekvensering">
+            use = <"Brukes for å registrere detaljene om en delesjonsvariant i humant DNA, funnet i en genomisk sekvens.
+
+Denne arketypen har blitt laget for å brukes i SLOT'et \"'Strukturert variantbeskrivelse'\" i arketypen CLUSTER.genomic_variant_result. Den kan også brukes i andre ENTRY- eller CLUSTER-arketyper der det er klinisk hensiktsmessig.
+
+I eksemplene i denne arketypen er det brukt små bokstaver på nukleotidene for å markere endringen/-e i DNA-sekvensen.
+Alle definisjoner og eksempler i denne arketypen følger HGVS-nomenklaturen.">
+            misuse = <"Skal ikke brukes til å registrere informasjon om varianter av ikke-humant DNA, eller noen form for RNA eller protein.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the details about a deletion variant of human DNA, observed in a genomic sequence.">
+            keywords = <"deletion", "variation", "genetic", "genomic", "variant", "DNA", "chromosome", "mutation", "nucleotide">
+            use = <"Use to record the details about a deletion variant of human DNA, observed in a genomic sequence.
+
+This archetype has been specifically designed to be used in the 'Structured variant' SLOT within the CLUSTER.genomic_variant_result archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+In the examples in this archetype, lower case nucleotides are only intended to highlight the changed positions of the DNA sequence.
+All definitions and examples in this archetype follow the HGVS nomenclature.">
+            misuse = <"Not to be used to record information about variants of non-human DNA, or any kind of RNA or protein.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Genomic deletion variant
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- Start position
+                value matches {
+                    DV_COUNT[at9000]
+                }
+            }
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- End position
+                value matches {
+                    DV_COUNT[at9001]
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Deleted sequence
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            allow_archetype CLUSTER[at0009] matches {    -- Reference sequence
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.reference_sequence(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Genomic deletion variant">
+                description = <"Eine menschliche genetische Sequenzänderung, bei der im Vergleich zu einer genomischen Referenzsequenz ein oder mehrere Nukleotide nicht vorhanden sind (deleted).">
+                comment = <"For example: changing \"AGAAtCACA\" to \"AGAA_CACA\".">
+            >
+            ["at0001"] = <
+                text = <"Start position">
+                description = <"Position of the deleted nucleotide or the first nucleotide of the deleted range.">
+                comment = <"For example: for a variant where the reference sequence \"AGAatcACA\" is changed to \"AGA___ACA\" the start position is 4.">
+            >
+            ["at0005"] = <
+                text = <"End position">
+                description = <"Position of the last nucleotide of the deleted range.">
+                comment = <"For example: for a variant where the reference sequence \"AGAatcACA\" is changed to \"AGA___ACA\" the end position is 6.">
+            >
+            ["at0008"] = <
+                text = <"Deleted sequence">
+                description = <"The deleted nucleotide or sequence.">
+                comment = <"For example: for a variant where the reference sequence \"AGAatcACA\" is changed to \"AGA___ACA\" the deleted sequence is \"ATC\".">
+            >
+            ["at0009"] = <
+                text = <"Reference sequence">
+                description = <"The sequence file used as a reference to describe this variant.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Genetisk variant - delesjon">
+                description = <"En endring i en human sekvensen hvor en eller flere nukleotider er fjernet (deletert) sammenlignet med en referansesekvens. Engelsk: Deletion.">
+                comment = <"For eksempel: endring fra 'AGAAtCACA' til 'AGAA_CACA'.">
+            >
+            ["at0001"] = <
+                text = <"Startposisjon">
+                description = <"Posisjonen til det slettede nukleotidet eller det første nukleotidet i det slettede området.">
+                comment = <"For eksempel: For en variant, hvor referansesekvensen er endret fra 'AGAATCACA' til 'AGA___ACA', er startposisjonen 4.">
+            >
+            ["at0005"] = <
+                text = <"Sluttposisjon">
+                description = <"Posisjonen til det siste nukleotidet i det slettede (deleterte) området.">
+                comment = <"For eksempel: For en variant, hvor referansesekvensen er endret fra 'AGAATCACA' til 'AGA___ACA', er sluttposisjonen 6.">
+            >
+            ["at0008"] = <
+                text = <"Deletert sekvens">
+                description = <"Nukleotidet eller nukleotidesekvensen som er slettet.">
+                comment = <"For eksempel: For en variant, hvor referansesekvensen er endret fra 'AGAATCACA' til 'AGA___ACA', er den deleterte sekvensen 'ATC'.">
+            >
+            ["at0009"] = <
+                text = <"Referansesekvens">
+                description = <"Sekvensfilen som har blitt brukt som en referanse for å beskrive varianten.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Genomic deletion variant">
+                description = <"A human genetic sequence change where, compared to a genomic reference sequence, one or more nucleotides are not present (deleted).">
+                comment = <"For example: changing 'AGAAtCACA' to 'AGAA_CACA'.">
+            >
+            ["at0001"] = <
+                text = <"Start position">
+                description = <"Position of the deleted nucleotide or the first nucleotide of the deleted range.">
+                comment = <"For example: for a variant where the reference sequence  'AGAatcACA' is changed to 'AGA___ACA' the start position is 4.">
+            >
+            ["at0005"] = <
+                text = <"End position">
+                description = <"Position of the last nucleotide of the deleted range.">
+                comment = <"For example: for a variant where the reference sequence  'AGAatcACA' is changed to 'AGA___ACA' the end position is 6.">
+            >
+            ["at0008"] = <
+                text = <"Deleted sequence">
+                description = <"The deleted nucleotide or sequence.">
+                comment = <"For example: for a variant where the reference sequence  'AGAatcACA' is changed to 'AGA___ACA' the deleted sequence is 'ATC'.">
+            >
+            ["at0009"] = <
+                text = <"Reference sequence">
+                description = <"The sequence file used as a reference to describe this variant.">
+            >
+        >
+    >

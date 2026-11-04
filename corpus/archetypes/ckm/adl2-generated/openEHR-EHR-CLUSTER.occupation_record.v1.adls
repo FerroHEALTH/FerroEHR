@@ -1,0 +1,1109 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=251b76fc-936e-45df-8869-3babe10969cb; build_uid=d25ea19d-db32-4977-8dd0-affee30cc0e2)
+    openEHR-EHR-CLUSTER.occupation_record.v1.2.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Therese Lindberg">
+                ["organisation"] = <"Cambio CDS">
+                ["email"] = <"therese.lindberg@cambio.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke and Vebjørn Arntzen">
+                ["organisation"] = <"Nasjonal IKT HF, Oslo University Hospital">
+                ["email"] = <"silje.ljosland.bakke@nasjonalikt.no / varntzen@ous-hf.no">
+            >
+        >
+        ["pt"] = <
+            language = <[ISO_639-1::pt]>
+            author = <
+                ["name"] = <"Danielle Santos Alves">
+                ["organisation"] = <"Federal University of Pernambuco">
+                ["email"] = <"angeldannyalves@gmail.com">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Danielle Santos Alves">
+                ["organisation"] = <"Federal University of Pernambuco">
+                ["email"] = <"angeldannyalves@gmail.com">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            author = <
+                ["name"] = <"Cecilia Mascia">
+                ["organisation"] = <"CRS4 - Center for advanced studies, research and development in Sardinia, Pula (Cagliari), Italy">
+                ["email"] = <"ceclila.mascia@crs4.it">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Bassem Khouzam, Vanessa Pereira">
+                ["organisation"] = <"Medtronic, Better - Pathfinder">
+                ["email"] = <"bassem.khouzam@medtronic.com, vanessapereira@protonmail.com">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Diego Bosca">
+                ["organisation"] = <"VeraTech for Health">
+                ["email"] = <"diebosto@veratech.es">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2010-12-17">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Morten Aas, Diakonhjemmet Sykehus, Norway", "Tomas Alme, DIPS ASA, Norway", "Erling Are Hole, Helse Bergen, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Koray Atalag, University of Auckland, New Zealand", "Heidi Aursand, Oslo universitetssykehus, Norway", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Marcus Baw, openGPSoC / BawMedical Ltd, United Kingdom", "Ivar Berge, Oslo Universitetssykehus, Norway", "Anita Bjørnnes, Helse Bergen, Norway", "Bjørn Christensen, Helse Bergen HF, Norway", "Angela Crovetti, CDC/NIOSH, United States", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Jayne Donaldson, University of Stirling, United Kingdom", "Bjørg Eli Hollund, helse-bergen, Norway", "Stig Erik Hegrestad, Helse Førde, Norway", "Samuel Frade, Marand, Portugal", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom", "Sergio Freire, State University of Rio de Janeiro, Brazil", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)", "Heather Grain, Llewelyn Grain Informatics, Australia", "Anne Gunn Haugland, Helse Bergen HF, Norway", "Sam Heard, Ocean Informatics, Australia", "Kristian Heldal, Telemark Hospital Trust, Norway", "Jørn Henrik Vold, Helse Bergen, Avdeling for rusmedisin, Norway", "Anca Heyd, DIPS ASA, Norway", "Teresa Highway, Alberta Health Services, Canada", "Annette Hole Sjøborg, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Kaja Irgens-Hansen, Yrkesmedisinsk avdeling, Haukeland universitetssykehus, Norway", "Susanna Jönsson, Landstinget i Värmland, Sweden", "Tom K. Grimsrud, Kreftregisteret, Norway", "Tone Klund, DIPS AS, Norway", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Harmony Kosola, Alberta Health Services, Canada", "Ron Krawec, Alberta Health Services, Canada", "Liv Laugen, Oslo universitetssykehus, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Pedro Leuschner, Centro Hospitalar do Porto, Portugal", "Hallvard Lærum, Direktoratet for e-helse, Norway", "Rose Mari Eikås, Helse Bergen, Norway", "Siv Marie Lien, DIPS ASA, Norway", "Hildegard McNicoll, freshEHR Clinical Informatics Ltd., United Kingdom", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "John Meredith, NHS Wales Informatics Service, United Kingdom", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Erik Nissen, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Anne Pauline Anderssen, Helse Nord RHF, Norway", "Martin Paulson, Sykehuset i Vestfold, Norway", "Georg Reinhardt, Helse Fonna, Norway", "Tanja Riise, Nasjonal IKT HF, Norway", "Gro-Hilde Severinsen, Norwegian center for ehealthresearch, Norway", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Niclas Skyttberg, Karolinska Institutet, Sweden", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Andreas Sundstrom, Capio S:t Gorans Hospital, Sweden", "Nyree Taylor, Ocean Informatics, Australia", "Tesfay Teame, Folkehelseinstittutet, Norway", "Susanne Trønnes, Norway", "Jon Tysdahl, Furst medlab AS, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: Employment Summary, Draft Archetype [Internet]. NEHTA, Australia, NEHTA Clinical Knowledge Manager [cited: 2016-01-11]. No longer available.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"6EFFAB5F512D4C7C4C9CCFCDC48670C9">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Darstellung von detaiilierten Informationen zu einem Job oder einer Rolle, die von einer Person während eines bestimmten Zeitraums ausgeführt wurde.">
+            keywords = <"Beschäftigung", "Arbeitgeber", "Job", "Tätigkeit", "Arbeit", "Beruf", "arbeitslos", "Mitarbeiter", "Arbeitslosigkeit", "studieren", "beschäftigt", "Schüler", "Branche", "Berufstätigkeit", "Freiwilliger", "Berufung", "Handel", "Arbeiter", "Ehrenamtliche", "Position", "Arbeitsplatz">
+            use = <"Verwenden Sie diesen Archetyp, um detaillierte Angaben zu einem Job oder einer Rolle darzustellen, die von einer Person während eines bestimmten Zeitraums ausgeführt wurde.
+
+Der Umfang dieses Archetyps umfasst alle Beschäftigungen oder Tätigkeiten einer Person. Zum Beispiel: ein bezahlter Job oder Dienst; unbezahlte Arbeit jeglicher Art wie eine Freiwilligentätigket; oder Rollen wie Ruhestand oder Student.
+
+Mehrere Instanzen dieses Archetyps, die im Laufe der Zeit erfasst werden, führen zur Übersicht eines Verlaufs vergangener und aktueller Jobs und / oder Rollen.
+
+Eine aktive, aktuelle Beschäftigung kann aus \"Beginn\" abgeleitet werden, wenn unter \"Ende\" nichts vermerkt ist.
+
+Eine Person kann viele gleichzeitige Beschäftigungen ausüben, von denen jede bezahlt oder unbezahlt sein kann. Jede Beschäftigung sollte in einer separaten Instanz dieses Archetyps dargestellt werden.
+
+Wenn sich die Details der Beschäftigung wesentlich ändern, z. B. eine Änderung der Rolle / des Titels oder der Anzahl der Stunden, sollte dies als separate Instanz dieses Archetyps dargestellt werden.
+
+Dieser Archetyp wurde speziell für die Verwendung im SLOT \"Beschäftigungsepisode\" im Archetyp \"EVALUATION.occupation_summary\" entwickelt, kann aber auch in anderen ENTRY- oder CLUSTER-Archetypen verwendet werden, sofern dies klinisch angemessen ist.
+
+Es können offensichtliche oder tatsächliche Überlappungen zwischen den Datenelementen dieses Archetyps und demografische Details zu Berufs- / Beschäftigungsdetails an anderen Stellen der klinischen oder administrativen Systeme geben. Die Datenelemente dieses Archetyps wurden speziell zur Unterstützung klinischer Zwecke entwickelt, einschließlich der Erstellung eines ärztlichen Attests für einen aktuellen Arbeitgeber.">
+            misuse = <"Darf nicht verwendet werden, um vorübergehende Änderungen oder Episoden innerhalb eines einzelnen Beschäftigungsdatensatzes darzustellen, z. B. Urlaub. Dies ist mit diesen Archetyp nicht möglich und sollte Teil des Human Relations-Systems eines Arbeitgebers sein.
+
+Nicht zur detaillierten Beschreibung von Gesundheitsrisiken oder der Exposition gegenüber gefährlichen Substanzen am Arbeitsplatz verwenden. Verwenden Sie zu diesem Zweck die Archetypen EVALUATION.health_risk oder EVALUATION.exposure.
+
+Darf nicht verwendet werden, um Informationen über Einkommensquellen oder Einkommensangaben für die Person darzustellen. Verwenden Sie zu diesem Zweck den Archetyp EVALUATION.income_summary.
+
+Nicht zur Darstellung von Informationen über die Beschäftigung einer Person zu einem bestimmten Zeitpunkt (z. B. am 16. Juni 2014) oder während eines relativen Zeitintervalls (z. B. „in den letzten 30 Tagen“) verwenden. Verwenden Sie einen geeigneten OBSERVATION-Archetyp für diesen Zweck.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera detaljer om ett enskilt jobb eller en roll som en person utför under en viss tidsperiod.">
+            keywords = <"sysselsättning", "arbetsgivare", "jobb", "ockupation", "arbete", "yrke", "arbetslös", "anställd", "arbetslöshet", "studerar", "anställda", "studerande", "sektor", "yrke", "volontär", "yrke", "handel", "arbetstagare", "volontär", "position">
+            use = <"Används för att registrera information om ett enskilt jobb eller en roll som en person utför under en viss tidsperiod.
+
+Omfattningen av denna arketyp inkluderar alla yrken eller aktiviteter som utförs av en individ. Till exempel: ett betalt jobb eller anställning; obetalt arbete av vilken typ som helst som en volontärposition; eller roller som att gå i pension eller studera.
+
+Flera instanser av den här arketypen som skapats över tid kommer att resultera i en sammanställning av en historia av tidigare och nuvarande jobb och/eller roller.
+
+En aktiv eller nuvarande ockupation kan antydas från ett 'Datum inleddes' men inget 'Datum upphört'.
+
+En individ kan utföra många samtidiga yrken, var och en kan vara betald eller obetald. Varje yrke bör registreras i en separat instans av denna arketyp.
+
+Om yrkesattribut förändras väsentligt, till exempel roll / titel eller antal timmar, bör detta registreras som en separat instans av denna arketyp.
+
+Den här arketypen har utformats speciellt för att användas i 'Yrkesepisod' SLOT inom EVALUATION.occupation_summary arketyp, men kan också användas inom alla andra ENTRY- eller CLUSTER-arketyper, där det är kliniskt lämpligt.
+
+Det kan finnas någon uppenbar eller verklig överlappning mellan dataelementen i denna arketyp och yrkes- / anställningsdetaljer som kan lagras som demografiska detaljer i kliniska eller administrativa system. Dessa dataelement har utformats specifikt för att stödja kliniska ändamål, inklusive generering av ett läkarintyg till en nuvarande arbetsgivare.">
+            misuse = <"Inte utformad för att registrera tillfälliga ändringar eller avsnitt inom en enda yrkesregistrering, som att vara ledig. Detta är utom räckhåll för denna arketyp och bör ingå i en arbetsgivares HR-system.
+
+Inte utformad för att användas till detaljerade beskrivningar av hälsorisker eller exponering för farliga ämnen på arbetsplatsen. Använd arketyperna EVALUATION.health_risk eller EVALUATION.exposure för detta ändamål.
+
+Inte utformad för att registrera information om inkomstkällor eller inkomstuppgifter för individen. Använd arketypen EVALUATION.income_summary för detta ändamål.
+
+Används inte för att registrera information om en persons ockupation vid en viss tidpunkt (till exempel den 16 juni 2014) eller under ett relativt tidsintervall (till exempel \"under de senaste 30 dagarna\". Använd en lämplig OBSERVATION arketyp för detta ändamål.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljert informasjon om en jobb eller rolle individet har, eller har hatt i en spesifisert tidsperiode.">
+            keywords = <"arbeid", "arbeidstaker", "arbeidsgiver", "arbeidsforhold", "arbeidshistorikk", "jobb", "ansatt", "yrke", "arbeidsløs", "studerer", "student", "elev", "trygdet", "ufør", "arbeidssituasjon", "erverv", "yrkestilknytning", "pensjon", "pensjonist", "attføring", "bransje", "arbeidsledig", "hjemmeværende", "stilling", "profesjon", "frivillig", "vernepliktig", "sektor", "næring", "verv">
+            use = <"Brukes for å registrere detaljert informasjon om en jobb eller rolle individet har, eller har hatt i en spesifisert tidsperiode.
+
+Arketypen omfatter alle typer arbeid eller aktiviteter individet har eller har hatt. For eksempel: En/et betalt eller ubetalt jobb/arbeid/verv, samt ulike roller som for eksempel pensjonist, hjemmeværende eller student.
+
+Ved å benytte denne arketypen til gjentatte registreringer, vil en få fram en historisk oversikt over nåværende og tidligere arbeidsforhold /roller et individ har eller har hatt.
+
+Et aktivt, nåværende arbeidsforhold/roller kan bli utledet fra \"Dato for oppstart\" hvis det ikke er registrert noe i \"Dato for opphør\".
+
+Et individ kan ha mange samtidige arbeidsforhold/rolle, og de kan hver for seg være betalt eller ubetalt. Hvert slik arbeidsforhold registreres i egne instanser av denne arketypen.
+
+Hvis detaljer om et arbeidsforhold/rolle endrer seg vesentlig, som forandring av tittel eller stillingsprosent, registreres dette i egne instanser av denne arketypen.
+
+Arketypen er laget for å benyttes i SLOTet \"Arbeidsepisode\" i arketypen EVALUATION.occupation_summary (Arbeidssammendrag), men kan også brukes innen andre ENTRY- eller CLUSTER-arketyper der det er klinisk relevant.
+
+Det kan fremstå som å være overlapp, reell eller tilsynelatende, mellom dataelementene i denne arketypen og demografiske opplysninger om sysselsetting/arbeidsforhold andre steder i kliniske systemer. Dataelementene i denne arketypen er laget spesifikt for å støtte kliniske bruksområder, inkludert sykemeldinger eller legeerklæringer.">
+            misuse = <"Brukes ikke for å registrere midlertidige endringer eller episoder innen en enkelt arbeidsepisode, som å være i permisjon. Dette er ikke innenfor anvendelsesområdet for denne arketypen, og skal registreres i et personal- eller HR-system.
+
+Brukes ikke for å beskrive helserisikoer eller eksponering for farlige substanser i arbeidssituasjonen. Til dette brukes henholdsvis arketypene EVALUATION.health_risk (Helserisiko) eller EVALUATION.exposure.
+
+Brukes ikke for å registrere informasjon om individets inntektskilder eller detaljer om inntekt. Bruk arketypen EVALUATION.income_summary for dette formålet.
+
+Brukes ikke for å registrere informasjon om arbeid /rolle for et individ på en bestemt dato (for eksempel 16. juni 2014) eller i løpet av en relativ tidsperiode, som for eksempel \"siste 30 dager\". Dette kan utledes fra \"Dato for oppstart\" hvis det ikke er registrert noe i \"Dato for opphør\", og må registreres i en egen OBSERVATION-arketype for dette formålet.">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation, Nasjonal IKT HF">
+        >
+        ["pt"] = <
+            language = <[ISO_639-1::pt]>
+            purpose = <"Registrar detalhes sobre um único trabalho ou função executada por um indivíduo durante um período especificado.
+">
+            keywords = <"emprego", "Empregador", "trabalho", "ocupação", "trabalhos", "profissão", "desempregado", "empregado", "desemprego", "estudante", "aluno", "setor", "profissão", "voluntário", "vocação", "comércio", "trabalhador", "posição">
+            use = <"Use para registrar detalhes sobre um único trabalho ou função realizada por uma pessoa durante um período especificado.
+
+O escopo deste arquétipo inclui todas as ocupações ou atividades realizadas por um indivíduo. Por exemplo: um trabalho remunerado ou emprego; trabalho não remunerado de qualquer tipo, como uma posição de voluntário; ou papéis como aposentado ou aluno.
+
+Várias instâncias desse arquétipo capturadas ao longo do tempo resultarão na agregação de um histórico de trabalhos e / ou funções anteriores e atuais.
+
+Uma ocupação ativa ou atual pode estar implícita a partir de uma 'Data de início', mas não pela 'Data de encerramento'.
+
+Um indivíduo pode realizar ocupações simultâneas, cada uma das quais podendo ser remuneradas ou não. Cada ocupação deve ser registrada em uma instância separada desse arquétipo.
+
+Se os atributos de ocupação mudarem significativamente, como uma mudança de função / título ou número de horas, isso deverá ser registrado como uma instância separada desse arquétipo.
+
+Esse arquétipo foi projetado especificamente para ser usado no SLOT 'Episódio de ocupação' dentro do arquétipo EVALUATION.occupation_summary, mas também pode ser usado em qualquer outro arquétipo ENTRY ou CLUSTER, onde for clinicamente apropriado.
+
+Pode haver alguma sobreposição aparente ou real entre os elementos de dados neste arquétipo e os detalhes de ocupação / emprego que podem ser armazenados como detalhes demográficos em sistemas clínicos ou administrativos. Esses elementos de dados foram projetados especificamente para apoiar fins clínicos, incluindo a geração de um atestado médico para um empregador atual.">
+            misuse = <"	
+Não deve ser usado para gravar alterações ou episódios temporários em um registro único de ocupação, como estar de licença. Isso está fora do escopo desse arquétipo e deve fazer parte do sistema de recursos humanos de um empregador.
+
+Não deve ser usado para descrições detalhadas de riscos para a saúde ou exposição a substâncias perigosas no local de trabalho. Use os arquétipos EVALUATION.health_risk ou EVALUATION.exposure para essa finalidade.
+
+Não deve ser usado para registrar informações sobre fontes de renda ou detalhes de renda da pessoa. Use o arquétipo EVALUATION.income_summary para esse fim.
+
+Não deve ser usado para registrar informações sobre a ocupação de um indivíduo em um momento específico (por exemplo, em 16 de junho de 2014) ou durante um intervalo de tempo relativo (por exemplo, 'nos últimos 30 dias'). Use um arquétipo do tipo OBSERVATION para esse fim.">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Registrar detalhes sobre um único trabalho ou função executada por um indivíduo durante um período especificado.">
+            keywords = <"emprego", "Empregador", "trabalho", "ocupação", "trabalhos", "profissão", "desempregado", "empregado", "desemprego", "estudante", "aluno", "setor", "profissão", "voluntário", "vocação", "comércio", "trabalhador", "posição">
+            use = <"Use para registrar detalhes sobre um único trabalho ou função realizada por uma pessoa durante um período especificado.
+
+O escopo deste arquétipo inclui todas as ocupações ou atividades realizadas por um indivíduo. Por exemplo: um trabalho remunerado ou emprego; trabalho não remunerado de qualquer tipo, como uma posição de voluntário; ou papéis como aposentado ou aluno.
+
+Várias instâncias desse arquétipo capturadas ao longo do tempo resultarão na agregação de um histórico de trabalhos e / ou funções anteriores e atuais.
+
+Uma ocupação ativa ou atual pode estar implícita a partir de uma 'Data de início', mas não pela 'Data de encerramento'.
+
+Um indivíduo pode realizar ocupações simultâneas, cada uma das quais podendo ser remuneradas ou não. Cada ocupação deve ser registrada em uma instância separada desse arquétipo.
+
+Se os atributos de ocupação mudarem significativamente, como uma mudança de função / título ou número de horas, isso deverá ser registrado como uma instância separada desse arquétipo.
+
+Esse arquétipo foi projetado especificamente para ser usado no SLOT 'Episódio de ocupação' dentro do arquétipo EVALUATION.occupation_summary, mas também pode ser usado em qualquer outro arquétipo ENTRY ou CLUSTER, onde for clinicamente apropriado.
+
+Pode haver alguma sobreposição aparente ou real entre os elementos de dados neste arquétipo e os detalhes de ocupação / emprego que podem ser armazenados como detalhes demográficos em sistemas clínicos ou administrativos. Esses elementos de dados foram projetados especificamente para apoiar fins clínicos, incluindo a geração de um atestado médico para um empregador atual.">
+            misuse = <"Não deve ser usado para gravar alterações ou episódios temporários em um registro único de ocupação, como estar de licença. Isso está fora do escopo desse arquétipo e deve fazer parte do sistema de recursos humanos de um empregador.
+
+Não deve ser usado para descrições detalhadas de riscos para a saúde ou exposição a substâncias perigosas no local de trabalho. Use os arquétipos EVALUATION.health_risk ou EVALUATION.exposure para essa finalidade.
+
+Não deve ser usado para registrar informações sobre fontes de renda ou detalhes de renda da pessoa. Use o arquétipo EVALUATION.income_summary para esse fim.
+
+Não deve ser usado para registrar informações sobre a ocupação de um indivíduo em um momento específico (por exemplo, em 16 de junho de 2014) ou durante um intervalo de tempo relativo (por exemplo, 'nos últimos 30 dias'). Use um arquétipo do tipo OBSERVATION para esse fim.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about a single job or role carried out by an individual during a specified period of time.">
+            keywords = <"employment", "employer", "job", "occupation", "work", "profession", "unemployed", "employee", "unemployment", "studying", "employed", "student", "sector", "profession", "volunteer", "vocation", "trade", "worker", "volunteer", "position">
+            use = <"Use to record details about a single job or role carried out by an individual during a specified period of time. 
+
+The scope of this archetype is inclusive of all occupations or activities undertaken by an individual. For example: a paid job or employment; unpaid work of any type such as a volunteer position; or roles such as being retired or a student. 
+
+Multiple instances of this archetype captured over time will result in the aggregation of a history of past and present jobs and/or roles.
+
+An active, or current occupation may be implied from a 'Date commenced' but no 'Date ceased'. 
+
+An individual may carry out many simultaneous occupations, each of which may be paid or unpaid. Each occupation should be recorded in a separate instance of this archetype.
+
+If occupation attributes change significantly, such as a change of role/title or number of hours, then this should be recorded as a separate instance of this archetype.
+
+This archetype has been specifically designed to be used in the 'Occupation episode' SLOT within the EVALUATION.occupation_summary archetype, but can also be used within any other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+There may be some apparent or real overlap between the data elements in this archetype and occupation/employment details that may be stored as demographic details in clinical or administrative systems. These data elements have been designed specifically to support clinical purposes including generation of a medical certificate to a current employer.">
+            misuse = <"Not to be used to record temporary changes or episodes within a single occupation record, such as being on leave. This is out of scope for this archetype and should be part of an employer's human relations system.
+
+Not to be used for detailed descriptions of health risks or exposure to hazardous substances in the workplace. Use the archetypes EVALUATION.health_risk or EVALUATION.exposure for this purpose.
+
+Not to be used to record information about sources of income or income details for the individual. Use the EVALUATION.income_summary archetype for this purpose.
+
+Not to be used to record information about the occupation of an individual at a specific point in time (for example, on June 16, 2014) or during a relative interval of time (for example 'in the past 30 days'. Use an appropriate OBSERVATION archetype for this purpose.">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation, Nasjonal IKT HF">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"Registrare i dettagli della singola professione svolta o ruolo ricoperto da un individuo durante un determinato periodo di tempo.">
+            keywords = <"lavoro, impiego, datore di lavoro, occupazione, disoccupazione, professione, disoccupato, occupato, dipendente, impiegato, studente, settore, volontario, vocazione, mestiere, lavoratore, posizione", ...>
+            use = <"Usato per registrare i dettagli della singola professione svolta o ruolo ricoperto da un individuo durante un determinato periodo di tempo.
+
+L'ambito di questo archetipo comprende tutte le occupazioni o attività svolte da un individuo. Ad esempio: un lavoro o impiego retribuiti; un qualsiasi lavoro non retribuito, come un'attività di volontariato; o ruoli come essere in pensione o uno studente. 
+
+Più istanze di questo archetipo catturate nel tempo possono essere aggregate per costruire la storia occupazionale di un individuo, che comprende occupazioni e ruoli passati e presenti.
+
+È possibile dedurre se l'occupazione sia attiva/corrente se è presente una 'Data di inizio' ma non una 'Data di cessazione'.
+
+Un individuo può avere più occupazioni contemporaneamente, ciascuna delle quali può essere retribuita o meno. Ogni occupazione dovrebbe essere registrata in una istanza separata di questo archetipo. 
+
+Se i dettagli dell'occupazione cambiano significativamente, ad esempio in caso di modifica del ruolo/titolo o numero di ore, questo dovrebbe corrispondere ad un'istanza separata di questo archetipo.
+
+Questo archetipo è stato sviluppato per essere usato nello SLOT 'Episodio lavorativo' all'interno dell'archetipo EVALUATION.occupation_summary, ma è possibile utilizzarlo all'interno di altri archetipi di tipo ENTRY o CLUSTER quando clinicamente appropriato. 
+
+Ci potrebbe essere una sovrapposizione, apparente o reale, tra i dati all'interno di questo archetipo e i dettegli sull'occupazione/impiego memorizzati come informazioni demografiche all'interno di sistemi clinici o amministrativi.  I contenuti sono stati espressamente progettati per supportare l'attività clinica, compresa la generazione di certificati medici per un datore di lavoro.">
+            misuse = <"Non utilizzare per memorizzare cambiamenti o episodi temporanei all'interno di un singolo record di occupazione, come ad esempio essere in congedo. Questo non rientra nello scopo dell'archetipo e dovrebbe far parte del sistema di gestione delle risorse umane del datore di lavoro. 
+
+Non utilizzare per descrizioni dettagliate dei rischi per la salute o dell'esposizione a sostanze pericolose nel luogo di lavoro. Utilizzare invece gli archetipi EVALUATION.health_risk o EVALUATION.exposure.
+
+Non utilizzare per memorizzare informazioni sulle fonti o dettagli del reddito dell'individuo. Per questo scopo, utilizzare l'archetipo EVALUATION.income_summary.
+
+Non utilizzare per memorizzare informazioni sull'occupazione di un individuo in uno specifico punto nel tempo (ad esempio, il 16 giugno 2014) o durante un intervallo di tempo (ad esempio 'negli ultimi 30 giorni'). Per questo scopo, usare un appropriato archetipo di tipo OBSERVATION. ">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Un travail ou un rôle unique exercé par un individu pendant une période de temps déterminée.">
+            keywords = <"emploi", "employeur", "emploi", "Occupation", "travail", "profession", "sans emploi", "employé", "chômage", "en train d'étudier", "employé", "étudiant", "secteur", "profession", "bénévole", "vocation", "Commerce", "ouvrier", "bénévole", "position">
+            use = <"*Use to record details about a single job or role carried out by an individual during a specified period of time. 
+
+The scope of this archetype is inclusive of all occupations or activities undertaken by an individual. For example: a paid job or employment; unpaid work of any type such as a volunteer position; or roles such as being retired or a student. 
+
+Multiple instances of this archetype captured over time will result in the aggregation of a history of past and present jobs and/or roles.
+
+An active, or current occupation may be implied from a 'Date commenced' but no 'Date ceased'. 
+
+An individual may carry out many simultaneous occupations, each of which may be paid or unpaid. Each occupation should be recorded in a separate instance of this archetype.
+
+If occupation attributes change significantly, such as a change of role/title or number of hours, then this should be recorded as a separate instance of this archetype.
+
+This archetype has been specifically designed to be used in the 'Occupation episode' SLOT within the EVALUATION.occupation_summary archetype, but can also be used within any other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+There may be some apparent or real overlap between the data elements in this archetype and occupation/employment details that may be stored as demographic details in clinical or administrative systems. These data elements have been designed specifically to support clinical purposes including generation of a medical certificate to a current employer.(en)">
+            misuse = <"*Not to be used to record temporary changes or episodes within a single occupation record, such as being on leave. This is out of scope for this archetype and should be part of an employer's human relations system.
+
+Not to be used for detailed descriptions of health risks or exposure to hazardous substances in the workplace. Use the archetypes EVALUATION.health_risk or EVALUATION.exposure for this purpose.
+
+Not to be used to record information about sources of income or income details for the individual. Use the EVALUATION.income_summary archetype for this purpose.
+
+Not to be used to record information about the occupation of an individual at a specific point in time (for example, on June 16, 2014) or during a relative interval of time (for example 'in the past 30 days'. Use an appropriate OBSERVATION archetype for this purpose.(en)">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Para registrar detalles sobre un trabajo o rol llevado a cabo por un individuo durante un periodo de tiempo especificado.">
+            keywords = <"empleo", "empleador", "trabajo", "ocupación", "tarea", "profesión", "desempleado", "empleado", "desempleo", "estudiando", "empleado", "estudiante", "sector", "profesión", "voluntario", "vocación", "comercio", "trabajador", "voluntario", "cargo">
+            use = <"Usar para registrar detalles sobre un trabajo o rol particular llevado a cabo por un individuo durante un periodo de tiempo especificado.
+
+El alcance de este arquetipo incluye todos los empleos o actividades llevadas a cabo por el individuo. Por ejemplo: Un trabajo o empleo pagado; trabajo no remunerado de cualquier tipo como voluntario; o roles tales como estar jubilado o ser estudiante.
+
+Múltiples instancias de este arquetipo capturadas a lo largo del tiempo resultarán en una agregación de un histórico de trabajos y/o roles presentes o pasados.
+
+Un trabajo actual puede deducirse de la 'Fecha empezado' pero no de la 'Fecha finalizado'.
+
+Un individuo puede llevar a cabo muchas ocupaciones al mismo tiempo, las cuales pueden ser remuneradas o no remuneradas. Cada ocupación debería de ser registrada en una instancia separada de este arquetipo.
+
+Si los atributos de la ocupación cambian significativamente, tales como cambios en el título/rol o el número de horas, éstas se deberían de registrar en una instancia separada de este arquetipo.
+
+Este arquetipo ha sido específicamente diseñado para ser usado en el SLOT de 'Episodio de ocupación' dentro del arquetipo EVALUATION.occupation_summary, pero también puede ser usado dentro de cualquier otro arquetipo ENTRY o CLUSTER, cuando sea clínicamente apropiado.
+
+Puede haber una superposición aparente o real entre los elementos de datos en este arquetipo y detalles sobre la ocupación/empleo que puedan haber sido incluidos como detalles demográficos en sistemas clínicos o administrativos. Estos elementos de datos se han diseñado específicamente para dar soporte a propósitos clínicos como puede ser la generación de un certificado médico para el empleador actual.">
+            misuse = <"No debe ser usado para registrar cambios temporales o episodios dentro de un único registro ocupacional, tales como estar de baja. Esto está fuera del alcance de este arquetipo y debería ser parte de un sistema de recursos humanos del empleador.
+
+No debe ser usado para una descripción detallada de los riesgos de salud o exposición a sustancias nocivas en el lugar de trabajo. Para este propósito use los arquetipos EVALUATION.health_risk o EVALUATION.exposure.
+
+No debe ser usado para registrar información sobre fuentes o detalles de ingresos de un individuo. Para este propósito use el arquetipo EVALUATION.income_summary.
+
+No debe ser usado para registrar información sobre la ocupación de un individuo en un punto concreto de tiempo (por ejemplo, el 16 de Junio de 2014) o durante un periodo de tiempo relativo (por ejemplo 'durante los últimos 30 días'). Para este propósito use un arquetipo OBSERVATION adecuado.">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Occupation record
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Job title/role
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            allow_archetype CLUSTER[at0004] matches {    -- Organisation details
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Date commenced
+                value matches {
+                    DV_DATE_TIME[at9004]
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Paid employment status
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Full time equivalent
+                value matches {
+                    DV_PROPORTION[at9008] matches {
+                        numerator matches {|>=0.0|}
+                        type matches {1, 2}
+                    }
+                    DV_CODED_TEXT[at9014] matches {
+                        defining_code matches {[ac9000]}    -- Full time equivalent (synthesised)
+                    }
+                    DV_TEXT[at9015]
+                }
+            }
+            ELEMENT[at0019] occurrences matches {0..1} matches {    -- Time allocated
+                value matches {
+                    DV_QUANTITY[at9009] matches {
+                        [magnitude, units, precision] matches {
+                            [{|>=0.0|}, {"h/d"}, {2}],
+                            [{|>=0.0|}, {"h/wk"}, {2}],
+                            [{|>=0.0|}, {"h/mo"}, {2}],
+                            [{|>=0.0|}, {"h/a"}, {2}],
+                            [{|>=0.0|}, {"d/wk"}, {2}],
+                            [{|>=0.0|}, {"d/mo"}, {2}],
+                            [{|>=0.0|}, {"wk/mo"}, {2}],
+                            [{|>=0.0|}, {"d/a"}, {2}],
+                            [{|>=0.0|}, {"wk/a"}, {2}],
+                            [{|>=0.0|}, {"mo/a"}, {2}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Industry category
+                value matches {
+                    DV_TEXT[at9010]
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Job category
+                value matches {
+                    DV_TEXT[at9011]
+                }
+            }
+            allow_archetype CLUSTER[at0018] matches {    -- Additional details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Date ceased
+                value matches {
+                    DV_DATE_TIME[at9012]
+                }
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9013]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Beschäftigung">
+                description = <"Ein einzelner Job oder eine einzelne Rolle, die von einer Person während eines bestimmten Zeitraums ausgeführt wurde.">
+            >
+            ["at0001"] = <
+                text = <"Status der Erwerbstätigkeit">
+                description = <"Der Status eines Arbeitnehmers in Bezug auf bezahlt oder unbezahlt.">
+                comment = <"Zum Beispiel: unbezahlt, bezahlt, Selbstständiger oder Ehrenamtlicher. Eine Codierung mit einer Terminologie ist nach Möglichkeit wünschenswert.">
+            >
+            ["at0002"] = <
+                text = <"Art der Branche">
+                description = <"Die Art der Branche, in der die Person arbeitet.">
+                comment = <"Zum Beispiel: Bergbau, Fertigung, Bau. Eine Codierung mit einer Terminologie ist nach Möglichkeit wünschenswert.">
+            >
+            ["at0004"] = <
+                text = <"Angaben zur Organisation">
+                description = <"Angaben zum Arbeitgeber oder zur Einrichtung.">
+            >
+            ["at0005"] = <
+                text = <"Berufsbezeichnung/Rolle">
+                description = <"Die Hauptberufsbezeichnung oder die Rolle der Person.">
+                comment = <"Zum Beispiel: Geschäftsführer, Pflegekraft oder Student. Jede dieser Berufsbezeichnungen oder Rollen kann aus mehreren Aufgaben bestehen.">
+            >
+            ["at0006"] = <
+                text = <"Art des Jobs">
+                description = <"Die Art des Jobs der Person.">
+                comment = <"Eine Codierung mit einer Terminologie ist nach Möglichkeit wünschenswert, z. B. mit ISCO-08.
+Zum Beispiel: Vertriebsleiter oder Softwareentwickler.">
+            >
+            ["at0007"] = <
+                text = <"Beginn">
+                description = <"Das Datum, an dem eine Person mit dem Job oder der Rolle begonnen hat.">
+            >
+            ["at0008"] = <
+                text = <"Ende">
+                description = <"Das Datum, an dem eine Person mit einem Job oder einer Rolle aufgehört hat.">
+            >
+            ["at0013"] = <
+                text = <"Vollzeitäquivalent">
+                description = <"Die Zeit, die in diesem Job oder dieser Rolle im Verhältnis zur Vollzeit verbracht wurde.">
+                comment = <"Vollzeitäquivalent kann auch als \"FTE\" (Full-Time Equivalent) bezeichnet werden. Zum Beispiel: 0,5; 50%; oder \"Teilzeit\".">
+            >
+            ["at0014"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Beschreibung zur Beschäftigung, die nicht in anderen Feldern erfasst wurde.">
+            >
+            ["at0016"] = <
+                text = <"Beschreibung">
+                description = <"Beschreibung des Jobs oder der Rolle der Person.">
+            >
+            ["at0018"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Weitere Angaben zu einer Beschäftigung.">
+                comment = <"Zum Beispiel: Standort und Bedingungen am Arbeitsplatz oder Kampfzonenerfahrung.">
+            >
+            ["at0019"] = <
+                text = <"Zugewiesene Zeit">
+                description = <"Die Zeit, die einer Person für die Ausführung des Jobs oder der Rolle pro festgelegten Zeitraum dieser Beschäftigung zugewiesen wird.">
+                comment = <"Zum Beispiel: \"3 Tage pro Woche\", \"10 Tage pro Monat\" oder \"2 Stunden pro Tag\".">
+            >
+            ["at0020"] = <
+                text = <"Vollzeit">
+                description = <"Die Person übt diese Beschäftigung mindestens so lange aus, wie diese offiziell als „Vollzeit“ für die Beschäftigung gilt.">
+            >
+            ["at0021"] = <
+                text = <"Teilzeit">
+                description = <"Die Person übt diese Beschäftigung weniger als die Zeit aus, die offiziell als \"Vollzeit\" für die Beschäftigung gilt.">
+            >
+            ["ac9000"] = <
+                text = <"Vollzeitäquivalent (synthesised)">
+                description = <"Die Zeit, die in diesem Job oder dieser Rolle im Verhältnis zur Vollzeit verbracht wurde. (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Yrkesregistrering">
+                description = <"Ett enskilt jobb eller en roll som en person utför under en viss tidsperiod.">
+            >
+            ["at0001"] = <
+                text = <"Betald anställningsstatus">
+                description = <"Arbetarens status när det gäller att få betalt eller inte.">
+                comment = <"Till exempel: obetalt; betald; egenföretagare; eller volontär. Kodning med en terminologi är önskvärd, där det är möjligt.">
+            >
+            ["at0002"] = <
+                text = <"Branschkategori">
+                description = <"Den typ av bransch där individen arbetar.">
+                comment = <"Till exempel: Gruvdrift, tillverkning, konstruktion. Kodning med en terminologi är önskvärd, där det är möjligt.">
+            >
+            ["at0004"] = <
+                text = <"Organisationsinformation">
+                description = <"Detaljer om arbetsgivaren eller institutionen.">
+            >
+            ["at0005"] = <
+                text = <"Jobbtitel / roll">
+                description = <"Individens jobbtitel eller arbetsroll.">
+                comment = <"Till exempel: verkställande direktör; Vårdgivare; eller student. Var och en av dessa jobbtitlar eller roller kan bestå av flera uppgifter.">
+            >
+            ["at0006"] = <
+                text = <"Jobbkategori">
+                description = <"Typ av jobb som individen utför.">
+                comment = <"Kodning med en terminologi är önskvärt, där det är möjligt, såsom ISCO-08.
+Till exempel: försäljningschef eller programvarutekniker.">
+            >
+            ["at0007"] = <
+                text = <"Startdatum">
+                description = <"Datumet då en person började jobbet eller rollen.">
+            >
+            ["at0008"] = <
+                text = <"Upphörandedatum">
+                description = <"Datumet då en person slutade på ett jobb eller avslutade en roll.">
+            >
+            ["at0013"] = <
+                text = <"Heltidsekvivalent">
+                description = <"Tiden i det här jobbet eller rollen i förhållande till heltid.">
+                comment = <"Heltidsekvivalent kan också kallas 'FTE'. Till exempel: 0,5; 50%; eller \"deltid\".">
+            >
+            ["at0014"] = <
+                text = <"Kommentar">
+                description = <"Ytterligare beskrivning om yrkesregistreringen som inte redan inkluderats.">
+            >
+            ["at0016"] = <
+                text = <"Beskrivning">
+                description = <"Berättande beskrivning om jobbet eller rollen som utförs av individen.">
+            >
+            ["at0018"] = <
+                text = <"Ytterligare detaljer">
+                description = <"Mer information om en yrkesregistrering.">
+                comment = <"Till exempel: arbetsplats och arbetsförhållanden; eller stridszonupplevelse.">
+            >
+            ["at0019"] = <
+                text = <"Tilldelad tid">
+                description = <"Hur lång tid en individ har tilldelats för att utföra jobbet eller rollen per angiven period av detta yrkesregister.">
+                comment = <"Till exempel: \"3 dagar per vecka\", \"10 dagar per månad\" eller \"2 timmar per dag\".">
+            >
+            ["at0020"] = <
+                text = <"Heltid">
+                description = <"Individen utför ockupationen lika med eller mer än den tid som officiellt betraktas som ”heltid” för ockupationen.">
+            >
+            ["at0021"] = <
+                text = <"Deltid">
+                description = <"Individen utför ockupationen under mindre tid än vad som officiellt betraktas som ”heltid” för ockupationen.">
+            >
+            ["ac9000"] = <
+                text = <"Heltidsekvivalent (synthesised)">
+                description = <"Tiden i det här jobbet eller rollen i förhållande till heltid. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Arbeidsforhold/rolle">
+                description = <"En jobb eller rolle individet har, eller har hatt i en spesifisert tidsperiode.">
+            >
+            ["at0001"] = <
+                text = <"Status lønnet arbeid">
+                description = <"Om individet har lønnet eller ulønnet arbeid.">
+                comment = <"For eksempel: \"Ulønnet\", \"Lønnet\", \"Selvstendig næringsdrivende\" eller \"Frivillig arbeid\". Koding av denne statusen med en terminologi er anbefalt, der det er mulig.">
+            >
+            ["at0002"] = <
+                text = <"Bransje">
+                description = <"Klassifisering av bransje eller sektor der individet har arbeidsforholdet/rollen.">
+                comment = <"For eksempel: \"Jordbruk, skogbruk og fiske\", \"Varehandel\", \"Bygg- og anleggsvirksomhet\". Koding av \"Bransje\" med en terminologi er anbefalt, der det er mulig.">
+            >
+            ["at0004"] = <
+                text = <"Organisasjonsdetaljer">
+                description = <"Detaljer om arbeidsgiver eller institusjon/organisasjon.">
+            >
+            ["at0005"] = <
+                text = <"Tittel/rolle">
+                description = <"Stillingstittel eller betegnelse for dette arbeidsforholdet/rollen/vervet.">
+                comment = <"For eksempel: Administrerende direktør, hjemmeværende eller student. Hver av disse stillingstitlene eller rollene kan omfatte flere arbeidsoppgaver.">
+            >
+            ["at0006"] = <
+                text = <"Yrkeskategori">
+                description = <"Klassifisering av yrket individet har.">
+                comment = <"Koding med en terminologi er ønskelig om mulig. For eksempel kategorisering i henhold til STYRK-08.
+For eksempel: \"Salgssjef\" eller \"Programvareutvikler\".">
+            >
+            ["at0007"] = <
+                text = <"Dato for oppstart">
+                description = <"Datoen arbeidsforholdet/rollen startet.">
+            >
+            ["at0008"] = <
+                text = <"Dato for opphør">
+                description = <"Datoen arbeidsforholdet/rollen opphørte.">
+            >
+            ["at0013"] = <
+                text = <"Heltidsekvivalent">
+                description = <"Arbeidsforholdet/rollens andel eller prosent av en heltidsstilling.">
+                comment = <"Definisjonen av \"heltid\" kan variere mellom ulike yrker. For eksempel \"0,5\", 50 %\" eller \"deltid\". I noen situasjoner kan det være passende å registrere faktisk antall arbeidstimer i elementet \"Antall arbeidstimer\".">
+            >
+            ["at0014"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekstkommentar om arbeidsforholdet/rollen som ikke passer i andre felt.">
+            >
+            ["at0016"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse av arbeidsforholdet/rollen.">
+            >
+            ["at0018"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere detaljer om arbeidsforholdet/rollen.">
+                comment = <"For eksempel: Forhold på arbeidsplassen eller erfaring fra krigssoner.">
+            >
+            ["at0019"] = <
+                text = <"Avsatt tid">
+                description = <"Den avtalte tiden som er satt av til å utføre jobben eller rollen per tidsperiode for dette arbeidsforholdet.">
+                comment = <"For eksempel: \"3 dager per uke\", \"10 dager per måned\" eller \"2 timer per dag\".">
+            >
+            ["at0020"] = <
+                text = <"Heltid">
+                description = <"Individet bruker lik eller lengre tid på jobben/rollen enn definisjonen av full stilling i lov- eller avtaleverk (tariffavtale).">
+            >
+            ["at0021"] = <
+                text = <"Deltid">
+                description = <"Individet bruker kortere tid på jobben/rollen enn definisjonen av full stilling i lov- eller avtaleverk (tariffavtale).">
+            >
+            ["ac9000"] = <
+                text = <"Heltidsekvivalent (synthesised)">
+                description = <"Arbeidsforholdet/rollens andel eller prosent av en heltidsstilling. (synthesised)">
+            >
+        >
+        ["pt"] = <
+            ["at0000"] = <
+                text = <"Registro da ocupação">
+                description = <"Um único trabalho ou função desempenhada por um indivíduo durante um período de tempo especificado.">
+            >
+            ["at0001"] = <
+                text = <"Status do emprego remunerado">
+                description = <"O status de um trabalhador em termos de ser pago ou não.">
+                comment = <"Por exemplo: não remunerado; remunerado; trabalhadores por conta própria; ou voluntário. É desejável codificar com uma terminologia, sempre que possível.">
+            >
+            ["at0002"] = <
+                text = <"Categoria Industrial">
+                description = <"O tipo de indústria em que o indivíduo trabalha.
+">
+                comment = <"Por exemplo: Mineração, fabricação, construção. É desejável codificar com uma terminologia, sempre que possível.">
+            >
+            ["at0004"] = <
+                text = <"Detalhes organizacionais">
+                description = <"Detalhes sobre o empregador ou instituição.">
+            >
+            ["at0005"] = <
+                text = <"Cargo / Função">
+                description = <"O cargo principal ou a função do indivíduo.">
+                comment = <"Por exemplo: CEO; Cuidador; ou aluno. Cada um desses cargos ou funções pode ser composto de várias ocupações.">
+            >
+            ["at0006"] = <
+                text = <"Categoria ocupacional">
+                description = <"O tipo de ocupação realizada pelo indivíduo.
+">
+                comment = <"É desejável codificar com uma terminologia, sempre que possível, como o ISCO-08. Por exemplo: Gerente de vendas ou engenheiro de software.">
+            >
+            ["at0007"] = <
+                text = <"Data de início">
+                description = <"A data em que um indivíduo iniciou o trabalho ou função.">
+            >
+            ["at0008"] = <
+                text = <"Data de término">
+                description = <"A data em que um indivíduo deixou de trabalhar em um emprego ou função.">
+            >
+            ["at0013"] = <
+                text = <"Equivalente a tempo integral">
+                description = <"O tempo gasto nesse trabalho ou função em relação ao período integral.">
+                comment = <"O equivalente a tempo integral também pode ser conhecido como 'ETI'. Por exemplo: 0,5; 50%; ou \"tempo parcial\".">
+            >
+            ["at0014"] = <
+                text = <"Comentários">
+                description = <"Narrativa adicional sobre o registro de ocupação não registrada em outros campos.">
+            >
+            ["at0016"] = <
+                text = <"Descrição">
+                description = <"Descrição narrativa sobre o trabalho ou função desempenhada pelo indivíduo.">
+            >
+            ["at0018"] = <
+                text = <"Detalhes adicionais">
+                description = <"Mais detalhes sobre um registro da ocupação.">
+                comment = <"Por exemplo: local e condições do local de trabalho; ou experiência na zona de combate.">
+            >
+            ["at0019"] = <
+                text = <"Tempo alocado">
+                description = <"A quantidade de tempo que um indivíduo é alocado para realizar o trabalho ou função por período especificado desse registro de ocupação.
+">
+                comment = <"Por exemplo: '3 dias por semana', '10 dias por mês' ou '2 horas por dia'.">
+            >
+            ["at0020"] = <
+                text = <"Tempo integral">
+                description = <"O indivíduo realiza essa ocupação por igual ou superior quantidade de tempo que é oficialmente considerada como 'período integral' para a ocupação.">
+            >
+            ["at0021"] = <
+                text = <"Tempo parcial">
+                description = <"O indivíduo realiza essa ocupação por menos do que o tempo considerado oficialmente como 'período integral' para a ocupação.">
+            >
+            ["ac9000"] = <
+                text = <"Equivalente a tempo integral (synthesised)">
+                description = <"O tempo gasto nesse trabalho ou função em relação ao período integral. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Registro da ocupação">
+                description = <"Um único trabalho ou função desempenhada por um indivíduo durante um período de tempo especificado.">
+            >
+            ["at0001"] = <
+                text = <"Status de emprego remunerado">
+                description = <"O status de um trabalhador em termos de ser pago ou não.">
+                comment = <"Por exemplo: não remunerado; remunerado; trabalhadores por conta própria; ou voluntário. É desejável codificar com uma terminologia, sempre que possível.">
+            >
+            ["at0002"] = <
+                text = <"Categoria Industrial">
+                description = <"O tipo de indústria em que o indivíduo trabalha.">
+                comment = <"Por exemplo: Mineração, fabricação, construção. É desejável codificar com uma terminologia, sempre que possível.">
+            >
+            ["at0004"] = <
+                text = <"Detalhes organizacionais">
+                description = <"Detalhes sobre o empregador ou instituição.">
+            >
+            ["at0005"] = <
+                text = <"Cargo / função">
+                description = <"O cargo principal ou a função do indivíduo.">
+                comment = <"Por exemplo: CEO; Cuidador; ou aluno. Cada um desses cargos ou funções pode ser composto de várias ocupações.">
+            >
+            ["at0006"] = <
+                text = <"Categoria de Emprego">
+                description = <"O tipo de trabalho realizado pelo indivíduo.">
+                comment = <"É desejável codificar com uma terminologia, sempre que possível, como o ISCO-08.
+Por exemplo: Gerente de vendas ou engenheiro de software.">
+            >
+            ["at0007"] = <
+                text = <"Data de início">
+                description = <"A data em que um indivíduo iniciou o trabalho ou função.">
+            >
+            ["at0008"] = <
+                text = <"Data de término">
+                description = <"A data em que um indivíduo deixou de trabalhar em um emprego ou função.">
+            >
+            ["at0013"] = <
+                text = <"Equivalente a tempo integral">
+                description = <"O tempo gasto nesse trabalho ou função em relação ao período integral.">
+                comment = <"O equivalente a tempo integral também pode ser conhecido como 'ETI'. Por exemplo: 0,5; 50%; ou \"tempo parcial\".">
+            >
+            ["at0014"] = <
+                text = <"Comentários">
+                description = <"Narrativa adicional sobre o registro de ocupação não registrada em outros campos.">
+            >
+            ["at0016"] = <
+                text = <"Descrição">
+                description = <"Descrição narrativa sobre o trabalho ou função desempenhada pelo indivíduo.">
+            >
+            ["at0018"] = <
+                text = <"Detalhes adicionais">
+                description = <"Mais detalhes sobre um registro de ocupação.">
+                comment = <"Por exemplo: local e condições do local de trabalho; ou experiência na zona de combate.">
+            >
+            ["at0019"] = <
+                text = <"Tempo alocado">
+                description = <"A quantidade de tempo que um indivíduo é alocado para realizar o trabalho ou função por período especificado desse registro de ocupação.">
+                comment = <"Por exemplo: '3 dias por semana', '10 dias por mês' ou '2 horas por dia'.">
+            >
+            ["at0020"] = <
+                text = <"Tempo integral">
+                description = <"O indivíduo realiza essa ocupação por igual ou superior quantidade de tempo que é oficialmente considerada como 'período integral' para a ocupação.">
+            >
+            ["at0021"] = <
+                text = <"Tempo parcial">
+                description = <"O indivíduo realiza essa ocupação por menos do que o tempo considerado oficialmente como 'período integral' para a ocupação.">
+            >
+            ["ac9000"] = <
+                text = <"Equivalente a tempo integral (synthesised)">
+                description = <"O tempo gasto nesse trabalho ou função em relação ao período integral. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Occupation record">
+                description = <"A single job or role carried out by an individual during a specified period of time.">
+            >
+            ["at0001"] = <
+                text = <"Paid employment status">
+                description = <"The status of a worker in terms of being paid or unpaid.">
+                comment = <"For example: unpaid; paid; self-employed; or volunteer. Coding with a terminology is desirable, where possible.">
+            >
+            ["at0002"] = <
+                text = <"Industry category">
+                description = <"The type of industry in which the individual works.">
+                comment = <"For example: Mining, manufacturing, construction. Coding with a terminology is desirable, where possible.">
+            >
+            ["at0004"] = <
+                text = <"Organisation details">
+                description = <"Details about the employer or institution.">
+            >
+            ["at0005"] = <
+                text = <"Job title/role">
+                description = <"The main job title or the role of the individual.">
+                comment = <"For example: Chief Executive Officer; Carer; or Student. Each of these job titles or roles may be comprised of multiple duties.">
+            >
+            ["at0006"] = <
+                text = <"Job category">
+                description = <"The type of job undertaken by the individual.">
+                comment = <"Coding with a terminology is desirable, where possible, such as ISCO-08.
+For example: Sales manager or software engineer.">
+            >
+            ["at0007"] = <
+                text = <"Date commenced">
+                description = <"The date when an individual commenced the job or role.">
+            >
+            ["at0008"] = <
+                text = <"Date ceased">
+                description = <"The date when an individual ceased working in a job or role.">
+            >
+            ["at0013"] = <
+                text = <"Full time equivalent">
+                description = <"The time spent in this job or role relative to full-time.">
+                comment = <"Full time equivalent may also be known as 'FTE'. For example: 0.5; 50 %; or \"part time\".">
+            >
+            ["at0014"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the occupation record not captured in other fields.">
+            >
+            ["at0016"] = <
+                text = <"Description">
+                description = <"Narrative description about the job or role carried out by the individual.">
+            >
+            ["at0018"] = <
+                text = <"Additional details">
+                description = <"Further detail about an occupation record.">
+                comment = <"For example: workplace location and conditions; or combat zone experience.">
+            >
+            ["at0019"] = <
+                text = <"Time allocated">
+                description = <"The amount of time an individual is allocated to carry out the job or role per specified period of this occupation record.">
+                comment = <"For example: '3 days per week', '10 days per month' or '2 hours per day'.">
+            >
+            ["at0020"] = <
+                text = <"Full-time">
+                description = <"The individual carries out this occupation for equal to or more than the amount of time that is officially regarded as 'full-time' for the occupation.">
+            >
+            ["at0021"] = <
+                text = <"Part-time">
+                description = <"The individual carries out this occupation for less than the amount of time that is officially regarded as 'full-time' for the occupation.">
+            >
+            ["ac9000"] = <
+                text = <"Full time equivalent (synthesised)">
+                description = <"The time spent in this job or role relative to full-time. (synthesised)">
+            >
+        >
+        ["it"] = <
+            ["at0000"] = <
+                text = <"Occupazione">
+                description = <"Singola professione svolta o ruolo ricoperto da un individuo durante un determinato periodo di tempo.">
+            >
+            ["at0001"] = <
+                text = <"Stato di retribuzione">
+                description = <"Lo status di un lavoratore in termini di retribuzione o non retribuzione.">
+                comment = <"Ad esempio:  non retribuito; retribuito; lavoratore autonomo; o volontario. 
+
+Si preferisce, ove possibile, la codifica con una terminologia.">
+            >
+            ["at0002"] = <
+                text = <"Settore industriale">
+                description = <"Il settore dell'azienda in cui l'individuo lavora.">
+                comment = <"Ad esempio: Estrazione, produzione, costruzione.
+
+Si preferisce, ove possibile, la codifica con una terminologia.">
+            >
+            ["at0004"] = <
+                text = <"Dettagli sull'azienda">
+                description = <"Dettagli sul datore di lavoro o sull'azienda.">
+            >
+            ["at0005"] = <
+                text = <"Qualifica/ruolo">
+                description = <"La qualifica professionale o il ruolo dell'individuo.">
+                comment = <"Ad esempio: Amminstratore delegato; Assistente; o Studente. Ciascuna qualifica o ruolo può comprendere più mansioni.">
+            >
+            ["at0006"] = <
+                text = <"Categoria professionale">
+                description = <"Il tipo di lavoro svolto dall'individuo.">
+                comment = <"La codifica con una terminologia è preferibile, quando possibile, ad esempio attraverso la ISCO-08.
+
+Ad esempio: Responsabile delle vendite o ingegnere del software.">
+            >
+            ["at0007"] = <
+                text = <"Data di inizio">
+                description = <"Data in cui l'individuo a iniziato ad esercitare la professione o ricoprire il ruolo.">
+            >
+            ["at0008"] = <
+                text = <"Data di cessazione">
+                description = <"Data in cui l'individuo a terminato di esercitare la professione o ricoprire il ruolo.">
+            >
+            ["at0013"] = <
+                text = <"Equivalente a tempo pieno">
+                description = <"La porzione di tempo dedicato a questa professione/ruolo rispetto al tempo pieno.  ">
+                comment = <"L' equivalente a tempo pieno è anche conosciuto come 'FTE' - Full time equivalent.
+
+Ad esempio:  0.5; 50 %; o \"part time\". ">
+            >
+            ["at0014"] = <
+                text = <"Commento">
+                description = <"Note aggiuntive sull'occupazione non rilevate dagli altri campi. ">
+            >
+            ["at0016"] = <
+                text = <"Descrizione">
+                description = <"Descrizione narrativa della professione svolta o del ruolo ricoperto dall'individuo. ">
+            >
+            ["at0018"] = <
+                text = <"Ulteriori dettagli">
+                description = <"Ulteriori dettagli sull'occupazione.">
+                comment = <"Ad esempio: l'ubicazione del posto di lavoro e le condizioni; o esperienza in zone di combattimento.">
+            >
+            ["at0019"] = <
+                text = <"Orario di lavoro">
+                description = <"Il tempo assegnato all'individuo per svolgere la professione/ruolo nel periodo specificato.">
+                comment = <"Ad esempio: '3 giorni a settimana', '10 giorni al mese' o '2 ore al giorno'.">
+            >
+            ["at0020"] = <
+                text = <"Tempo pieno">
+                description = <"Il lavoro è svolto per un periodo di tempo pari o superiore a quello ufficialmente considerato a \"tempo pieno\" per l'occupazione.">
+            >
+            ["at0021"] = <
+                text = <"Tempo parziale">
+                description = <"Il lavoro è svolto per un periodo di tempo inferiore a quello ufficialmente considerato a \"tempo pieno\" per l'occupazione.">
+            >
+            ["ac9000"] = <
+                text = <"Equivalente a tempo pieno (synthesised)">
+                description = <"La porzione di tempo dedicato a questa professione/ruolo rispetto al tempo pieno.   (synthesised)">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Fiche d'occupation">
+                description = <"Un travail ou un rôle unique exercé par un individu pendant une période de temps déterminée.">
+            >
+            ["at0001"] = <
+                text = <"Statut d'emploi rémunéré">
+                description = <"Le statut d'un travailleur en termes de rémunération ou d'absence de rémunération.">
+                comment = <"Par exemple : non rémunéré, rémunéré, indépendant ou bénévole. Il est souhaitable de coder avec une terminologie, lorsque cela est possible.">
+            >
+            ["at0002"] = <
+                text = <"Catégorie d'industrie">
+                description = <"Le type d'industrie dans laquelle l'individu travaille.">
+                comment = <"Par exemple : Mines, industrie manufacturière, construction. Il est souhaitable de coder avec une terminologie, lorsque cela est possible.">
+            >
+            ["at0004"] = <
+                text = <"Détails de l'organisation">
+                description = <"Détails sur l'employeur ou l'institution.">
+            >
+            ["at0005"] = <
+                text = <"Titre/fonction du poste">
+                description = <"Le titre principal de l'emploi ou le rôle de l'individu.">
+                comment = <"Par exemple : Directeur général, soignant ou étudiant. Chacun de ces titres ou rôles peut comporter plusieurs fonctions.">
+            >
+            ["at0006"] = <
+                text = <"Catégorie d'emploi">
+                description = <"Le type d'emploi occupé par l'individu.">
+                comment = <"Il est souhaitable d'utiliser, dans la mesure du possible, une terminologie telle que la CITP-08. Par exemple : Directeur des ventes ou ingénieur en logiciel.">
+            >
+            ["at0007"] = <
+                text = <"Date de début">
+                description = <"La date à laquelle l'individu a commencé l'emploi ou la fonction.">
+            >
+            ["at0008"] = <
+                text = <"Date de fin">
+                description = <"La date à laquelle une personne a cessé de travailler dans un emploi ou une fonction.">
+            >
+            ["at0013"] = <
+                text = <"Équivalent temps plein">
+                description = <"Le temps passé dans cet emploi ou cette fonction par rapport à un emploi à temps plein.">
+                comment = <"L'équivalent temps plein peut également être appelé \"ETP\". Par exemple : 0,5 ; 50 % ; ou \"temps partiel\".">
+            >
+            ["at0014"] = <
+                text = <"Commentaire">
+                description = <"Une description supplémentaire de l'enregistrement de la profession qui n'a pas été saisie dans d'autres champs.">
+            >
+            ["at0016"] = <
+                text = <"Description">
+                description = <"Description de l'emploi ou du la fonction exercé par la personne.">
+            >
+            ["at0018"] = <
+                text = <"Informations complémentaires">
+                description = <"Plus de détails sur la fiche d'occupation.">
+                comment = <"Par exemple : lieu et conditions de travail ; ou expérience dans une zone de combat.">
+            >
+            ["at0019"] = <
+                text = <"Temps alloué">
+                description = <"Le temps alloué à une personne pour exercer l'emploi ou la fonction par période spécifiée dans cette fiche de profession.">
+                comment = <"Par exemple : \"3 jours par semaine\", \"10 jours par mois\" ou \"2 heures par jour\".">
+            >
+            ["at0020"] = <
+                text = <"Temps plein">
+                description = <"La personne exerce cette profession pendant une durée égale ou supérieure à la durée officiellement considérée comme \"à temps plein\" pour cette profession.">
+            >
+            ["at0021"] = <
+                text = <"Temps partiel">
+                description = <"L'individu exerce cette profession pendant une durée inférieure à celle qui est officiellement considérée comme \"à temps plein\" pour cette profession">
+            >
+            ["ac9000"] = <
+                text = <"Équivalent temps plein (synthesised)">
+                description = <"Le temps passé dans cet emploi ou cette fonction par rapport à un emploi à temps plein. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Registro ocupacional">
+                description = <"Un único trabajo o rol llevado a cabo por un individuo durante un periodo de tiempo especificado.">
+            >
+            ["at0001"] = <
+                text = <"Estado trabajo remunerado.">
+                description = <"El estado de un trabajador en términos de ser pagado o no pagado.">
+                comment = <"Por ejemplo: no remunerado; autoempelado; o voluntario. Se recomienda codificarlo con una terminología donde sea posible.">
+            >
+            ["at0002"] = <
+                text = <"Sector industrial">
+                description = <"El tipo de sector industrial en el que trabaja el individuo.">
+                comment = <"Por ejemplo: Minería, Fabricación, Construcción. Donde sea posible se recomienda codificar con una terminología.">
+            >
+            ["at0004"] = <
+                text = <"Detalles de la organización">
+                description = <"Detalles sobre el empleador o institución.">
+            >
+            ["at0005"] = <
+                text = <"Cargo/rol">
+                description = <"El cargo, puesto o rol del individuo">
+                comment = <"Por ejemplo: Director ejecutivo; Cuidador; o Estudiante. Cada uno de estos cargos o roles pueden estar compuestos de muchos deberes.">
+            >
+            ["at0006"] = <
+                text = <"Categoría profesional">
+                description = <"El tipo de trabajo llevado a cabo por el individuo.">
+                comment = <"Donde sea posible se recomienda codificar con una terminología, tal como CIUO-08">
+            >
+            ["at0007"] = <
+                text = <"Fecha de inicio">
+                description = <"La fecha en la que un individuo inicia el trabajo o rol.">
+            >
+            ["at0008"] = <
+                text = <"Fecha de fin">
+                description = <"La fecha cuando un individuo deja de trabajar en un trabajo o rol.">
+            >
+            ["at0013"] = <
+                text = <"Equivalencia a tiempo completo">
+                description = <"El tiempo usado en este trabajo o rol relativo a tiempo completo.">
+                comment = <"El tiempo completo puede ser también conocido como 'ETC'. Por ejemplo: 0.5; 50 %; o \"tiempo parcial\"">
+            >
+            ["at0014"] = <
+                text = <"Comentario">
+                description = <"Narrativa adiciona sobre el registro de ocupación no capturada en otros campos.">
+            >
+            ["at0016"] = <
+                text = <"Descripción">
+                description = <"Descripción narrativa sobre el trabajo o rol llevado a cabo por el individuo.">
+            >
+            ["at0018"] = <
+                text = <"Detalles adicionales">
+                description = <"Información adicional sobre un registro ocupacional.">
+                comment = <"Por ejemplo: Localización y condiciones del lugar de trabajo; o experiencia en zona de combate.">
+            >
+            ["at0019"] = <
+                text = <"Tiempo asignado">
+                description = <"La cantidad de tiempo que se le asigna a un individuo para llevar a cabo el trabajo o rol por periodo específico de su registro ocupacional.">
+                comment = <"Por ejemplo: '3 días a la semana', '10 días al mes' o '2 horas al día'">
+            >
+            ["at0020"] = <
+                text = <"Tiempo completo">
+                description = <"El individuo lleva a cabo su ocupación por un tiempo igual o superior al oficialmente establecido como 'tiempo completo' para dicha ocupación.">
+            >
+            ["at0021"] = <
+                text = <"Tiempo parcial">
+                description = <"El individuo lleva a cabo su ocupación por un tiempo menor al oficialmente establecido como 'tiempo completo' para dicha ocupación.">
+            >
+            ["ac9000"] = <
+                text = <"Equivalencia a tiempo completo (synthesised)">
+                description = <"El tiempo usado en este trabajo o rol relativo a tiempo completo. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0020", "at0021">
+        >
+    >

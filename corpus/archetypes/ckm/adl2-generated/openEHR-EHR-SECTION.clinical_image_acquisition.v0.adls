@@ -1,0 +1,96 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=fb160501-e184-4170-a03b-bccaa3b27db6; build_uid=b19a8923-9cb5-49c4-ae07-fc63e3015484)
+    openEHR-EHR-SECTION.clinical_image_acquisition.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2015-06-28">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"79F44C39B0B2D59D57D1F5530F17950A">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Manage the process to acquire medical imaging studies, whilst every resulting image is validated for diagnostic purposes.">
+            keywords = <"imaging", ...>
+            use = <"Use in clinical processes in which the acquisition of imaging studies is accompanied by a validation step. Therefore, the image acquisitions are reviewed to guarantee their validity for diagnostic purposes.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Gestionar el proceso de adquisición de estudios de imagen médica, al tiempo que las imágenes resultantes son validadas para fines diagnóstico.">
+            use = <"Se utiliza en procesos clínicos en los que la adquisición de los estudios imagenológicos viene acompañada de una etapa de validación. Por lo tanto, las imágenes adquiridas son revisadas para garantizar su validez para fines diagnósticos.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Clinical image acquisition and validation
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype ACTION[at0001] matches {    -- Imaging acquisition
+                include
+                    archetype_id/value matches {/openEHR-EHR-ACTION\.imaging_exam(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+                exclude
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype OBSERVATION[at0003] matches {    -- Image validation
+                include
+                    archetype_id/value matches {/.*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Clinical image acquisition and validation">
+                description = <"Manages the acquisition and validation of diagnostic tests based on medical imaging.">
+            >
+            ["at0001"] = <
+                text = <"Imaging acquisition">
+                description = <"Clinical activity that takes place when conducting a study of medical imaging.">
+            >
+            ["at0003"] = <
+                text = <"Image validation">
+                description = <"Review of the diagnostic procedure used as medical images are acquired, to validate their use for diagnostic purposes.">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Adquisición y validación de imágenes clínicas">
+                description = <"Define el proceso de adquisición y validación de pruebas diagnósticas basadas en la imágen médica.">
+            >
+            ["at0001"] = <
+                text = <"Exámen imagenológico">
+                description = <"Actividad clínica que tiene lugar cuando  se lleva a cabo la captura de un estudio imagenológico.">
+            >
+            ["at0003"] = <
+                text = <"Validación de imágenes">
+                description = <"Revisión del procedimiento diagnóstico utilizado a medida que las imágenes médicas se van adquiriendo, para validar su uso con fines diagnósticos.">
+            >
+        >
+    >

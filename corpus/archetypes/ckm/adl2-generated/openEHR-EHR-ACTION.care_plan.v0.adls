@@ -1,0 +1,329 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1a2859a8-f424-45d6-9b02-7f4578e819cd; build_uid=5bc62fc0-a917-4204-bc09-f62e757c4f56)
+    openEHR-EHR-ACTION.care_plan.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2011-05-03">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Sistine Barretto-Daniels, Ocean Informatics, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    references = <
+        ["1"] = <"Derived from: Care Plan, Draft Archetype [Internet]. Australian Digital Health Agency, Australian Digital Health Agency Clinical Knowledge Manager [cited: 2016-08-22]. Available from: http://dcm.nehta.org.au/ckm/#showArchetype_1013.1.1220">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"953432F4BBFC4D09C6285563D2317D5C">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record activity regarding the planning and carrying out of a single care plan as a whole.">
+            keywords = <"care plan", "activity">
+            use = <"Use to record activity regarding the planning and carrying out of a single care plan as a whole.">
+            misuse = <"Not to be used to record activity of individual components of a care plan - use the specific ACTION archetype appropriate for each activity.">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation">
+        >
+    >
+
+definition
+    ACTION[at0000] matches {    -- Care Plan
+        ism_transition matches {
+            ISM_TRANSITION[at0003] matches {    -- Care plan Need Identified
+                current_state matches {
+                    DV_CODED_TEXT[at9008] matches {
+                        defining_code matches {[at9000]}    -- planned
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9009] matches {
+                        defining_code matches {[at0003]}    -- Care plan Need Identified
+                    }
+                }
+            }
+            ISM_TRANSITION[at0008] matches {    -- Care Plan Developed
+                current_state matches {
+                    DV_CODED_TEXT[at9010] matches {
+                        defining_code matches {[at9000]}    -- planned
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9011] matches {
+                        defining_code matches {[at0008]}    -- Care Plan Developed
+                    }
+                }
+            }
+            ISM_TRANSITION[at0034] matches {    -- Care Plan Postponed
+                current_state matches {
+                    DV_CODED_TEXT[at9012] matches {
+                        defining_code matches {[at9001]}    -- postponed
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9013] matches {
+                        defining_code matches {[at0034]}    -- Care Plan Postponed
+                    }
+                }
+            }
+            ISM_TRANSITION[at0033] matches {    -- Care Plan Cancelled
+                current_state matches {
+                    DV_CODED_TEXT[at9014] matches {
+                        defining_code matches {[at9002]}    -- cancelled
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9015] matches {
+                        defining_code matches {[at0033]}    -- Care Plan Cancelled
+                    }
+                }
+            }
+            ISM_TRANSITION[at0018] matches {    -- Care Plan Scheduled
+                current_state matches {
+                    DV_CODED_TEXT[at9016] matches {
+                        defining_code matches {[at9003]}    -- scheduled
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9017] matches {
+                        defining_code matches {[at0018]}    -- Care Plan Scheduled
+                    }
+                }
+            }
+            ISM_TRANSITION[at0006] matches {    -- Care Plan Commenced
+                current_state matches {
+                    DV_CODED_TEXT[at9018] matches {
+                        defining_code matches {[at9004]}    -- active
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9019] matches {
+                        defining_code matches {[at0006]}    -- Care Plan Commenced
+                    }
+                }
+            }
+            ISM_TRANSITION[at0020] matches {    -- Care Plan Reviewed
+                current_state matches {
+                    DV_CODED_TEXT[at9020] matches {
+                        defining_code matches {[at9004]}    -- active
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9021] matches {
+                        defining_code matches {[at0020]}    -- Care Plan Reviewed
+                    }
+                }
+            }
+            ISM_TRANSITION[at0035] matches {    -- Care Plan Suspended
+                current_state matches {
+                    DV_CODED_TEXT[at9022] matches {
+                        defining_code matches {[at9005]}    -- suspended
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9023] matches {
+                        defining_code matches {[at0035]}    -- Care Plan Suspended
+                    }
+                }
+            }
+            ISM_TRANSITION[at0032] matches {    -- Care Plan Aborted
+                current_state matches {
+                    DV_CODED_TEXT[at9024] matches {
+                        defining_code matches {[at9006]}    -- aborted
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9025] matches {
+                        defining_code matches {[at0032]}    -- Care Plan Aborted
+                    }
+                }
+            }
+            ISM_TRANSITION[at0010] matches {    -- Care Plan Expired
+                current_state matches {
+                    DV_CODED_TEXT[at9026] matches {
+                        defining_code matches {[at9006]}    -- aborted
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9027] matches {
+                        defining_code matches {[at0010]}    -- Care Plan Expired
+                    }
+                }
+            }
+            ISM_TRANSITION[at0013] matches {    -- Care Plan Completed
+                current_state matches {
+                    DV_CODED_TEXT[at9028] matches {
+                        defining_code matches {[at9007]}    -- complete
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9029] matches {
+                        defining_code matches {[at0013]}    -- Care Plan Completed
+                    }
+                }
+            }
+        }
+        description matches {
+            ITEM_TREE[at0019] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Care Plan Name
+                        value matches {
+                            DV_TEXT[at9030]
+                        }
+                    }
+                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9031]
+                        }
+                    }
+                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Reason
+                        value matches {
+                            DV_TEXT[at9032]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0015] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Care Plan ID
+                        value matches {
+                            DV_IDENTIFIER[at9033]
+                        }
+                    }
+                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Expiry Date
+                        value matches {
+                            DV_DATE_TIME[at9034]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Care Plan">
+                description = <"Plan or sequence of discrete activities developed to achieve a specified management goal or treatment outcome, carried out by health professionals and/or the patient.">
+            >
+            ["at0002"] = <
+                text = <"Care Plan Name">
+                description = <"Name of care plan.">
+            >
+            ["at0003"] = <
+                text = <"Care plan Need Identified">
+                description = <"Need for a care plan has been identified.">
+            >
+            ["at0006"] = <
+                text = <"Care Plan Commenced">
+                description = <"Care plan activities commenced and in progress.">
+            >
+            ["at0008"] = <
+                text = <"Care Plan Developed">
+                description = <"Care plan components identified and documented.">
+            >
+            ["at0010"] = <
+                text = <"Care Plan Expired">
+                description = <"Care plan duration has passed the 'Expiry Date'.">
+            >
+            ["at0013"] = <
+                text = <"Care Plan Completed">
+                description = <"All activities related to the care plan have been reconciled or completed.">
+            >
+            ["at0016"] = <
+                text = <"Care Plan ID">
+                description = <"Identification of care plan.">
+            >
+            ["at0017"] = <
+                text = <"Expiry Date">
+                description = <"Anticipated date beyond which the care plan can be deemed 'expired'.">
+            >
+            ["at0018"] = <
+                text = <"Care Plan Scheduled">
+                description = <"Care plan has been scheduled.">
+            >
+            ["at0020"] = <
+                text = <"Care Plan Reviewed">
+                description = <"Care plan has been reviewed.">
+            >
+            ["at0021"] = <
+                text = <"Description">
+                description = <"Description of activity performed/enacted against the plan.">
+            >
+            ["at0025"] = <
+                text = <"Reason">
+                description = <"Reason for activity  being performed /enacted against the plan.">
+            >
+            ["at0032"] = <
+                text = <"Care Plan Aborted">
+                description = <"Care plan has been aborted.">
+            >
+            ["at0033"] = <
+                text = <"Care Plan Cancelled">
+                description = <"Care plan has been cancelled prior to commencement.">
+            >
+            ["at0034"] = <
+                text = <"Care Plan Postponed">
+                description = <"Commencement of care plan has been temporarily postponed to a future date.">
+            >
+            ["at0035"] = <
+                text = <"Care Plan Suspended">
+                description = <"Care plan is temporarily suspended but intended to resume at a later date.">
+            >
+            ["at9004"] = <
+                text = <"active">
+                description = <"active">
+            >
+            ["at9000"] = <
+                text = <"planned">
+                description = <"planned">
+            >
+            ["at9001"] = <
+                text = <"postponed">
+                description = <"postponed">
+            >
+            ["at9002"] = <
+                text = <"cancelled">
+                description = <"cancelled">
+            >
+            ["at9003"] = <
+                text = <"scheduled">
+                description = <"scheduled">
+            >
+            ["at9005"] = <
+                text = <"suspended">
+                description = <"suspended">
+            >
+            ["at9006"] = <
+                text = <"aborted">
+                description = <"aborted">
+            >
+            ["at9007"] = <
+                text = <"complete">
+                description = <"complete">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9004"] = <http://openehr.org/id/245>
+            ["at9000"] = <http://openehr.org/id/526>
+            ["at9001"] = <http://openehr.org/id/527>
+            ["at9002"] = <http://openehr.org/id/528>
+            ["at9003"] = <http://openehr.org/id/529>
+            ["at9005"] = <http://openehr.org/id/530>
+            ["at9006"] = <http://openehr.org/id/531>
+            ["at9007"] = <http://openehr.org/id/532>
+        >
+    >

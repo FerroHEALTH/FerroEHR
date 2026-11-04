@@ -1,0 +1,227 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3ef892f3-cc76-4465-b0b7-74a78574a1c6; build_uid=e1b5ebe2-1f2e-47f4-8f6c-8713599633fc)
+    openEHR-EHR-CLUSTER.exam_hydration.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2007-03-12">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics<heather.leslie@oceaninformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"07CDFF363605F0B5E34651C037EDC3DE">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en fritekstbeskrivelse og klinisk tolkning av observerte funn ved fysisk undersøkelse av et organsystem eller anatomisk struktur.">
+            use = <"Brukes til å registrere en fritekstbeskrivelse og klinisk tolkning av observerte funn ved fysisk undersøkelse av et spesifisert organsystem eller anatomisk struktur. Denne arketypen består kun av kjerneelementene av mønsteret for undersøkelser, og kan utvides ved hjelp av andre CLUSTER-arketyper eller brukes som grunnlag for undersøkelsesarketyper for spesifikke kroppssystemer eller anatomiske strukturer. 
+
+Eksempler på detaljer som kan beskrives ved hjelp av dette CLUSTER er inspeksjon, palpasjon, auskultasjon, perkusjon og bevegelser i kroppssystemer eller anatomiske strukturer. Undersøkelsen kan støttes av enkle hjelpemidler som stetoskop, otoskop eller reflekshammer. Også funn ved mer avanserte undersøkelser kan registreres her, som ved endoskopi. I de tilfellene vil informasjon om hvilket hjelpemiddel eller utstyr brukt bli registrert i OBSERVATION.exam, elementet \"Detaljer om medisinsk utstyr\", i ACTION.procedure \"Prosedyredetaljer\" eller tilsvarende i egnet ENTRY- eller ACTION-arketype.
+
+Arketypen er laget spesifikt for å brukes i \"Undersøkelsesdetaljer\"-SLOTet i arketypen OBSERVATION.exam, men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende.
+
+Denne arketypen kan benyttes for alle typer undersøkelser, alt fra enkle undersøkelser som undersøkelse av et hudområde, inspeksjon av ører og til artroskopi av et kne.
+
+Kan for eksempel nøstes i SLOTet \"Undersøkelsesdetaljer\" i arketypen OBSERVATION.exam (Norsk Funn ved fysisk undersøkelse) for å registrere ytterligere strukturerte funn ved fysiske undersøkelser.
+
+Arketypen CLUSTER.exclusion_exam kan nøstes i SLOTet \"Undersøkelse ikke utført\" der en har behov for å registrere informasjon om at en undersøkelse ikke ble utført.
+
+Brukes for å videreføre fritekstbeskrivelser av kliniske funn fra tidligere systemer inn i et arketypeformat, ved å bruke elementet \"Klinisk beskrivelse\".">
+            misuse = <"Skal ikke brukes til å ta opp frittstående klinisk observasjoner eller testresultater - bruk spesifikke OBSERVATION arketyper, for eksempel OBSERVATION.head_circumference eller OBSERVATION.glasgow_coma_scale.
+
+Skal ikke brukes til å ta opp anamnese - bruk da spesifikke OBSERVATION og CLUSTER arketyper. For eksempel OBSERVATION.story og CLUSTER.symptom_sign.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For recording a narrative description and clinical interpretation of the findings observed during assessment of the hydration status of an individual.">
+            use = <"Use to record a narrative description and clinical interpretation of the findings observed during assessment of the hydration status of an individual.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.observed during assessment of the hydration status of an individual.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Hydration
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Clinical description
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Mucous membranes
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Anterior fontanelle
+                value matches {
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[ac9000]}    -- Anterior fontanelle (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0019] occurrences matches {0..1} matches {    -- Skin turgor
+                value matches {
+                    DV_CODED_TEXT[at9006] matches {
+                        defining_code matches {[ac9001]}    -- Skin turgor (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Appearance of eyes
+                value matches {
+                    DV_CODED_TEXT[at9007] matches {
+                        defining_code matches {[ac9002]}    -- Appearance of eyes (synthesised)
+                    }
+                }
+            }
+            allow_archetype CLUSTER[at0004] matches {    -- Examination findings
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.exam_body_fluid\.v0\..*/}
+            }
+            allow_archetype CLUSTER[at0005] matches {    -- Multimedia representation
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v0\..*/}
+            }
+            ELEMENT[at0006] matches {    -- Clinical interpretation
+                value matches {
+                    DV_TEXT[at9008]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9009]
+                }
+            }
+            allow_archetype CLUSTER[at0008] matches {    -- Examination not done
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Hydration">
+                description = <"Findings observed during assessment of the hydration status of an individual.">
+            >
+            ["at0003"] = <
+                text = <"Clinical description">
+                description = <"Narrative description about the individual's state of hydration.">
+            >
+            ["at0004"] = <
+                text = <"Examination findings">
+                description = <"Structured details about indicators of hydration.">
+                comment = <"For example: thickness of saliva.">
+            >
+            ["at0005"] = <
+                text = <"Multimedia representation">
+                description = <"Digital image, video or diagram representing the physical examination findings.">
+            >
+            ["at0006"] = <
+                text = <"Clinical interpretation">
+                description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the physical examination findings.">
+                comment = <"Coding of the 'Clinical interpretation' with a terminology is preferred, where possible.">
+            >
+            ["at0007"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the physical examination findings, not captured in other fields.">
+            >
+            ["at0008"] = <
+                text = <"Examination not done">
+                description = <"Details to explicitly record that this examination was not performed.">
+            >
+            ["at0013"] = <
+                text = <"Mucous membranes">
+                description = <"Narrative description about the state of all mucous membranes, including mouth and lips.">
+            >
+            ["at0014"] = <
+                text = <"Anterior fontanelle">
+                description = <"Description about the state of infant's anterior fontanelle.">
+            >
+            ["at0015"] = <
+                text = <"Elevated">
+                description = <"The anterior fontanelle appears raised.">
+            >
+            ["at0016"] = <
+                text = <"Normal">
+                description = <"The anterior fontanelle appears normal.">
+            >
+            ["at0017"] = <
+                text = <"Flat">
+                description = <"The anterior fontanelle appears flat.">
+            >
+            ["at0018"] = <
+                text = <"Sunken">
+                description = <"The anterior fontanelle appears sunken.">
+            >
+            ["at0019"] = <
+                text = <"Skin turgor">
+                description = <"Description about the state of the individual's skin or tissue turgor.">
+            >
+            ["at0020"] = <
+                text = <"Normal">
+                description = <"Skin turgor appears normal.">
+            >
+            ["at0021"] = <
+                text = <"Decreased">
+                description = <"Skin turgor appears to be reduced.">
+            >
+            ["at0022"] = <
+                text = <"Appearance of eyes">
+                description = <"*">
+            >
+            ["at0023"] = <
+                text = <"Normal">
+                description = <"The eyes appear normal.">
+            >
+            ["at0024"] = <
+                text = <"Sunken">
+                description = <"The eyes appear to be sunken in their orbits.">
+            >
+            ["ac9000"] = <
+                text = <"Anterior fontanelle (synthesised)">
+                description = <"Description about the state of infant's anterior fontanelle. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Skin turgor (synthesised)">
+                description = <"Description about the state of the individual's skin or tissue turgor. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Appearance of eyes (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0023", "at0024">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0020", "at0021">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0015", "at0016", "at0017", "at0018">
+        >
+    >

@@ -1,0 +1,162 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=4fddf2c7-88ee-46d7-ae4f-a16cf752c591; build_uid=7697efcf-e12a-48aa-a199-e54db66af860)
+    openEHR-EHR-CLUSTER.pi_rads_2_1.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"June Marie Knappskog, June Marie Nepstad Knappskog">
+                ["organisation"] = <"Helse Nord IKT AS, Norway (Nasjonal IKT redaktør), Helse Nord IKT AS, Norway (openEHR Editor)">
+                ["email"] = <"june.marie.nepstad.knappskog@hnikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Bjørn Næss">
+        ["organisation"] = <"DIPS AS">
+        ["email"] = <"bna@dips.no">
+        ["date"] = <"2022-03-01">
+    >
+    original_namespace = <"no.nasjonalikt">
+    original_publisher = <"Nasjonal IKT">
+    other_contributors = <"Andreas Abildgaard, OUS, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Ivar Berge, Oslo University Hospital, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "Christian Chevalley, ADOC, Thailand", "Giovanni Delussu, crs4, Italy", "Mikkel Johan Gaup Grønmo, Helse Nord IKT, Norway (openEHR Editor)", "Alfred Honore, Haukeland, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "June Marie Nepstad Knappskog, Helse Nord IKT AS, Norway (openEHR Editor), Norway (openEHR Editor)", "Anjali Kulkarni, Karkinos, India", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Brad Littleton, Big Picture Medical, Australia", "Ruth Lochan, Akademiska Sjukhuset Uppsala, Sweden", "Martine Louise Nalum, DIPS AS, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Terje Nordberg, Helse Bergen, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Terje Sagmyr, Helse Vest IKT, Norway (openEHR Editor)", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"no.nasjonalikt">
+    custodian_organisation = <"Nasjonal IKT">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"American College of Radiology. PI-RADS. Retrieved from https://www.acr.org/Clinical-Resources/Reporting-and-Data-Systems/PI-RADS.">
+        ["2"] = <"Turkbey, B., Rosenkrantz, A. B., Haider, M. A., Padhani, A. R., Villeirs, G., Macura, K. J., Tempany, C. M., Choyke, P. L., Cornud, F., Margolis, D. J., Thoeny, H. C., Verma, S., Barentsz, J., & Weinreb, J. C. (2019). Prostate Imaging Reporting and Data System Version 2.1: 2019 Update of Prostate Imaging Reporting and Data System Version 2. European Urology, 76(3), 340-351. https://doi.org/https://doi.org/10.1016/j.eururo.2019.02.033">
+    >
+    other_details = <
+        ["current_contact"] = <"June Marie Knappskog, june.marie.nepstad.knappskog@hnikt.no">
+        ["MD5-CAM-1.0.1"] = <"F7C3E69EDC60D342645BC49DFAAC78FF">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere PI-RADS v2.1 klassifiseringen.">
+            keywords = <"PI-RADS, prostatakreft, bilde-rapportering, mpMRI, standardisert, vurderingskategorier, lesjoner, klinisk signifikant, radiolog, urolog, MR prostata", ...>
+            use = <"Brukes for å registrere PI-RADS v2.1 klassifiseringen.
+
+Denne arketypen er designet for å være nøstet inn i en relevant CLUSTER-arketype, der én instans av denne arketypen brukes til å registrere PI-RADS klassifiseringen for hvert unormalt område identifisert i prostata.
+
+Per dags dato finnes det ingen validert norsk oversettelse av verktøyet. Man har derfor i arketypen valgt å beholde orginalspråk for dataelementene. Om det på et tidspunkt etableres en validert norsk oversettelse, vil arketypen oppdateres med denne.">
+            misuse = <"Brukes ikke til å registrere noen versjon av PI-RADS-klassifiseringen annet enn versjon 2.1. For slike formål, bruk arketypene som er designet for hver spesifik versjon av PI-RADS.">
+            copyright = <"© Nasjonal IKT HF">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the PI-RADS v2.1 classification.">
+            keywords = <"PI-RADS, prostate cancer, imaging-reporting, mpMRI, standarized, assessment categories, lesions, clinically significant, radiologists, urologists, MR prostate", ...>
+            use = <"Use to record the PI-RADS v2.1 classification.
+
+This archetype is designed to be nested within a relevant CLUSTER archetype, using one instance of this archetype to record the PI-RADS classification for each abnormal area identified in the prostate.">
+            misuse = <"Not to be used to record any version of the PI-RADS classification other than version 2.1. For these purposes, use archetypes designed for each specific version of PI-RADS.">
+            copyright = <"© Nasjonal IKT HF">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- PI-RADS v2.1
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- PI-RADS
+                value matches {
+                    DV_ORDINAL[at9001] matches {
+                        [value, symbol] matches {
+                            [{1}, {[at0002]}],    -- Very low
+                            [{2}, {[at0003]}],    -- Low
+                            [{3}, {[at0004]}],    -- Intermediate
+                            [{4}, {[at0005]}],    -- High
+                            [{5}, {[at0006]}]    -- Very high
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"PI-RADS v2.1">
+                description = <"En klassifisering av et unormalt område identifisert ved mpMRI (multi-parametrisk magnetisk resonansavbildning) av prostata.
+">
+                comment = <"PI-RADS - Prostate Imaging Reporting and Data System.">
+            >
+            ["at0001"] = <
+                text = <"PI-RADS">
+                description = <"">
+            >
+            ["at0002"] = <
+                text = <"Very low">
+                description = <"Clinically significant cancer is highly unlikely to be present.">
+            >
+            ["at0003"] = <
+                text = <"Low">
+                description = <"Clinically significant cancer is unlikely to be present.">
+            >
+            ["at0004"] = <
+                text = <"Intermediate">
+                description = <"The presence of clinically significant cancer is equivocal.">
+            >
+            ["at0005"] = <
+                text = <"High">
+                description = <"Clinically significant cancer is likely to be present.">
+            >
+            ["at0006"] = <
+                text = <"Very high">
+                description = <"Clinically significant cancer is highly likely to be present.">
+            >
+            ["ac9001"] = <
+                text = <"PI-RADS (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"PI-RADS v2.1">
+                description = <"A classification of an abnormal area identified on mpMRI (multi-parametric magnetic resonance imaging) examination of the prostate.">
+                comment = <"PI-RADS - Prostate Imaging Reporting and Data System.">
+            >
+            ["at0001"] = <
+                text = <"PI-RADS">
+                description = <"">
+            >
+            ["at0002"] = <
+                text = <"Very low">
+                description = <"Clinically significant cancer is highly unlikely to be present.">
+            >
+            ["at0003"] = <
+                text = <"Low">
+                description = <"Clinically significant cancer is unlikely to be present.">
+            >
+            ["at0004"] = <
+                text = <"Intermediate">
+                description = <"The presence of clinically significant cancer is equivocal.">
+            >
+            ["at0005"] = <
+                text = <"High">
+                description = <"Clinically significant cancer is likely to be present.">
+            >
+            ["at0006"] = <
+                text = <"Very high">
+                description = <"Clinically significant cancer is highly likely to be present.">
+            >
+            ["ac9001"] = <
+                text = <"PI-RADS (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0002", "at0003", "at0004", "at0005", "at0006">
+        >
+    >

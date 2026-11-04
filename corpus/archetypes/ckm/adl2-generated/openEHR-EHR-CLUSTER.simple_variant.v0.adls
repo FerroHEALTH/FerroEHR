@@ -1,0 +1,363 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6330df99-9e38-4ab5-bce8-acd76b51ca5f; build_uid=7abd8a59-f6ef-493e-891e-455655bb1b5e)
+    openEHR-EHR-CLUSTER.simple_variant.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Aurelie Tomczak">
+                ["organisation"] = <"Institute of Pathology, University Hospital Heidelberg, Germany">
+                ["email"] = <"au.tomczak@yahoo.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aurelie Tomczak">
+        ["organisation"] = <"Institute of Pathology, University Hospital Heidelberg, Germany">
+        ["email"] = <"au.tomczak@yahoo.com">
+        ["date"] = <"2020-06-18">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Christina Jaeger-Schmidt, Heidelberg University Hospital, Germany", "Florian Kaercher, Charité Berlin, Germany", "Francesca Frexia, CRS4, Italy", "Gianluigi Zanetti, CRS4, Italy", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Gideon Giacomelli, Charité Berlin, Germany", "Paolo Uva, CRS4, Italy", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Simon Schumacher, HiGHmed, Germany">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"\"Den Dunnen et al. (2016) HGVS recommendations for the description of sequence variants: 2016 update. Hum.Mutat. 25: 37: 564-569\"">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"4864118C0D713AAD6D18B10A63CB3F44">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Beschreibung einer in einer Sequenz beobachteten Variante, bei dem der Variantentyp unbekannt ist, weil z.B. noch keine Annotation der Daten gemacht wurde, oder weil die spezifische Variante nicht von den spezialisierten Variantenarchetypen erfasst wird.">
+            keywords = <"Variante", "Genetisch", "Genomisch", "Einfache genetische Variante", "Simple Variant">
+            use = <"Dieser Archetyp soll im SLOT \"Variant\" des Archetyps \"Genetic variant\" verwendet werden.
+">
+            misuse = <"Dieser Archetyp sollte nur für den Import von vcf-daten verwendet werden, wenn keine Annotation des Variantentyps (Instertion, Deletion usw.) verfügbar ist und daher die spezifischen Archetypen nicht ausgewählt werden können um die Variantenergebnisse zu speichern.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To describe a variant observed in a sequence, where the variant type is unknown, for example, because no annotation of the data has yet been made, or because the specific variant is not covered by the specialized variant archetypes.">
+            keywords = <"variation", "genetic", "genomic", "variant", "simple generic variant">
+            use = <"This archetype should be used inside the \"Variant\" SLOT of the \"Genetic variant\" archetype.">
+            misuse = <"This archetype should only be used for import of vcf-data if no annotation of the variant type (substitution, insertion etc.) is available, and, therefore, the right specific archetypes cannot be picked to store the variant results.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Simple genetic variant
+        items cardinality matches {2..*} matches {
+            ELEMENT[at0012] occurrences matches {1} matches {    -- Chromosome label
+                value matches {
+                    DV_CODED_TEXT[at9001] matches {
+                        defining_code matches {[ac9000]}    -- Chromosome label (synthesised)
+                    }
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Start position of variant
+                value matches {
+                    DV_COUNT[at9003]
+                }
+            }
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- End position of variant
+                value matches {
+                    DV_COUNT[at9004]
+                }
+            }
+            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Alternate nucleotide sequence
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Reference nucleotide sequence
+                value matches {
+                    DV_TEXT[at9006]
+                }
+            }
+            allow_archetype CLUSTER[at0038] matches {    -- Reference sequence
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.reference_sequence(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Einfache genetische Variante">
+                description = <"Eine Sequenzänderung, bei der im Vergleich zu einer Referenzsequenz ein oder mehrere Nukleotide geändert werden.">
+            >
+            ["at0003"] = <
+                text = <"Startposition der Variante">
+                description = <"Die Position des ersten Nukleotids des geänderten Bereichs für eine einfache Variante. (\"Start\" in der vcf-Datei).">
+            >
+            ["at0004"] = <
+                text = <"Endposition der Variante">
+                description = <"Die Position des letzten Nukleotids des geänderten Bereichs für eine einfache Variante. (\"End\" in der vcf-Datei).">
+            >
+            ["at0009"] = <
+                text = <"Alternative Nukleotidsequenz">
+                description = <"Die beobachtete alternative Nukleotid- oder Nukleotidsequenz (\"Alt\" in vcf-Datei).">
+            >
+            ["at0010"] = <
+                text = <"Referenznukleotidsequenz">
+                description = <"Die Referenznukleotid- oder Nukleotidsequenz. (\"Ref\") in der vcf-Datei).">
+            >
+            ["at0012"] = <
+                text = <"Chromosom">
+                description = <"Chromosom-Identifikator.">
+            >
+            ["at0013"] = <
+                text = <"Chromosom 1">
+                description = <"Chromosom 1.">
+            >
+            ["at0014"] = <
+                text = <"Chromosom 2">
+                description = <"Chromosom 2.">
+            >
+            ["at0015"] = <
+                text = <"Chromosom 3">
+                description = <"Chromosom 3.">
+            >
+            ["at0016"] = <
+                text = <"Chromosom 4">
+                description = <"Chromosom 4.">
+            >
+            ["at0017"] = <
+                text = <"Chromosom 5">
+                description = <"Chromosom 5.">
+            >
+            ["at0018"] = <
+                text = <"Chromosom 6">
+                description = <"Chromosom 6.">
+            >
+            ["at0019"] = <
+                text = <"Chromosom 7">
+                description = <"Chromosom 7.">
+            >
+            ["at0020"] = <
+                text = <"Chromosom 8">
+                description = <"Chromosom 8.">
+            >
+            ["at0021"] = <
+                text = <"Chromosom 9">
+                description = <"Chromosom 9.">
+            >
+            ["at0022"] = <
+                text = <"Chromosom 10">
+                description = <"Chromosom 10.">
+            >
+            ["at0023"] = <
+                text = <"Chromosom 11">
+                description = <"Chromosom 11.">
+            >
+            ["at0024"] = <
+                text = <"Chromosom 12">
+                description = <"Chromosom 12.">
+            >
+            ["at0025"] = <
+                text = <"Chromosom 13">
+                description = <"Chromosom 13.">
+            >
+            ["at0026"] = <
+                text = <"Chromosom 14">
+                description = <"Chromosom 14.">
+            >
+            ["at0027"] = <
+                text = <"Chromosom 15">
+                description = <"Chromosom 15.">
+            >
+            ["at0028"] = <
+                text = <"Chromosom 16">
+                description = <"Chromosom 16.">
+            >
+            ["at0029"] = <
+                text = <"Chromosom 17">
+                description = <"Chromosom 17.">
+            >
+            ["at0030"] = <
+                text = <"Chromosom 18">
+                description = <"Chromosom 18.">
+            >
+            ["at0031"] = <
+                text = <"Chromosom 19">
+                description = <"Chromosom 19.">
+            >
+            ["at0032"] = <
+                text = <"Chromosom 20">
+                description = <"Chromosom 20.">
+            >
+            ["at0033"] = <
+                text = <"Chromosom 21">
+                description = <"Chromosom 21.">
+            >
+            ["at0034"] = <
+                text = <"Chromosom 22">
+                description = <"Chromosom 22.">
+            >
+            ["at0035"] = <
+                text = <"Chromosom X">
+                description = <"Chromosom X.">
+            >
+            ["at0036"] = <
+                text = <"Chromosom Y">
+                description = <"Chromosom Y.">
+            >
+            ["at0038"] = <
+                text = <"Referenzsequenz">
+                description = <"Die Sequenzdatei, die als Referenz zur Beschreibung der Variante verwendet wurde.">
+            >
+            ["ac9000"] = <
+                text = <"Chromosom (synthesised)">
+                description = <"Chromosom-Identifikator. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Simple genetic variant">
+                description = <"A sequence change where, compared to a reference sequence, a one or more nucleotides are changed.">
+            >
+            ["at0003"] = <
+                text = <"Start position of variant">
+                description = <"The position of the first nucleotide of the changed range for a simple variant. (\"Start\" in vcf-file).">
+            >
+            ["at0004"] = <
+                text = <"End position of variant">
+                description = <"The position of the last nucleotide of the changed range for a simple variant. (\"End\" in vcf-file).">
+            >
+            ["at0009"] = <
+                text = <"Alternate nucleotide sequence">
+                description = <"The observed alternate nucleotide or nucleotide sequence (\"Alt\" in vcf-file).">
+            >
+            ["at0010"] = <
+                text = <"Reference nucleotide sequence">
+                description = <"The reference nucleotide or nucleotide sequence. (\"Ref\" in vcf-file).">
+            >
+            ["at0012"] = <
+                text = <"Chromosome label">
+                description = <"Chromosome identifier.">
+            >
+            ["at0013"] = <
+                text = <"Chromosome 1">
+                description = <"Chromosome 1.">
+            >
+            ["at0014"] = <
+                text = <"Chromosome 2">
+                description = <"Chromosome 2.">
+            >
+            ["at0015"] = <
+                text = <"Chromosome 3">
+                description = <"Chromosome 3.">
+            >
+            ["at0016"] = <
+                text = <"Chromosome 4">
+                description = <"Chromosome 4.">
+            >
+            ["at0017"] = <
+                text = <"Chromosome 5">
+                description = <"Chromosome 5.">
+            >
+            ["at0018"] = <
+                text = <"Chromosome 6">
+                description = <"Chromosome 6.">
+            >
+            ["at0019"] = <
+                text = <"Chromosome 7">
+                description = <"Chromosome 7.">
+            >
+            ["at0020"] = <
+                text = <"Chromosome 8">
+                description = <"Chromosome 8.">
+            >
+            ["at0021"] = <
+                text = <"Chromosome 9">
+                description = <"Chromosome 9.">
+            >
+            ["at0022"] = <
+                text = <"Chromosome 10">
+                description = <"Chromosome 10.">
+            >
+            ["at0023"] = <
+                text = <"Chromosome 11">
+                description = <"Chromosome 11.">
+            >
+            ["at0024"] = <
+                text = <"Chromosome 12">
+                description = <"Chromosome 12.">
+            >
+            ["at0025"] = <
+                text = <"Chromosome 13">
+                description = <"Chromosome 13.">
+            >
+            ["at0026"] = <
+                text = <"Chromosome 14">
+                description = <"Chromosome 14.">
+            >
+            ["at0027"] = <
+                text = <"Chromosome 15">
+                description = <"Chromosome 15.">
+            >
+            ["at0028"] = <
+                text = <"Chromosome 16">
+                description = <"Chromosome 16.">
+            >
+            ["at0029"] = <
+                text = <"Chromosome 17">
+                description = <"Chromosome 17.">
+            >
+            ["at0030"] = <
+                text = <"Chromosome 18">
+                description = <"Chromosome 18.">
+            >
+            ["at0031"] = <
+                text = <"Chromosome 19">
+                description = <"Chromosome 19.">
+            >
+            ["at0032"] = <
+                text = <"Chromosome 20">
+                description = <"Chromosome 20.">
+            >
+            ["at0033"] = <
+                text = <"Chromosome 21">
+                description = <"Chromosome 21.">
+            >
+            ["at0034"] = <
+                text = <"Chromosome 22">
+                description = <"Chromosome 22.">
+            >
+            ["at0035"] = <
+                text = <"Chromosome X">
+                description = <"Chromosome X.">
+            >
+            ["at0036"] = <
+                text = <"Chromosome Y">
+                description = <"Chromosome Y.">
+            >
+            ["at0038"] = <
+                text = <"Reference sequence">
+                description = <"The sequence file that has been used as a reference to describe the variant.">
+            >
+            ["ac9000"] = <
+                text = <"Chromosome label (synthesised)">
+                description = <"Chromosome identifier. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0013", "at0014", "at0015", "at0016", "at0017", "at0018", "at0019", "at0020", "at0021", "at0022", "at0023", "at0024", "at0025", "at0026", "at0027", "at0028", "at0029", "at0030", "at0031", "at0032", "at0033", "at0034", "at0035", "at0036">
+        >
+    >

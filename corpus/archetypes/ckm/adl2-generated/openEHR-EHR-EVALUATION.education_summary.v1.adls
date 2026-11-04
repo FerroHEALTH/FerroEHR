@@ -1,0 +1,359 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c6416355-d047-4028-b3b9-077db1b79a81; build_uid=bb590207-4f10-4a38-acc2-541e173dc132)
+    openEHR-EHR-EVALUATION.education_summary.v1.0.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Darin Leonhardt">
+                ["organisation"] = <"PLRI">
+                ["email"] = <"leonhardt.darin@mh-hannover.de">
+            >
+            accreditation = <"-">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand">
+                ["organisation"] = <"Helse Bergen">
+                ["email"] = <"john.tore.valand@helse-bergen.no">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Vanessa Pereira">
+                ["organisation"] = <"Better - Pathfinder">
+                ["email"] = <"vanessapereira@protonmail.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics, Australia">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2010-12-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Erling Are Hole, Helse Bergen, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "John Bennett, NEHTA, Australia", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Stephen Chu, NEHTA, Australia", "Matthew Cordell, NEHTA, Australia", "Are Edvardsen, SKDE, Helse Nord RHF, Norway", "David Evans, Queensland Health, Australia", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)", "Andrew Goodchild, NEHTA, Australia", "Heather Grain, Llewelyn Grain Informatics, Australia", "Evelyn Hovenga, EJSH Consulting, Australia", "Mary Kelaher, NEHTA, Australia", "Ronald Krawec, Alberta Health Services, Canada", "Robert L'egan, NEHTA, Australia", "Anita Lagos, Haraldsplass Diakonale Sykehus, Norway", "Liv Laugen, Oslo universitetssykehus, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Erhard Lohse, Fjell kommune, Norway", "Ian McNicoll, Ocean Informatics UK, United Kingdom", "Lars Morgan Karlsen, Nordlandssykehuset Bodø, Norway", "Stewart Morrison, NEHTA, Australia", "Andrej Orel, Marand d.o.o., Slovenia", "Jayashree Panickar, Karolinska Institute, Sweden", "Jodie Pycroft, Adelaide Northern Division of General Practice Ltd, Australia", "Gro-Hilde Severinsen, Norwegian center for ehealthresearch, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "John Taylor, NEHTA, Australia", "Micaela Thierley, Helse Bergen/Haraldsplass sykehus, Norway", "Gordon Tomes, National Disability Insurance Scheme Agency, Australia", "Richard Townley-O'Neill, NEHTA, Australia", "Susanne Trønnes, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: Education and Training, Draft archetype [Internet]. Australian Digital Health Agency (NEHTA), ADHA Clinical Knowledge Manager. Authored: 2010 Dec 21. Available at: http://dcm.nehta.org.au/ckm#showArchetype_1013.1.924_5 (discontinued).">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"B092069A92C2ED33B96658F84B518BF9">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Erfassung von Informationen über die derzeitige und frühere Bildung oder Ausbildung einer Person, die einen Überblick über ihren Bildungshintergrund geben.">
+            keywords = <"Bildung", "Schule", "Universität", "Sekundarstufe", "Tertiärbereich", "Hochschule", "Berufsausbildung", "Ausbildung", "Bedürfnisse", "Grundschule">
+            use = <"Der Archetyp wird verwendet, um zusammenfassende Informationen über die aktuelle und frühere Schulbildung oder Ausbildung einer Person aufzuzeichnen, die einen Überblick über ihren Bildungshintergrund geben. Im Rahmen dieses Archetyps umfasst die Schuldbildung alle Bildungsbereiche, die auf einem strukturierten Lehrplan beruhen und von ausgebildeten Fachkräften vermittelt werden.
+
+Dieser Archetyp wurde entwickelt, um als eigenständiger Archetyp im Rahmen einer Vorlage für die Sozialgeschichte (oder einer ähnlichen Vorlage) verwendet zu werden. Er soll eine Zusammenfassung aller Bildungs- oder Ausbildungsgänge im weitesten Sinne bieten. Verwenden Sie für jede Bildung oder Ausbildung eine eigene Instanz des CLUSTER.education_record im SLOT für \"Education record\".">
+            misuse = <"Nicht zur Darstellung strukturierter Details über eine bestimmte Bildung oder Ausbildung. Zu diesem Zweck ist der Archetyp CLUSTER.education_record im SLOT \"Education record\" zu verwenden.
+
+Nicht zur Aufzeichnung von Einzelheiten über den Unterricht an Personen, die zur Verbesserung ihrer Gesundheitskompetenz und ihrer Lebenskompetenzen zur Verfügung gestellt werden. Verwenden Sie zu diesem Zweck ACTION.health_education.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere et sammendrag om et individs nåværende og tidligere utdanning eller opplæring, som gir en oversikt over utdanningsbakgrunn.">
+            keywords = <"utdanning", "skole", "universitet", "videregående", "ungdomsskole", "barneskole", "lærling", "læretid", "kurs", "fagbrev", "diplom", "studie", "bachelor", "master", "PhD", "realkompetanse", "formalkompetanse", "høyskole", "opplæring", "skolegang", "videreutdanning", "spesialkompetanse", "studium">
+            use = <"Brukes for å registrere et sammendrag om et individs nåværende og tidligere utdanning eller opplæring for å få oversikt over utdanningsbakgrunn. Med utdanning menes i denne arketypen all formell opplæring som er basert på et definert pensum og gitt i en profesjonell setting.
+
+Arketypen er laget for å være en frittstående arketype, og kan benyttes i et templat som en del av individets sosialanamnese. Arketypen er ment å gi et sammendrag over all utdanning eller opplæring i den videste forstand. For hver enkelt utdanning eller opplæring brukes én instans av arketypen CLUSTER.education_record (Utdanning) i SLOTet \"Utdanningsdetaljer\".">
+            misuse = <"Brukes ikke for å registrere strukturerte detaljer om en spesifikk utdanning eller opplæring. Bruk arketypen CLUSTER.education_record (Utdanning) i SLOTet \"Utdanningsdetaljer\" for dette formålet.
+
+Brukes ikke for å registrere detaljer om undervisning som har til hensikt å øke evne til å forstå og anvende helseinformasjon, og å mestre praktiske ferdigheter eller livet relatert til helsetilstanden, bruk arketypen ACTION.health_education (Helseinformasjon/undervisning) for dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record	summary information about an individual's current and past education or training, which provides an overview of their educational background.">
+            keywords = <"education", "school", "university", "secondary", "tertiary", "college", "apprenticeship", "training", "needs", "primary">
+            use = <"Use to record summary information about an individual's current and past formal education or training, which provides an overview of their educational background. In the context of this archetype, formal education includes all education that is based on a structured curriculum and delivered by trained professionals.
+
+This archetype has been designed to be used as a standalone archetype within the context of a Social History (or similar) template. It is intended to provide a summary of all education or training, considered in the broadest sense. For each education or training, use a separate instance of the CLUSTER.education_record within the SLOT for 'Education record'.">
+            misuse = <"Not to be used for recording structured details about a specific education or training. Use the CLUSTER.education_record archetype within 'Education record' SLOT for this purpose.
+
+Not to be used to record details about the teaching provided to individuals to improve their health literacy and life skills. Use ACTION.health_education for this purpose.">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Information sommaire ou persistante sur l'éducation ou la formation actuelle et passée d'une personne.">
+            keywords = <"éducation", "école", "Université", "secondaire", "tertiaire", "Université", "apprentissage", "entraînement", "Besoins", "primaire">
+            use = <"*Use to record summary information about an individual's current and past formal education or training, which provides an overview of their educational background. In the context of this archetype, formal education includes all education that is based on a structured curriculum and delivered by trained professionals.
+
+This archetype has been designed to be used as a standalone archetype within the context of a Social History (or similar) template. It is intended to provide a summary of all education or training, considered in the broadest sense. For each education or training, use a separate instance of the CLUSTER.education_record within the SLOT for 'Education record'.(en)">
+            misuse = <"*Not to be used for recording structured details about a specific education or training. Use the CLUSTER.education_record archetype within 'Education record' SLOT for this purpose.
+
+Not to be used to record details about the teaching provided to individuals to improve their health literacy and life skills. Use ACTION.health_education for this purpose.(en)">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Education summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Age started
+                        value matches {
+                            DV_DURATION[at9002] matches {
+                                value matches {PYM/|>=P0D|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0031] occurrences matches {0..1} matches {    -- Age ended
+                        value matches {
+                            DV_DURATION[at9011] matches {
+                                value matches {PYM/|>=P0D|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Highest level completed
+                        value matches {
+                            DV_TEXT[at9005]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0029] matches {    -- Education record
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    allow_archetype CLUSTER[at0030] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9009]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0026] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0027] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9010]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Zusammenfassung der Bildung">
+                description = <"Zusammenfassende oder dauerhafte Informationen über die derzeitige und frühere Schulbildung oder Ausbildung einer Person.">
+            >
+            ["at0002"] = <
+                text = <"Höchster erreichter Bildungsabschluss">
+                description = <"Beschreibung der höchst erreichten Bildungs- oder Ausbildungsgrades.">
+                comment = <"Eine Kodierung mit einer Terminologie ist, wenn möglich, wünschenswert. Zum Beispiel: die ISCED-Klassifizierung, wie berufliche Bildung der Sekundarstufe II; postsekundäre nicht-tertiäre berufliche Bildung; Bachelor oder gleichwertiges Niveau, beruflich; Doktorat oder gleichwertiges Niveau, akademisch; postsekundäre nicht-tertiäre berufliche Bildung; oder nie an einem Bildungsangebot teilgenommen.">
+            >
+            ["at0003"] = <
+                text = <"Alter begonnen">
+                description = <"Alter, in dem eine Person zum ersten Mal eine Schulbildung begonnen hat.">
+                comment = <"Im Rahmen dieses Archetyps umfasst die Schulbildung jegliche Bildung, die auf einem strukturierten Lehrplan beruht und von ausgebildeten Fachkräften vermittelt wird.">
+            >
+            ["at0007"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Informationen über die Bildung einer Person, die in anderen Feldern nicht erfasst werden.">
+            >
+            ["at0018"] = <
+                text = <"Beschreibung">
+                description = <"Narrative Beschreibung des allgemeinen Bildungs- oder Ausbildungsweges einer Person.">
+            >
+            ["at0027"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder zur Angleichung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: lokale Informationsanforderungen oder zusätzliche Metadaten zur Angleichung an FHIR oder CIMI-Äquivalente.">
+            >
+            ["at0028"] = <
+                text = <"Letzte Aktualisierung">
+                description = <"Das Datum, an dem diese Zusammenfassung der Bildung zuletzt aktualisiert wurde.">
+                comment = <"Bei der Implementierung wird davon ausgegangen, dass, wenn ein zugehöriger Bildungsdatensatz hinzugefügt oder aktualisiert wird, dieses Datum ebenfalls aktualisiert wird.">
+            >
+            ["at0029"] = <
+                text = <"Bildungsstation">
+                description = <"Detaillierte Angaben zu jeder Schulbildung oder Ausbildung, sowohl zur aktuellen als auch zur früheren.">
+            >
+            ["at0030"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Zusätzliche Angaben über die Ausbildung oder den bisherigen Bildungsweg einer Person.">
+                comment = <"Zum Beispiel: \"Sonderpädagogischer Förderungsbedarf\".">
+            >
+            ["at0031"] = <
+                text = <"Alter beendet">
+                description = <"Alter, in dem eine Person zuletzt eine Schulbildung abgeschlossen hat.">
+                comment = <"Wird in der Regel nur erfasst, wenn eine Person keinen anerkannten formalen Bildungsstand erreicht hat, z. B. eine Person, die die Schule im Alter von 13 Jahren verlassen hat.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Utdanningssammendrag">
+                description = <"Sammendrag eller varig (persistent) informasjon om et individs nåværende og tidligere utdanning eller opplæring.">
+            >
+            ["at0002"] = <
+                text = <"Høyeste fullførte utdanningsnivå">
+                description = <"Beskrivelse av det høyeste fullførte nivået av utdanning eller opplæring.">
+                comment = <"Koding av \"Høyeste fullførte utdanningsnivå\" med en terminologi er anbefalt der det er mulig. For eksempel med NUS 2000 eller Unescos ISCED klassifikasjon. Sistnevnte forefinnes ikke på norsk, men eksempel er \"'Upper secondary vocational education\"; \"Post-secondary non-tertiary vocational education\"; \"Bachelor’s or equivalent level, professional\"; \"Doctoral or equivalent level, academic\"; \"Post-secondary non-tertiary vocational education\"; or \"Never attended an educational program\".">
+            >
+            ["at0003"] = <
+                text = <"Alder skolestart">
+                description = <"Alder da individet begynte sin skolegang.">
+                comment = <"Med utdanning menes all formell opplæring som er basert på et definert pensum og gitt i en profesjonell setting.">
+            >
+            ["at0007"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om utdanningssammendraget som ikke er fanget opp i andre felt.">
+            >
+            ["at0018"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse om individets overordnede utdannings- og opplæringshistorikk.">
+            >
+            ["at0027"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at0028"] = <
+                text = <"Sist oppdatert">
+                description = <"Datoen da dette sammendraget om utdanning sist ble oppdatert.">
+                comment = <"Ved implementering av arketypen forutsettes det at dersom en utdanning eller opplæring legges til eller oppdateres i CLUSTER.education_record (Utdanning), vil også denne datoen oppdateres.">
+            >
+            ["at0029"] = <
+                text = <"Utdanningsdetaljer">
+                description = <"Strukturerte detaljer om hver enkelt utdanning eller opplæring, både nåværende og tidligere.">
+            >
+            ["at0030"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere strukturerte detaljer om individets nåværende eller tidligere skolegang/utdanning.">
+                comment = <"For eksempel: \"Behov for spesialundervisning\".">
+            >
+            ["at0031"] = <
+                text = <"Alder skoleslutt">
+                description = <"Alder da individet avsluttet sin formelle skolegang.">
+                comment = <"Registreres vanligvis bare når et individ ikke fullfører en formell utdanning (eller obligatorisk skole), for eksempel et individ som slutter skolen ved 13 års alder.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Education summary">
+                description = <"Summary or persistent information about an individual's current and past education or training.">
+            >
+            ["at0002"] = <
+                text = <"Highest level completed">
+                description = <"Description of highest category of education or training completed.">
+                comment = <"Coding with a terminology is desirable, where possible. For example: the ISCED classification, such as upper secondary vocational education; post-secondary non-tertiary vocational education; Bachelor’s or equivalent level, professional; Doctoral or equivalent level, academic; post-secondary non-tertiary vocational education; or never attended an educational program.">
+            >
+            ["at0003"] = <
+                text = <"Age started">
+                description = <"Age when an individual first commenced formal education.">
+                comment = <"In the context of this archetype, formal education includes all education that is based on a structured curriculum and delivered by trained professionals.">
+            >
+            ["at0007"] = <
+                text = <"Comment">
+                description = <"Additional narrative about an individual's education, not captured in other fields.">
+            >
+            ["at0018"] = <
+                text = <"Description">
+                description = <"Narrative description about the overall education or training history of an individual.">
+            >
+            ["at0027"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0028"] = <
+                text = <"Last updated">
+                description = <"The date that this education summary was last updated.">
+                comment = <"At implementation, it is assumed that if an associated education record is added or updated then this date will also be updated.">
+            >
+            ["at0029"] = <
+                text = <"Education record">
+                description = <"Structured details about each education or training, both current and past.">
+            >
+            ["at0030"] = <
+                text = <"Additional details">
+                description = <"Additional details about the education or training, or previous education history of an individual.">
+                comment = <"For example: 'Special education needs'.">
+            >
+            ["at0031"] = <
+                text = <"Age ended">
+                description = <"Age when an individual last attended formal education.">
+                comment = <"Usually only recorded when an individual has not achieved a recognized level of formal education, such as an individual who left school at the age of 13.">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Résumé de l'éducation">
+                description = <"Information sommaire ou persistante sur l'éducation ou la formation actuelle et passée d'une personne.">
+            >
+            ["at0002"] = <
+                text = <"Niveau atteint le plus élevé">
+                description = <"Description de la plus haute catégorie d'enseignement ou de formation suivie.">
+                comment = <"Le codage avec une terminologie est souhaitable, dans la mesure du possible. Par exemple : la classification CITE, telle que l'enseignement professionnel secondaire supérieur ; l'enseignement professionnel post-secondaire non tertiaire ; la licence ou le niveau équivalent, professionnel ; le doctorat ou le niveau équivalent, universitaire ; l'enseignement professionnel post-secondaire non tertiaire ; ou n'a jamais suivi un programme d'enseignement.">
+            >
+            ["at0003"] = <
+                text = <"Age commencé">
+                description = <"Age auquel un individu a commencé à suivre une éducation formelle.">
+                comment = <"Age auquel un individu a commencé à suivre une éducation formelle.">
+            >
+            ["at0007"] = <
+                text = <"Commentaire">
+                description = <"Récit supplémentaire sur l'éducation d'un individu, non pris en compte dans d'autres domaines.">
+            >
+            ["at0018"] = <
+                text = <"Description">
+                description = <"Description narrative de l'ensemble des études ou de la formation d'un individu.">
+            >
+            ["at0027"] = <
+                text = <"Extension">
+                description = <"Informations supplémentaires requises pour saisir le contenu local ou pour s'aligner sur d'autres modèles/formalismes de référence.">
+                comment = <"Par exemple : exigences locales en matière d'information ou métadonnées supplémentaires à aligner sur les équivalents FHIR ou CIMI.">
+            >
+            ["at0028"] = <
+                text = <"Dernière mise à jour">
+                description = <"La date de la dernière mise à jour de ce résumé sur l'éducation.">
+                comment = <"Lors de la mise en œuvre, il est supposé que si un enregistrement d'éducation associé est ajouté ou mis à jour, cette date sera également mise à jour.">
+            >
+            ["at0029"] = <
+                text = <"Fichier d'éducation">
+                description = <"Des détails structurés sur chaque éducation ou formation, actuelle et passée.">
+            >
+            ["at0030"] = <
+                text = <"Détails supplémentaires">
+                description = <"Données supplémentaires sur l'éducation ou la formation, ou sur les antécédents scolaires d'une personne.">
+                comment = <"Par exemple : \"Besoins éducatifs spéciaux\".">
+            >
+            ["at0031"] = <
+                text = <"Age terminé">
+                description = <"Age auquel une personne a fréquenté l'enseignement formel pour la dernière fois.">
+                comment = <"En règle générale, il n'est enregistré que lorsqu'une personne n'a pas atteint un niveau reconnu d'éducation formelle, comme dans le cas d'une personne qui a quitté l'école à l'âge de 13 ans.">
+            >
+        >
+    >

@@ -1,0 +1,175 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f0d0389d-874f-482e-a1c3-6c7c09eae7de; build_uid=0d993fd5-ff6c-4f77-8474-2b3d758fb74c)
+    openEHR-EHR-ADMIN_ENTRY.covid_19_admission.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            author = <
+                ["name"] = <"Alessandro Sulis">
+                ["organisation"] = <"CRS4 - Center for advanced studies, research and development in Sardinia, Pula (Cagliari), Italy">
+                ["email"] = <"alessandro.sulis@crs4.it">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["date"] = <"2020-03-09">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"09A706820F78FD18D5E1CCE87EA9E4A0">
+    >
+    details = <
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"*unknown(en)">
+            use = <"">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"*unknown(en)">
+            use = <"">
+            misuse = <"">
+        >
+    >
+
+definition
+    ADMIN_ENTRY[at0000] matches {    -- Covid 19 Admission
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Hospital admission status
+                        value matches {
+                            DV_CODED_TEXT[at9001] matches {
+                                defining_code matches {[ac9000]}    -- Hospital admission status (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Date first admitted
+                        value matches {
+                            DV_DATE_TIME[at9002]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"Covid 19 Hoitoon pääsy">
+                description = <"*Covid_19_Admission(en)">
+            >
+            ["at0002"] = <
+                text = <"Hoitoon pääsyn tila">
+                description = <"*">
+            >
+            ["at0003"] = <
+                text = <"Kyllä">
+                description = <"Potilas sisäänkirjattu sairaalaan">
+            >
+            ["at0004"] = <
+                text = <"Ei">
+                description = <"Potilasta ei sisäänkirjattu sairaalaan">
+            >
+            ["at0005"] = <
+                text = <"Ei tiedossa">
+                description = <"Ei tiedossa kirjattiinko potilasta sairaalaan">
+            >
+            ["at0006"] = <
+                text = <"Ensimmäinen hoitoon pääsyn pvm">
+                description = <"*">
+            >
+            ["ac9000"] = <
+                text = <"Hoitoon pääsyn tila (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Covid 19 Admission">
+                description = <"Covid_19_Admission">
+            >
+            ["at0002"] = <
+                text = <"Hospital admission status">
+                description = <"*">
+            >
+            ["at0003"] = <
+                text = <"YES">
+                description = <"The patient was admitted to hospital.">
+            >
+            ["at0004"] = <
+                text = <"NO">
+                description = <"The patient was not admitted to hospital.">
+            >
+            ["at0005"] = <
+                text = <"UNKNOWN">
+                description = <"It is not known if the patient was admitted to hospital.">
+            >
+            ["at0006"] = <
+                text = <"Date first admitted">
+                description = <"*">
+            >
+            ["ac9000"] = <
+                text = <"Hospital admission status (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+        ["it"] = <
+            ["at0000"] = <
+                text = <"Accesso per Covid 19">
+                description = <"Ricovero per Covid 19  (en)">
+            >
+            ["at0002"] = <
+                text = <"Stato del ricovero ospedaliero">
+                description = <"*">
+            >
+            ["at0003"] = <
+                text = <"SI">
+                description = <"Il paziente è stato ricoverato ">
+            >
+            ["at0004"] = <
+                text = <"*NO(en)">
+                description = <"Il paziente non è stato ricoverato ">
+            >
+            ["at0005"] = <
+                text = <"*UNKNOWN(en)">
+                description = <"Non è presente alcuna informazione sul fatto che il paziente sia stato ricoverato oppure no ">
+            >
+            ["at0006"] = <
+                text = <"Data del primo ricovero">
+                description = <"*">
+            >
+            ["ac9000"] = <
+                text = <"Stato del ricovero ospedaliero (synthesised)">
+                description = <"* (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0003", "at0004", "at0005">
+        >
+    >

@@ -1,0 +1,180 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7dfbf086-be1b-41e7-80f0-6addfdbc98e2; build_uid=ce37dad5-a661-4a49-a833-4cdd68e8e75e)
+    openEHR-DEMOGRAPHIC-CLUSTER.person_identifier-provider.v0.0.1-alpha
+
+specialize
+    openEHR-DEMOGRAPHIC-CLUSTER.person_identifier.v0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Sergio Miranda Freire">
+                ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+                ["email"] = <"sergio@lampada.uerj.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sergio Miranda Freire & Rigoleta Dutra Mediano Dias">
+        ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+        ["email"] = <"sergio@lampada.uerj.br">
+        ["date"] = <"2009-05-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Rigoleta Dutra, Ministry of Defense, Brazil (openEHR Editor)", "Sergio Freire, State University of Rio de Janeiro, Brazil (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"ISO/DTS 27527:2007(E) - Provider Identification - Draft Technnical Specification - International Organization for Standardization">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"239A14834B79DBD3BF9C7E628C84418E">
+    >
+    details = <
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Representação de dados relativos a um documento de identificação de um prestador de assistência (indivíduo/organização).">
+            keywords = <"serviço demográfico", "identificador de um prestador de assistência à saúde.">
+            use = <"Usado em serviçoS demográficos para registrar os dados relativos a um documento de identificação de um prestador de assistência à saúde (indivíduo/organização).">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Representation of data about a healthcare provider (individual/organisation) identifier.">
+            keywords = <"demographic service", "healthcare provider identifier">
+            use = <"Used in demographic services to register data about a healthcare provider (individual/organisation) identifier.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Healthcare provider identifier
+        items matches {
+            ELEMENT[at0.2] occurrences matches {1..*} matches {    -- Identifier Usage
+                value matches {
+                    DV_TEXT[at0.9000]
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code matches {[ac1.1]}    -- Identifier usage code
+                    }
+                }
+            }
+            CLUSTER[at0.3] matches {    -- Duplicate resolution
+                items cardinality matches {3..*} matches {
+                    ELEMENT[at0.30] occurrences matches {0..1} matches {    -- Not a duplicate of
+                        value matches {
+                            DV_TEXT[at0.9002]
+                        }
+                    }
+                    ELEMENT[at0.31] occurrences matches {0..1} matches {    -- Duplicate of
+                        value matches {
+                            DV_TEXT[at0.9003]
+                        }
+                    }
+                    ELEMENT[at0.32] occurrences matches {1..*} matches {    -- Confirmed by organisation
+                        value matches {
+                            DV_TEXT[at0.9004]
+                        }
+                    }
+                    ELEMENT[at0.33] occurrences matches {1..*} matches {    -- Date confirmed
+                        value matches {
+                            DV_DATE[at0.9005]
+                        }
+                    }
+                    ELEMENT[at0.34] occurrences matches {1..*} matches {    -- Retired identifider
+                        value matches {
+                            DV_TEXT[at0.9006]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["pt-br"] = <
+            ["at0000.1"] = <
+                text = <"Identificador de um prestador de assistência à saúde">
+                description = <"Identificador de um prestador de assistência à saúde.">
+            >
+            ["at0.2"] = <
+                text = <"Uso da identificação">
+                description = <"O propósito de uso deste identificador único.">
+            >
+            ["at0.3"] = <
+                text = <"Resolução de duplicidade">
+                description = <"Este grupo de dados permite aos usuários identificar onde eles determinaram que dois identificadores que parecem ser duplicatas não são duplicatas, ou indicar, no caso de se descobrir qe eles são duplicatas: que número está inativo e não é mais usado, e qual deve ser mantido.">
+            >
+            ["at0.30"] = <
+                text = <"Não é duplicata de">
+                description = <"O identificador digitado neste campo não é uma duplicata deste identificador.">
+            >
+            ["at0.31"] = <
+                text = <"Duplicata de">
+                description = <"O identificador digitado neste campo não é uma duplicata deste identificador.">
+            >
+            ["at0.32"] = <
+                text = <"Confirmado pela organização">
+                description = <"A organização que confirmou o status de duplicata ou não deste identificador.">
+            >
+            ["at0.33"] = <
+                text = <"Data da confirmação">
+                description = <"A data onde este identificador foi determinado como sendo ou não uma duplicata.">
+            >
+            ["at0.34"] = <
+                text = <"Identificador desativado">
+                description = <"Para um conjunto de identificadores duplicados, este campo indica se este número é o que deve ser desativado (não mais usado) ou não.">
+            >
+            ["ac1.1"] = <
+                text = <"Código de uso do identificador.">
+                description = <"códigos válidos para os usos de identificadores.">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Healthcare provider identifier">
+                description = <"Healthcare provider identifier.">
+            >
+            ["at0.2"] = <
+                text = <"Identifier Usage">
+                description = <"The purpose or intended use of this unique identifier.">
+            >
+            ["at0.3"] = <
+                text = <"Duplicate resolution">
+                description = <"This group of data allow users to identify where they have determined that two identifiers which appears to be duplicates are not duplicated, or to indicate that where they are discovered to be duplicates -  which number is retired and no longer used, and which is retained.">
+            >
+            ["at0.30"] = <
+                text = <"Not a duplicate of">
+                description = <"The identifier entered into this field is not a duplicate entry of this identifier.">
+            >
+            ["at0.31"] = <
+                text = <"Duplicate of">
+                description = <"The identifier entered into this field is a duplicate entry of this identifier.">
+            >
+            ["at0.32"] = <
+                text = <"Confirmed by organisation">
+                description = <"The organisation that has confirmed the duplicate or not duplicate status of this identifier.">
+            >
+            ["at0.33"] = <
+                text = <"Date confirmed">
+                description = <"The date upon which this identifier was determined as a duplicate or not a duplicate.">
+            >
+            ["at0.34"] = <
+                text = <"Retired identifider">
+                description = <"For a duplicate identifier set this field indicates if this number is the one retired (nor for further use) or not.">
+            >
+            ["ac1.1"] = <
+                text = <"Identifier usage code">
+                description = <"Valid codes for usage of identifiers.">
+            >
+        >
+    >

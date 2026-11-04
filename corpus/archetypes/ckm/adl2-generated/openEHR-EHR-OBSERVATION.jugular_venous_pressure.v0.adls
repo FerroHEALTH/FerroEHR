@@ -1,0 +1,315 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6d16587e-7da1-4ae5-b2cd-c35e0a92221b; build_uid=400bbe01-7d64-4b77-8a6e-1bd3e29076f8)
+    openEHR-EHR-OBSERVATION.jugular_venous_pressure.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2018-11-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Sam Heard, Ocean Informatics, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"41391C56AE3002A6D89B20246B92CAD6">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the indirectly observed pressure over the venous system via visualization of the internal jugular vein.">
+            keywords = <"jvp", "jugular", "venous", "pressure">
+            use = <"Use to record the indirectly observed pressure over the venous system via visualization of the internal jugular vein.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Jugular venous pressure
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {1} matches {    -- Any Event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- JVP presence
+                                        value matches {
+                                            DV_CODED_TEXT[at9006] matches {
+                                                defining_code matches {[ac9000]}    -- JVP presence (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Column height
+                                        value matches {
+                                            DV_QUANTITY[at9007] matches {
+                                                property matches {[at9001]}    -- Length
+                                                units matches {"cm"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Clinical description
+                                        value matches {
+                                            DV_TEXT[at9008]
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Character
+                                        value matches {
+                                            DV_TEXT[at9009]
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Abdominojugular test
+                                        value matches {
+                                            DV_CODED_TEXT[at9010] matches {
+                                                defining_code matches {[ac9002]}    -- Abdominojugular test (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Kussmaul sign
+                                        value matches {
+                                            DV_CODED_TEXT[at9011] matches {
+                                                defining_code matches {[ac9003]}    -- Kussmaul sign (synthesised)
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0029] matches {    -- Multimedia representation
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.waveform(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                                    }
+                                    ELEMENT[at0028] matches {    -- Clinical interpretation
+                                        value matches {
+                                            DV_TEXT[at9012]
+                                        }
+                                    }
+                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9013]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0013] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Body position
+                                        value matches {
+                                            DV_CODED_TEXT[at9014] matches {
+                                                defining_code matches {[ac9004; at17]}    -- Body position (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9015]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0019] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Location of measurement
+                        value matches {
+                            DV_CODED_TEXT[at9016] matches {
+                                defining_code matches {[ac9005]}    -- Location of measurement (synthesised)
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0020] matches {    -- Device
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device\.v1\..*|openEHR-EHR-CLUSTER\.waveform(-[a-zA-Z0-9_]+)*\.v0\..*/}
+                    }
+                    allow_archetype CLUSTER[at0025] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Jugular venous pressure">
+                description = <"The indirectly observed pressure over the venous system via visualization of the internal jugular vein.">
+            >
+            ["at0002"] = <
+                text = <"Any Event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Column height">
+                description = <"The observed height of the jugular vein filling level.">
+            >
+            ["at0005"] = <
+                text = <"JVP presence">
+                description = <"The JVP is observed as present or absent.">
+            >
+            ["at0006"] = <
+                text = <"Character">
+                description = <"Description of the character of the jugular wave.">
+            >
+            ["at0007"] = <
+                text = <"Abdominojugular test">
+                description = <"Observation of the change in the JVP in response to changes of abdominal pressure.">
+                comment = <"Also known as the hepatojugular reflex.">
+            >
+            ["at0008"] = <
+                text = <"Positive">
+                description = <"The JVP rises with increased abdominal pressure.">
+            >
+            ["at0009"] = <
+                text = <"Negative">
+                description = <"The JVP does not rise with increased abdominal pressure.">
+            >
+            ["at0010"] = <
+                text = <"Kussmaul sign">
+                description = <"Observation of the paradoxical rise in jugular venous pressure (JVP) on inspiration, or a failure in the appropriate fall of the JVP with inspiration.">
+            >
+            ["at0011"] = <
+                text = <"Present">
+                description = <"The Kussmaul sign is observed.">
+            >
+            ["at0012"] = <
+                text = <"Absent">
+                description = <"The Kussmaul sign is not observed.">
+            >
+            ["at0014"] = <
+                text = <"Body position">
+                description = <"Position of individual during measurement.">
+            >
+            ["at0015"] = <
+                text = <"Supine">
+                description = <"The individual is lying flat on a surface.">
+            >
+            ["at0016"] = <
+                text = <"Reclining at 45 degrees">
+                description = <"The individual is reclining at approximately 45 degrees.">
+            >
+            ["at0017"] = <
+                text = <"Sitting">
+                description = <"The individual is sitting upright.">
+            >
+            ["at0018"] = <
+                text = <"Confounding factors">
+                description = <"Comment on and record other incidental factors that may be contributing to the jugular venous pressure measurement.">
+            >
+            ["at0020"] = <
+                text = <"Device">
+                description = <"Details about the device used to record the measurement.">
+            >
+            ["at0022"] = <
+                text = <"Location of measurement">
+                description = <"was measured.">
+            >
+            ["at0023"] = <
+                text = <"Left">
+                description = <"The left JVP was measured.">
+            >
+            ["at0024"] = <
+                text = <"Right">
+                description = <"The right JVP was measured.">
+            >
+            ["at0025"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0026"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the jugular venous pressure findings not captured in other fields.">
+            >
+            ["at0027"] = <
+                text = <"Clinical description">
+                description = <"Narrative description about finding on observation of the jugular venous pressure.">
+            >
+            ["at0028"] = <
+                text = <"Clinical interpretation">
+                description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the jugular venous pressure.">
+            >
+            ["at0029"] = <
+                text = <"Multimedia representation">
+                description = <"Digital image, video, wave form or diagram representing the findings.">
+            >
+            ["at0030"] = <
+                text = <"Present">
+                description = <"The JVP is observed.">
+            >
+            ["at0031"] = <
+                text = <"Absent">
+                description = <"The JVP is not observed.">
+            >
+            ["at0032"] = <
+                text = <"Indeterminate">
+                description = <"It is not possible to determine if the JVP is present or absent.">
+            >
+            ["at9001"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac9000"] = <
+                text = <"JVP presence (synthesised)">
+                description = <"The JVP is observed as present or absent. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Abdominojugular test (synthesised)">
+                description = <"Observation of the change in the JVP in response to changes of abdominal pressure. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Kussmaul sign (synthesised)">
+                description = <"Observation of the paradoxical rise in jugular venous pressure (JVP) on inspiration, or a failure in the appropriate fall of the JVP with inspiration. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Body position (synthesised)">
+                description = <"Position of individual during measurement. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Location of measurement (synthesised)">
+                description = <"was measured. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/122>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0008", "at0009">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0030", "at0031", "at0032">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0023", "at0024">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0015", "at0016", "at0017">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0011", "at0012">
+        >
+    >

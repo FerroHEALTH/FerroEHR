@@ -1,0 +1,269 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=83a0625f-b654-42e4-a779-797b6281d726; build_uid=1f811f48-1849-4ff3-9943-b8ef1a9a1b4f)
+    openEHR-EHR-OBSERVATION.iciq_ui_short.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Hildegard Franke">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"hildi@freshehr.com">
+        ["date"] = <"2016-05-30">
+    >
+    original_namespace = <"uk.org.clinicalmodels">
+    original_publisher = <"UK Clinical Models">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"uk.org.clinicalmodels">
+    custodian_organisation = <"UK Clinical Models">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"International Consultation on Incontinence Modular Questionnaire  http://www.iciq.net/index.html">
+    >
+    other_details = <
+        ["current_contact"] = <"Hildegard Franke, freshEHR Clinical Informatics Ltd.<hildi@freshehr.com>">
+        ["MD5-CAM-1.0.1"] = <"57A40A521B6DA98E55E8F07BFA8DE34B">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Intended to capture the result of the short form of the ICIQ (International Consultation on Incontinence Questionnaire), also referred to as ICIQ-UI Short Form. The form is used to obtain a brief yet comprehensive summary of the level, impact and perceived cause of symptoms of incontinence.">
+            keywords = <"incontinence", "ICIQ", "score", "urine", "leakage", "leak", "questionnaire">
+            use = <"Use to record ICIQ-UI Short form answers to questions and total score.">
+            misuse = <"">
+            copyright = <"© Clinical Models UK">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- ICIQ-UI Short Form
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Point in time
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Frequency
+                                        value matches {
+                                            DV_ORDINAL[at9003] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- Never
+                                                    [{1}, {[at0006]}],    -- About once a week or less often
+                                                    [{2}, {[at0007]}],    -- Two or three times a week
+                                                    [{3}, {[at0008]}],    -- About once a day
+                                                    [{4}, {[at0009]}],    -- Several times a day
+                                                    [{5}, {[at0010]}]    -- All the time
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Quantity
+                                        value matches {
+                                            DV_ORDINAL[at9004] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0012]}],    -- None
+                                                    [{2}, {[at0013]}],    -- A small amount
+                                                    [{4}, {[at0014]}],    -- A moderate amount
+                                                    [{6}, {[at0015]}]    -- A large amount
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Interference with daily life
+                                        value matches {
+                                            DV_COUNT[at9005] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- ICIQ Score
+                                        value matches {
+                                            DV_COUNT[at9006] matches {
+                                                magnitude matches {|0..21|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0018] matches {    -- When does urine leak?
+                                        value matches {
+                                            DV_CODED_TEXT[at9007] matches {
+                                                defining_code matches {[ac9002]}    -- When does urine leak? (synthesised)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0027] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0028] matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9008]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0029] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0030] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"ICIQ-UI Short Form">
+                description = <"International Consultation on Incontinence (ICIQ) Urinary Incontinence (UI) Short Form.">
+            >
+            ["at0002"] = <
+                text = <"Point in time">
+                description = <"A specific date and/or time which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Frequency">
+                description = <"Frequency of urine leakage over past 4 weeks.">
+                comment = <"Prompt: On average over the past 4 weeks, how often do you leak urine?">
+            >
+            ["at0005"] = <
+                text = <"Never">
+                description = <"Over the past 4 weeks I have never leaked urine.">
+            >
+            ["at0006"] = <
+                text = <"About once a week or less often">
+                description = <"Over the past 4 weeks I have leaked urine about once a week or less often on average.">
+            >
+            ["at0007"] = <
+                text = <"Two or three times a week">
+                description = <"Over the past 4 weeks I have leaked urine two or three times a week on average.">
+            >
+            ["at0008"] = <
+                text = <"About once a day">
+                description = <"Over the past 4 weeks I have leaked urine about once a day on average.">
+            >
+            ["at0009"] = <
+                text = <"Several times a day">
+                description = <"Over the past 4 weeks I have leaked urine several times a day on average.">
+            >
+            ["at0010"] = <
+                text = <"All the time">
+                description = <"Over the past 4 weeks I have leaked urine all the time.">
+            >
+            ["at0011"] = <
+                text = <"Quantity">
+                description = <"Perceived quantity of urine leakage.">
+                comment = <"Prompt: We would like to know how much urine you think leaks. 
+How much urine do you usually leak (whether you wear protection or not)?">
+            >
+            ["at0012"] = <
+                text = <"None">
+                description = <"Over the past 4 weeks I have not leaked any urine.">
+            >
+            ["at0013"] = <
+                text = <"A small amount">
+                description = <"Over the past 4 weeks I have leaked a small amount of urine on average.">
+            >
+            ["at0014"] = <
+                text = <"A moderate amount">
+                description = <"Over the past 4 weeks I have leaked a moderate amount of urine on average.">
+            >
+            ["at0015"] = <
+                text = <"A large amount">
+                description = <"Over the past 4 weeks I have leaked a large amount of urine on average.">
+            >
+            ["at0016"] = <
+                text = <"Interference with daily life">
+                description = <"Perceived interference of urine leakage with daily life on a scale of 0 - 10.">
+                comment = <"Prompt: Overall, how much does leaking urine interfere with your everyday life?
+ Please record a number between 0 (not at all) and 10 (a great deal)">
+            >
+            ["at0017"] = <
+                text = <"ICIQ Score">
+                description = <"Sum of scores for frequency, quantity and interference.">
+            >
+            ["at0018"] = <
+                text = <"When does urine leak?">
+                description = <"Occasions when urine leakage occurs.">
+                comment = <"Prompt: When does urine leak? (Please tick all that apply to you).">
+            >
+            ["at0019"] = <
+                text = <"Never">
+                description = <"Urine never leaks.">
+            >
+            ["at0020"] = <
+                text = <"Before getting to toilet">
+                description = <"Urine leaks before you can get to the toilet.">
+            >
+            ["at0021"] = <
+                text = <"Cough or sneeze">
+                description = <"Urine leaks when you cough or sneeze.">
+            >
+            ["at0022"] = <
+                text = <"Asleep">
+                description = <"Urine leaks when you are asleep.">
+            >
+            ["at0023"] = <
+                text = <"Physically active/exercising">
+                description = <"Urine leaks when you are physically active or exercising.">
+            >
+            ["at0024"] = <
+                text = <"Finished urinating and are dressed">
+                description = <"Urine leaks when you have finished urinating and are dressed.">
+            >
+            ["at0025"] = <
+                text = <"No obvious reason">
+                description = <"Urine leaks for no obvious reason.">
+            >
+            ["at0026"] = <
+                text = <"All the time">
+                description = <"Urine leaks all the time.">
+            >
+            ["at0028"] = <
+                text = <"Confounding factors">
+                description = <"Description of any incidental factors that may have contributed to the score.">
+            >
+            ["at0030"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"e.g. Local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9008"] = <
+                text = <"Frequency (synthesised)">
+                description = <"Frequency of urine leakage over past 4 weeks. (synthesised)">
+            >
+            ["ac9009"] = <
+                text = <"Quantity (synthesised)">
+                description = <"Perceived quantity of urine leakage. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"When does urine leak? (synthesised)">
+                description = <"Occasions when urine leakage occurs. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0012", "at0013", "at0014", "at0015">
+        >
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009", "at0010">
+        >
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0019", "at0020", "at0021", "at0022", "at0023", "at0024", "at0025", "at0026">
+        >
+    >

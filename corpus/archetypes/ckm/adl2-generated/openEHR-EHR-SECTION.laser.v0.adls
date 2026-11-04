@@ -1,0 +1,94 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3bbb6d46-c121-4b1d-8c4a-8de063028ee3; build_uid=6083a154-98b2-47c6-8ef9-fd8efd95a532)
+    openEHR-EHR-SECTION.laser.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2015-06-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"E185D2071B59EB62E1BAE584EF349AE7">
+    >
+    details = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Gestionar el proceso de planificación y posteriormente llevar a cabo un tratamiento oftálmico usando la terapia por láser.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Register clinical information about any procedure based on the use of ophthalmic laser, from it is scheduled until the intervention is conducted by an ophthalmologist.">
+            keywords = <"ophthalmology", "laser">
+            use = <"To be used whenever a complex clinical process comprehends the use of ophthalmic laser.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Ophthalmic laser procedure
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype INSTRUCTION[at0001] matches {    -- Procedure request
+                include
+                    archetype_id/value matches {/openEHR-EHR-INSTRUCTION\.request-procedure(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+            }
+            allow_archetype ACTION[at0002] matches {    -- Procedure undertaken
+                include
+                    archetype_id/value matches {/openEHR-EHR-ACTION\.procedure(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Ophthalmic laser procedure">
+                description = <"Defines any procedure involving treatment of ophthalmic diseases by means of techniques based in laser.">
+            >
+            ["at0001"] = <
+                text = <"Procedure request">
+                description = <"Details about the prescription of a procedure based on the use of ophthalmic laser.">
+            >
+            ["at0002"] = <
+                text = <"Procedure undertaken">
+                description = <"Details of any procedure conducted, that involves the use of ophthalmic laser.">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Láser">
+                description = <"Define el proceso que implica el tratamiento de afecciones oftalmológicas por medio de técnicas basadas en el uso de láser.">
+            >
+            ["at0001"] = <
+                text = <"Solicitud de procedimiento">
+                description = <"Solicitud para un procedimiento a ser realizado.">
+            >
+            ["at0002"] = <
+                text = <"Procedimiento realizado">
+                description = <"Actividad clínica que se ha llevado a cabo con propósitos terapéuticos o diagnósticos.">
+            >
+        >
+    >

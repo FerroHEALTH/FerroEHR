@@ -1,0 +1,786 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d906e83e-9307-4142-8c67-8ecad6c618e8; build_uid=d031553f-a62c-4240-916f-1fd4d6a5079b)
+    openEHR-EHR-COMPOSITION.self_reported_data.v1.1.6
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nn"] = <
+            language = <[ISO_639-1::nn]>
+        >
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Erik Sundvall, Marit Alice Venheim, Samira Nikman, Åsa Skagerhult, Manna Vosta">
+                ["organisation"] = <"Karolinska Institutet + Karolinska University Hospital Region Stockholm + Linköping University, Helse Vest IKT, Karolinska Institutet + Karolinska University Hospital, Region Stockholm + Linköping University, Västra Götalandsregionen">
+                ["email"] = <"erik.sundvall@regionstockholm.se, marit.alice.venheim@helse-vest-ikt.no, samira.nikman@regionstockholm.se, asa.skagerhult@vgregion.se, manna.vosta@regionstockholm.se">
+            >
+            accreditation = <"Karolinska University Hospital">
+            other_details = <
+                ["other_contributors"] = <"Samira Nikman, Karolinska University Hospital, Sweden">
+            >
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            author = <
+                ["name"] = <"Heidi Koikkalainen">
+                ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+                ["email"] = <"heidi.koikkalainen@freshehr.com">
+            >
+            other_details = <
+                ["other_contributors"] = <"Riikka Lahtela, Istekki Oy, Finland
+Henri Huttunen, Una Oy, Finland
+Anna-Leena Karvonen, Tietoevry, Finland">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Marit Alice Venheim, Vebjørn Arntzen">
+                ["organisation"] = <"Helse Vest IKT, Oslo University Hospital">
+                ["email"] = <"marit.alice.venheim@helse-vest-ikt.no, varntzen@ous-hf.no">
+            >
+        >
+        ["pt"] = <
+            language = <[ISO_639-1::pt]>
+            author = <
+                ["name"] = <"Vanessa Pereira">
+                ["organisation"] = <"Luxembourg Institute of Health (LIH)">
+                ["email"] = <"vanessapereira@protonmail.com">
+            >
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Sol Fustiñana">
+                ["organisation"] = <"University Hospital Basel (USB)">
+                ["email"] = <"sol.fustinana@usb.ch">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            author = <
+                ["name"] = <"Olha Nikolaieva">
+                ["organisation"] = <"University Hospital Basel">
+                ["email"] = <"olha.nikolaieva@usb.ch">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Michaël Schnell">
+                ["organisation"] = <"Luxembourg Institute of Health (LIH)">
+                ["email"] = <"michael.schnell@posteo.net">
+            >
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+            author = <
+                ["name"] = <"Lin Zhang">
+                ["organisation"] = <"Freelancer">
+                ["email"] = <"linforest@163.com">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Sol Fustiñana">
+                ["organisation"] = <"University Hospital Basel (USB)">
+                ["email"] = <"sol.fustinana@usb.ch">
+            >
+        >
+        ["tr"] = <
+            language = <[ISO_639-1::tr]>
+            author = <
+                ["name"] = <"Olha Nikolaieva">
+                ["organisation"] = <"University Hospital Basel">
+                ["email"] = <"olha.nikolaieva@usb.ch">
+            >
+            other_details = <
+                ["other_contributors"] = <"Koray Atalag, GALATA-Digital, New Zealand">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Marit Alice Venheim">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["email"] = <"marit.alice.venheim@helse-vest-ikt.no">
+        ["date"] = <"2022-04-29">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Astrid Askeland, Dips AS, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Aleocidio Balzanelo, DASA, Brazil", "Maria Berggren, Region Uppsala, Sweden", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Diego Bosca, VeraTech for Health, Spain", "Samanta Dallagnese, Private Office, Brazil", "Gunn Elin Blakkisrud, DIPS ASA, Norway", "Kåre Flø, DIPS ASA, Norway", "Martin Grundberg, Cambio Healthcare Systems, Sweden", "Evelyn Hovenga, EJSH Consulting, Australia", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (Nasjonal IKT redaktør)", "Ronald Krawec, Alberta Health Services, Canada", "Kanika Kuwelker, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Manisha Mantri, C-DAC, India", "Hanne Marte Bårholm, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Terje Sagmyr, Helse Vest IKT, Norway", "Carina Sandell, Region Östergötland, Sweden", "Andre Smitt-Ingebretsen, Sørlandet sykehus HF, Norway", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Erik Sundvall, Karolinska Institutet + Karolinska University Hospital, Region Stockholm + Linköping University, Sweden", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Ina Wille, Helse-Vest RHF, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B1C990759B32653BE06B8E37B9F51820">
+    >
+    details = <
+        ["nn"] = <
+            language = <[ISO_639-1::nn]>
+            purpose = <"*A container for information provided by an individual, to support clear separation of patient generated from clinician-generated health data. (en)">
+            keywords = <"*questionnaire, self-report, form, survey, PROM, PREM, PRO, diary, journal (en)", ...>
+            use = <"*Use as a generic container to record information provided by an individual, to support clear separation of patient-generated from clinician-generated health data.
+
+The scope of content for this archetype can be very broad and be inclusive of many contexts. The anticipated scope of content includes, but not limited to:
+- self-generated responses to questionnaires, including PREMs or PROMs
+- pain or mood diary
+- tobacco smoking diary
+- self-generated health summary for sharing with others
+- self-monitoring of measurements and observations
+
+The anticipated use of this archetype includes, but is not limited to:
+- submission of a self-reported questionnaire to a clinician in advance of a planned contact
+- submission of a contact request form
+- daily measurements within a Personal Health Record
+- patient-entered data in a shared clinical portal
+- patient generated records of information from personal or medical devices
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"*Not to be used to represent clinician-generated records. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Ein Container für Informationen, die von einer Person bereitgestellt werden, um patientengenerierten von klinisch generierten Gesundheitsdaten zu unterscheiden.">
+            keywords = <"Fragebogen, Selbstauskunft, Selbstbericht, Formular, Bogen, Umfrage, PROM, PREM, PRO, Tagebuch, Diary", ...>
+            use = <"Zur Verwendung als genirischer Container zur Repräsentation von Informationen, die von einer Person bereitgestellt werden, um patientengenerierten von klinisch generierten Gesundheitsdaten zu unterscheiden.
+
+Der inhaltliche Umfang dieses Archetyps kann sehr breit sein und viele Kontexte umfassen. Der erwartete Umfang des Inhalts umfasst, ist aber nicht beschränkt auf:
+
+- selbst erstellte Antworten auf Fragebögen, einschließlich PREMs oder PROMs
+- Schmerz- oder Stimmungstagebuch
+- Rauchertagebuch
+- selbst erstellte Gesundheitszusammenfassung zum Teilen mit anderen
+- Selbstüberwachung von Messungen und Beobachtungen
+
+Die erwartete Verwendung dieses Archetyps umfasst, ist aber nicht beschränkt auf:
+
+- Abgabe eines selbstbeantworteten Fragebogens an einen Kliniker vor einem geplanten Kontakt
+- Übermittlung eines Kontaktanfrageformulars
+- tägliche Messungen innerhalb einer persönlichen Gesundheitsakte
+- von Patienten eingegebene Daten in einem gemeinsam genutzten klinischen Portal
+- Patientengenerierte Datensätze von Informationen von persönlichen oder medizinischen Geräten
+
+Die Hauptkomponente Sections/Content wurde absichtlich nicht eingeschränkt. Dadurch kann sie mit beliebigen SECTION- oder ENTRY-Archetypen gefüllt werden, die für den klinischen Zweck innerhalb eines Templates geeignet sind.">
+            misuse = <"Nicht zur Repräsentation von klinisch generierten Datensätzen verwenden.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"En behållare för uppgifter som lämnas av en individ, för att möjliggöra tydlig åtskillnad mellan hälsodata genererad av patient respektive vårdpersonal.">
+            keywords = <"frågeformulär", "egenrapport", "egenregistrering", "egenmonitorering", "formulär", "enkät", "PROM", "PREM", "patientrapporterat utfall", "dagbok", "loggbok">
+            use = <"Används som en generell behållare för att registrera information tillhandahållen av en individ, i syfte att möjliggöra en tydlig åtskillnad mellan hälsodata genererad av patient respektive av vårdpersonal. 
+
+Innehållet i denna arketyp kan vara mycket brett och omfatta många olika sammanhang. Förväntat innehåll inkluderar men är inte begränsat till:
+- egenregistrerade svar på frågeformulär, inklusive PREM eller PROM
+- smärt- eller humördagbok
+- dagbok över tobaksrökning
+- egenregistrerad hälsosammanfattning för delning med andra 
+- egenmonitorering av mätvärden och observationer
+
+Förväntade användningsområden för denna arketyp inkluderar men är inte begränsade till:
+- inlämning av ett egenrapporterat frågeformulär till en vårdpersonal inför ett planerat vårdmöte
+- inlämning av ett formulär för kontaktförfrågan
+- dagliga mätningar i en personlig hälsodokumentation
+- egeninmatade data i en gemensam klinisk portal
+- egengenererad dokumentation av registrerade uppgifter från personlig eller medicinteknisk utrustning
+
+Arketypens innehållsdel har medvetet lämnats obegränsad för att möjliggöra inkludering av valfria SECTION- eller ENTRY-arketyper som är lämpliga för det kliniska syftet inom en template.">
+            misuse = <"Ska inte användas för att representera information skapad av vårdpersonal.">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"Henkilön itse ilmoittamien tietojen säiliö, jonka käyttö tukee henkilön itse tuottamien tietojen selkeää erottamista sosiaali- ja terveydenhuollon ammattihenkilöiden tuottamista asiakastiedoista.">
+            keywords = <"kyselylomake, omaseuranta, lomake, kysely, PROM, PREM, PRO, päiväkirja, suunnitelma", ...>
+            use = <"Käytä geneerisenä säiliönä henkilön itse ilmoittamien tietojen tallentamiseen, jotta henkilön tuottamat tiedot voidaan erottaa selkeästi sosiaali- ja terveydenhuollon ammattihenkilöiden tuottamista asiakastiedoista. 
+
+Arkkityypin sisältö voi olla hyvin laaja ja sitä voidaan hyödyntää monissa eri käyttötapauksissa. Arkkityypin sisällön oletetaan koostuvan seuraavanlaisesta sisällöstä, vaikka sisällön ei tarvitse rajoittua näihin:
+- itse tuotetut vastaukset kyselylomakkeisiin, mukaan lukien PREM- tai PROM-vastaukset
+- kipu- tai mielialapäiväkirja
+- tupakointipäiväkirja
+- itse tuotettu terveysyhteenveto muiden kanssa jaettavaksi
+- omat havainnot ja mittaustiedot
+
+Arkkityyppiä oletetaan käytettävän seuraavanlaisiin tarkoituksiin, mutta käytön ei tarvitse rajoittua näihin:
+- itse tuotettujen kyselyiden tai testien lähettäminen sosiaali- ja terveydenhuollon palvelunantajalle ennen kontaktia
+- yhteydenottopyyntölomakkeen lähettäminen
+- omien päivittäisten mittausten tai havaintojen raportointi
+- henkilön syöttämät tiedot digitaaliseen palveluun
+- itse tuotetut tiedot, jotka on tallennettu henkilökohtaisella laitteella tai lääkinnällisellä laitteella
+
+Arkkityypin sisältöä ei ole tarkoituksella rajoitettu, jotta on voitu mahdollistaa sen täydentäminen templaateissa kaikilla tarkoitukseen sopivilla SECTION- ja ENTRY-arkkityypeillä.">
+            misuse = <"Ei tule käyttää sosiaali- ja terveydenhuollon ammattihenkilön tuottamien asiakastietojen tallentamiseen.">
+        >
+        ["pt"] = <
+            language = <[ISO_639-1::pt]>
+            purpose = <"Um contentor para informações fornecidas por um indivíduo, para apoiar uma separação clara dos pacientes gerados a partir de dados de saúde gerados pelo médico.">
+            keywords = <"questionário", "auto-relatório", "formulário", "inquérito", "PROM", "PREM", "PRO", "diário">
+            use = <"Utilização como contentor genérico para registar informações fornecidas por um indivíduo, para apoiar uma separação clara entre os dados de saúde gerados pelo paciente e os dados de saúde gerados pelo médico.
+
+O âmbito do conteúdo deste arquétipo pode ser muito amplo e incluir muitos contextos. O âmbito de conteúdo previsto inclui, mas não se limita a:
+- respostas auto-geradas a questionários, incluindo PREMs ou PROMs
+- diário da dor ou do humor
+- diário de tabagismo
+- resumo de saúde auto-gerada para partilha com outros
+- auto-controlo das medições e observações
+
+O uso antecipado deste arquétipo inclui, mas não está limitado a
+- apresentação de um questionário autodeclarado a um clínico antes de um contacto planeado
+- apresentação de um formulário de pedido de contacto
+- medições diárias dentro de um Registo de Saúde Pessoal
+- dados centrados no paciente num portal clínico partilhado
+- registos de informação gerados pelo paciente a partir de dispositivos pessoais ou médicos
+
+A componente principal das Secções/Conteúdo foi deliberadamente deixada sem constrangimentos. Isto permitirá que seja preenchida com qualquer arquétipo de SECÇÃO ou ENTRADA apropriado para o propósito clínico dentro de um modelo.">
+            misuse = <"Não deve ser utilizado para representar registos gerados por clínicos.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"A container for information provided by an individual, to support clear separation of patient generated from clinician-generated health data.">
+            keywords = <"questionnaire, self-report, form, survey, PROM, PREM, PRO, diary, journal", ...>
+            use = <"Use as a generic container to record information provided by an individual, to support clear separation of patient-generated from clinician-generated health data.
+
+The scope of content for this archetype can be very broad and be inclusive of many contexts. The anticipated scope of content includes, but not limited to:
+- self-generated responses to questionnaires, including PREMs or PROMs
+- pain or mood diary
+- tobacco smoking diary
+- self-generated health summary for sharing with others
+- self-monitoring of measurements and observations
+
+The anticipated use of this archetype includes, but is not limited to:
+- submission of a self-reported questionnaire to a clinician in advance of a planned contact
+- submission of a contact request form
+- daily measurements within a Personal Health Record
+- patient-entered data in a shared clinical portal
+- patient generated records of information from personal or medical devices
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template.">
+            misuse = <"Not to be used to represent clinician-generated records.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"Un contenitore di informazioni fornite da un individuo, per supportare una chiara separazione tra i dati sanitari generati dal paziente e quelli generati dal clinico.">
+            keywords = <"questionario, auto-segnalazione, modulo, indagine, PROM, PREM, PRO, diario, taccuino", ...>
+            use = <"Usare come contenitore generico per registrare informazioni fornite da un individuo, per supportare una chiara separazione tra i dati sanitari generati dal paziente e quelli generati dal clinico.
+
+L’ambito dei contenuti per questo archetipo può essere molto ampio e includere molti contesti. L’ambito previsto dei contenuti include, ma non è limitato a:
+- risposte auto-generate a questionari, inclusi PREM o PROM
+- diario del dolore o dell’umore
+- diario sul fumo di tabacco
+- resoconto sanitario auto-generato da condividere con altri
+- automonitoraggio di misurazioni e osservazioni
+
+L’uso previsto di questo archetipo include, ma non è limitato a:
+- invio di un questionario auto-riportato a un clinico in anticipo rispetto a un contatto programmato
+- invio di un modulo di richiesta di contatto
+- misurazioni quotidiane all’interno di registro personale sanitario
+- dati inseriti dal paziente in un portale clinico condiviso
+- registrazioni generate dal paziente di informazioni provenienti da dispositivi personali o medici
+
+Il componente principale Sezioni/Contenuto è stato volutamente lasciato non vincolato. Ciò consentirà di compilarlo con qualsiasi archetipo SECTION o ENTRY appropriato per lo scopo clinico all’interno di un template.">
+            misuse = <"Non deve essere utilizzato per rappresentare registrazioni generate dal clinico.">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"Un conteneur pour les informations fournies par un individu, pour bien distinguer entre des données de santé fournies par un patient et celles fournies par un clinicien.">
+            keywords = <"questionnaire, auto-déclaration, formulaire, enquête, PROM, PREM, PRO, carnet, journal", ...>
+            use = <"Ce conteneur est prévu pour enregistrer les informations fournies par un individu, pour bien distinguer entre des données de santé fournies par un patient et celles fournies par un clinicien. 
+
+Le cadre du contenu de cet archetype peut être très vaste et peut inclure de nombreux contextes. Le cadre prévu pour le contenu inclut (liste non exhaustive) :
+- questionnaires auto-déclarés, dont des PREMs ou des PROMs
+- journal de consigne pour les douleurs ou les humeurs
+- journal de consommation de tabac
+- résumé de l'état de santé auto-déclaré pour un partage avec autrui
+- auto-surveillance d'observations et mesures
+
+Les usages prévus pour cet archetype incluent (liste non exhaustive) :
+- soumission d'un questionnaire auto-déclaré à un clinicien en amont d'un contact prévu
+- soumission d'un formulaire de demande de contact
+- mesures quotidiennes dans un carnet de santé personnel
+- données remplis par le patient dans un portail médical partagé
+- données patient provenant d'appareil personnels ou d'appareil médicaux
+
+Les sections/contenus principaux sont volontairement sans contraintes. Cela permet de remplir le contenu avec tout archetype de type SECTION ou ENTRY adapté au besoin clinique d'un template.">
+            misuse = <"Ne pas utiliser pour représenter des enregistrements générés par un clinicien.">
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+            purpose = <"针对个人所提供信息的容器，用于支持将患者产生型健康数据（patient generated health data，PGHD）与临床医务人员/临床医生产生型健康数据（clinician-generated health data，CGHD）明确地区分/分离开来。">
+            keywords = <"问卷, 调查问卷, 自行报告, 自我报告, 表单, 表格, 调查, PROM, 患者报告型结局指标, 患者报告型效果指标, PREM, 患者报告型体验指标, PRO, 患者报告型效果, 日记, 日志", ...>
+            use = <"作为通用的容器，用来记录个人所提供的信息，以支持将患者产生型健康数据与临床医务人员/临床医生产生型健康数据明确地区分/分离开来。
+
+本原始型的内容范围可能非常广泛，并且可以包容很多的上下文背景/语境。预期的内容范围包括但不仅限于：
+- 自行生成的对于问卷的回答，包括 PREM（Patient-Reported Experience Measure，患者报告型体验指标） 或 PROM（Patient‐Reported Outcome Measure，患者报告型结局/效果指标）
+- 疼痛或情绪日记
+- 吸烟日记
+- 自行生成的健康摘要，用于与他人共享
+- 对于种种观测项目和观察项目的自行监控/监测
+
+本原始型的预期用途包括但不仅限于：
+- 在已经计划的联系/接触之前，向临床医务人员/临床医生提交自行报告的问卷
+- 提交联系申请表
+- 个人健康档案（Personal Health Record，PHR）之中的日常观测结果
+- 患者在共享型临床门户当中所输入的数据
+- 患者生成的赋予来自个人或医疗设备的信息的记录
+
+在此故意对其总的章节/内容（Sections/Content）构成要素不加约束。这样，在模板当中，就可以利用任何适合相应临床目的的章节型（SECTION）或条目型（ENTRY）原始型来对其加以填充。">
+            misuse = <"并非旨在用于表达临床医务人员/临床医生产生型的记录。">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Contenedor genérico para información aportada por una persona.">
+            keywords = <"cuestionario, autodeclaración, formulario, encuesta, PROM, PREM, PRO, diario, registro", ...>
+            use = <"Utilizar como un contenedor genérico para registrar información aportada por una persona, con el fin de mantener una separación clara entre los datos de salud generados por el paciente y aquellos generados por profesionales sanitarios.
+
+El alcance del contenido de este arquetipo puede ser muy amplio e incluir numerosos contextos. El alcance previsto del contenido incluye, entre otros:
+- respuestas autogeneradas a cuestionarios, incluidos PREMs o PROMs
+- diario de dolor o de estado de ánimo
+- diario de consumo de tabaco
+- resumen de salud autogenerado para compartir con otras personas
+- automonitorización de mediciones y observaciones
+
+El uso previsto de este arquetipo incluye, pero no se limita a:
+- envío de un cuestionario autodeclarado a un profesional sanitario antes de un contacto planificado
+- envío de un formulario de solicitud de contacto
+- registro diario de mediciones en una Historia Personal de Salud
+- datos introducidos por el paciente en un portal clínico compartido
+- registros generados por el paciente con información procedente de dispositivos personales o médicos
+
+El componente principal de Secciones/Contenido se ha dejado deliberadamente sin restricciones. Esto permitirá que pueda completarse con cualquier arquetipo de SECTION o ENTRY que sea adecuado para el propósito clínico dentro de una plantilla.">
+            misuse = <"No debe utilizarse para representar registros generados por profesionales sanitarios.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"En container for informasjon gitt av et individ, for å kunne skille mellom data generert av pasienten og data generert av kliniker.">
+            keywords = <"spørreskjema", "selvrapportert", "skjema", "spørreundersøkelse", "PROM", "PREM", "PRO", "dagbok", "helseopplysninger">
+            use = <"Brukes som en container for informasjon gitt av et individ, for å kunne skille mellom data generert av pasienten og data generert av kliniker.
+
+Innholdsomfanget for denne arketypen kan være svært bredt og være inkludert i mange kontekster. Det antatte innholdsomfanget inkluderer, men er ikke avgrenset til:
+- selvgenererte svar på spørreskjemaer, inkludert PREMs eller PROMs
+- smerte- eller humørdagbok
+- røykedagbok
+- selvgenerert helsesammendrag som kan deles med andre
+- selvmonotorering av målinger og observasjoner
+
+Den antatte bruken av denne arketypen inkluderer, men er ikke avgrenset til:
+- innsending av selvrapporterte spørreskjema til en kliniker i forkant av en planlagt kontakt
+- innsending av et skjema som kontaktforespørsel
+- daglige målinger i en personlig helsejournal
+- pasientens selvregistrerte data i en delt klinisk portal
+- data registrert av pasienten fra personlig eller medisinsk utstyr
+
+Det er ikke satt begrensinger på hovedkomponenten Section/content. Dette gjør at man kan legge til hvilken som helst SECTION eller ENTRY arketype som er som passer til det kliniske formålet i templatet.">
+            misuse = <"Skal ikke brukes til å representere data generert av kliniker.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Un contenedor para la información proporcionada por una persona, que permite separar claramente los datos de salud generados por el paciente de aquellos generados por el profesional de la salud.">
+            keywords = <"cuestionario, autoinforme, formulario, encuesta, PROM, PREM, PRO, diario, registro", ...>
+            use = <"Usar un contenedor genérico para registrar información proporcionada por una persona, con el fin de mantener una clara separación entre los datos de salud generados por el paciente y aquellos generados por el profesional de la salud.
+
+El alcance del contenido de este arquetipo puede ser muy amplio e incluir numerosos contextos. El alcance previsto incluye, entre otros:
+- respuestas autogeneradas a cuestionarios, incluidos PREMs o PROMs
+- diario de dolor o de estado de ánimo
+- diario de consumo de tabaco
+- resumen de salud autogenerado para compartir con otras personas
+- autorregistro de mediciones y observaciones
+
+El uso previsto de este arquetipo incluye, pero no se limita a:
+- envío de un cuestionario autodeclarado a un profesional de la salud antes de un contacto planificado
+- envío de un formulario de solicitud de contacto
+- registro diario de mediciones dentro de una Historia Personal de Salud
+- datos ingresados por el paciente en un portal clínico compartido
+- registros generados por el paciente con información proveniente de dispositivos personales o médicos
+
+El componente principal de Secciones/Contenido se ha dejado deliberadamente sin restricciones. Esto permitirá que se complete con cualquier arquetipo de SECTION o ENTRY que sea apropiado para el propósito clínico dentro de una plantilla.">
+            misuse = <"No debe utilizarse para representar registros generados por el profesional de la salud.">
+        >
+        ["tr"] = <
+            language = <[ISO_639-1::tr]>
+            purpose = <"Bir birey tarafından bildirilen bilgileri saklayan bir kapsayıcı; hasta ve klinisyen tarafından sağlanan sağlik verilerinin açık bir şekilde ayrışmasını desteklemek amacıyla.">
+            keywords = <"soru formu, öz-bildirim, form, anket, PROM, PREM, PRO, günlük, günce", ...>
+            use = <"Bir birey tarafından sağlanan bilgileri kaydetmek için genel bir kapsayıcı olarak kullanılır; hasta tarafından üretilen verilerin klinisyen tarafından üretilen sağlık verilerinden açıkça ayrışmasını desteklemek amacıyla. 
+
+Bu arketipin içerik kapsamı çok geniş olabilir ve birçok bağlamı içerebilir. Öngörülen içerik kapsamı şunları içerebilir, ancak bunlarla sınırlı değildir:
+ - anketlere verilen kişisel yanıtlar, PREM veya PROM’lar dahil olmak üzere 
+- ağrı veya ruh hali günlüğü
+- sigara içme günlüğü 
+- başkalarıyla paylaşmak üzere hazırlanmış kişisel sağlık özeti 
+- ölçümlerin ve gözlemlerin kişisel takibi. 
+
+Bu arketipin öngörülen kullanım alanları şunları içerebilir, ancak bunlarla sınırlı değildir: 
+- planlanan bir görüşme öncesinde bir klinisyene gönderilen öz-bildirim anketi 
+- bir iletişim talep formunun gönderilmesi 
+- Kişisel Sağlık Kaydı içinde günlük ölçümler 
+- paylaşılan bir klinik portalda hasta tarafından girilen veriler 
+- kişisel veya tıbbi cihazlardan elde edilen hasta kaynaklı bilgi kayıtları. 
+
+Ana Bölümler/İçerik bileşeni özellikle kısıtlanmamıştır. Bu sayede klinik amaca uygun herhangi bir SECTION veya ENTRY arketipiyle bir şablon içinde doldurulmasına olanak tanıyacaktır.">
+            misuse = <"Klinisyen tarafından üretilen kayıtları temsil etmek için kullanılmamalıdır.">
+        >
+    >
+
+definition
+    COMPOSITION[at0000] matches {    -- Self-reported data
+        category matches {
+            DV_CODED_TEXT[at9000] matches {    -- event
+                defining_code matches {[at9000]}    -- event
+            }
+        }
+        context matches {
+            EVENT_CONTEXT[at9001] matches {
+                other_context matches {
+                    ITEM_TREE[at0003] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            allow_archetype CLUSTER[at0006] matches {    -- Information Source
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                            }
+                            allow_archetype CLUSTER[at0005] matches {    -- Device
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                            }
+                            allow_archetype CLUSTER[at0004] matches {    -- Extension
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nn"] = <
+            ["at0000"] = <
+                text = <"*Self-reported data (en)">
+                description = <"*Generic container for information provided by an individual. (en)">
+            >
+            ["at0004"] = <
+                text = <"*Extension (en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms. (en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR. (en)">
+            >
+            ["at0005"] = <
+                text = <"*Device (en)">
+                description = <"*To capture the device used to report data. (en)">
+            >
+            ["at0006"] = <
+                text = <"*Information Source (en)">
+                description = <"*About one or more source types for the information contained in the report. (en)">
+                comment = <"*This data element may be used when the Information source is different to the author or composer. For example: 'parent'; or 'carer'. (en)">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Selbstberichtete Daten">
+                description = <"Generischer Container für Informationen, die von einer Person bereitgestellt werden.">
+            >
+            ["at0004"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen.">
+            >
+            ["at0005"] = <
+                text = <"Gerät">
+                description = <"Um das Gerät zu erfassen, das zum Berichten von Daten verwendet wird.">
+            >
+            ["at0006"] = <
+                text = <"Informationsquelle">
+                description = <"Über eine oder mehrere Arten von Quelle für die im Bericht enthaltenen Informationen.">
+                comment = <"Dieses Datenelement kann verwendet werden, wenn sich die Informationsquelle vom Autor oder Verfasser unterscheidet. Zum Beispiel: \"Elternteil\" oder „Betreuer“.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Egenrapporterad data">
+                description = <"En generisk behållare för uppgifter som lämnas av en individ.">
+            >
+            ["at0004"] = <
+                text = <"Tilläggsinformation">
+                description = <"Ytterligare information som krävs för att fånga lokalt innehåll eller för att anpassa till andra referensmodeller eller formella krav.">
+                comment = <"Exempelvis lokala informationskrav eller ytterligare metadata för att anpassa till FHIR.">
+            >
+            ["at0005"] = <
+                text = <"Utrustning">
+                description = <"Anger vilken utrustning som använts för att rapportera data.">
+            >
+            ["at0006"] = <
+                text = <"Informationskälla">
+                description = <"En eller flera typer av källor för informationen i rapporten.">
+                comment = <"Detta datafält kan användas när informationskällan är en annan än författaren eller den som registrerat uppgifterna. Till exempel: \"förälder\" eller \"omsorgsgivare\".">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"Itse ilmoitetut tiedot">
+                description = <"Geneerinen säiliö henkilön itse ilmoittamille tiedoille.">
+            >
+            ["at0004"] = <
+                text = <"Laajennus">
+                description = <"Lisätiedot, joita tarvitaan paikallisen asiayhteyden kirjaamiseksi tai yhtenäistämiseksi muiden viitemallien tai formalismien kanssa.">
+                comment = <"Esimerkiksi: paikalliset tietovaatimukset tai FHIR:n mukaiset metatiedot.">
+            >
+            ["at0005"] = <
+                text = <"Laite">
+                description = <"Tietojen raportointiin käytetty laite.">
+            >
+            ["at0006"] = <
+                text = <"Tietolähde">
+                description = <"Tietoja yhdestä tai useammasta raportin sisältämien tietojen lähdetyypeistä.">
+                comment = <"Tätä tietoelementtiä voidaan käyttää, kun tietolähde on eri kuin tiedon kirjaaja. Esimerkiksi: 'vanhempi'; tai 'hoitaja'.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["pt"] = <
+            ["at0000"] = <
+                text = <"Dados auto-relatados">
+                description = <"Contentor genérico para informação fornecida por um indivíduo.">
+            >
+            ["at0004"] = <
+                text = <"Extensão">
+                description = <"Informação adicional necessária para captar conteúdos locais ou para alinhar com outros modelos/formalismos de referência.">
+                comment = <"Por exemplo: requisitos de informação local ou metadados adicionais para alinhar com FHIR.">
+            >
+            ["at0005"] = <
+                text = <"Dispositivo">
+                description = <"Para capturar o dispositivo utilizado para reportar dados.">
+            >
+            ["at0006"] = <
+                text = <"Fonte de informação">
+                description = <"Sobre um ou mais tipos de fontes para a informação contida no relatório.">
+                comment = <"Este elemento de dados pode ser utilizado quando a fonte de informação é diferente da do autor ou compositor. Por exemplo: 'progenitor'; ou 'cuidador'.">
+            >
+            ["at9000"] = <
+                text = <"evento">
+                description = <"evento">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Self-reported data">
+                description = <"Generic container for information provided by an individual.">
+            >
+            ["at0004"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR.">
+            >
+            ["at0005"] = <
+                text = <"Device">
+                description = <"To capture the device used to report data.">
+            >
+            ["at0006"] = <
+                text = <"Information Source">
+                description = <"About one or more source types for the information contained in the report.">
+                comment = <"This data element may be used when the Information source is different to the author or composer. For example: 'parent'; or 'carer'.">
+            >
+            ["at9000"] = <
+                text = <"event">
+                description = <"event">
+            >
+        >
+        ["it"] = <
+            ["at0000"] = <
+                text = <"Dati auto-riportati">
+                description = <"Contenitore generico per informazioni fornite da un individuo.">
+            >
+            ["at0004"] = <
+                text = <"Estensione">
+                description = <"Informazioni aggiuntive richieste per registrare contenuti locali o per allinearsi ad altri modelli/formalismi di riferimento.">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR.(en)">
+            >
+            ["at0005"] = <
+                text = <"Dispositivo">
+                description = <"Per registrare il dispositivo utilizzato per riportare i dati.">
+            >
+            ["at0006"] = <
+                text = <"Fonte di informazione">
+                description = <"Riguarda uno o più tipi di fonte delle informazioni contenute nel referto.">
+                comment = <"*This data element may be used when the Information source is different to the author or composer. For example: 'parent'; or 'carer'.(en)">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"Données auto-déclarées">
+                description = <"Conteneur générique pour des informations fournies par un individu.">
+            >
+            ["at0004"] = <
+                text = <"Extension">
+                description = <"Informations supplémentaires requises pour la collecte locale du contenu ou pour l'alignement avec d'autres référentiels ou formalismes.">
+                comment = <"Par exemple: exigences locales d'informations ou méta-données supplémentaires pour l'alignement avec FHIR.">
+            >
+            ["at0005"] = <
+                text = <"Appareil">
+                description = <"Appareil utilisé pour la collecte des données.">
+            >
+            ["at0006"] = <
+                text = <"Source de l'information">
+                description = <"A propos d'un ou plusieurs types de sources pour les informations contenues dans le rapport.">
+                comment = <"Ces éléments de données peuvent être utilisées lorsque la source d'information est différente de l'auteur ou du rédacteur. Par exemple: 'parent' ou 'soignant'.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["zh-cn"] = <
+            ["at0000"] = <
+                text = <"自行报告的数据">
+                description = <"针对个人所提供信息的容器。又可称为“自我报告的数据”">
+            >
+            ["at0004"] = <
+                text = <"扩展">
+                description = <"采集本地内容或者是与其他参考模型/形式化体系保持一致时所需的其他信息。">
+                comment = <"本地信息要求/需求，或者是与 FHIR 保持一致时所需的其他元数据。">
+            >
+            ["at0005"] = <
+                text = <"设备">
+                description = <"旨在采集/记录用来报告数据的设备。">
+            >
+            ["at0006"] = <
+                text = <"信息来源">
+                description = <"关于报告之中所包含信息的一个或多个来源类型。">
+                comment = <"当信息来源不同于作者/编纂者或创作者时（如“患者”或“[非正规]照护人员”），可以使用本数据元。">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Datos autodeclarados">
+                description = <"Contenedor genérico para información aportada por una persona.">
+            >
+            ["at0004"] = <
+                text = <"Extensión">
+                description = <"Información adicional necesaria para registrar contenido local o para alinearse con otros modelos o formalismos de referencia.">
+                comment = <"Por ejemplo: requisitos locales de información o metadatos adicionales para alinearse con FHIR.">
+            >
+            ["at0005"] = <
+                text = <"Dispositivo">
+                description = <"Para registrar el dispositivo utilizado para notificar los datos.">
+            >
+            ["at0006"] = <
+                text = <"Fuente de información">
+                description = <"Acerca de uno o más tipos de fuentes de la información contenida en el informe.">
+                comment = <"Este elemento de datos puede utilizarse cuando la fuente de información es distinta del autor o creador. Por ejemplo: “progenitor” o “cuidador”.">
+            >
+            ["at9000"] = <
+                text = <"evento">
+                description = <"evento">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Selvrapporterte data">
+                description = <"Generisk container for informasjon gitt av et individ.">
+            >
+            ["at0004"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som er nødvendig for å registrere lokalt innhold/kontekst, eller for å sammenstille med andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0005"] = <
+                text = <"Utstyr">
+                description = <"For legge til enheten som brukes til å rapportere data.">
+            >
+            ["at0006"] = <
+                text = <"Informasjonskilde">
+                description = <"Om en eller flere typer kilde for informasjonen i rapporten.">
+                comment = <"Dette dataelementet kan brukes når informasjonskilden er forskjellig fra forfatteren. For eksempel: \"forelder\" eller \"omsorgsperson\".">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"Datos autoinformados">
+                description = <"Contenedor genérico para información proporcionada por una persona.">
+            >
+            ["at0004"] = <
+                text = <"Extensión">
+                description = <"Información adicional necesaria para registrar contenido local o para alinearse con otros modelos/formalismos de referencia.">
+                comment = <"Por ejemplo: requisitos de información locales o metadatos adicionales para alinearse con FHIR.">
+            >
+            ["at0005"] = <
+                text = <"Dispositivo">
+                description = <"Para registrar el dispositivo utilizado para reportar los datos.">
+            >
+            ["at0006"] = <
+                text = <"Fuente de información">
+                description = <"Acerca de uno o más tipos de fuentes de la información contenida en el informe.">
+                comment = <"Este elemento de datos puede utilizarse cuando la fuente de información es diferente del autor o compositor. Por ejemplo: “padre/madre” o “cuidador”.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["tr"] = <
+            ["at0000"] = <
+                text = <"Birey tarafindan bildirilen veriler">
+                description = <"Bir birey tarafından bildiririlen bilgiler için genel kapsayıcı.">
+            >
+            ["at0004"] = <
+                text = <"Uzantı">
+                description = <"Yerel içeriği veya FHIR ile uyumlu ek metaverileri kaydetmek için gereken ek bilgiler.">
+                comment = <"Örneğin, yerel bilgi gereksinimleri veya FHIR ile uyum sağlamak için ek metaveriler.">
+            >
+            ["at0005"] = <
+                text = <"Cihaz">
+                description = <"Verilerin bildirildiği cihazın kaydedilmesi için.">
+            >
+            ["at0006"] = <
+                text = <"Bilgi Kaynağı">
+                description = <"Rapor içerisinde yer alan bilgilere ilişkin bir veya birden fazla kaynak türü hakkında.">
+                comment = <"Bu veri öğesi, bilgi kaynağı yazar veya derleyenden farklı olduğunda kullanılabilir. Örneğin: ‘ebeveyn’ veya ‘bakıcı’.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/433>
+        >
+    >

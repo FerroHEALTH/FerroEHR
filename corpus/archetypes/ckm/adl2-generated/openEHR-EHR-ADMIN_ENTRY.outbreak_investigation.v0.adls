@@ -1,0 +1,198 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=99238856-24e4-4307-8f5b-dd5825337446; build_uid=e3e4ac11-fb5f-4331-bc2e-522f38ea783b)
+    openEHR-EHR-ADMIN_ENTRY.outbreak_investigation.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-10-31">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"170C94F5C3435A347065058C60942986">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about the investigation into an outbreak of an infectious disease.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ADMIN_ENTRY[at0000] matches {    -- Outbreak investigation
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Index disease
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Outbreak type
+                        value matches {
+                            DV_TEXT[at9010]
+                            DV_CODED_TEXT[at9011] matches {
+                                defining_code matches {[ac9009]}    -- Outbreak type (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0014] matches {    -- Outbreak onset
+                        value matches {
+                            DV_DATE_TIME[at9003]
+                            DV_INTERVAL<DV_DATE_TIME>[at9004]
+                            DV_DURATION[at9012] matches {
+                                value matches {PW/|P0D..P364D|}
+                            }
+                        }
+                    }
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Outbreak setting
+                        value matches {
+                            DV_TEXT[at9005]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Active case-searches?
+                        value matches {
+                            DV_CODED_TEXT[at9006] matches {
+                                defining_code matches {[ac9000]}    -- Active case-searches? (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Number of suspected cases detected
+                        value matches {
+                            DV_COUNT[at9007]
+                        }
+                    }
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Other cases identified?
+                        value matches {
+                            DV_CODED_TEXT[at9008] matches {
+                                defining_code matches {[ac9001]}    -- Other cases identified? (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9009]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Outbreak investigation">
+                description = <"Details about the investigation into an outbreak of an infectious disease.">
+            >
+            ["at0002"] = <
+                text = <"Outbreak setting">
+                description = <"The setting in which the individual was infected.">
+                comment = <"For example: household contact; community; healthcare facility; or unknown.">
+            >
+            ["at0003"] = <
+                text = <"Active case-searches?">
+                description = <"Were active case-searches conducted?">
+            >
+            ["at0004"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Other cases identified?">
+                description = <"Were other cases identified?">
+            >
+            ["at0008"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Number of suspected cases detected">
+                description = <"The number of suspected cases detected during active case-search.">
+            >
+            ["at0012"] = <
+                text = <"Comment">
+                description = <"Narrative description about the outbreak, not captured in other data elements.">
+            >
+            ["at0013"] = <
+                text = <"Index disease">
+                description = <"Name of the index infectious disease causing the outbreak.">
+            >
+            ["at0014"] = <
+                text = <"Outbreak onset">
+                description = <"Date when the active first case was diagnosed.">
+                comment = <"Use the DV_duration data type to support recording the Epidemiological week of onset.">
+            >
+            ["at0015"] = <
+                text = <"Outbreak type">
+                description = <"The type of outbreak.">
+            >
+            ["at0016"] = <
+                text = <"Sporadic case">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Cluster">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Outbreak">
+                description = <"">
+            >
+            ["ac9009"] = <
+                text = <"Outbreak type (synthesised)">
+                description = <"The type of outbreak. (synthesised)">
+            >
+            ["ac9000"] = <
+                text = <"Active case-searches? (synthesised)">
+                description = <"Were active case-searches conducted? (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Other cases identified? (synthesised)">
+                description = <"Were other cases identified? (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0016", "at0017", "at0018">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0008", "at0009", "at0010">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0004", "at0005", "at0006">
+        >
+    >

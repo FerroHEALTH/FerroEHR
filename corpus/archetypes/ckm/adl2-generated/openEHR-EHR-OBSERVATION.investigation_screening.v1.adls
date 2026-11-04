@@ -1,0 +1,911 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=69d2930f-2a17-4c69-b472-785d142d9744; build_uid=4019ac3f-5162-4016-81fc-dfd0501cac68)
+    openEHR-EHR-OBSERVATION.investigation_screening.v1.3.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch, Darin Leonhardt">
+                ["organisation"] = <"Medizinische Hochschule Hannover, PLRI, PLRI für medizinische Informatik/ Medizinische Hochschule">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de, leonhardt.darin@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Kanika Kuwelker, John Tore Valand, Vebjørn Arntzen">
+                ["organisation"] = <"Helse Vest IKT, Helse Bergen, Oslo University Hospital">
+                ["email"] = <"kanika.kuwelker@helse-vest-ikt.no, john.tore.valand@helse-vest-ikt.no, varntzen@ous-hf.no">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Julio de Sosa">
+                ["organisation"] = <"Servei Català de la Salut">
+                ["email"] = <"juliodesosa@catsalut.cat">
+            >
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Julio de Sosa">
+                ["organisation"] = <"Servei Català de la Salut">
+                ["email"] = <"juliodesosa@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-10-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Astrid Askeland, Dips AS, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Terje Bektesevic Holmlund, UiT Norges arktiske universitet, Norway", "Ivar Berge, Oslo Universitetssykehus, Norway", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Randi Brendberg, Helse Nord RHF, Norway", "Yexuan Cheng, 浙江大学, China", "Are Edvardsen, SKDE, Helse Nord RHF, Norway", "Heike Eichele, Regionalt fagmiljø for autimse, ADHD, Tourettes syndrom og narkolepsi Helse Vest, Kronstad DPS, Haukeland universitetssykehus, Bergen, Norway", "Alexander Eikrem-Lüthi, Lovisenberg Diakonale Sykehus, Norway", "Gunn Elin Blakkisrud, DIPS ASA, Norway", "Kåre Flø, DIPS ASA, Norway", "Grant Forrest, Lunaria Ltd, United Kingdom", "Anca Heyd, DIPS ASA, Norway", "Joost Holslag, Nedap, Netherlands", "Evelyn Hovenga, EJSH Consulting, Australia", "Mikkel Johan Gaup Grønmo, Helse Nord IKT, Norway (Nasjonal IKT redaktør)", "Gunnar Jårvik, Helse Vest IKT AS, Norway", "Runar Kristiansen, DIPS AS, Norway", "Anjali Kulkarni, Karkinos, India", "Kanika Kuwelker, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, Oslo universitetssykehus, Norway (Nasjonal IKT redaktør)", "Øygunn Leite Kallevik, Helse Bergen, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Nina Louise Jebsen, Haukeland Universitetssykehus, Norway", "Martine Louise Nalum, DIPS AS, Norway", "Hanne Marte Bårholm, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Svenne Naumann, Finnmarkssykehuset, Norway", "Terje Nordberg, Helse Bergen, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Kritika Sarkar, Karkinos Healthcare, India", "Ragnhild Schultz, OUS, Norway", "Andre Smitt-Ingebretsen, Sørlandet sykehus HF, Norway", "Tove Stenquist, Helseforetak, Norway", "Frode Stenvik, Helse Sør-Øst, Norway", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Ina Wille, Helse-Vest RHF, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"12BB458F5811CD246819C78F394256F2">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Schaffung eines Schemas für die Aufzeichnung von Antworten auf vordefinierte Screening-Fragen zu diagnostischen Untersuchungen oder einer Gruppe von Untersuchungen, einschließlich, aber nicht beschränkt auf bildgebende Untersuchungen und Labortests.">
+            keywords = <"Untersuchung, Screening, Fragebogen, Prävention, Bildgebung, Labor, Pathologie, Blut, Probe, Sputum, EMG, EKG, Gehör, Test, Untersuchung, Rückenmarksflüssigkeit, Biopsie, EEG, MRI, CT, Röntgen, PET, Ultraschall, Spirometrie", ...>
+            use = <"Dient zur Erstellung eines Schemas für die Aufzeichnung von Antworten auf vordefinierte Screening-Fragen zu diagnostischen Untersuchungen oder Gruppen von Untersuchungen. Der Umfang der diagnostischen Untersuchungen umfasst alle Arten von bildgebenden Untersuchungen und das breiteste Spektrum an Labor- und anatomisch-pathologischen Tests. Darüber hinaus kann dieser Archetyp auch verwendet werden, um zu erfassen, wann andere diagnostische Tests durchgeführt wurden, wie z. B. Herzbelastungstests, Hör- und Sehtests, Elektrokardiographie (EKG) und Elektroenzephalographie (EEG).
+
+Häufige Anwendungsfälle sind unter anderem:
+- Selbstauskunft der Patienten
+- Erstellung eines Patientenprofils in einem Krankheitsregister
+- Systematische Befragung im Rahmen einer Konsultation in Bezug auf die Verabreichung von Untersuchungsmethoden
+
+Die Semantik dieses Archetyps ist absichtlich offen formuliert, und eine Abfrage dieses Archetyps wäre normalerweise nur im Kontext der jeweiligen Vorlage sinnvoll oder sicher. Jedes Datenelement würde in der Regel in einer Vorlage umbenannt, um die spezifische Frage zu repräsentieren. Falls Wertesätze für allgemeine Anwendungsfälle vorgeschlagen wurden, können diese an die lokalen Anforderungen angepasst werden, indem die Datentypen DV_TEXT oder DV_BOOLEAN verwendet werden, um jedem spezifischen Anwendungsfall zu entsprechen.
+
+Die Verwendung dieses Schemas innerhalb einer Vorlage ermöglicht die Dokumentation eines breiten Spektrums von Frage/Antwort-Paaren wie z. B.:
+- Haben Sie jemals Ihren Cholesterinspiegel testen lassen? Ja, Nein, Unbekannt.
+- Wurden Sie auf Röteln-Antikörper getestet? Ja, Nein, Unbekannt.
+- Wurden Sie jemals auf Sichelzellenanämie untersucht? Ja, Nein, Unbekannt.
+- Wann war Ihre letzte Röntgenaufnahme der Brust?
+- Wie lautete das Ergebnis Ihres letzten INR-Tests?
+- Wie lautete der Befund des Elektrokardiogramms?
+- Hat der Säugling ein Neugeborenen-Hörscreening bestanden/nicht bestanden?
+
+Die EVENT-Struktur aus dem Referenzmodell kann verwendet werden, um anzugeben, ob sich die Fragen auf einen Zeitpunkt oder einen Zeitraum beziehen. Verwenden Sie eine separate Instanz dieses Archetyps, um zwischen einem Fragebogen, der Informationen über eine Untersuchung oder einen Test aufzeichnet, die/der zu einem beliebigen Zeitpunkt in der Vergangenheit durchgeführt wurde, und Informationen über eine Untersuchung oder einen Test, die/der innerhalb eines bestimmten Zeitraums durchgeführt wurde, zu unterscheiden - z. B. der Unterschied zwischen \"Hatten Sie jemals einen INR-Test?\" im Vergleich zu \"Hatten Sie in den letzten vier Wochen einen INR-Test?\"
+
+Die Quelle der Informationen in einer Fragebogenantwort kann in verschiedenen Kontexten variieren, kann aber mit Hilfe des Elements \"Information provider\" im Referenzmodell spezifisch identifiziert werden.
+
+Dieser Archetyp wurde entwickelt, um als Screening-Instrument verwendet zu werden oder um einfache Fragebogen-Daten für Situationen wie ein Krankheitsregister aufzuzeichnen. Wenn der Screening-Fragebogen angibt, dass eine Untersuchung durchgeführt wurde, können zusätzliche Details, die für die Speicherung in einer klinischen Akte erforderlich sind, mithilfe spezifischer Archetypen für Testergebnisse erfasst werden.">
+            misuse = <"Nicht für die Aufzeichnung eines Untersuchungsauftrags zu verwenden - verwenden Sie zu diesem Zweck INSTRUCTION.service_request.
+
+Nicht für die Aufzeichnung des Fortschritts von Aktivitäten, die als Teil einer Untersuchung durchgeführt werden, zu verwenden - verwenden Sie zu diesem Zweck entsprechende ACTION-Archetypen.
+
+Nicht für die Aufzeichnung formaler diagnostischer Testergebnisse zu verwenden - verwenden Sie zu diesem Zweck geeignete OBSERVATIONS. Zum Beispiel die OBSERVATION.laboratory_test_result oder OBSERVATION.imaging_examination_result.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å lage et rammeverk for registrering av svar på forhåndsdefinerte spørsmål om diagnostiske undersøkelser eller gruppe av undersøkelser. Dette inkluderer, men er ikke begrenset til bildediagnostiske undersøkelser og laboratorieundersøkelser.">
+            keywords = <"utredning", "undersøkelse", "kartlegging", "spørreskjema", "forebygging", "bildediagnostikk", "laboratorie", "patologi", "blodprøve", "sputum", "EMG", "EKG", "EEG", "MR", "CT", "røntgen", "PET", "spirometri", "EKKO", "billeddiagnostikk", "ultralyd", "vevsprøve", "hørseltest", "synstest">
+            use = <"Bruk for å lage et rammeverk for registrering av svar på forhåndsdefinerte spørsmål om bruk av en spesifisert diagnostisk undersøkelse eller gruppering av undersøkelser. Omfanget av diagnostiske undersøkelser inkluderer alle modaliteter av bildediagnostiske undersøkelser og den videste definisjonen av laboratorie- og patologiprøver. I tillegg kan arketypen brukes til å registrere om andre diagnostiske undersøkelser har vært gjort, som belastnings-EKG, hørsel- eller synstest eller ECG.
+
+Vanlige bruksområder inkluderer, men er ikke begrenset til:
+- Selvrapportering av pasienter
+- Til en pasientprofil i et register for sykdommer
+- Systematiske spørsmål i enhver konsultasjon, relatert til administrasjon av undersøkelser
+
+Semantikken til denne arketypen er med vilje løs, og å spørre etter denne arketypen vil normalt bare være nyttig eller trygt innenfor konteksten til hver spesifikk mal. I et templat vil hvert dataelement vanligvis døpes om til det (spesifikke) spørsmålet man ønsker svar på. Flere steder er det foreslått verdisett som passer til de vanligste bruksområder, men det er allikevel mulig å tilpasse/endre verdisett for lokal bruk ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN i stedet.
+
+Ved å anvende dette rammeverket i et templat kan gjøre det mulig å dokumentere en vidt spekter av spørsmål/svar, som:
+
+- Har du noen gang fått testet kolesterolnivået ditt? Ja, Nei, Ukjent.
+- Har du blitt testet for rubella-antistoffer? Ja, Nei, Ukjent.
+- Har du noen gang blitt screenet for sigdcellesykdom? Ja, Nei, Ukjent
+- Når var ditt siste røntgenbilde av thorax?
+- Hva var svaret på din siste INR-prøve?
+- Hva var funnene på EKG-et?
+- Var svaret normalt på screeningen i hørselundersøkelsen for nyfødte?
+
+EVENT-strukturen fra arketypens referansemodell kan brukes for å spesifisere om spørsmålene relateres til et tidspunkt eller til et tidsintervall. Bruk egne instanser av denne arketypen for å skille mellom spørsmål om diagnostiske undersøkelser som gjelder et hvilket som helst tidspunkt eller for et tidsintervall. For eksempel; \"Har du noen gang tatt en INR-prøve?\" sammenlignet med \"Har du tatt en INR-prøve i løpet av de siste fire ukene?\".
+
+Kilden til informasjonen i et spørreskjema kan variere i ulike kontekster, men kan identifiseres spesifikt ved å benytte \"Information provider\" elementet i openEHR referansemodell.
+
+Denne arketypen er laget for å bli brukt i et spørreskjema eller for å registrere enkle strukturerte data til for eksempel et sykdomsregister. Dersom det i spørreskjemaet identifiseres at det er gjort en undersøkelse som bør lagres i den elektroniske journalen er det tenkt at de spesifikke detaljene om undersøkelsen skal lagres i persistente arketyper laget spesielt for det formålet.">
+            misuse = <"Skal ikke brukes til å registrere bestilling av diagnostiske tester - bruk INSTRUCTION.service_request for dette formålet.
+
+Skal ikke brukes til å registrere fremdriften til aktiviteter utført som en del av undersøkelse - bruk ACTION.laboratory_test for dette formålet.
+
+Skal ikke brukes til å registrere formelle diagnostiske testresultater - bruk OBSERVATION.laboratory_test_result eller OBSERVATION.imaging_examination_result for dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To create a framework for recording answers to pre-defined screening questions about diagnostic investigations or group of investigations, including but not limited to imaging examinations and laboratory tests.">
+            keywords = <"investigation, screening, questionnaire, prevention, imaging, laboratory, pathology, blood, sample, sputum, EMG, ECG, hearing, test, examination, spinal fluid, biopsy, EEG, MRI, CT, X-ray, PET, ultrasound, spirometry", ...>
+            use = <"Use to create a framework for recording answers to pre-defined screening questions about diagnostic investigations or groups of investigations. The scope of diagnostic investigations includes all modalities of imaging examinations and the broadest range of laboratory and anatomical pathology tests. In addition, this archetype can also be used to record when other diagnostic tests have been carried out, such as cardiac stress testing, hearing and vision testing, electrocardiography (ECG) and electroencephalography (EEG).
+
+Common use cases include, but are not limited to:
+- Patient self-reporting
+- Creating a patient profile in a disease registry
+- Systematic questioning in any consultation related to patterns of investigation administration
+
+The semantics of this archetype are intentionally loose, and querying this archetype would normally only be useful or safe within the context of each specific template. Each data element would usually be renamed in a template to represent the specific question asked. Where value sets have been proposed for common use cases, these can be adapted to align with local requirements by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case. 
+
+Utilising this framework within a template can enable documentation of a broad range of question/answer pairs such as:
+- Have you ever had your cholesterol level tested? Yes, No, Unknown.
+- Have you been tested for rubella antibodies? Yes, No, Unknown.
+- Have you ever been screened for sickle cell disease? Yes, No, Unknown.
+- When was your last Chest X-ray?
+- What was the result of your most recent INR test?
+- What were the findings of the electrocardiogram?
+- Did the infant pass/fail a Neonatal hearing screen?
+
+The EVENT structure from the reference model can be used to specify whether the questions relate to a point in time or over a period of time. Use a separate instance of this archetype to distinguish between a questionnaire recording information about an investigation or test that has been done at any time in the past and information about an investigation or test done within a specified time interval - for example, the difference between \"Have you ever had an INR test?\" compared to \"Have you had an INR test during the last four weeks?\".
+
+The source of the information in a questionnaire response may vary in different contexts but can be specifically identified using the 'Information provider' element in the Reference Model.
+
+This archetype has been designed to be used as a screening tool or to record simple questionnaire-format data for use in situations such as a disease registry. If the screening questionnaire identifies an investigation has been carried out, additional details required for persistence as part of a clinical record can be captured using specific test result archetypes.">
+            misuse = <"Not to be used for recording an order for an investigation - use INSTRUCTION.service_request for this purpose.
+
+Not to be used for recording the progress of activities performed as part of an investigation - use appropriate ACTION archetypes for this purpose.
+
+Not to be used to record formal diagnostic test results - use appropriate OBSERVATIONS for this purpose. For example, the OBSERVATION.laboratory_test_result or OBSERVATION.imaging_examination_result.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Crear una estructura base para registrar respuestas a preguntas de screening predefinidas sobre investigaciones diagnósticas o grupo de investigaciones, incluyendo, entre otros, diagnóstico por imagen y pruebas de laboratorio.">
+            keywords = <"investigación, screening, cuestionario, prevención, imagen, laboratorio, patología, sangre, muestra, esputo, EMG, ECG, audición, prueba, examen, líquido cefalorraquídeo, biopsia, EEG, resonancia magnética, tomografía computarizada, rayos X, TEP, ultrasonido, espirometría", ...>
+            use = <"Usado para crear una estructura base para registrar respuestas a preguntas de screening predefinidas sobre investigaciones diagnósticas o grupo de investigaciones. El alcance de las investigaciones diagnósticas incluye todas las modalidades de diagnóstico por imagen y la más amplia gama de pruebas de laboratorio y de anatomía patológica. Además, este arquetipo también se puede utilizar para registrar cuándo se han realizado otras pruebas diagnósticas, como pruebas de esfuerzo cardíaco, pruebas de audición y visión, electrocardiograma (ECG) y electroencefalograma (EEG).
+
+Los casos de uso comunes incluyen, entre otros:
+- Autoinforme del paciente
+- Creación de un perfil de paciente en un registro de enfermedades.
+- Cuestionamiento sistemático en cualquier consulta relacionada con patrones de gestión de investigaciones.
+
+La semántica de este arquetipo es intencionalmente vaga y consultar este arquetipo normalmente solo sería útil o seguro dentro del contexto de cada plantilla específica. Por lo general, se cambiaría el nombre de cada elemento de datos en una plantilla para representar la pregunta específica formulada. Cuando se han propuesto conjuntos de valores para casos de uso comunes, estos se pueden adaptar para alinearse con los requisitos locales utilizando la opción de tipos de datos DV_TEXT o DV_BOOLEAN para que coincida con cada caso de uso específico.
+
+La utilización de esta estructura dentro de una plantilla puede permitir la documentación de una amplia gama de preguntas/respuestas, como por ejemplo:
+- ¿Le han mirado en alguna ocasión su nivel de colesterol? Sí, No, Desconocido.
+- ¿Le han realizado la prueba de anticuerpos contra la rubéola? Sí, No, Desconocido.
+- ¿Alguna vez le han hecho pruebas de detección de anemia falciforme? Sí, No, Desconocido.
+- ¿Cuándo fue su última radiografía de tórax?
+- ¿Cuál fue el resultado de su prueba de INR más reciente?
+- ¿Cuáles fueron los hallazgos detectados en el electrocardiograma?
+- ¿El bebé pasó/falló la prueba de audición neonatal?
+
+La estructura EVENT del modelo de referencia se puede utilizar para especificar si las preguntas se relacionan con un momento determinado o durante un período de tiempo. Utilice una instancia separada de este arquetipo para distinguir entre un cuestionario que registra información sobre una investigación o prueba que se realizó en cualquier momento en el pasado, e información sobre una investigación o prueba realizada dentro de un intervalo de tiempo específico; por ejemplo, la diferencia entre \"¿Alguna vez te has hecho una prueba de INR?\" en comparación con \"¿Se ha realizado una prueba de INR en las últimas cuatro semanas?\".
+
+La fuente de información de una respuesta del cuestionario puede variar según el contexto, pero puede ifentificarse de forma específica utilizando el elemento 'Proveedor de información' en el Modelo de Referencia.
+
+Este arquetipo ha sido diseñado para usarse como herramienta de detección o para registrar datos en formato de cuestionario simple para su uso en situaciones como un registro de enfermedades. Si el cuestionario identifica que se ha llevado a cabo una investigación, se pueden registrar detalles adicionales necesarios para su persistencia como parte de un registro clínico, utilizando arquetipos de resultados de pruebas específicos.">
+            misuse = <"No debe utilizarse para registrar una orden para una investigación; usar INSTRUCTION.service_request para este propósito.
+
+No debe utilizarse para registrar el progreso de las actividades realizadas como parte de una investigación; usar arquetipos del tipo ACTION apropiados para este propósito.
+
+No debe utilizarse para registrar resultados de pruebas de diagnóstico formales; usar OBSERVATIONS apropiadas para este propósito. Por ejemplo, OBSERVATION.laboratory_test_result u OBSERVATION.imaging_examination_result.">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Crear una estructura base per registrar respostes a preguntes de screening predefinides sobre investigacions diagnòstiques o grup de recerca, incloent-hi, entre d'altres, diagnòstic per imatge i proves de laboratori.">
+            keywords = <"investigació, screening, qüestionari, prevenció, imatge, laboratori, patologia, sang, mostra, esput, EMG, ECG, audició, prova, examen, líquid cefaloraquidi, biòpsia, EEG, ressonància magnètica, tomografia computaritzada, raigs X, TEP, ultrasò, espirometria", ...>
+            use = <"Usat per crear una estructura base per registrar respostes a preguntes de screening predefinides sobre investigacions diagnòstiques o grup de recerca. L'abast de les investigacions diagnòstiques inclou totes les modalitats de diagnòstic per imatge i la gamma més àmplia de proves de laboratori i d'anatomia patològica. A més, aquest arquetip també es pot utilitzar per registrar quan s'han realitzat altres proves diagnòstiques, com ara proves d'esforç cardíac, proves d'audició i visió, electrocardiograma (ECG) i electroencefalograma (EEG).
+
+Els casos d'ús comuns inclouen, entre d'altres:
+- Autoinforme del pacient
+- Creació dun perfil de pacient en un registre de malalties.
+- Qüestionament sistemàtic a qualsevol consulta relacionada amb patrons de gestió d'investigacions.
+
+La semàntica d'aquest arquetip és intencionalment vaga i consultar aquest arquetip normalment només seria útil o segur dins del context de cada plantilla específica. En general, es canviaria el nom de cada element de dades a una plantilla per representar la pregunta específica formulada. Quan s'han proposat conjunts de valors per a casos d'ús comuns, es poden adaptar per alinear-se amb els requisits locals utilitzant l'opció de tipus de dades DV_TEXT o DV_BOOLEAN perquè coincideixi amb cada cas d'ús específic.
+
+La utilització d'aquesta estructura dins d'una plantilla pot permetre la documentació d'una àmplia gamma de preguntes/respostes, com ara:
+- Us han mirat en alguna ocasió el seu nivell de colesterol? Sí, No, Desconegut.
+- Li han realitzat la prova d'anticossos contra la rubèola? Sí, No, Desconegut.
+- Alguna vegada us han fet proves de detecció d'anèmia falciforme? Sí, No, Desconegut.
+- Quan va ser la seva darrera radiografia de tòrax?
+- Quin va ser el resultat de la prova d'INR més recent?
+- Quines van ser les troballes detectades a l'electrocardiograma?
+- El nadó va passar/fallar la prova d'audició neonatal?
+
+L'estructura EVENT del model de referència es pot fer servir per especificar si les preguntes es relacionen amb un moment determinat o durant un període de temps. Utilitzeu una instància separada d'aquest arquetip per distingir entre un qüestionari que enregistra informació sobre una investigació o prova que es va realitzar en qualsevol moment en el passat, i informació sobre una investigació o prova realitzada dins d'un interval de temps específic; per exemple, la diferència entre \"Alguna vegada t'has fet una prova d'INR?\" en comparació amb \"¿S'ha realitzat una prova d'INR en les darreres quatre setmanes?\".
+
+La font d'informació d'una resposta del qüestionari pot variar segons el context, però es pot identificar de manera específica utilitzant l'element 'Proveïdor d'informació' al Model de Referència.
+
+Aquest arquetip ha estat dissenyat per fer-se servir com a eina de detecció o per registrar dades en format de qüestionari simple per al seu ús en situacions com un registre de malalties. Si el qüestionari identifica que s'ha dut a terme una investigació, es poden registrar detalls addicionals necessaris per a la seva persistència com a part d'un registre clínic utilitzant arquetips de resultats de proves específics.">
+            misuse = <"No s'ha d'utilitzar per registrar una ordre per a una investigació; utilitzar INSTRUCTION.service_request per a aquest propòsit.
+
+No s'ha de fer servir per registrar el progrés de les activitats realitzades com a part d'una investigació; utilitzar arquetips del tipus ACTION apropiats per a aquest propòsit.
+
+No s'ha de fer servir per registrar resultats de proves de diagnòstic formals; utilitzar OBSERVATIONS apropiades per a aquest propòsit. Per exemple, OBSERVATION.laboratory_test_result o OBSERVATION.imaging_examination_result.">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Diagnostic investigation screening questionnaire
+        data matches {
+            HISTORY[at0022] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0023] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0001] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0040] occurrences matches {0..1} matches {    -- Screening purpose
+                                        value matches {
+                                            DV_TEXT[at9003]
+                                        }
+                                    }
+                                    ELEMENT[at0027] matches {    -- Any investigations?
+                                        value matches {
+                                            DV_CODED_TEXT[at9004] matches {
+                                                defining_code matches {[ac9021]}    -- Any investigations? (synthesised)
+                                            }
+                                            DV_TEXT[at9005]
+                                            DV_BOOLEAN[at9006]
+                                        }
+                                    }
+                                    ELEMENT[at0043] occurrences matches {0..1} matches {    -- Description
+                                        value matches {
+                                            DV_TEXT[at9007]
+                                        }
+                                    }
+                                    CLUSTER[at0026] matches {    -- Specific investigation
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0021] occurrences matches {1} matches {    -- Investigation name
+                                                value matches {
+                                                    DV_TEXT[at9008]
+                                                }
+                                            }
+                                            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Done?
+                                                value matches {
+                                                    DV_CODED_TEXT[at9009] matches {
+                                                        defining_code matches {[ac9022]}    -- Done? (synthesised)
+                                                    }
+                                                    DV_TEXT[at9010]
+                                                    DV_BOOLEAN[at9011]
+                                                }
+                                            }
+                                            ELEMENT[at0047] matches {    -- Type
+                                                value matches {
+                                                    DV_TEXT[at9022]
+                                                }
+                                            }
+                                            ELEMENT[at0003] matches {    -- Timing
+                                                value matches {
+                                                    DV_DATE_TIME[at9012]
+                                                    DV_TEXT[at9013]
+                                                    DV_INTERVAL<DV_DATE_TIME>[at9019]
+                                                    DV_INTERVAL<DV_DURATION>[at9020]
+                                                    DV_DURATION[at9021]
+                                                }
+                                            }
+                                            ELEMENT[at0002] matches {    -- Conclusion
+                                                value matches {
+                                                    DV_TEXT[at9016]
+                                                }
+                                            }
+                                            allow_archetype CLUSTER[at0041] matches {    -- Additional details
+                                                include
+                                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.imaging_exam(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.organisation\.v1\..*|openEHR-EHR-CLUSTER\.lab_microscopy_parasitology\.v0\..*|openEHR-EHR-CLUSTER\.lab_antibody\.v0\..*|openEHR-EHR-CLUSTER\.laboratory_test_analyte\.v1\..*|openEHR-EHR-CLUSTER\.lab_antigen\.v0\..*|openEHR-EHR-CLUSTER\.lab_blood_cell_count\.v0\..*|openEHR-EHR-CLUSTER\.lab_microscopy_culture\.v0\..*|openEHR-EHR-CLUSTER\.lab_microscopy_stain\.v0\..*|openEHR-EHR-CLUSTER\.lab_molecular_microbial\.v0\..*|openEHR-EHR-CLUSTER\.specimen\.v1\..*/}
+                                            }
+                                            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Comment
+                                                value matches {
+                                                    DV_TEXT[at9018]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0044]    -- Additional details
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0005] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0019] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Screening-Fragebogen zur diagnostischen Untersuchungen">
+                description = <"Eine Reihe von Fragen und die dazugehörigen Antworten dienen der Überprüfung, ob diagnostische Untersuchungen durchgeführt wurden.">
+                comment = <"Die Antworten können selbst berichtet werden.">
+            >
+            ["at0002"] = <
+                text = <"Schlussfolgerung">
+                description = <"Kurze Beschreibung, Zusammenfassung oder Interpretation der Untersuchungsergebnisse.">
+                comment = <"*For example: 'All results within normal range', 'Normal', 'Further investigations needed'. This data element is not to contain a representation of the actual results or findings of laboratory tests. In that situation, nest a CLUSTER archetype carrying the structured result within the following 'Additional details' SLOT, for example the CLUSTER.laboratory_test_analyte archetype. (en)">
+            >
+            ["at0003"] = <
+                text = <"Zeitpunkt">
+                description = <"Angabe des Zeitpunktes für die Untersuchung.">
+                comment = <"Das Datenelement \"Zeitpunkt\" wurde bewusst offen modelliert, um die unzähligen Möglichkeiten zu unterstützen, mit denen es in Fragebögen verwendet werden kann, um zu erfassen, wann eine Untersuchung durchgeführt wurde. Die spezifische und beabsichtigte Semantik kann in einer Vorlage weiter geklärt werden. Zum Beispiel: das tatsächliche Datum und/oder die Uhrzeit; die Start- und Endzeit der Untersuchung; das Zeitintervall, in dem die Untersuchung durchgeführt wurde; die Dauer der Untersuchung; das Alter der Person zum Zeitpunkt der Untersuchung; oder die Zeitdauer seit dem Ereignis. Bei Verwendung des Datentyps DV_DATE_TIME ist ein Teildatum zulässig, um nur ein Jahr zu erfassen.">
+            >
+            ["at0019"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen.">
+            >
+            ["at0021"] = <
+                text = <"Name der Untersuchung">
+                description = <"Name der diagnostischen Untersuchung oder der Gruppe von Untersuchungen.">
+                comment = <"Zum Beispiel: \" Blutgas\", \" Brust-Röntgen\", \"EKG\"; oder \"Hörtest\".
+Die Kodierung des \"Untersuchungsnamens\" mit einer Terminologie wird, wenn möglich, bevorzugt.">
+            >
+            ["at0023"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardwert, ein undefinierter/s Zeitpunkt oder Intervallereignis, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann.">
+            >
+            ["at0024"] = <
+                text = <"Durchgeführt?">
+                description = <"Gibt es eine Vorgeschichte der durchgeführten Untersuchungen?">
+                comment = <"In einem Template würde das Datenelement normalerweise in die spezifische gestellte Frage umbenannt. Der vorgeschlagene Wertesatz kann für die lokale Verwendung angepasst werden, indem die Datentypauswahl DV_TEXT oder DV_BOOLEAN verwendet wird, um jedem spezifischen Anwendungsfall zu entsprechen.">
+            >
+            ["at0025"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Angaben über den diagnostischen Untersuchungstest, die in anderen Feldern nicht erfasst werden.">
+            >
+            ["at0026"] = <
+                text = <"Spezifische Untersuchung">
+                description = <"Angaben zu einer bestimmten Untersuchung oder einer Gruppe von Untersuchungen, die für den Zweck des Screenings relevant sind.">
+                comment = <"Verwenden Sie separate Instanzen von diesem CLUSTER, um zwischen bestimmten Untersuchungen oder Gruppierungen von Untersuchungen zu unterscheiden.">
+            >
+            ["at0027"] = <
+                text = <"Gibt es Untersuchungen?">
+                description = <"Wurden in der Vergangenheit diagnostische Tests oder Untersuchungen im Zusammenhang mit dem Screening durchgeführt?">
+                comment = <"In einem Template würde das Datenelement normalerweise in die spezifische gestellte Frage umbenannt. Der vorgeschlagene Wertesatz kann für die lokale Verwendung angepasst werden, indem die Datentypauswahl DV_TEXT oder DV_BOOLEAN verwendet wird, um jedem spezifischen Anwendungsfall zu entsprechen.">
+            >
+            ["at0028"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Nein">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Unbekannt">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Nein">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Unbekannt">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Zweck des Screenings">
+                description = <"Der Kontext oder Grund für das Screening.">
+                comment = <"Dieses Datenelement soll bei einer späteren Abfrage den Erhebungskontext für die Frage/Antwort-Gruppen bereitstellen. Es wird nicht erwartet, dass dieses Datenelement der Person belichtet wird, sondern nur in Daten gespeichert wird. Zum Beispiel: Screening vor der Aufnahme, der Name des eigentlichen Fragebogens oder Screening auf die frühere Untersuchungen.">
+            >
+            ["at0041"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Strukturierte Angaben oder Fragen zu einer bestimmten Untersuchung oder einer Gruppe von Untersuchungen.">
+            >
+            ["at0043"] = <
+                text = <"Beschreibung">
+                description = <"Beschreibung über die Geschichte der Durchführung von Untersuchungen, die für das Screening relevant sind.">
+            >
+            ["at0044"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Strukturierte Angaben oder Fragen zum Screening für diagnostische Untersuchungen.">
+            >
+            ["at0045"] = <
+                text = <"Unsicher">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Unsicher">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"*Type (en)">
+                description = <"*The method, technique, modality or other more specific identification of the diagnostic investigation. (en)">
+                comment = <"*For example: contrast-enhanced mammography, magnification mammography, mammographic digital tomosynthesis,  contrast imaging technique,  fluorescence in situ hybridisation, Immunoassay method. (en)">
+            >
+            ["ac9021"] = <
+                text = <"Gibt es Untersuchungen? (synthesised)">
+                description = <"Wurden in der Vergangenheit diagnostische Tests oder Untersuchungen im Zusammenhang mit dem Screening durchgeführt? (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"Durchgeführt? (synthesised)">
+                description = <"Gibt es eine Vorgeschichte der durchgeführten Untersuchungen? (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Kartleggingsspørsmål om diagnostiske undersøkelser">
+                description = <"Spørsmål og tilhørende svar som er knyttet til kartlegging om diagnostiske undersøkelser har vært utført eller ikke.">
+                comment = <"Svarene kan være selvrapporterte.">
+            >
+            ["at0002"] = <
+                text = <"Konklusjon">
+                description = <"Kort beskrivelse, oppsummering eller tolkning av funnene på undersøkelsen.">
+                comment = <"For eksempel \"Alle resultater innenfor normalverdier\", \"Normal\", \"Ytterligere undersøkelser nødvendig\". Dette dataelementet er ikke tenkt å representere det faktiske resultatet eller funnet til et laboratorieresultat. Er det nødvendig kan en passende CLUSTER-arketype benyttes i  SLOT'et \"Ytterligere detaljer\", for eksempel CLUSTER.laboratory_test_analyte arketypen (Analyseresultat).">
+            >
+            ["at0003"] = <
+                text = <"Tidsangivelse">
+                description = <"Tidsangivelse for undersøkelsen.">
+                comment = <"Elementet \"Tidsangivelse\" er med hensikt løst modellert for å legge til rette for myriadene av mulighetene det kan brukes i spørreskjemaer for å fange når en undersøkelse ble utført. Den spesifikke og tiltenkte semantikken kan bli ytterligere klargjort i et templat. For eksempel: Undersøkelsens faktiske dato og/eller klokkeslett, start- og slutttid for undersøkelsen, et tidsintervall for når undersøkelsen ble gjort, varigheten av en undersøkelse, individets alder på tidspunktet for undersøkelsen, eller hvor lenge det siden den ble gjort. Kan være en delvis dato, for eksempel bare år, ved å bruke datatypen DV_DATE_TIME.">
+            >
+            ["at0019"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0021"] = <
+                text = <"Undersøkelsesnavn">
+                description = <"Navnet på en undersøkelse eller gruppe av undersøkelser.">
+                comment = <"For eksempel: \"Blodgass\",\" Røntgen thorax\", \"EKG\" eller \"Hørseltest\". Koding av \"Undersøkelsesnavn\" med en terminologi foretrekkes der det er mulig.">
+            >
+            ["at0023"] = <
+                text = <"Uspesifikk hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0024"] = <
+                text = <"Utført?">
+                description = <"Er den spesifikke undersøkelsen noen gang blitt gjennomført?">
+                comment = <"Navnet på dataelementet kan omformuleres til det spesifikke spørsmålet i et templat eller brukergrensesnitt. Det foreslåtte verdisettet kan tilpasses/endres i det enkelte bruksområde ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN.">
+            >
+            ["at0025"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om den spesifikke undersøkelsen som ikke er omfattet av andre felt.">
+            >
+            ["at0026"] = <
+                text = <"Spesifikk undersøkelse">
+                description = <"Detaljer om en spesifikk undersøkelse eller gruppe av undersøkelser som er innenfor kartleggingsformålet.">
+                comment = <"Bruk separate instanser av dette CLUSTER'et for å skille mellom spesifikke undersøkelser eller gruppering av undersøkelser.">
+            >
+            ["at0027"] = <
+                text = <"Noen tidligere undersøkelser?">
+                description = <"Er det gjort noen diagnostiske undersøkelser tidligere som er innenfor kartleggingsformålet?">
+                comment = <"Navnet på dataelementet kan omformuleres til det spesifikke spørsmålet i et templat eller brukergrensesnitt. Det foreslåtte verdisettet kan tilpasses/endres i det enkelte bruksområde ved å benytte de alternative datatypene DV_TEXT eller DV_BOOLEAN">
+            >
+            ["at0028"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Ukjent">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Ukjent">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Kartleggingsformål">
+                description = <"Konteksten eller årsaken for kartleggingen.">
+                comment = <"Dette dataelementet er ment for å sette en kontekst for samlingen av spørsmål/svar til bruk senere for å gjøre spørringer på dataene. Det er ikke forventet at dette dataelementet skal være synlig for en bruker av skjemaet, men kun tilgjengelig i de lagrede dataene. For eksempel: \"Preoperativ screening\" eller navnet på det faktiske spørreskjemaet.">
+            >
+            ["at0041"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Strukturerte detaljer eller spørsmål om den spesifikke undersøkelsen.">
+            >
+            ["at0043"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse om undersøkelser som er tidligere utført og som er innenfor kartleggingsformålet.">
+            >
+            ["at0044"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Strukturerte detaljer eller spørsmål om kartleggingen av diagnostiske undersøkelser.">
+            >
+            ["at0045"] = <
+                text = <"Usikker">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Usikker">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Type">
+                description = <"Metoden, teknikken, modaliteten eller annen mer spesifikk identifikasjon av den diagnostiske undersøkelsen.">
+                comment = <"For eksempel: kontrastforsterket mammografi, forstørrelsesmammografi, digital tomosyntese av bryst, kontrastbildeteknikk, fluorescens in situ hybridisering (FISH), immunoassay-metode.">
+            >
+            ["ac9021"] = <
+                text = <"Noen tidligere undersøkelser? (synthesised)">
+                description = <"Er det gjort noen diagnostiske undersøkelser tidligere som er innenfor kartleggingsformålet? (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"Utført? (synthesised)">
+                description = <"Er den spesifikke undersøkelsen noen gang blitt gjennomført? (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Diagnostic investigation screening questionnaire">
+                description = <"Series of questions and associated answers used to screen whether diagnostic investigations have been carried out.">
+                comment = <"The answers may be self-reported.">
+            >
+            ["at0002"] = <
+                text = <"Conclusion">
+                description = <"Brief description, summary or interpretation of the investigation outcome.">
+                comment = <"For example: 'All results within normal range', 'Normal', 'Further investigations needed'. This data element is not to contain a representation of the actual results or findings of laboratory tests. In that situation, nest a CLUSTER archetype carrying the structured result within the following 'Additional details' SLOT, for example the CLUSTER.laboratory_test_analyte archetype.">
+            >
+            ["at0003"] = <
+                text = <"Timing">
+                description = <"Indication of timing related to the investigation.">
+                comment = <"The 'Timing' data element has deliberately been loosely modelled to support the myriad of ways that it can be used in questionnaires to capture when an investigation was carried out. The specific and intended semantics can be further clarified in a template. For example: the actual date and/or time; the start and stop time for the investigation; the interval of time during which the investigation was carried out; the duration of the investigation; the age of the individual at the time of the investigation; or the duration of time since it occurred. A partial date is valid, using the DV_DATE_TIME data type, to record only a year.">
+            >
+            ["at0019"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0021"] = <
+                text = <"Investigation name">
+                description = <"Name of the diagnostic investigation or grouping of investigations.">
+                comment = <"For example: 'Blood gas', Chest Xray', 'ECG'; or 'Hearing test'.
+Coding of the 'Investigation name' with a terminology is preferred, where possible.">
+            >
+            ["at0023"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0024"] = <
+                text = <"Done?">
+                description = <"Is there a history of the investigation being carried out?">
+                comment = <"In a template, the data element would usually be renamed to the specific question asked. The proposed value set can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.">
+            >
+            ["at0025"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the diagnostic investigation test not captured in other fields.">
+            >
+            ["at0026"] = <
+                text = <"Specific investigation">
+                description = <"Details about a specified investigation or grouping of investigations relevant for the screening purpose.">
+                comment = <"Use separate instances of this CLUSTER to differentiate between specific investigations or groupings of investigations.">
+            >
+            ["at0027"] = <
+                text = <"Any investigations?">
+                description = <"Is there a history of any diagnostic tests or investigations related to the screening purpose?">
+                comment = <"In a template, the data element would usually be renamed to the specific question asked. The proposed value set can be adapted for local use by using the DV_TEXT or the DV_BOOLEAN datatypes choice to match each specific use case.">
+            >
+            ["at0028"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Unknown">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Screening purpose">
+                description = <"The context or reason for screening.">
+                comment = <"This data element is intended to provide collection context for the question/answer groups when queried at a later date. It is not expected that this data element will be exposed to the individual, but only stored in data. For example: pre-admission screening, the name of the actual questionnaire or screening for previous investigations.">
+            >
+            ["at0041"] = <
+                text = <"Additional details">
+                description = <"Structured details or questions about the specific investigation or group of investigations.">
+            >
+            ["at0043"] = <
+                text = <"Description">
+                description = <"Narrative description about the history of any investigations relevant for the screening purpose.">
+            >
+            ["at0044"] = <
+                text = <"Additional details">
+                description = <"Structured details or questions about screening for diagnostic investigations.">
+            >
+            ["at0045"] = <
+                text = <"Unsure">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Unsure">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Type">
+                description = <"The method, technique, modality or other more specific identification of the diagnostic investigation.">
+                comment = <"For example: contrast-enhanced mammography, magnification mammography, mammographic digital tomosynthesis,  contrast imaging technique,  fluorescence in situ hybridisation, Immunoassay method.">
+            >
+            ["ac9021"] = <
+                text = <"Any investigations? (synthesised)">
+                description = <"Is there a history of any diagnostic tests or investigations related to the screening purpose? (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"Done? (synthesised)">
+                description = <"Is there a history of the investigation being carried out? (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Cuestionario de detección de investigación diagnóstica">
+                description = <"Serie de preguntas y respuestas asociadas, utilizadas para evaluar si se han realizado investigaciones diagnósticas.">
+                comment = <"Las respuestas pueden ser autoinformadas.">
+            >
+            ["at0002"] = <
+                text = <"Conclusion">
+                description = <"Breve descripción, resumen o interpretación del resultado de la investigación.">
+                comment = <"*For example: 'All results within normal range', 'Normal', 'Further investigations needed'. This data element is not to contain a representation of the actual results or findings of laboratory tests. In that situation, nest a CLUSTER archetype carrying the structured result within the following 'Additional details' SLOT, for example the CLUSTER.laboratory_test_analyte archetype. (en)">
+            >
+            ["at0003"] = <
+                text = <"Tiempo">
+                description = <"Indicación del momento relacionado con la investigación.">
+                comment = <"El elemento de datos 'Tiempo' se ha modelado deliberadamente de manera flexible para permitir la infinidad de formas en que se puede utilizar en cuestionarios, con el fin de registrar cuándo se llevó a cabo una investigación. La semántica específica y prevista se puede aclarar aún más en una template. Por ejemplo: la fecha y/u hora real; la hora de inicio y finalización de la investigación; el intervalo de tiempo durante el cual se llevó a cabo la investigación; la duración de la investigación; la edad del individuo al momento de la investigación; o el tiempo transcurrido desde que ocurrió. Una fecha parcial es válida, utilizando el tipo de datos DV_DATE_TIME, para registrar solo un año.">
+            >
+            ["at0019"] = <
+                text = <"Extensión">
+                description = <"Se requiere información adicional para ampliar el modelo con contenido local o para alinearlo con otros modelos o formalismos de referencia.">
+                comment = <"Por ejemplo: requisitos de información local; o metadatos adicionales para alinearse con FHIR.">
+            >
+            ["at0021"] = <
+                text = <"Nombre de la investigación">
+                description = <"Nombre de la investigación diagnóstica o grupo de investigaciones.">
+                comment = <"Por ejemplo: 'Gas en sangre', Radiografía de tórax', 'ECG'; o 'Audiometría'.
+Siempre que sea posible, se prefiere codificar el 'nombre de la investigación' con una terminología.">
+            >
+            ["at0023"] = <
+                text = <"Cualquier evento">
+                description = <"Evento predeterminado, en un intervalo de tiempo o momento no específico, que puede ser definido de forma expresa en una plantilla o en tiempo de ejecución.">
+            >
+            ["at0024"] = <
+                text = <"¿Realizado?">
+                description = <"¿Existen antecedentes de que se haya llevado a cabo la investigación?">
+                comment = <"En un template, el nombre del elemento de datos normalmente se cambiaría según la pregunta específica formulada. El conjunto de valores propuesto se puede adaptar para uso local utilizando la opción de tipos de datos DV_TEXT o DV_BOOLEAN para que coincida con cada caso de uso específico.">
+            >
+            ["at0025"] = <
+                text = <"Comentarios">
+                description = <"Narración adicional sobre la prueba de investigación diagnóstica, no registrada en otros campos.">
+            >
+            ["at0026"] = <
+                text = <"Investigación específica">
+                description = <"Detalles sobre una investigación o grupo de investigaciones relevantes para el propósito del screening.">
+                comment = <"Utilice instancias separadas de este CLUSTER para diferenciar entre investigaciones específicas o grupo de investigaciones.">
+            >
+            ["at0027"] = <
+                text = <"¿Alguna investigación?">
+                description = <"¿Existen antecedentes de alguna prueba diagnóstica o investigación relacionada con el propósito del screening?">
+                comment = <"En un template, el nombre del elemento de datos normalmente se cambiaría según la pregunta específica formulada. El conjunto de valores propuesto se puede adaptar para uso local utilizando la opción de tipos de datos DV_TEXT o DV_BOOLEAN para que coincida con cada caso de uso específico.">
+            >
+            ["at0028"] = <
+                text = <"Sí">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Desconocido">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Sí">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Desconocido">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Propósito del screening">
+                description = <"Contexto o motivo del screening.">
+                comment = <"Este elemento de datos tiene como objetivo proporcionar una recogida de información para los grupos de preguntas/respuestas, cuando se realicen consultas en una fecha posterior. No se espera que este elemento de datos sea expuesto al individuo, sino que solo se almacene en forma de datos. Por ejemplo: screening previo al ingreso, nombre del cuestionario propiamente dicho o screening de investigaciones previas.">
+            >
+            ["at0041"] = <
+                text = <"Detalles adicionales">
+                description = <"Detalles estructurados o preguntas sobre la investigación específica o grupo de investigaciones.">
+            >
+            ["at0043"] = <
+                text = <"Descripción">
+                description = <"Descripción narrativa sobre la historia de cualquier investigación relevante para el propósito del screening.">
+            >
+            ["at0044"] = <
+                text = <"Detalles adicionales">
+                description = <"Detalles estructurados o preguntas sobre el screening para investigaciones diagnósticas.">
+            >
+            ["at0045"] = <
+                text = <"Unsure">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Unsure">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"*Type (en)">
+                description = <"*The method, technique, modality or other more specific identification of the diagnostic investigation. (en)">
+                comment = <"*For example: contrast-enhanced mammography, magnification mammography, mammographic digital tomosynthesis,  contrast imaging technique,  fluorescence in situ hybridisation, Immunoassay method. (en)">
+            >
+            ["ac9021"] = <
+                text = <"¿Alguna investigación? (synthesised)">
+                description = <"¿Existen antecedentes de alguna prueba diagnóstica o investigación relacionada con el propósito del screening? (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"¿Realizado? (synthesised)">
+                description = <"¿Existen antecedentes de que se haya llevado a cabo la investigación? (synthesised)">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Qüestionari de detecció de recerca diagnòstica">
+                description = <"Sèrie de preguntes i respostes associades, utilitzades per avaluar si s'han fet investigacions diagnòstiques.">
+                comment = <"Les respostes poden ser autoinformades.">
+            >
+            ["at0002"] = <
+                text = <"Conclusió">
+                description = <"Breu descripció, resum o interpretació del resultat de la investigació.">
+                comment = <"*For example: 'All results within normal range', 'Normal', 'Further investigations needed'. This data element is not to contain a representation of the actual results or findings of laboratory tests. In that situation, nest a CLUSTER archetype carrying the structured result within the following 'Additional details' SLOT, for example the CLUSTER.laboratory_test_analyte archetype. (en)">
+            >
+            ["at0003"] = <
+                text = <"Temps">
+                description = <"Indicació del moment relacionat amb la investigació.">
+                comment = <"L'element de dades 'Temps' s'ha modelat deliberadament de manera flexible per permetre la infinitat de formes en què es pot utilitzar en qüestionaris, per tal de registrar quan es va dur a terme una investigació. La semàntica específica i prevista es pot aclarir encara més en una template. Per exemple: la data i/o hora real; l'hora d'inici i de finalització de la investigació; l'interval de temps durant el qual es va dur a terme la investigació; la durada de la investigació; l'edat de l'individu al moment de la investigació; o el temps transcorregut des que va passar. Una data parcial és vàlida, utilitzant el tipus de dades DV_DATE_TIME, per registrar només un any.">
+            >
+            ["at0019"] = <
+                text = <"Extensió">
+                description = <"Es requereix informació addicional per ampliar el model amb contingut local o per alinear-lo amb altres models o formalismes de referència.">
+                comment = <"Per exemple: requisits dinformació local; o metadades addicionals per alinear-se amb FHIR.">
+            >
+            ["at0021"] = <
+                text = <"Nom de la investigació">
+                description = <"Nom de la investigació diagnòstica o grup de recerca.">
+                comment = <"Per exemple: 'Gas en sang', Radiografia de tòrax', 'ECG'; o 'Audiometria'.
+Sempre que sigui possible, es prefereix codificar el 'nom de la investigació' amb una terminologia.">
+            >
+            ["at0023"] = <
+                text = <"Qualsevol esdeveniment">
+                description = <"Esdeveniment predeterminat, en un interval de temps o moment no específic, que es pot definir de forma expressa en una plantilla o en temps d'execució.">
+            >
+            ["at0024"] = <
+                text = <"Realitzat?">
+                description = <"Hi ha antecedents que s'hagi dut a terme la investigació?">
+                comment = <"En un template, el nom de l'element de dades normalment es canviaria segons la pregunta específica formulada. El conjunt de valors proposat es pot adaptar per a ús local utilitzant lopció de tipus de dades DV_TEXT o DV_BOOLEAN perquè coincideixi amb cada cas dús específic.">
+            >
+            ["at0025"] = <
+                text = <"Comentaris">
+                description = <"Narració addicional sobre la prova de recerca diagnòstica, no registrada a altres camps.">
+            >
+            ["at0026"] = <
+                text = <"Investigació específica">
+                description = <"Detalls sobre una investigació o grup d'investigacions rellevants per al propòsit de l'screening.">
+                comment = <"Utilitzeu instàncies separades d'aquest CLUSTER per diferenciar entre investigacions específiques o grup de recerca.">
+            >
+            ["at0027"] = <
+                text = <"Alguna investigació?">
+                description = <"Hi ha antecedents d'alguna prova diagnòstica o investigació relacionada amb el propòsit de l'screening?">
+                comment = <"En un template, el nom de l'element de dades normalment es canviaria segons la pregunta específica formulada. El conjunt de valors proposat es pot adaptar per a ús local utilitzant l'opció de tipus de dades DV_TEXT o DV_BOOLEAN perquè coincideixi amb cada cas d'ús específic.">
+            >
+            ["at0028"] = <
+                text = <"Sí">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Desconegut">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Sí">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Desconegut">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Propòsit de l'screening">
+                description = <"Context o motiu de l'screening.">
+                comment = <"Aquest element de dades té com a objectiu proporcionar una recollida d'informació per als grups de preguntes/respostes, quan es facin consultes en una data posterior. No s'espera que aquest element de dades sigui exposat a l'individu, sinó que només s'emmagatzemi en forma de dades. Per exemple: screening previ a l'ingrés, nom del qüestionari pròpiament dit o screening d'investigacions prèvies.">
+            >
+            ["at0041"] = <
+                text = <"Detalls addicionals">
+                description = <"Detalls estructurats o preguntes sobre la investigació específica o grup de recerca.">
+            >
+            ["at0043"] = <
+                text = <"Descripció">
+                description = <"Descripció narrativa sobre la història de qualsevol investigació rellevant per al propòsit de l'screening.">
+            >
+            ["at0044"] = <
+                text = <"Detalls addicionals">
+                description = <"Detalls estructurats o preguntes sobre l'screening per a investigacions diagnòstiques.">
+            >
+            ["at0045"] = <
+                text = <"Unsure">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Unsure">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"*Type (en)">
+                description = <"*The method, technique, modality or other more specific identification of the diagnostic investigation. (en)">
+                comment = <"*For example: contrast-enhanced mammography, magnification mammography, mammographic digital tomosynthesis,  contrast imaging technique,  fluorescence in situ hybridisation, Immunoassay method. (en)">
+            >
+            ["ac9021"] = <
+                text = <"Alguna investigació? (synthesised)">
+                description = <"Hi ha antecedents d'alguna prova diagnòstica o investigació relacionada amb el propòsit de l'screening? (synthesised)">
+            >
+            ["ac9022"] = <
+                text = <"Realitzat? (synthesised)">
+                description = <"Hi ha antecedents que s'hagi dut a terme la investigació? (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0030"] = <http://snomed.info/id/261665006>
+            ["at0028"] = <http://snomed.info/id/373066001>
+            ["at0029"] = <http://snomed.info/id/373067005>
+            ["at0036"] = <http://snomed.info/id/373066001>
+            ["at0037"] = <http://snomed.info/id/373067005>
+            ["at0039"] = <http://snomed.info/id/261665006>
+        >
+    >
+    value_sets = <
+        ["ac9022"] = <
+            id = <"ac9022">
+            members = <"at0036", "at0037", "at0039", "at0046">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0028", "at0029", "at0030", "at0045">
+        >
+    >

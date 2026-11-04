@@ -1,0 +1,97 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=36f8f3b8-572e-4337-8a11-810b8f657ba8; build_uid=cc8da233-b399-4189-bb59-1e017fd71d17)
+    openEHR-EHR-EVALUATION.long_term_process_enrollment-antiVEGF_AMD.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-EVALUATION.long_term_process_enrollment.v0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2015-06-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"5B07C7E1EB58430EEF14CA0485911F66">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Record a contribution to the decision of admittance of a patient in the process of wet AMD treatment by intravitreal anti-VEGF periodical injections.">
+            keywords = <"chronic", "admittance", "wet amd", "anti-vegf">
+            use = <"It can be used for enrollment of new patients into the cycles of anti-VEGF injections to treat wet AMD, but also it is possible to evaluate already registered patients to reconsider the continuity of their treatment at a given time.">
+            misuse = <"Most of archetypes are focused on register acute episodes identified on clinical environment. Conversely, this one is aimed at periodically review a decision made about a protracted healthcare process (for instance, a therapeutic decision for a chronic condition that requires regular treatment). Thus, this archetype is not intended for registering decisions about occasional actions.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000.1] matches {    -- Enrollment in intravitreal anti-VEGF therapy for wet AMD
+        /data[at0001]/items matches {
+            ELEMENT[at0010.1] matches {    -- Criteria
+                value matches {
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code matches {[ac0.9000]}    -- Criteria (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.13"] = <
+                text = <"Very low VA">
+                description = <"Visual acuity on first clinical encounter below 0.1 in decimal scale.">
+            >
+            ["at0.14"] = <
+                text = <"Healed lesions">
+                description = <"Identified signs of previous treatments such as photodynamic therapy, laser photocoagulation scars, or any vitreoretinal operative procedure.">
+            >
+            ["at0.15"] = <
+                text = <"Multimorbidity">
+                description = <"Coexistence of additional alterations on the retina causative of visual impairment.">
+            >
+            ["at0.16"] = <
+                text = <"Reaction to anti-VEGF">
+                description = <"Establishment or suspicion of any reaction due to hypersensitivity to anti-VEGF agents used in intravitreal injections.">
+            >
+            ["at0.17"] = <
+                text = <"VA decrease">
+                description = <"Visual acuity decreased for three consecutive reviews below 0.1 in decimal scale.">
+            >
+            ["at0.18"] = <
+                text = <"Morphologic deterioration">
+                description = <"Progressive deterioration of the morphology of the lesion.">
+            >
+            ["at0000.1"] = <
+                text = <"Enrollment in intravitreal anti-VEGF therapy for wet AMD">
+                description = <"Manages the enrollment of patients in intravitreal anti-VEGF therapy to treat wet AMD.">
+            >
+            ["at0010.1"] = <
+                text = <"Criteria">
+                description = <"Different criteria considered to make a decision with regard to patient's admittance into the healthcare process.">
+            >
+            ["ac0.9000"] = <
+                text = <"Criteria (synthesised)">
+                description = <"Different criteria considered to make a decision with regard to patient's admittance into the healthcare process. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.13", "at0.14", "at0.15", "at0.16", "at0.17", "at0.18">
+        >
+    >

@@ -1,0 +1,94 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=b522cccc-ccbd-43a8-a007-19d5d1ca1c0e; build_uid=c13b67dc-2b8a-4c31-8c64-6b633a114cdd)
+    openEHR-EHR-SECTION.surgery_procedure.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2015-06-28">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"E4B6946D1D6B7F00ADA61A23F620AD58">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Register clinical information about any surgical procedure on posterior segment of eye, from it is scheduled until the intervention is conducted by an ophthalmologist.">
+            keywords = <"surgery", ...>
+            use = <"To be used whenever a complex clinical process comprises at least a surgical procedure on posterior segment of eye.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar la información clínica sobre cualquier procedimiento quirúrgico en el segmento posterior del ojo, desde que la intervención se solicita hasta que un oftalmólogo la lleva a cabo.">
+            use = <"Utilícese cuando un proceso clínico complejo comprende al menos de un procedimiento quirúrgico en el segmento posterior del ojo.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Ophthalmic surgical procedure
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype INSTRUCTION[at0001] matches {    -- Procedure request
+                include
+                    archetype_id/value matches {/openEHR-EHR-INSTRUCTION\.request-procedure(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+            }
+            allow_archetype ACTION[at0002] matches {    -- Procedure undertaken
+                include
+                    archetype_id/value matches {/openEHR-EHR-ACTION\.procedure(-[a-zA-Z0-9_]+)*\.v([0-9]+)/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Ophthalmic surgical procedure">
+                description = <"Describes any surgical procedure aimed at treating ophthalmic conditions.">
+            >
+            ["at0001"] = <
+                text = <"Procedure request">
+                description = <"Request for a procedure to be performed.">
+            >
+            ["at0002"] = <
+                text = <"Procedure undertaken">
+                description = <"A clinical activity that has been carried out for therapeutic or diagnostic purposes.">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Intervención quirúrgica oftalmológica">
+                description = <"Describe las intervenciones quirúrgicas que implican el tratamiento de afecciones oftalmológicas.">
+            >
+            ["at0001"] = <
+                text = <"Solicitud de procedimiento">
+                description = <"Solicitud para un procedimiento a ser realizado.">
+            >
+            ["at0002"] = <
+                text = <"Procedimiento realizado">
+                description = <"Actividad clínica que se ha llevado a cabo con propósitos terapéuticos o diagnósticos.">
+            >
+        >
+    >

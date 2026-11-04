@@ -1,0 +1,387 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=0942a3f6-3f2d-431c-871c-84bc722f4626; build_uid=0a3df5b6-9bf5-4746-add4-36d6652a2872)
+    openEHR-EHR-COMPOSITION.request.v1.1.4
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["pt-pt"] = <
+            language = <[ISO_639-1::pt-pt]>
+            author = <
+                ["name"] = <"Hugo Silva">
+                ["organisation"] = <"University of Minho">
+                ["email"] = <"pg50416@uminho.pt">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Lisa Axelsson">
+                ["organisation"] = <"Region Östergötland">
+                ["email"] = <"lisa.axelsson@regionostergotland.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Lars Bitsch-Larsen, John Tore Valand">
+                ["organisation"] = <"Haukeland Universitetssjukehus">
+            >
+        >
+        ["ja"] = <
+            language = <[ISO_639-1::ja]>
+            author = <
+                ["name"] = <"Shinji KOBAYASHI">
+                ["organisation"] = <"NPO openEHR Japan">
+                ["email"] = <"skoba@moss.gr.jp">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Dennis Valk">
+                ["organisation"] = <"Code24 BV">
+                ["email"] = <"dennis.valk@code24.nl">
+            >
+            accreditation = <"Code24 BV">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"freshEHR Informatics, UK">
+        ["email"] = <"ian@freshehr.com">
+        ["date"] = <"2008-01-08">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Nadim Anani, Karolinska Institutet, Sweden", "Vebjørn Arntzen, Oslo University Hospital, Norway", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Terje Bless, Helse Nord FIKS, Norway", "Shahla Foozonkhah, Iran ministry of health and education, Iran", "Heather Grain, Llewelyn Grain Informatics, Australia", "Bjørn Grøva, Diretoratet for e-helse, Norway", "Kristian Heldal, Telemark Hospital Trust, Norway", "Lars Karlsen, DIPS ASA, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Shinji Kobayashi, Kyoto University, Japan", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hallvard Lærum, Oslo Universitetssykehus HF, Norway", "Rose Mari Eikås, Helse Bergen, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Anne Pauline Anderssen, Helse Nord RHF, Norway", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Line Sæle, Nasjonal IKT HF, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Jon Tysdahl, Furst medlab AS, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"FHIR ReferralRequest resource: http://hl7-fhir.github.io/referralrequest.html">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics<heather.leslie@oceaninformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"1AE1CE5FEEA2C7BF49E562CF8F9521EA">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Um eine Beratung, eine bestimmte Dienstleistung oder die Übertragung der Versorgung von einem Gesundheitsdienstleister oder einer Organisation über den Patienten anzufordern.">
+            keywords = <"Überweisung", "Anfrage", "Anforderung", "Auftrag", "Leistung">
+            use = <"Verwendung als Grundlage für eine Anfrage für eine Beratung, eine Dienstleistung oder Übertragung der Versorgung von einem Gesundheitsdienstleister oder einer Organisation über den Patienten. Dieses Dokument enthält in der Regel Details zum Anwendungsbereich und zur Dauer der Gültigkeit der Anfrage sowie relevante klinische Informationen zum Patienten. Die Anfragen können von einer einfachen Beratungsanfrage, Einholen von Empfehlungen für weitere Maßnahmen, der Beantragung einer bestimmten Prozedur oder eines diagnostischen Tests bis hin zur vollständigen Übertragung der Versorgungs und der klinischen Verantwortung an den empfangenden Gesundheitsdienstleister variieren.
+
+Beispiele umfassen, ohne darauf beschränkt zu sein, eine Anforderung für:
+- eine Beratung, Zweitmeinung oder Managementberatung durch einen Spezialisten;
+- ein diagnostischer Test;
+- häusliche Pflege durch Krankenschwestern;
+- Übergabe der Versorgung an eine Reha-Einrichtung;
+- Bewertung der Indikation zur Altenpflege;
+- Kontrolle der Medikamente durch einen Apotheker; und
+- Bereitstellung von Psychotherapie oder Ergotherapie.
+
+Anforderungen können gezielt (Identifizierung eines bestimmten Gesundheitsdienstleisters oder einer bestimmten Organisation zur Ausführung des Antrags) oder nicht zielgerichtet (Identifizierung nur der Art der gewünschten Leistung) erfolgen.">
+            misuse = <"Darf nicht zur Darstellung des Dokuments verwendet werden, das im Rahmen einer einzelnen klinischen Begegnung oder einer einzelnen Visite aufgezeichnet wurde. Verwenden Sie dazu COMPOSITION.encounter.
+
+Darf nicht verwendet werden, um eine Zusammenfassung der Leistungsübertragung an eine andere Organisation oder einen anderen Anbieter bereitzustellen - Verwenden Sie COMPOSITION.transfer_summary für diesen Zweck.">
+        >
+        ["pt-pt"] = <
+            language = <[ISO_639-1::pt-pt]>
+            purpose = <"Para pedir aconselhamento, um serviço específico ou a transferência dos cuidados de um sujeito de uma organização ou prestador de cuidados de saúde para outra.">
+            keywords = <"orientação", "pedido", "serviço">
+            use = <"Utilizar como base para um pedido de aconselhamento, um serviço ou a transferência dos cuidados de um sujeito de uma organização ou prestador de cuidados de saúde. Normalmente, este documento incluirá detalhes sobre o âmbito e a duração da validade do pedido, bem como informações clínicas relevantes sobre o sujeito. Os pedidos podem variar desde um simples pedido de consulta, procura de recomendações sobre ações futuras, pedido de um procedimento específico ou um teste de diagnóstico, até à transferência total dos cuidados e responsabilidade clínica para o prestador de cuidados de saúde recetor.
+
+Os casos de uso incluem, mas não estão limitados a, um pedido de:
+- uma consulta, segunda opinião ou aconselhamento de gestão de um especialista;
+- um teste de diagnóstico;
+- atendimento domiciliário de enfermeiros de visita;
+- transferência de cuidados para uma instalação de reabilitação;
+- para avaliação de cuidados a idosos;
+- para revisão de medicamentos por um farmacêutico;
+- e para a prestação de fisioterapia ou terapia ocupacional.
+
+Os pedidos podem ser direcionados (identificando um prestador de cuidados de saúde ou organização específica para realizar o pedido) ou não direcionados (identificando apenas o tipo de cuidados pretendidos).">
+            misuse = <"Não deve ser utilizado para representar o documento registado como parte de um encontro ou visita clínica única. Utilize COMPOSITION.encounter para esta finalidade.
+
+Não deve ser utilizado para fornecer um resumo de transferência de cuidados para outra organização ou prestador - utilize COMPOSITION.transfer_summary para esta finalidade.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att begära rådgivning, en specifik tjänst, eller vårdöverföring mellan vårdgivare eller organisation avseende en patient.">
+            keywords = <"remiss", "remittering", "begäran", "tjänst">
+            use = <"Används som grund för begäran om råd, tjänst eller vårdöverföring avseende en patient, mellan vårdgivare eller organisationer. Dokumentet innehåller vanligtvis detaljer om begärans omfång och giltighetstid tillsammans med relevant klinisk information. En tjänstebegäran kan vara allt från en enkel förfrågan om konsultation, en fråga om rekommenderad vidare vård, en begäran om en specifik procedur eller diagnostisk åtgärd, till en fullständig vårdöverföring mellan vårdgivare.
+Användningsområden inkluderar, men är inte begränsade till, att begära:
+
+- konsultation, second opinion eller råd av specialist
+- diagnostisk åtgärd
+- hemsjukvård
+- vårdöverföring till rehabilitering
+- bedömning av vårdbehov
+- läkemedelsgenomgång med farmaceut
+- tillhandahållande av sjukgymnastik eller arbetsterapi
+
+Begäran kan antingen vara riktad till en specifik vårdgivare eller organisation, eller peka ut vilken typ av vård som önskas.
+">
+            misuse = <"Ska inte användas för att dokumentera detaljer om ett vårdtillfälle eller ett besök. Använd istället arketypen Vårdtillfälle (COMPOSITION.encounter).
+
+Ska inte användas som epikris vid överflyttning av patient till annan organisation eller vårdgivare. Använd istället arketypen COMPOSITION.transfer_summary.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å spørre om råd, en helsetjeneste, eller ansvarsoverføring for en helsetjenestemottaker.">
+            keywords = <"forespørselsdokument", "forespørsel", "tilsynsforespørsel", "internhenvisning", "eksternhenvisning", "bestilling", "helsetjenester", "medisinske tjenester", "henvisning", "rekvisisjon", "forordning">
+            use = <"Brukes som basis for å spørre om råd, en tjeneste eller ansvarsoverføring for en helsetjenestemottaker. Dokumentet vil vanligvis inneholde detaljer om omfang og varighet av forespørselen, sammen med relevant klinisk informasjon. Et forespørselsdokument kan være alt fra en enkel forespørsel om en konsultasjon, forespørsel om anbefalinger om videre behandling, forespørsel om en spesifikk prosedyre eller diagnostisk undersøkelse, til en fullstendig overføring av ansvar mellom helsetjenesteyter. 
+
+Bruksområder kan omfatte, men er ikke begrenset til:
+- en konsultasjon, second opinion eller forespørsel om råd fra en spesialist,
+- en diagnostisk undersøkelse,
+- hjemmebaserte tjenester,
+- overføring til rehabilitering,
+- vurdering av behov for kommunale tjenester,
+- for legemiddelgjennomgang med en farmasøyt,
+- for henvisning til fysio- eller ergoterapi.
+
+Forespørselsdokumentet kan ha en spesifikk mottaker (spesifikk helsetjenesteyter eller organisasjon) eller en mer uspesifikk mottaker (ønsket tjenestetype).">
+            misuse = <"Brukes ikke for å registrere detaljer om en enkel interaksjon, kontakt eller omsorgshendelse mellom et individ og helsepersonell. Bruk arketypen Klinisk kontakt (COMPOSITION.encounter) for dette formålet
+
+Brukes ikke som overflyttingsnotat/epikrise til andre organisasjoner eller tjenesteytere. Bruk Overføringsdokument (COMPOSITION.transfer_summary) for dette formålet.">
+        >
+        ["ja"] = <
+            language = <[ISO_639-1::ja]>
+            purpose = <"ケア対象者について、医療従事者または医療機関に対し、助言、特定のサービス、または診療の移管を依頼するため。">
+            keywords = <"紹介", "依頼", "サービス", "紹介状", "診療依頼">
+            use = <"ケア対象者について、医療従事者または医療機関に対し、助言、サービス、または診療の移管を依頼する際の基盤として用いる。この文書には通常、依頼の範囲および有効期間に関する詳細と、ケア対象者に関する関連する臨床情報が含まれる。依頼の内容は、単純なコンサルテーションの依頼、今後の対応についての推奨を求めるもの、特定の処置や臨床検査の依頼から、受け手となる医療従事者への診療および臨床的責任の完全な引き継ぎまで多岐にわたる。
+
+ユースケースには以下の依頼が含まれるが、これらに限定されない：
+- 専門医によるコンサルテーション、セカンドオピニオン、または診療方針に関する助言；
+- 臨床検査；
+- 訪問看護師による在宅ケア；
+- リハビリテーション施設への診療の移管；
+- 高齢者ケアのアセスメント；
+- 薬剤師による薬剤監査；および
+- 理学療法または作業療法の提供。
+
+依頼は、依頼を実施する特定の医療従事者または医療機関を指定するもの（宛先指定あり）でも、希望するケアの種類のみを示すもの（宛先指定なし）でもよい。">
+            misuse = <"単一の診察の一部として記録される文書を表現するために用いてはならない。その目的にはCOMPOSITION.encounterを用いること。
+
+他の医療機関または医療従事者への診療移管サマリーを提供するために用いてはならない。その目的にはCOMPOSITION.transfer_summaryを用いること。">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتوصيل طلب إحالة أو طلب تقديم خدمة إلى من يقوم بتقديمها.">
+            keywords = <"إحالة", "طلب">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To request advice, a specified service or transfer of care from a healthcare provider or organisation about the subject of care.">
+            keywords = <"referral", "request", "service">
+            use = <"Use as basis for a request for advice, a service or transfer of care from a healthcare provider or organisation about the subject of care. This document will typically include details about the scope and duration of validity of the request, as well as relevant clinical information about the subject. Requests can vary from a simple request for a consultation, seeking recommendation about further action, requesting a specific procedure or diagnostic test, through to full handover of care and clinical responsibility to the receiving healthcare provider.
+
+Use cases include, but are not limited to a request for:
+- a consultation, second opinion or management advice from a specialist;
+- a diagnostic test;
+- home care from visiting nurses;
+- transfer of care to a rehabilitation facility;
+- for aged care assessment;
+- for a medication review by a pharmacist; and
+- for provision of physiotherapy or occupational therapy.
+
+Requests may be targeted (identifying a specific healthcare provider or organisation to carry out the request) or untargeted (identifying only the type of care desired).">
+            misuse = <"Not to be used to represent the document recorded as part of a single clinical encounter or visit. Use COMPOSITION.encounter for this purpose.
+
+Not to be used to provide a transfer of care summary to another organisation or provider - use COMPOSITION.transfer_summary for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"Voor het vragen van advies, een specifieke dienst of overdracht van zorg aan een zorgverlener of organisatie over de onderhavige persoon cq onderwerp van zorg.">
+            keywords = <"verwijzing", "verzoek", "dienst">
+            use = <"Gebruik voor het vragen van advies, een specifieke dienst of overdracht van zorg aan een zorgverlener of organisatie over de onderhavige persoon cq onderwerp van zorg. Dit document zal typisch details omvatten over de scope en geldigheidsduur van het verzoek, als ook relevante klinische informatie over de betreffende persoon cq onderwerp. Verzoeken kunnen variëren van een eenvoudig verzoek voor consultatie, aanbeveling zoeken voor verdere actie, vragen om een specifieke procedure of diagnostische test, tot een volledige overdracht van zorg en klinische verantwoordelijkheid aan de ontvangende zorgaanbieder.
+
+Voorbeelden bevatten, maar zijn niet gelimiteerd tot een verzoek voor:
+- een consultatie, second opinion of management advies van een specialist;
+- een diagnostische test;
+- thuiszorg uitgevoerd door verpleegkundigen;
+- overdracht van zorg aan een rehabilitatie instelling;
+- indicatie ouderenzorg;
+- controle van medicatie door een apotheker; en
+- verlenen van psychotherapie of bezigheidstherapie.
+
+Verzoeken kunnen gericht zijn (richten tot aan specifieke zorgverlener of organisatie om aan het verzoek te voldoen) of globaal geformuleerd (alleen het gewenste type zorg beschrijven).">
+            misuse = <"Niet te gebruiken om het vastgelegde document te presenteren als deel van een enkele klinische ontmoeting (encounter) of bezoek. Gebruik COMPOSITION.encounter voor dit doel.
+
+Niet te gebruiken om een samenvattende zorgoverdracht te leveren aan een andere organisatie of aanbeider. Gebruik COMPOSITION.transfer_summary voor dit doel.">
+        >
+    >
+
+definition
+    COMPOSITION[at0000] matches {    -- Request for service
+        category matches {
+            DV_CODED_TEXT[at9001] matches {
+                defining_code matches {[at9000]}    -- event
+            }
+        }
+        context matches {
+            EVENT_CONTEXT[at9002] matches {
+                other_context matches {
+                    ITEM_TREE[at0001] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            allow_archetype CLUSTER[at0042] matches {    -- Extension
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Leistungsanforderung">
+                description = <"Das Dokument, das von einem behandelnden Gesundheitsdienstleister oder einer behandelnden Organisation an einen anderen gesendet wird, um Beratung, eine Dienstleistung oder Übertragung der Versorgung anzufordern.">
+            >
+            ["at0042"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["pt-pt"] = <
+            ["at0000"] = <
+                text = <"Pedido de serviço">
+                description = <"Documento enviado de um prestador ou organização de cuidados de saúde para outro, com a finalidade de solicitar aconselhamento, um serviço ou transferência de cuidados.">
+            >
+            ["at0042"] = <
+                text = <"Extensão">
+                description = <"Informação adicional necessária para captar o contexto local ou para alinhar com outros modelos/formalismos de referência.">
+                comment = <"Por exemplo: Informação departamental do hospital local ou metadados adicionais para alinhar com os equivalentes FHIR ou CIMI.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Tjänstebegäran">
+                description = <"Dokument som skickas från en vårdgivare eller organisation till en annan, i syfte att be om råd, begära en tjänst eller att begära vårdöverföring.">
+            >
+            ["at0042"] = <
+                text = <"Tilläggsinformation">
+                description = <"Plats för att infoga tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.">
+                comment = <"Exempelvis lokala informationskrav eller metadata för anpassning till FHIR- eller CIMI-motsvarigheter.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Tjenesteforespørsel">
+                description = <"Dokument som sendes fra en helsetjenesteyter til en annen, med hensikt om å forespørre om råd, en tjeneste eller overføring av ansvar.">
+            >
+            ["at0042"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som er nødvendig for å registrere lokalt innhold/kontekst, eller for å sammenstille med andre referansemodeller/formalismer.">
+                comment = <"F.eks lokale informasjonskrav eller ekstra metadata for å tilpasse med FHIR eller CIMI ekvivalenter.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["ja"] = <
+            ["at0000"] = <
+                text = <"診療依頼書">
+                description = <"助言、サービス、または診療の移管を依頼する目的で、診療を担当する医療従事者または医療機関から別の医療従事者・医療機関へ送付される文書。">
+            >
+            ["at0042"] = <
+                text = <"Extension">
+                description = <"ローカルな文脈を取り込むため、または他の参照モデル／形式体系と整合させるために必要な追加情報。">
+                comment = <"例：院内の部門情報や、FHIRまたはCIMIの等価物と整合させるための追加メタデータ。">
+            >
+            ["at9000"] = <
+                text = <"イベント">
+                description = <"イベント">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Request for service">
+                description = <"Document sent from one treating healthcare provider or organisation to another, for the purpose of requesting advice, a service or transfer of care.">
+            >
+            ["at0042"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental information or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at9000"] = <
+                text = <"event">
+                description = <"event">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"*Request for service(en)">
+                description = <"*Document sent from one treating healthcare provider or organisation to another, for the purpose of requesting advice, a service or transfer of care.(en)">
+            >
+            ["at0042"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local context or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: Local hospital departmental information or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["nl"] = <
+            ["at0000"] = <
+                text = <"Verzoek voor een dienst">
+                description = <"Document verstuurd van de ene behandelende zorgaanbieder of organisatie naar een andere, met als doel het vragen van advies, een dienst of overdracht van zorg.">
+            >
+            ["at0042"] = <
+                text = <"Extensie">
+                description = <"Aanvullende informatie vereist om de lokale context te vatten of om te verbinden met andere referentie modellen/formalismen.">
+                comment = <"Bijvoorbeeld: Informatie van lokale ziekenhuis afdelingen of aanvullende metagegevens verbinden met FHIR of CIMI equivalenten.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/433>
+        >
+    >

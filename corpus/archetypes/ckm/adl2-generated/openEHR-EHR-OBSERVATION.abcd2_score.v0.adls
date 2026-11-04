@@ -1,0 +1,393 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3fcf6398-a2a4-4862-a069-e5015b71e773; build_uid=7e830e83-338a-458e-b322-99d805a19dba)
+    openEHR-EHR-OBSERVATION.abcd2_score.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Dennis Forslund">
+                ["organisation"] = <"Cambio Healthcare Systems">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Dennis Forslund">
+        ["organisation"] = <"Cambio Healthcare Systems">
+        ["email"] = <"models@cambiocds.com">
+        ["date"] = <"2016-11-30">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Atomica Informatics, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Johnston SC, Rothwell PM, Nguyen-Huynh MN, Giles MF, Elkins JS, Bernstein AL, Sidney S. Validation and refinement of scores to predict very early stroke risk after transient ischaemic attack. Lancet. 2007 Jan 27;369(9558):283-92. PubMed PMID: 17258668.">
+        ["2"] = <"Perry JJ, Sharma M, Sivilotti ML, Sutherland J, Symington C, Worster A, Émond M, Stotts G, Jin AY, Oczkowski WJ, et al. Prospective validation of the ABCD2 score for patients in the emergency department with transient ischemic attack. CMAJ. 2011 Jul 12;183(10):1137-45. doi: 10.1503/cmaj.101668. Epub 2011 Jun 6. PubMed PMID: 21646462; PubMed Central PMCID: PMC3134721.">
+        ["3"] = <"Rothwell PM, Giles MF, Flossmann E, Lovelock CE, Redgrave JN, Warlow CP, Mehta Z. A simple score (ABCD) to identify individuals at high early risk of stroke after transient ischaemic attack. Lancet. 2005 Jul 2-8;366(9479):29-36. PubMed PMID: 15993230.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"D64AAA7E71F86B49BDBBDB2868350F29">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att utgöra stöd till klinisk bedömning av strokerisk i samband med transitorisk ischemisk attack (TIA). ">
+            keywords = <"ABCD", "ABCD2", "Stroke", "TIA">
+            use = <"Använd som stöd till klinisk bedömning av strokerisk i samband med transitorisk ischemisk attack (TIA). Instrumentet baseras på fem parametrar som vardera bidrar till totala summan enligt:
+
+- Ålder: 1p för ≥60 år
+- Blodtryck: 1p för systoliskt BT ≥140 och/eller diastoliskt BT ≥90
+- Kliniska fynd (TIA): 1p för språkrubbning utan ensidig svaghet, 2p för ensidig svaghet
+- Symtomduration (TIA): 1p för 10-59 min, 2p för ≥60 min
+- Diabetes: 1p för diagnosticerad diabetes
+
+Total poäng uppgår till maximalt 7p, och resultatet tolkas enligt:
+
+1-3p = låg risk, 2-dagars risk 1,0%, 7-dagars risk 1,2%, 90-dagars risk 3,1%
+4-5p = måttlig risk, 2-dagars risk 4,1%, 7-dagars risk 5,9%, 90-dagars risk 9,8%
+6-7p = hög risk, 2-dagars risk 8,1%, 7-dagars risk 11,7%, 90-dagars risk 17,8%">
+            misuse = <"Endast avsedd att användas som stöd till klinisk bedömning. Studier indikerar att instrumentet har tveksam effekt på akutmottagning, det kliniska värdet är således diskutabelt.">
+            copyright = <"© Cambio Healthcare Systems, openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results of the ABCD2 assessment tool.">
+            keywords = <"ABCD", "ABCD2", "Stroke", "TIA">
+            use = <"Use to record the results of the ABCD2 assessment tool.">
+            misuse = <"">
+            copyright = <"© Cambio Healthcare Systems, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- ABCD2 score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Age ≥ 60 years
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0010]}],    -- Absent
+                                                    [{1}, {[at0011]}]    -- Present
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Blood pressure elevation
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0012]}],    -- Absent
+                                                    [{1}, {[at0013]}]    -- Present
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Clinical features
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0014]}],    -- Other symptoms
+                                                    [{1}, {[at0015]}],    -- Speech disturbance without focal weakness
+                                                    [{2}, {[at0016]}]    -- Unilateral weakness
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Diabetes history
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- Absent
+                                                    [{1}, {[at0018]}]    -- Present
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Symptom duration
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0019]}],    -- <10 minutes
+                                                    [{1}, {[at0020]}],    -- 10-59 minutes
+                                                    [{2}, {[at0021]}]    -- ≥60 minutes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9010]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0023] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0024] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"*ABCD2 score(en)">
+                description = <"*Tool to assess the risk of subsequent stroke in an individual presenting with a transient ischaemic attack (TIA).(en)">
+            >
+            ["at0002"] = <
+                text = <"*Any event(en)">
+                description = <"*Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.(en)">
+            >
+            ["at0004"] = <
+                text = <"*Age ≥ 60 years(en)">
+                description = <"*Is the person 60 years or older?(en)">
+            >
+            ["at0005"] = <
+                text = <"*Blood pressure elevation(en)">
+                description = <"*Was the initial systolic pressure >140 mmHg and/or diastolic pressure ≥ 90 mmHg?(en)">
+            >
+            ["at0007"] = <
+                text = <"*Clinical features(en)">
+                description = <"*What are the clinical features of the TIA?(en)">
+            >
+            ["at0008"] = <
+                text = <"*Diabetes history(en)">
+                description = <"*Does the patient have a history of  diabetes mellitus?(en)">
+            >
+            ["at0009"] = <
+                text = <"*Symptom duration(en)">
+                description = <"*What is the duration of symptoms?(en)">
+            >
+            ["at0010"] = <
+                text = <"Frånvarande">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"Föreligger">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Frånvarande">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"Föreligger">
+                description = <"*">
+            >
+            ["at0014"] = <
+                text = <"Andra symtom">
+                description = <"*">
+            >
+            ["at0015"] = <
+                text = <"Språkrubbning utan ensidig svaghet">
+                description = <"*">
+            >
+            ["at0016"] = <
+                text = <"Ensidig svaghet">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"Frånvarande">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"Föreligger">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"<10 minuter">
+                description = <"*">
+            >
+            ["at0020"] = <
+                text = <"10-59 minuter">
+                description = <"*">
+            >
+            ["at0021"] = <
+                text = <"*≥60 minutes(en)">
+                description = <"**(en)">
+            >
+            ["at0022"] = <
+                text = <"*Total score(en)">
+                description = <"*Sum of the individual scores assigned for each of the contributing variables.(en)">
+            >
+            ["at0024"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to capture local content or to align with other reference models/formalisms.(en)">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.(en)">
+            >
+            ["ac9010"] = <
+                text = <"*Age ≥ 60 years(en) (synthesised)">
+                description = <"*Is the person 60 years or older?(en) (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"*Blood pressure elevation(en) (synthesised)">
+                description = <"*Was the initial systolic pressure >140 mmHg and/or diastolic pressure ≥ 90 mmHg?(en) (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"*Clinical features(en) (synthesised)">
+                description = <"*What are the clinical features of the TIA?(en) (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"*Diabetes history(en) (synthesised)">
+                description = <"*Does the patient have a history of  diabetes mellitus?(en) (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"*Symptom duration(en) (synthesised)">
+                description = <"*What is the duration of symptoms?(en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"ABCD2 score">
+                description = <"Tool to assess the risk of subsequent stroke in an individual presenting with a transient ischaemic attack (TIA).">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Age ≥ 60 years">
+                description = <"Is the person 60 years or older?">
+            >
+            ["at0005"] = <
+                text = <"Blood pressure elevation">
+                description = <"Was the initial systolic pressure >140 mmHg and/or diastolic pressure ≥ 90 mmHg?">
+            >
+            ["at0007"] = <
+                text = <"Clinical features">
+                description = <"What are the clinical features of the TIA?">
+            >
+            ["at0008"] = <
+                text = <"Diabetes history">
+                description = <"Does the patient have a history of  diabetes mellitus?">
+            >
+            ["at0009"] = <
+                text = <"Symptom duration">
+                description = <"What is the duration of symptoms?">
+            >
+            ["at0010"] = <
+                text = <"Absent">
+                description = <"*">
+            >
+            ["at0011"] = <
+                text = <"Present">
+                description = <"*">
+            >
+            ["at0012"] = <
+                text = <"Absent">
+                description = <"*">
+            >
+            ["at0013"] = <
+                text = <"Present">
+                description = <"*">
+            >
+            ["at0014"] = <
+                text = <"Other symptoms">
+                description = <"*">
+            >
+            ["at0015"] = <
+                text = <"Speech disturbance without focal weakness">
+                description = <"*">
+            >
+            ["at0016"] = <
+                text = <"Unilateral weakness">
+                description = <"*">
+            >
+            ["at0017"] = <
+                text = <"Absent">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"Present">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"<10 minutes">
+                description = <"*">
+            >
+            ["at0020"] = <
+                text = <"10-59 minutes">
+                description = <"*">
+            >
+            ["at0021"] = <
+                text = <"≥60 minutes">
+                description = <"*">
+            >
+            ["at0022"] = <
+                text = <"Total score">
+                description = <"Sum of the individual scores assigned for each of the contributing variables.">
+            >
+            ["at0024"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9010"] = <
+                text = <"Age ≥ 60 years (synthesised)">
+                description = <"Is the person 60 years or older? (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Blood pressure elevation (synthesised)">
+                description = <"Was the initial systolic pressure >140 mmHg and/or diastolic pressure ≥ 90 mmHg? (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Clinical features (synthesised)">
+                description = <"What are the clinical features of the TIA? (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Diabetes history (synthesised)">
+                description = <"Does the patient have a history of  diabetes mellitus? (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Symptom duration (synthesised)">
+                description = <"What is the duration of symptoms? (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0017", "at0018">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0014", "at0015", "at0016">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0012", "at0013">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0010", "at0011">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0019", "at0020", "at0021">
+        >
+    >

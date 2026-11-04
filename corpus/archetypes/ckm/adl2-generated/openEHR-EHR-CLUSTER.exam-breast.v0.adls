@@ -1,0 +1,293 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c1a0a1c4-9578-445a-a2f1-86618d12c53a; build_uid=a905fbf4-66fb-461a-8176-e35e043098f6)
+    openEHR-EHR-CLUSTER.exam-breast.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-CLUSTER.exam.v2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Nina Schewe, Martin Koch, Alina Rehberg">
+                ["organisation"] = <"Medizinische Hochschule Hannover, Servei Català de la Salut">
+                ["email"] = <"schewe.nina@mh-hannover.de, martinandreaskoch@catsalut.cat, rehberg.alina@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Therese Lindberg">
+                ["organisation"] = <"Cambio CDS">
+                ["email"] = <"therese.lindberg@cambio.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Nasjonal IKT HF">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Adriana Kitajima">
+                ["organisation"] = <"Hospital Alemão Oswaldo Cruz - HAOC">
+                ["email"] = <"adrianakitajima@gmail.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2015-06-23">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Shahla Foozonkhah, Iran ministry of health and education, Iran", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom (openEHR Editor)", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)", "Ingrid Heitmann, Oslo universitetssykehus HF, Norway", "Hilde Hollås, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Sabine Leh, Haukeland University Hospital, Department of Pathology, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Lars Morgan Karlsen, DIPS ASA, Norway", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Vladimir Pizzo, Hospital Sírio Libanês, Brazil", "Jussara Rotzsch, UNB, Brazil", "Anoop Shah, University College London, United Kingdom", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia (openEHR Editor)", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "Jon Tysdahl, Furst medlab AS, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"54A5B56CF23BD8031BFDBF503109E87E">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung einer narrative Beschreibung und klinische Interpretation der Befunde, die bei der körperlichen Untersuchung einer einzelnen Brust beobachtet wurden.
+
+">
+            use = <"Zur Erfassung einer narrativen Beschreibung und klinischen Interpretation der Befunde aus der körperlichen Untersuchung einer einzelnen Brust.
+
+Dieser Archetyp wurde speziell für den SLOT „Untersuchungsdetails“ innerhalb des Archetyps „OBSERVATION.exam“ oder „ACTION.procedure“ entwickelt, kann aber auch in anderen ENTRY- oder CLUSTER-Archetypen verwendet werden, sofern klinisch sinnvoll.
+
+Dient als Rahmen für die Verschachtelung von CLUSTER-Archetypen im SLOT „Untersuchungsbefunde“, um zusätzliche strukturierte Befunde der körperlichen Untersuchung zu erfassen.
+
+Der Archetyp „CLUSTER.exclusion_exam“ kann im SLOT „Untersuchung nicht durchgeführt“ verschachtelt werden, um optional explizite Details zur nicht durchgeführten Untersuchung zu erfassen.
+
+Dient zur Integration narrativer Beschreibungen klinischer Befunde aus bestehenden oder älteren klinischen Systemen in ein archetypisiertes Format mithilfe des Datenelements „Klinische Beschreibung“.">
+            misuse = <"Nicht zur Aufzeichnung der Krankengeschichte verwenden – verwenden Sie spezifische OBSERVATION- und CLUSTER-Archetypen. Zum Beispiel OBSERVATION.story und CLUSTER.symptom_sign.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera en berättande beskrivning och klinisk tolkning av de fynd som observerats under fysisk bröstundersökning.">
+            use = <"Används för registrera en berättande beskrivning och klinisk tolkning av resultaten som observerats under en fysisk bröstundersökning.
+
+Den här arketypen har utformats speciellt för att användas i \"Undersökningsdetaljer\" -SLOT i OBSERVATION.exam eller ACTION.procedure-arketyp, men kan även användas inom andra ENTRY- eller CLUSTER-arketyper, där det är kliniskt lämpligt.
+
+Används för att skapa ett ramverk där CLUSTER-arketyper kan kapslas i SLOT för undersökningsresultat för att registrera ytterligare strukturerade fysiska undersökningsresultat.
+
+CLUSTER.exclusion_exam-arketypen kan kapslas i SLOT-undersökningen för att eventuellt spela in explicita detaljer om att undersökningen inte utförs.
+
+Används för att införliva de berättande beskrivningarna av kliniska fynd i befintliga eller äldre kliniska system i ett arketypiskt format med hjälp av dataelementet 'Klinisk beskrivning'.">
+            misuse = <"Inte utformad för att användas som registrering av klinisk historia - använd specifika OBSERVATION- och CLUSTER-arketyper. Till exempel OBSERVATION.story och CLUSTER.symptom_sign.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en fritekstbeskrivelse og klinisk tolkning av observerte funn ved fysisk undersøkelse av et organsystem eller anatomisk struktur.">
+            use = <"Brukes til å registrere en fritekstbeskrivelse og klinisk tolkning av observerte funn ved fysisk undersøkelse av et spesifisert organsystem eller anatomisk struktur. Denne arketypen består kun av kjerneelementene av mønsteret for undersøkelser, og kan utvides ved hjelp av andre CLUSTER-arketyper eller brukes som grunnlag for undersøkelsesarketyper for spesifikke kroppssystemer eller anatomiske strukturer. 
+
+Eksempler på detaljer som kan beskrives ved hjelp av dette CLUSTER er inspeksjon, palpasjon, auskultasjon, perkusjon og bevegelser i kroppssystemer eller anatomiske strukturer. Undersøkelsen kan støttes av enkle hjelpemidler som stetoskop, otoskop eller reflekshammer. Også funn ved mer avanserte undersøkelser kan registreres her, som ved endoskopi. I de tilfellene vil informasjon om hvilket hjelpemiddel eller utstyr brukt bli registrert i OBSERVATION.exam, elementet \"Detaljer om medisinsk utstyr\", i ACTION.procedure \"Prosedyredetaljer\" eller tilsvarende i egnet ENTRY- eller ACTION-arketype.
+
+Arketypen er laget spesifikt for å brukes i \"Undersøkelsesdetaljer\"-SLOTet i arketypen OBSERVATION.exam, men kan også brukes innen andre ENTRY- og CLUSTER-arketyper der det er klinisk passende.
+
+Denne arketypen kan benyttes for alle typer undersøkelser, alt fra enkle undersøkelser som undersøkelse av et hudområde, inspeksjon av ører og til artroskopi av et kne.
+
+Kan for eksempel nøstes i SLOTet \"Undersøkelsesdetaljer\" i arketypen OBSERVATION.exam (Norsk Funn ved fysisk undersøkelse) for å registrere ytterligere strukturerte funn ved fysiske undersøkelser.
+
+Arketypen CLUSTER.exclusion_exam kan nøstes i SLOTet \"Undersøkelse ikke utført\" der en har behov for å registrere informasjon om at en undersøkelse ikke ble utført.
+
+Brukes for å videreføre fritekstbeskrivelser av kliniske funn fra tidligere systemer inn i et arketypeformat, ved å bruke elementet \"Klinisk beskrivelse\".">
+            misuse = <"Skal ikke brukes til å ta opp frittstående klinisk observasjoner eller testresultater - bruk spesifikke OBSERVATION arketyper, for eksempel OBSERVATION.head_circumference eller OBSERVATION.glasgow_coma_scale.
+
+Skal ikke brukes til å ta opp anamnese - bruk da spesifikke OBSERVATION og CLUSTER arketyper. For eksempel OBSERVATION.story og CLUSTER.symptom_sign.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*To record the findings observed during the physical examination of a body system or anatomical structure. (en)">
+            use = <"*Use to record the observed findings during the physical examination of a body system or anatomical structure.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the \"Procedure detail\" SLOT within the ACTION.procedure archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. Specialisations of this archetype can be used to record examination findings for identified body systems or anatomical structures. If there is no appropriate specialisation available, use this archetype and identify the system or structure being examined using the 'System or structure examined' data element and the location on the body using the 'Body site' data element or the 'Structured body site' SLOT.
+
+Interpretation of the findings, for example 'No abnormality detected' or 'Moderate inflammation present', can be recorded using the 'Clinical interpretation' data element.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"*Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used for recording the results of an imaging examination - use the CLUSTER.imaging_exam family of archetypes for this purpose. (en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a narrative description and clinical interpretation of the findings observed during the physical examination of a single breast.">
+            use = <"Use to record a narrative description and clinical interpretation of the findings observed during the physical examination of a single breast. 
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or ACTION.procedure archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.">
+            misuse = <"Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Examination of a breast
+        items matches {
+            ELEMENT[at0001.1] matches {    -- System or structure examined
+                value matches {
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code matches {[ac0.9000]}    -- System or structure examined (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0.1"] = <
+                text = <"Linke Brust">
+                description = <"Die linke Brust wurde untersucht.">
+            >
+            ["at0.2"] = <
+                text = <"Rechte Brust">
+                description = <"Die rechte Brust wurde untersucht.">
+            >
+            ["at0000.1"] = <
+                text = <"Untersuchungsergebnisse">
+                description = <"Während der körperlichen Untersuchung eines Körpersystems oder einer anatomischen Struktur beobachtete Befunde.">
+            >
+            ["at0001.1"] = <
+                text = <"Untersuchtes System oder untersuchte Struktur">
+                description = <"Identifizierung des untersuchten Körpersystems oder der anatomischen Struktur.">
+                comment = <"Wenn möglich wird die Kodierung des untersuchten Systems oder der untersuchten Struktur mit einer Terminologie bevorzugt.">
+            >
+            ["ac0.9000"] = <
+                text = <"Untersuchtes System oder untersuchte Struktur (synthesised)">
+                description = <"Identifizierung des untersuchten Körpersystems oder der anatomischen Struktur. (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0.1"] = <
+                text = <"Vänster bröst">
+                description = <"Det vänstra bröstet undersöktes.">
+            >
+            ["at0.2"] = <
+                text = <"Höger bröst">
+                description = <"Det högra bröstet undersöktes.">
+            >
+            ["at0000.1"] = <
+                text = <"Undersökning av ett bröst">
+                description = <"Fynd som observerats vid fysisk undersökning av ett bröst.">
+            >
+            ["at0001.1"] = <
+                text = <"System eller struktur undersökt">
+                description = <"Identifiering av det undersökta kroppssystemet eller den anatomiska strukturen.">
+                comment = <"Kodning av systemet eller strukturen som undersöks med en terminologi är att föredra, där det är möjligt.">
+            >
+            ["ac0.9000"] = <
+                text = <"System eller struktur undersökt (synthesised)">
+                description = <"Identifiering av det undersökta kroppssystemet eller den anatomiska strukturen. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000.1"] = <
+                text = <"Undersøkelsesfunn">
+                description = <"Funn ved fysisk undersøkelse av et organsystem eller anatomisk struktur.">
+            >
+            ["at0001.1"] = <
+                text = <"Undersøkt organsystem eller struktur">
+                description = <"Identifisering av det undersøkte organsystemet eller anatomiske strukturen.">
+                comment = <"*Coding of the system or structure examined with a terminology is preferred, where possible. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Left breast (en)">
+                description = <"*The left breast was examined. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Right breast (en)">
+                description = <"*The right breast was examined. (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"Undersøkt organsystem eller struktur (synthesised)">
+                description = <"Identifisering av det undersøkte organsystemet eller anatomiske strukturen. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000.1"] = <
+                text = <"Resultados do exame">
+                description = <"Constatações observadas durante o exame físico de um sistema corporal ou estrutura anatômica.">
+            >
+            ["at0001.1"] = <
+                text = <"Sistema ou estrutura examinada">
+                description = <"Identificação do sistema do corpo examinado ou da estrutura anatômica.">
+                comment = <"A codificação do sistema ou estrutura examinada com uma terminologia é preferível, sempre que possível.">
+            >
+            ["at0.1"] = <
+                text = <"Left breast">
+                description = <"The left breast was examined.">
+            >
+            ["at0.2"] = <
+                text = <"Right breast">
+                description = <"The right breast was examined.">
+            >
+            ["ac0.9000"] = <
+                text = <"Sistema ou estrutura examinada (synthesised)">
+                description = <"Identificação do sistema do corpo examinado ou da estrutura anatômica. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Examination of a breast">
+                description = <"Findings observed during the physical examination of a single breast.">
+            >
+            ["at0001.1"] = <
+                text = <"System or structure examined">
+                description = <"Identification of the examined body system or anatomical structure.">
+                comment = <"Coding of the system or structure examined with a terminology is preferred, where possible.">
+            >
+            ["at0.1"] = <
+                text = <"Left breast">
+                description = <"The left breast was examined.">
+            >
+            ["at0.2"] = <
+                text = <"Right breast">
+                description = <"The right breast was examined.">
+            >
+            ["ac0.9000"] = <
+                text = <"System or structure examined (synthesised)">
+                description = <"Identification of the examined body system or anatomical structure. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["SNOMED-CT"] = <
+            ["at0.1"] = <http://snomed.info/id/80248007>
+            ["at0.2"] = <http://snomed.info/id/73056007>
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.1", "at0.2">
+        >
+    >

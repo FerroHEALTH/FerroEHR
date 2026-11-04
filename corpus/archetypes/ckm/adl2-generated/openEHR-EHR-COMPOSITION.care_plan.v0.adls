@@ -1,0 +1,172 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=65278673-1c39-48fb-b6d7-b70af842a463; build_uid=cfd4c0aa-e83a-4a8f-9967-1b98724a229f)
+    openEHR-EHR-COMPOSITION.care_plan.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"June Marie Knappskog">
+                ["organisation"] = <"Helse Nord IKT + NRUA">
+                ["email"] = <"june.marie.nepstad.knappskog@hnikt.no">
+            >
+            accreditation = <"Nasjonal IKT">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Eline Brader, Heather Leslie, Joost Holslag">
+                ["organisation"] = <"Nedap, Atomica Informatics, Joost Holslag Geneeskunde & Advies">
+                ["email"] = <"eline.brader@nedap.com, heather.leslie@atomicainformatics.com, info@joostholslag.nl">
+            >
+            accreditation = <"Accreditatie">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-04-07">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"13D55DE5073CB5A79B7527DCB7E65582">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å gi et rammeverk som støtter registrering av samtlige aspekter av en behandlingsplan.">
+            keywords = <"behandlingsplan", "plan", "pleieplan", "administrasjonsplan">
+            use = <"Brukes for å gi et rammeverk til støtte for registrering av alle aspekter av en behandlingsplan som skal gjennomføres over en periode.
+
+Denne arketypen kan inneholde kombinasjoner av planlagte aktiviteter, aktiviteter som er i gang eller som er utført, mål og anbefalinger.
+
+Dette inkluderer:
+- INSTRUCTION-arketypen for behandlingsplanen (som en samling av en eller flere aktiviteter) og den korresponderende ACTION-arketypen som registrerer statusen til behandlingsplanen som en helhet.
+- INSTRUCTION-arketypen for hver foreslått aktivitet
+- korresponderende ACTION-arketyper for aktivitetene som registrerer statusen til hver enkelt tilhørende INSTRUCTION-arketype.
+- SECTION.care_plan arketypen er et rammeverkseksempel for klinisk innhold som kan brukes i denne arketypen.">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a persistent and managed list of any combination of archetypes that will support the accurate recording of a Care plan.">
+            keywords = <"care plan, plan, care management plan, management plan", ...>
+            use = <"Use to record a persistent and managed list of any combination of archetypes that will support the accurate recording of a Care plan that may evolve over time.
+
+This archetype will be contain combinations of planned activities, activies that are in progress or have been carried out, goals/objectives, targets, and recommendations.
+
+This care plan may include:
+- the order and activity status for the care plan as a whole, using INSTRUCTION.care_plan_request and ACTION.care_plan;
+- the order for each of the proposed activities, for example INSTRUCTION.service_request or INSTRUCTION.health_education_request;
+- the corresponding ACTION archetypes for each activity, which will indicate the status of each order - for example those that are planned, in progress, completed or cancelled; and
+- optionally, instances of EVALUATION.goal to record the overall goal of the care plan and/or clinical targets for each of activities.
+
+The SECTION.care_plan archetype is an example of a framework for clinical content that could be used within this archetype.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"Om een persistente en beheerde lijst van elke combinatie van archetypen vast te leggen die de nauwkeurige vastlegging van een zorgplan ondersteunt.">
+            keywords = <"zorgplan", "plan", "zorgmanagement plan", "managementplan">
+            use = <"Gebruik om een persistente en beheerde lijst van elke combinatie van archetypen vast te leggen die de nauwkeurige vastlegging van een Zorgplan ondersteunt dat in de loop van de tijd kan evolueren.
+
+Dit archetype bevat combinaties van geplande activiteiten, activiteiten die in uitvoering zijn of zijn uitgevoerd, doelen, doelstellingen en adviezen.
+
+Dit zorgplan kan bevatten:
+- de volgorde en activiteitsstatus voor het zorgplan als geheel, met behulp van INSTRUCTION.care_plan_request en ACTION.care_plan;
+- de volgorde voor elk van de voorgestelde activiteiten, bijvoorbeeld INSTRUCTION.service_request of INSTRUCTION.health_education_request;
+- de overeenkomstige ACTION archetypes voor elke activiteit, die de status van elke opdracht aangeven - bijvoorbeeld diegenen die zijn gepland, in uitvoering, voltooid of geannuleerd; en
+- optioneel, instanties van EVALUATION.goal om het algehele doel van het zorgplan en/of klinische doelen voor elk van de activiteiten vast te leggen.
+
+Het SECTION.care_plan archetype is een voorbeeld van een kader voor klinische inhoud die binnen dit archetype kan worden gebruikt.">
+            misuse = <"">
+        >
+    >
+
+definition
+    COMPOSITION[at0000] matches {    -- Care plan
+        category matches {
+            DV_CODED_TEXT[at9001] matches {
+                defining_code matches {[at9000]}    -- persistent
+            }
+        }
+        context matches {
+            EVENT_CONTEXT[at9002] matches {
+                other_context matches {
+                    ITEM_TREE[at0001] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            allow_archetype CLUSTER[at0002] matches {    -- Extension
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Behandlingsplan">
+                description = <"Et rammeverk for støtte registrering av alle aspekter av en behandlingsplan.">
+            >
+            ["at0002"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller eller formalismer.">
+                comment = <"For eksempel: lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at9000"] = <
+                text = <"* persistent (en)">
+                description = <"* persistent (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Care plan">
+                description = <"A persistent and managed list of any combination of archetypes that will support the accurate recording of a Care plan.">
+            >
+            ["at0002"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at9000"] = <
+                text = <"persistent">
+                description = <"persistent">
+            >
+        >
+        ["nl"] = <
+            ["at0000"] = <
+                text = <"Zorgplan">
+                description = <"Een persistente en beheerde lijst van elke combinatie van archetypen die de nauwkeurige vastlegging van een Zorgplan ondersteunt.">
+            >
+            ["at0002"] = <
+                text = <"Extensie">
+                description = <"Extra informatie benodigd voor het uitbreiden van het model met lokale informatie of voor het in lijn brengen met andere referentiemodellen of formalismen.">
+                comment = <"Bijvoorbeeld: lokale informatie eisen; of extra metadata om in lijn te brengen met FHIR.">
+            >
+            ["at9000"] = <
+                text = <"* persistent (en)">
+                description = <"* persistent (en)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/431>
+        >
+    >

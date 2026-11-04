@@ -1,0 +1,421 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6623f599-ff4e-449c-9824-10d02d81a1be; build_uid=6f0750eb-3841-4589-8ee1-b52a69a32da8)
+    openEHR-EHR-ACTION.vaccination_management.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2023-03-23">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Keisha Barwise, Jamaica", "Candice de Lisser, Jamaica", "Khin Aung, Jamaica">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia heather.leslie@atomicainformatics.com">
+        ["MD5-CAM-1.0.1"] = <"9523401BA4EF46B13CF4CC856FE72A59">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about any activity related to the process of planning, scheduling, administration and notification of a single vaccine item, including deviations from the intended care path such as postponement and cancellation.">
+            keywords = <"vaccination", "administration", "vaccine">
+            use = <"Use to record details about any activity related to the process of planning, scheduling, administration and notification of a single vaccine item, including deviations from the intended care path such as postponement and cancellation. This is achieved by the recording of relevant data elements about specific activities, each of which are described as the 'Pathway' careflow steps in this archetype.
+
+This archetype is intended to be used to record a record of progress of vaccination against any planned vaccination. 
+
+Within the context of a Vaccination List, this archetype will be used to record only what vaccination has been administered.
+
+Timings related to vaccine management can be managed in one of two ways:
+- Using the reference model - the time for performance of any pathway step will use the ACTION time attribute for each step.
+- Archetyped data elements - the 'Scheduled date/time' data element is intended to record the time when the vaccine item was intended to be administered. Note: the corresponding ACTION time attribute for the Scheduled pathway step will record the time that the clinical activity was scheduled into a system, not the intended date/time on which the activity is intended to be carried out.
+
+In practice, overarching care plans can incorporate age-, gender- and clinical context-appropriate vaccination plans, usually generated on the basis of accepted local vaccination protocols or guidelines and recorded in the health record in a variety of ways:
+- using a single order that describes an entire vaccination schedule appropriate for the individual's age, gender and clinical context;
+- a single order for a course of multiple vaccinations (primary course +/- boosters) for a target disease; or
+- one or more orders that each describe a single individual vaccination. 
+
+Some travel-related vaccinations may require a clinician to generate a prescription for a vaccine that is not commonly available at the vaccination centre - this will require generation of a prescription, using the INSTRUCTION.medication_order archetypes. 
+
+Recording information using this ACTION archetype indicates that some sort of activity has actually occurred; this will most commonly be the administration of the vaccine item itself, be used to record cancellation of a vaccination due to withdrawal of consent. When the activities follow the usual Planned > Scheduled > Active > Completed states, recording a 'Reason' is not usually necessary - rather, it is usually used to record the reason for deviation from the typical care pathway.">
+            misuse = <"Not to be used to record the order for a vaccination or a prescription for a vaccination - use INSTRUCTION.medication for this purpose.
+
+Not to be used to record whether an individual is up-to-date with their vaccination for a target disease - use EVALUATION.vaccine_summary.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ACTION[at0000] matches {    -- Vaccination management
+        description matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Vaccination item
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Dose amount
+                        value matches {
+                            DV_QUANTITY[at9007]
+                        }
+                    }
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Route
+                        value matches {
+                            DV_TEXT[at9008]
+                        }
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Body site
+                        value matches {
+                            DV_TEXT[at9009]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0009] matches {    -- Structured body site
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_relative(-[a-zA-Z0-9_]+)*\.v2\..*/}
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Manufacturer
+                        value matches {
+                            DV_TEXT[at9010]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Batch ID
+                        value matches {
+                            DV_TEXT[at9011]
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Expiry
+                        value matches {
+                            DV_DATE_TIME[at9012]
+                        }
+                    }
+                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Sequence
+                        value matches {
+                            DV_COUNT[at9013]
+                        }
+                    }
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Date scheduled
+                        value matches {
+                            DV_DATE_TIME[at9014]
+                        }
+                    }
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Date administered
+                        value matches {
+                            DV_DATE_TIME[at9015]
+                        }
+                    }
+                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Patient guidance
+                        value matches {
+                            DV_TEXT[at9016]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0018] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Reason
+                        value matches {
+                            DV_TEXT[at9017]
+                        }
+                    }
+                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9018]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0020] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Extension
+                        value matches {
+                            DV_TEXT[at9019]
+                        }
+                    }
+                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Vaccination protocol
+                        value matches {
+                            DV_TEXT[at9020]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0035] matches {    -- Place of vaccination
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                }
+            }
+        }
+        ism_transition matches {
+            ISM_TRANSITION[at0024] matches {    -- Vaccine recommended
+                current_state matches {
+                    DV_CODED_TEXT[at9021] matches {
+                        defining_code matches {[at9000]}    -- planned
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9022] matches {
+                        defining_code matches {[at0024]}    -- Vaccine recommended
+                    }
+                }
+            }
+            ISM_TRANSITION[at0025] matches {    -- Prescription issued
+                current_state matches {
+                    DV_CODED_TEXT[at9023] matches {
+                        defining_code matches {[at9000]}    -- planned
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9024] matches {
+                        defining_code matches {[at0025]}    -- Prescription issued
+                    }
+                }
+            }
+            ISM_TRANSITION[at0026] matches {    -- Vaccine appointment booked
+                current_state matches {
+                    DV_CODED_TEXT[at9025] matches {
+                        defining_code matches {[at9001]}    -- scheduled
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9026] matches {
+                        defining_code matches {[at0026]}    -- Vaccine appointment booked
+                    }
+                }
+            }
+            ISM_TRANSITION[at0027] matches {    -- Vaccine administration postponed
+                current_state matches {
+                    DV_CODED_TEXT[at9027] matches {
+                        defining_code matches {[at9002]}    -- postponed
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9028] matches {
+                        defining_code matches {[at0027]}    -- Vaccine administration postponed
+                    }
+                }
+            }
+            ISM_TRANSITION[at0028] matches {    -- Vaccine administration cancelled
+                current_state matches {
+                    DV_CODED_TEXT[at9029] matches {
+                        defining_code matches {[at9003]}    -- cancelled
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9030] matches {
+                        defining_code matches {[at0029]}    -- Vaccine administration cancelled
+                    }
+                }
+            }
+            ISM_TRANSITION[at0030] matches {    -- Vaccine administration administered
+                current_state matches {
+                    DV_CODED_TEXT[at9031] matches {
+                        defining_code matches {[at9004]}    -- active
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9032] matches {
+                        defining_code matches {[at0031]}    -- Vaccine administration administered
+                    }
+                }
+            }
+            ISM_TRANSITION[at0032] matches {    -- Vaccine administration completed
+                current_state matches {
+                    DV_CODED_TEXT[at9033] matches {
+                        defining_code matches {[at9005]}    -- complete
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9034] matches {
+                        defining_code matches {[at0032]}    -- Vaccine administration completed
+                    }
+                }
+            }
+            ISM_TRANSITION[at0033] matches {    -- Vaccine notification completed
+                current_state matches {
+                    DV_CODED_TEXT[at9035] matches {
+                        defining_code matches {[at9005]}    -- complete
+                    }
+                }
+                careflow_step matches {
+                    DV_CODED_TEXT[at9036] matches {
+                        defining_code matches {[at0033]}    -- Vaccine notification completed
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Vaccination management">
+                description = <"Any activity related to the process of planning, scheduling, administration and notification of a single vaccine item, including deviations from the intended care path such as postponement and cancellation.">
+            >
+            ["at0002"] = <
+                text = <"Vaccination item">
+                description = <"Trade name or class of the vaccine which is the focus of the activity.">
+                comment = <"For example: 
+Coding of the vaccine with a terminology is strongly recommended, where possible. The extent of coding may vary from the name or class of the vaccine item through to structured details about the actual vaccine product & dose.">
+            >
+            ["at0003"] = <
+                text = <"Batch ID">
+                description = <"The identifier assigned to the batch by the manufacturer during production.">
+            >
+            ["at0004"] = <
+                text = <"Manufacturer">
+                description = <"The manufacturer of the vaccine.">
+                comment = <"Comment: For example: 'Pfizer' or 'Johnson & Johnson'.">
+            >
+            ["at0005"] = <
+                text = <"Expiry">
+                description = <"The expiry date of the vaccine, as provided by the manufacturer.">
+            >
+            ["at0007"] = <
+                text = <"Route">
+                description = <"The route of administraion of the vaccine.">
+                comment = <"For example: 'subcutaneous', 'intramuscular' or 'oral'. Coding of the route of administration with a terminology is preferred, where possible. ">
+            >
+            ["at0008"] = <
+                text = <"Body site">
+                description = <"Name of the site of vaccine administration.">
+                comment = <"Comment: For example: 'left deltoid'. Coding of the body site with a terminology is preferred, where possible.">
+            >
+            ["at0009"] = <
+                text = <"Structured body site">
+                description = <"Structured description of the site of vaccine administration.">
+            >
+            ["at0010"] = <
+                text = <"Dose amount">
+                description = <"The amount of vaccine administered at one time.">
+                comment = <"For example: 1 mg, 1.5 ml, 0.125 g; or 1-2 ml, 12.5-20.5 mg.">
+            >
+            ["at0014"] = <
+                text = <"Sequence">
+                description = <"The sequence of vaccine administration in a series of administrations.">
+                comment = <"For example: '2'; 'second booster' or '2 of 3'.">
+            >
+            ["at0015"] = <
+                text = <"Date administered">
+                description = <"The date and/or time the vaccination was administered.">
+            >
+            ["at0016"] = <
+                text = <"Date scheduled">
+                description = <"The date and/or time the vaccination is scheduled for administration.">
+            >
+            ["at0017"] = <
+                text = <"Reason">
+                description = <"Reason that the pathway step for the identified vaccination was carried out.">
+                comment = <"It is not necessary to record the reason for each pathway step that is expected. Rather this data element is intended to capture the reason for any divergence from a typical vaccination process, such as 'Postponed' due to 'Patient had a fever', or a scheduled administration as part of a course may be 'Cancelled' due to 'Previous adverse reaction'. Note: The clinical indication for triggering the vaccination process may be recorded using the INSTRUCTION.medication archetype.">
+            >
+            ["at0018"] = <
+                text = <"Additional details">
+                description = <"Further structured details about vaccination management, possibly specific to a single pathway step.">
+            >
+            ["at0019"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the activity or pathway step not captured in other fields, including details of any variance between the intended activity and the activity actually carried out.">
+            >
+            ["at0021"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0022"] = <
+                text = <"Patient guidance">
+                description = <"Any guidance, instructions or advice given to the individual or carer at the time of the pathway step.">
+            >
+            ["at0023"] = <
+                text = <"Vaccination protocol">
+                description = <"Identification of the vaccine schedule triggering this vaccination activity.">
+                comment = <"For example: 'National Immunisation Program schedule'; or 'Catch up schedule'.">
+            >
+            ["at0024"] = <
+                text = <"Vaccine recommended">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Prescription issued">
+                description = <"A prescription for the vaccine item has been supplied to the individual for dispensing from a pharmacy.">
+                comment = <"Usually required for vaccines that are not part of typical vaccine schedules, such as infrequently administered travel-related vaccines.">
+            >
+            ["at0026"] = <
+                text = <"Vaccine appointment booked">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Vaccine administration postponed">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Vaccine administration cancelled">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Vaccine administration cancelled">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Vaccine administration administered">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Vaccine administration administered">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Vaccine administration completed">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Vaccine notification completed">
+                description = <"Notification of vaccination has been sent to a vaccine registry or similar authority.">
+            >
+            ["at0035"] = <
+                text = <"Place of vaccination">
+                description = <"Organisation where the vaccination was administered or holds the vaccination record.">
+            >
+            ["at9004"] = <
+                text = <"active">
+                description = <"active">
+            >
+            ["at9000"] = <
+                text = <"planned">
+                description = <"planned">
+            >
+            ["at9002"] = <
+                text = <"postponed">
+                description = <"postponed">
+            >
+            ["at9003"] = <
+                text = <"cancelled">
+                description = <"cancelled">
+            >
+            ["at9001"] = <
+                text = <"scheduled">
+                description = <"scheduled">
+            >
+            ["at9005"] = <
+                text = <"complete">
+                description = <"complete">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9004"] = <http://openehr.org/id/245>
+            ["at9000"] = <http://openehr.org/id/526>
+            ["at9002"] = <http://openehr.org/id/527>
+            ["at9003"] = <http://openehr.org/id/528>
+            ["at9001"] = <http://openehr.org/id/529>
+            ["at9005"] = <http://openehr.org/id/532>
+        >
+    >

@@ -1,0 +1,988 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=8be783ed-7a69-4f43-8816-978891a472df; build_uid=40714ef5-9c55-4145-bf44-22e2d11c2444)
+    openEHR-EHR-ADMIN_ENTRY.episode_institution.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Pascal Biermann">
+                ["organisation"] = <"Carl von Ossietzky Universität Oldenburg">
+                ["email"] = <"pascal.biermann@uni-oldenburg.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke, Mikkel Johan Gaup Grønmo, Vebjørn Arntzen, Martin Milde">
+                ["organisation"] = <"Helse Vest IKT AS, Helse Nord IKT, Oslo University Hospital">
+                ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no, mikkel.johan.gaup.gronmo@hnikt.no, varntzen@ous-hf.no, martin.milde@helse-vest-ikt.no">
+            >
+            accreditation = <"Nasjonal IKT">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Laura Moral Lopez">
+                ["organisation"] = <"Sistema de Salut de Catalunya">
+                ["email"] = <"lauramoral@catsalut.cat">
+            >
+            other_details = <
+                ["other_contributors"] = <"Tradcera">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Laura Moral Lopez">
+                ["organisation"] = <"Sistema de Salut de Catalunya">
+                ["email"] = <"lauramoral@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2020-03-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"71A668DE9FA7D8F303D4DEE8D5EAA28D">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Erfassung administrativer Details über den Zeitraum einer Patientenversorgung, zwischen einer formellen oder statistischen Aufnahme und einer formellen oder statistischen Entlassung, welche nur durch eine Versorgungsform der Gesundheitseinrichtung charakterisiert ist.
+">
+            keywords = <"Institutionsaufenthalt, Aufenthalt, Krankenhausaufenthalt, Institutioneller Aufenthalt", ...>
+            use = <"Wird verwendet zur Erfassung administrativer Details über den Zeitraum einer Patientenversorgung, zwischen einer formellen oder statistischen Aufnahme und einer formellen oder statistischen Entlassung, welche nur durch eine Versorgungsform der Gesundheitseinrichtung charakterisiert ist.">
+            misuse = <"">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere administrative detaljer om en periode med pasientbehandling, som starter når en helseinstitusjon eller tjeneste tar medisinsk og/eller juridisk ansvar for pasienten, og som avsluttes ved en formell eller statistisk utskriving. Denne perioden er definert av kun én type helsehjelp fra helseinstitusjonen/tjenesten.">
+            keywords = <"Innleggelse, utskrivelse, besøk, opphold", ...>
+            use = <"Brukes for å registrere administrative detaljer om en periode med pasientbehandling, som starter når en helseinstitusjon eller tjeneste tar medisinsk og/eller juridisk ansvar for pasienten, og som avsluttes ved en formell eller statistisk utskriving. Denne perioden er definert av kun én type helsehjelp fra helseinstitusjonen/tjenesten.
+
+Innen konteksten av denne arketypen tolkes \"utskrivelse\" bredt, og inkluderer situasjoner som avhengig av lokalt regelverk ikke vanligvis regnes som utskrivelser, for eksempel dødsfall i institusjonen, eller nyfødte som sendes hjem.">
+            misuse = <"Brukes ikke for å registrere enkeltmøter med en pasient der institusjonen ikke tar formelt medisinsk og/eller juridisk ansvar for pasienten, som for eksempel ved polikliniske konsultasjoner. Ved tidspunktet da denne arketypen ble opprettet var det ikke avklart hvilken arketype som bør benyttes for dette formålet.
+
+Brukes ikke for å registrere en planlagt innleggelse til en helseinstitusjon eller tjenestene. Ved tidspunktet da denne arketypen ble opprettet var det ikke avklart hvilken arketype som bør benyttes for dette formålet.
+">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record administrative details about a period of admitted patient care between a formal or statistical admission and a discharge, characterised by only one type of care from a healthcare institution or service.">
+            keywords = <"Admission, discharge, separation, visit, stay, hospitalization", ...>
+            use = <"To record administrative details about a period of admitted patient care, beginning when a healthcare institution or service assumes medical and/or legal responsibility for the patient, and ending at formal or statistical discharge. This period is defined by a single type of care provided by the institution/service.
+
+Within the context of this archetype, discharge is interpreted broadly, and includes situations that, depending on local rules, may not be considered a discharge, such as death in the institution, or newborns released from care.">
+            misuse = <"Not to be used for a single meeting with a patient where the institution does not take formal medical and/or legal responsibility of the patient, such as outpatient visits. At the time of authoring it is not yet determined which archetype should be used for this purpose.
+
+Not to be used for a planned admission to a healthcare institution or service. At the time of authoring it is not yet determined which archetype should be used for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"Registrare i dettagli amministrativi di un periodo di cura del paziente ricoverato tra un ricovero formale o statistico e una separazione formale o statistica, caratterizzata da un solo tipo di cura da un'istituzione sanitaria.">
+            use = <"Utilizzare per registrare i dettagli amministrativi relativi a un periodo di cura del paziente ricoverato tra un ricovero formale o statistico e una separazione formale o statistica, caratterizzata da un solo tipo di cura di un'istituzione sanitaria.">
+            misuse = <"">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Registrar dades administratives sobre un període d’atenció als pacients ingressats entre un ingrés formal o estadístic i una alta formal o estadística, caracteritzats només per un tipus d’atenció d’un centre sanitari.">
+            use = <"Utilitzar per a registrar dades administratives sobre un període d’atenció als pacients ingressats entre un ingrés formal o estadístic i una alta formal o estadística, caracteritzats només per un tipus d’atenció d’un centre sanitari.">
+            misuse = <"">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Registrar datos administrativos sobre un periodo de atención a los pacientes ingresados entre un ingreso formal o estadístico y una alta formal o estadística, caracterizados únicamente por un tipo de atención en una institución sanitaria.">
+            use = <"Utilizar para registrar datos administrativos sobre un periodo de atención a los pacientes ingresados entre un ingreso formal o estadístico, y una alta formal o estadística, caracterizado únicamente por un tipo de atención en una institución sanitaria.">
+            misuse = <"">
+        >
+    >
+
+definition
+    ADMIN_ENTRY[at0000] matches {    -- Admission
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Admission ID
+                        value matches {
+                            DV_IDENTIFIER[at9005]
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Admission date
+                        value matches {
+                            DV_DATE_TIME[at9000]
+                        }
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Reason for admission
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Admission category
+                        value matches {
+                            DV_TEXT[at9007]
+                        }
+                    }
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Source category
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0013] matches {    -- Source
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.address(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Referral ID
+                        value matches {
+                            DV_IDENTIFIER[at9019]
+                            DV_TEXT[at9020]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0027] matches {    -- Referring clinician
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Medical record number
+                        value matches {
+                            DV_IDENTIFIER[at9009]
+                            DV_TEXT[at9010]
+                        }
+                    }
+                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Health insurance category
+                        value matches {
+                            DV_TEXT[at9011]
+                        }
+                    }
+                    ELEMENT[at0021] matches {    -- Attending unit
+                        value matches {
+                            DV_TEXT[at9012]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0015] matches {    -- Attending clinicians
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    CLUSTER[at0018] matches {    -- Physical location
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0019] occurrences matches {0..1} matches {    -- Location onset
+                                value matches {
+                                    DV_DATE_TIME[at9013]
+                                }
+                            }
+                            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Location category
+                                value matches {
+                                    DV_TEXT[at9014]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0017] matches {    -- Location
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.address(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                            }
+                            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Ward
+                                value matches {
+                                    DV_TEXT[at9015]
+                                }
+                            }
+                            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Room
+                                value matches {
+                                    DV_TEXT[at9016]
+                                }
+                            }
+                            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Bed
+                                value matches {
+                                    DV_TEXT[at9017]
+                                }
+                            }
+                            ELEMENT[at0020] occurrences matches {0..1} matches {    -- Location end
+                                value matches {
+                                    DV_DATE_TIME[at9018]
+                                }
+                            }
+                        }
+                    }
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Discharge date
+                        value matches {
+                            DV_DATE_TIME[at9001]
+                        }
+                    }
+                    ELEMENT[at0006] matches {    -- Outcome
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Destination category
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0012] matches {    -- Destination
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.address(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0011] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9008]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"episode_institution">
+                description = <"Zur Erfassung administrativer Details über den Zeitraum einer Patientenversorgung, zwischen einer formellen oder statistischen Aufnahme und einer formellen oder statistischen Entlassung, welche nur durch eine Versorgungsform der Gesundheitseinrichtung charakterisiert ist.">
+            >
+            ["at0002"] = <
+                text = <"Entlassungsdatum">
+                description = <"Das Datum und/oder die Uhrzeit der formellen oder statistischen institutionellen Entlassung.">
+                comment = <"Zum Beispiel: Überführung in häusliche Pflege oder eine andere Institution, Todeszeitpunkt. Für die Dokumentation des Todeszeitpunkts sollte CLUSTER.death_details genutzt werden.">
+            >
+            ["at0003"] = <
+                text = <"Kategorie des Zielortes der Entlassung">
+                description = <"Die Art der Unterkunft, in welche die Person entlassen wurde.">
+                comment = <"Zum Beispiel: nach Hause, Krankenhaus, Pflegeheim, Rehabilitierungszentrum.">
+            >
+            ["at0004"] = <
+                text = <"Aufnahmedatum">
+                description = <"Das Datum und/oder Uhrzeit der formellen oder statistischen institutionellen Aufnahme.">
+            >
+            ["at0006"] = <
+                text = <"Outcome">
+                description = <"Outcome des Aufenthaltes zum Zeitpunkt der Entlassung.">
+                comment = <"Zum Beispiel: genesen/nicht genesen/tot">
+            >
+            ["at0007"] = <
+                text = <"Zuweiserkategorie">
+                description = <"Der Typ der zuweisenden Einheit vor der Aufnahme.">
+                comment = <"Zum Beispiel: Krankenhaus, gemeinschaftliche Wohneinrichtung, Pflegeheim. Wenn möglich sollte die Zuweiserkategorie mittels einer Terminologie kodiert werden.">
+            >
+            ["at0008"] = <
+                text = <"Aufnahmegrund">
+                description = <"Der Anlass, aus dem die Person zur Versorgung aufgenommen wurde.">
+                comment = <"Zum Beispiel: Kurzzeitpflege, Rehabilitation, Isolierung aufgrund einer Infektion. Bei Bedarf sollten Diagnosen per EVAL.problem_diagnosis und dem verschachteltem CLUSTER.problem_qualifier Archetyp dokumentiert werden.">
+            >
+            ["at0009"] = <
+                text = <"Aufnahmekategorie">
+                description = <"Die Art der Aufnahme.">
+                comment = <"Zum Beispiel: ambulante Operation, elektive Operation oder Notfall">
+            >
+            ["at0010"] = <
+                text = <"Kommentar">
+                description = <"Weitere Informationen zum Aufenthalt, soweit noch nicht in anderen Feldern erfasst.">
+            >
+            ["at0011"] = <
+                text = <"Zusätzliche Details">
+                description = <"Zusätzliche strukturierte Details über den Aufenthalt in der Institution.">
+                comment = <"Zum Beispiel:">
+            >
+            ["at0012"] = <
+                text = <"Zielort der Entlassung">
+                description = <"Die Organisation oder Adresse, an welche die Person entlassen wurde.">
+            >
+            ["at0013"] = <
+                text = <"Zuweiser">
+                description = <"Die Organisation oder Adresse der Person vor der Aufnahme.">
+            >
+            ["at0014"] = <
+                text = <"Versorgungsfall ID">
+                description = <"Eine Kennung zur Identifizierung des Versorgungsfalles.">
+            >
+            ["at0015"] = <
+                text = <"Behandelnde Mediziner">
+                description = <"Angaben zu den Beratenden und zu den behandelnden Mediziner*innen während des Aufenthaltes.">
+            >
+            ["at0016"] = <
+                text = <"Nummer der Krankenakte">
+                description = <"Identifizierende Nummer der Krankenakte.">
+            >
+            ["at0017"] = <
+                text = <"Standort">
+                description = <"Eine Organisation, physische Adresse oder strukturierte Adresse, welche den Standort des Aufenthaltes beschreibt.">
+                comment = <"Zum Beispiel: 2. Etage, Haus I, Städtisches Krankenhaus">
+            >
+            ["at0018"] = <
+                text = <"Standort">
+                description = <"Der physische Standort der Person innerhalb der Institution während des Aufenthaltes.">
+            >
+            ["at0019"] = <
+                text = <"Aufnahme am Standort">
+                description = <"Das Datum, an dem die Person an einen anderen Standort innerhalb der Institution verlegt wurde.">
+                comment = <"Zum Beispiel: Das Datum einer Stations- oder Bettenverlegung.">
+            >
+            ["at0020"] = <
+                text = <"Standortentlassung">
+                description = <"Das Datum der Entlassung von dem institutionsinternen Standort.">
+            >
+            ["at0021"] = <
+                text = <"Behandelnde Organisationseinheit">
+                description = <"Die für die Behandlung verantwortliche Organisationseinheit.">
+                comment = <"Zum Beispiel: Orthopädie">
+            >
+            ["at0022"] = <
+                text = <"Station">
+                description = <"Der Name der Station innerhalb der Institution, auf der sich die Person befand.">
+            >
+            ["at0023"] = <
+                text = <"Zimmer">
+                description = <"Der Name des Zimmers innerhalb der Institution, in dem sich die Person befand.">
+            >
+            ["at0024"] = <
+                text = <"Bett">
+                description = <"Die Bezeichnung des Bettes innerhalb der Institution, welches der Person zugewiesen war.">
+            >
+            ["at0025"] = <
+                text = <"Standortkategorie">
+                description = <"Die Art des Standortes.">
+                comment = <"Zum Beispiel: Intensivstation, Intermediate Care Unit">
+            >
+            ["at0026"] = <
+                text = <"Krankenversicherungskategorie">
+                description = <"Anzuwendender Krankenversicherungstyp für diesen Aufenthalt.">
+            >
+            ["at0027"] = <
+                text = <"Überweisender Mediziner">
+                description = <"Details zu den Mediziner*innen, die für die Überweisung der Person aus dem Zuweiser verantwortlich sind.">
+            >
+            ["at0028"] = <
+                text = <"*DV_IDENTIFIER (en)">
+                description = <"">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Innleggelse">
+                description = <"Administrative detaljer om oppholdet mellom en formell eller statistisk innleggelse og formell eller statistisk utskrivelse, karakterisert ved at det utføres kun én type helsehjelp fra en helseinstitusjon eller -tjeneste.">
+            >
+            ["at0002"] = <
+                text = <"Utskrivelsesdato">
+                description = <"Dato eller dato/tid for den formelle eller statistiske utskrivelsen fra institusjonen eller tjenesten.">
+                comment = <"For eksempel: overført til pleiehjem eller annen institusjon, eller dødsdato.
+En formell dødsdato bør registreres i CLUSTER.death_details.">
+            >
+            ["at0003"] = <
+                text = <"Utskrevet til">
+                description = <"Typen bolig hvor individet bodde på etter utskrivelse.">
+                comment = <"For eksempel hjemme, sykehus, sykehjem eller rehabiliteringshjem.">
+            >
+            ["at0004"] = <
+                text = <"Innleggelsesdato">
+                description = <"Dato eller dato/tid for den formelle eller statistiske innleggelsen i institusjonen eller tjenesten.">
+            >
+            ["at0006"] = <
+                text = <"Utfall">
+                description = <"Utfall for individet etter utskrivelse.">
+                comment = <"For eksempel bedring/ingen bedring/død.">
+            >
+            ["at0007"] = <
+                text = <"Innlagt fra kategori">
+                description = <"Type bosted individet bodde på før innleggelsen.">
+                comment = <"For eksempel sykehus, ordinær bolig eller sykehjem. \"Innlagt fra\" bør kodes med en terminologi der det er mulig.">
+            >
+            ["at0008"] = <
+                text = <"Innleggelsesårsak">
+                description = <"Årsaken til at individet ble innlagt ved en institusjon eller tjeneste.">
+                comment = <"For eksempel avlastning, rehabilitering, eller isolering som følge av infeksjon.
+Diagnoser bør registreres ved bruk av EVALUATION.problem_diagnosis-arketypen, og eventuelt med CLUSTER.problem_qualifier ved behov.">
+            >
+            ["at0009"] = <
+                text = <"Innleggelseskategori">
+                description = <"Kategorien av innleggelse.">
+                comment = <"For eksempel dagkirurgi, elektiv kirurgi eller øyeblikkelig hjelp.">
+            >
+            ["at0010"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om innleggelsen som ikke fanges opp i andre felt.">
+            >
+            ["at0011"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterlige strukturerte detaljer om innleggelsen.">
+            >
+            ["at0012"] = <
+                text = <"Destinasjon">
+                description = <"Organisasjon eller adressen for individet etter innleggelsen.">
+            >
+            ["at0013"] = <
+                text = <"Innlagt fra">
+                description = <"Organisasjonen eller adressen til individet fra før innleggelsen.">
+            >
+            ["at0014"] = <
+                text = <"Innleggelses-ID">
+                description = <"En identifikator for innleggelsen.">
+            >
+            ["at0015"] = <
+                text = <"Ansvarlige klinikere">
+                description = <"Detaljer om klinikerne som er ansvarlige for behandlingen.">
+            >
+            ["at0016"] = <
+                text = <"Journalnummer">
+                description = <"En identifikator som unikt identifiserer individets pasientjournal.">
+            >
+            ["at0017"] = <
+                text = <"Lokasjon">
+                description = <"En organisasjon, fysisk adresse eller strukturert adresse som beskriver hvor individet befant seg under innleggelsen.">
+                comment = <"For eksempel 2. etg, Glassblokkene, Sykehuset.">
+            >
+            ["at0018"] = <
+                text = <"Fysisk lokasjon">
+                description = <"Den fysiske lokasjonen av individet i institusjonen eller tjenesten.">
+            >
+            ["at0019"] = <
+                text = <"Lokasjon start">
+                description = <"Dato for når individet ble overført til den interne lokasjonen.">
+                comment = <"For eksempel datoen da individet ble flyttet til en ny sengepost eller seng.">
+            >
+            ["at0020"] = <
+                text = <"Lokasjon slutt">
+                description = <"Dato for når individet ble flyttet fra den interne lokasjonen.">
+            >
+            ["at0021"] = <
+                text = <"Ansvarlig enhet">
+                description = <"Klinisk enhet som er ansvarlig for behandlingen av individet.">
+                comment = <"For eksempel \"Ortopedisk sengepost A\".">
+            >
+            ["at0022"] = <
+                text = <"Sengepost">
+                description = <"Navnet på sengeposten eller avdelingen innenfor institusjonen eller tjenesten hvor individet oppholdt seg.">
+            >
+            ["at0023"] = <
+                text = <"Rom">
+                description = <"Navnet på rommet innenfor institusjonen eller tjenesten hvor individet oppholdt seg.">
+            >
+            ["at0024"] = <
+                text = <"Seng">
+                description = <"Navn på sengen innenfor institusjonen eller tjenesten der individet oppholdt seg.">
+            >
+            ["at0025"] = <
+                text = <"Lokasjonskategori">
+                description = <"Typen lokasjon.">
+                comment = <"For eksempel intensiv eller akuttpost.">
+            >
+            ["at0026"] = <
+                text = <"Helseforsikringskategori">
+                description = <"Type helseforsikring/utgiftsdekning som gjelder for individet.">
+            >
+            ["at0027"] = <
+                text = <"Henviser">
+                description = <"Detaljer om ansvarlig kliniker som har henvist individet.">
+            >
+            ["at0028"] = <
+                text = <"Henvisnings ID">
+                description = <"En identifikator for en henvisning.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Admission">
+                description = <"Administrative details about a period of admitted patient care between a formal or statistical admission and a discharge, characterised by only one type of care from a healthcare institution or service.">
+            >
+            ["at0002"] = <
+                text = <"Discharge date">
+                description = <"The date or date-time of the formal or statistical end of the admission.">
+                comment = <"For example: transfer of care to home or another institution; or date of death.
+Formal recording of the date of death should use CLUSTER.death_details.">
+            >
+            ["at0003"] = <
+                text = <"Destination category">
+                description = <"The type of residence where the individual resided following discharge.">
+                comment = <"For example: home; hospital; nursing home; or rehabilitation hospital.">
+            >
+            ["at0004"] = <
+                text = <"Admission date">
+                description = <"The date or the date-time of the formal or statistical admission to the institution or service.">
+            >
+            ["at0006"] = <
+                text = <"Outcome">
+                description = <"Outcome for the individual following discharge.">
+                comment = <"For example: recovered/not recovered/death.">
+            >
+            ["at0007"] = <
+                text = <"Source category">
+                description = <"The type of residence where the individual resided prior to admission.">
+                comment = <"For example: hospital, community, or nursing home. 'Admission source' should be coded with a terminology, where possible.">
+            >
+            ["at0008"] = <
+                text = <"Reason for admission">
+                description = <"The reason why the individual was admitted to an institution or service.">
+                comment = <"For example: respite; rehabilitation; or infection isolation.
+Diagnosies should be recorded using the EVAL.problem_diagnosis archetype plus the nested CLUSTER.problem_qualifier, if necessary.">
+            >
+            ["at0009"] = <
+                text = <"Admission category">
+                description = <"The type of admission.">
+                comment = <"For example: day surgery; elective surgery or emergency department. ">
+            >
+            ["at0010"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the admission, not captured in other fields.">
+            >
+            ["at0011"] = <
+                text = <"Additional details">
+                description = <"Additional structured details about the admission.">
+            >
+            ["at0012"] = <
+                text = <"Destination">
+                description = <"The organisation or address for the individual after the admission.">
+            >
+            ["at0013"] = <
+                text = <"Source">
+                description = <"The organisation or address for the individual prior to the admission.">
+            >
+            ["at0014"] = <
+                text = <"Admission ID">
+                description = <"An identifier for the admission.">
+            >
+            ["at0015"] = <
+                text = <"Attending clinicians">
+                description = <"Details about the consultant and attending clinicians responsible for care.">
+            >
+            ["at0016"] = <
+                text = <"Medical record number">
+                description = <"Identification of the medical record number.">
+            >
+            ["at0017"] = <
+                text = <"Location">
+                description = <"An organisation, physical address or structured address describing where the individual was located while admitted.">
+                comment = <"For example: 2nd floor, Moorhouse wing, Turnbull building, General Hospital.">
+            >
+            ["at0018"] = <
+                text = <"Physical location">
+                description = <"The physical location of the individual within the institution or service.">
+            >
+            ["at0019"] = <
+                text = <"Location onset">
+                description = <"The date the individual was moved to the internal location.">
+                comment = <"For example, the date moved to a new ward or bed.">
+            >
+            ["at0020"] = <
+                text = <"Location end">
+                description = <"The date the individual was moved from the internal location.">
+            >
+            ["at0021"] = <
+                text = <"Attending unit">
+                description = <"The clinical service unit assigned for care of the individual.">
+                comment = <"For example: Orthopaedic A unit.">
+            >
+            ["at0022"] = <
+                text = <"Ward">
+                description = <"The name of the ward within the institution or service where the individual was located.">
+            >
+            ["at0023"] = <
+                text = <"Room">
+                description = <"The name of the room within the institution or service where the individual was located.">
+            >
+            ["at0024"] = <
+                text = <"Bed">
+                description = <"The name of the bed within the institution or service where the individual was located.">
+            >
+            ["at0025"] = <
+                text = <"Location category">
+                description = <"The type of location.">
+                comment = <"For example: Intensive care unit; high dependency unit.">
+            >
+            ["at0026"] = <
+                text = <"Health insurance category">
+                description = <"The type of health insurance applicable.">
+            >
+            ["at0027"] = <
+                text = <"Referring clinician">
+                description = <"Details about the clinicians responsible for referring the individual from the Source.">
+            >
+            ["at0028"] = <
+                text = <"Referral ID">
+                description = <"Identifier of the referral.">
+            >
+        >
+        ["it"] = <
+            ["at0000"] = <
+                text = <"episode_institution">
+                description = <"Dettagli amministrativi su un periodo di cura del paziente ricoverato tra un ricovero formale o statistico e una separazione formale o statistica, caratterizzata da un solo tipo di cura da un'istituzione sanitaria. ">
+            >
+            ["at0002"] = <
+                text = <"Data di dimissione">
+                description = <"*The date and/or time of the formal or statistical end of the admission to the institution. (en)">
+                comment = <"*For example: transfer of care to home or another institution; or date of death.
+Formal recording of the date of death should use CLUSTER.death_details. (en)">
+            >
+            ["at0003"] = <
+                text = <"Categoria destinazione">
+                description = <"*The type of residence where the individual resided after the episode of care. (en)">
+                comment = <"Ad esempio: casa, ospedale, casa di cura o ospedale di riabilitazione. ">
+            >
+            ["at0004"] = <
+                text = <"Data di ingresso">
+                description = <"*The date and/or time of the formal or statistical admission to the institution. (en)">
+            >
+            ["at0006"] = <
+                text = <"Esito">
+                description = <"*Outcome for the individual at the end of the episode of care. (en)">
+                comment = <"Per esempio: recuperato/non recuperato/morte.">
+            >
+            ["at0007"] = <
+                text = <"*Source category (en)">
+                description = <"*The category of residence where the individual resided prior to admission. (en)">
+                comment = <"*For example: hospital, community, or nursing home. 'Admission source' should be coded with a terminology, where possible. (en)">
+            >
+            ["at0008"] = <
+                text = <"*Reason for admission (en)">
+                description = <"*The reason why the individual was admitted for an episode of care. (en)">
+                comment = <"*For example: respite; rehabilitation; or infection isolation.
+Diagnosies should be recorded using the EVAL.problem_diagnosis archetype plus the nested CLUSTER.problem_qualifier, if necessary. (en)">
+            >
+            ["at0009"] = <
+                text = <"*Admission category (en)">
+                description = <"*The type of admission. (en)">
+                comment = <"*For example: day surgery; elective surgery or em.  (en)">
+            >
+            ["at0010"] = <
+                text = <"*Comment (en)">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"*Additional details (en)">
+                description = <"">
+                comment = <"*For example:  (en)">
+            >
+            ["at0012"] = <
+                text = <"*Destination (en)">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"*Source (en)">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"*Episode ID (en)">
+                description = <"*An identifier for the episode of care. (en)">
+            >
+            ["at0015"] = <
+                text = <"*Attending clinicians (en)">
+                description = <"*The details about the consultant and attending clinicians responsible for care during the episode. (en)">
+            >
+            ["at0016"] = <
+                text = <"*Medical record number (en)">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"*Location (en)">
+                description = <"*An organisation, physical address or structured address describing where the individual was located during the episode of care. (en)">
+                comment = <"*For example: 2nd floor, Moorhouse wing, Turnbull building, General Hospital. (en)">
+            >
+            ["at0018"] = <
+                text = <"*Physical location (en)">
+                description = <"*The physical location of the individual within the institution during the episode of care. (en)">
+            >
+            ["at0019"] = <
+                text = <"*Location onset (en)">
+                description = <"*The date the individual was moved to the institution internal location. (en)">
+                comment = <"*For example, the date moved to a new ward or bed. (en)">
+            >
+            ["at0020"] = <
+                text = <"*Location end (en)">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"*Attending unit (en)">
+                description = <"*The clinical service unit assigned for care of the individual. (en)">
+                comment = <"*For example: Orthopaedic A unit. (en)">
+            >
+            ["at0022"] = <
+                text = <"*Ward (en)">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"*Room (en)">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"*Bed (en)">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"*Location category (en)">
+                description = <"*The type of location (en)">
+                comment = <"*For example: Intensive care unit; high dependency unit. (en)">
+            >
+            ["at0026"] = <
+                text = <"*Health insurance category (en)">
+                description = <"*The type of health insurance applicable for the episode. (en)">
+            >
+            ["at0027"] = <
+                text = <"*Referring clinician (en)">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"*DV_IDENTIFIER (en)">
+                description = <"">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"episode_institution">
+                description = <"Dades administratives sobre un període d’atenció als pacients ingressats entre un ingrés formal o estadístic i una alta formal o estadística, caracteritzats només per un tipus d’atenció d’un centre sanitari.">
+            >
+            ["at0002"] = <
+                text = <"Data de l’alta">
+                description = <"La data/hora del final de l’ingrés formal o estadístic al centre.">
+                comment = <"Per exemple: transferir l’atenció a casa o a altre centre; o data de defunció.
+L’enregistrament formal de la data de defunció haurà d’utilitzar CLUSTER.death_details.">
+            >
+            ["at0003"] = <
+                text = <"Categoría de destinació">
+                description = <"El tipus de residència on residí el pacient després de l’episodi d’atenció.">
+                comment = <"Per exemple: casa; hospital; residència d’ancians; o hospital de rehabilitació.">
+            >
+            ["at0004"] = <
+                text = <"Data d’ingrés">
+                description = <"La data o hora de l’ingrés formal o estadístic al centre.">
+            >
+            ["at0006"] = <
+                text = <"Resultat">
+                description = <"Resultat per al pacient al final de l’episodi d’atenció.">
+                comment = <"Per exemple: recobrat/no recobrat/mort.">
+            >
+            ["at0007"] = <
+                text = <"Categoria d’origen">
+                description = <"El tipus de residència on residia el pacient abans de l’ingrés.">
+                comment = <"Per exemple: hospital, comunitat o residència d’ancians. Es recomana programar «Categoria d’origen» amb una terminologia, sempre que sigui possible.">
+            >
+            ["at0008"] = <
+                text = <"Raó de l’ingrés">
+                description = <"Raó per la qual s'ingressà al pacient per a un episodi d’atenció.">
+                comment = <"Per exemple: respir; rehabilitació; o aïllament per infecció.
+Es recomana registrar els diagnòstics utilitzant l’arquetip EVAL.problem_diagnosis conjuntament amb el CLUSTER.problem_qualifier situat, si fos necessari.">
+            >
+            ["at0009"] = <
+                text = <"Categoria d’ingrés">
+                description = <"El tipus d’ingrés.">
+                comment = <"Per exemple: cirurgia ambulatòria; cirurgia programada o medicina d’urgències.">
+            >
+            ["at0010"] = <
+                text = <"Observacions">
+                description = <"Informació addicional sobre l'episodi, no recollida en altres caselles.">
+            >
+            ["at0011"] = <
+                text = <"Dades addicionals">
+                description = <"Dades estructurades addicionals sobre l’episodi d’atenció dins d’un centre.">
+                comment = <"Per exemple:">
+            >
+            ["at0012"] = <
+                text = <"Destinació">
+                description = <"L’organisme o adreça on està destinat el pacient després de l’ingrés.">
+            >
+            ["at0013"] = <
+                text = <"Origen">
+                description = <"L’organisme o adreça on està destinat el pacient abans de l’ingrés.">
+            >
+            ["at0014"] = <
+                text = <"Identificació de l’episodi">
+                description = <"Un identificador per a l’episodi d’atenció.">
+            >
+            ["at0015"] = <
+                text = <"Metges responsables">
+                description = <"Dades sobre l’especialista i els metges responsables encarregats de l’atenció durant l’episodi.">
+            >
+            ["at0016"] = <
+                text = <"Nombre de la història clínica">
+                description = <"Identificació del nombre de la història clínica.">
+            >
+            ["at0017"] = <
+                text = <"Ubicació">
+                description = <"Un organisme, adreça física o adreça estructurada que descrigui el lloc on el pacient estava ubicat durant l’episodi d’atenció.">
+                comment = <"Per exemple: 2n pis de l’ala Moorhouse de l’edifici Turnbull de l’Hospital General.">
+            >
+            ["at0018"] = <
+                text = <"Ubicació física">
+                description = <"La ubicació física del pacient dins del centre durant l’episodi d’atenció.">
+            >
+            ["at0019"] = <
+                text = <"Arribada a la ubicació">
+                description = <"La data en què el pacient es va traslladar a la ubicació interna del centre.">
+                comment = <"Per exemple: la data en què es traslladà a un nou pavelló o llit.">
+            >
+            ["at0020"] = <
+                text = <"Final d'ubicació">
+                description = <"La data en què el pacient es va traslladar fora de la ubicació interna del centre.">
+            >
+            ["at0021"] = <
+                text = <"Unitat responsable">
+                description = <"La unitat de serveis clínics assignada per atendre al pacient.">
+                comment = <"Per exemple: Unitat ortopèdica A.">
+            >
+            ["at0022"] = <
+                text = <"Pavelló">
+                description = <"El nom del Pavelló dins del centre on es va ubicar al pacient.">
+            >
+            ["at0023"] = <
+                text = <"Sala">
+                description = <"El nom de la Sala dins del centre on es va ubicar al pacient.">
+            >
+            ["at0024"] = <
+                text = <"Llit">
+                description = <"El nom del Llit dins del centre on es va ubicar al pacient.">
+            >
+            ["at0025"] = <
+                text = <"Categoria d'ubicació">
+                description = <"El tipus d'ubicació.">
+                comment = <"Per exemple: unitat de cures intensives; unitat d’alta dependència.">
+            >
+            ["at0026"] = <
+                text = <"Categoria d’assegurança de salut">
+                description = <"El tipus d’assegurança de salut que es pot aplicar a l’episodi.">
+            >
+            ["at0027"] = <
+                text = <"Metge del trasllat">
+                description = <"Dades sobre els metges encarregats de traslladar el pacient des de l’Origen.">
+            >
+            ["at0028"] = <
+                text = <"*DV_IDENTIFIER (en)">
+                description = <"">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"episode_institution">
+                description = <"Detalles administrativos sobre un periodo de atención a los pacientes ingresados entre un ingreso formal o estadístico y una alta formal o estadística, caracterizados únicamente por un tipo de atención en una institución sanitaria.">
+            >
+            ["at0002"] = <
+                text = <"Fecha de alta">
+                description = <"La fecha y/u hora del final del ingreso formal o estadístico de la institución.">
+                comment = <"Por ejemplo: traslado de episodio de atención a hogar u otra institución; o fecha de defunción. 
+El registro formal de la fecha de defunción tendrá que utilizar el CLUSTER.death_details.">
+            >
+            ["at0003"] = <
+                text = <"Categoría de destino">
+                description = <"El tipo de residencia donde residirá el individuo después del episodio de atención.">
+                comment = <"Por ejemplo: casa, hospital, residencia u hospital de rehabilitación.">
+            >
+            ["at0004"] = <
+                text = <"Fecha de ingreso">
+                description = <"La fecha u hora del ingreso formal o estadístico en la institución.">
+            >
+            ["at0006"] = <
+                text = <"Resultado">
+                description = <"Resultado para el individuo al final del episodio de atención.">
+                comment = <"Por ejemplo: recuperado/no recuperado/fallecido.">
+            >
+            ["at0007"] = <
+                text = <"Categoría de origen">
+                description = <"El tipo de residencia donde residía el individuo antes del ingreso.">
+                comment = <"Por ejemplo: hospital, comunidad, o residencia. Se recomienda codificar \"Categoría de origen\" cuando sea posible con una terminología.">
+            >
+            ["at0008"] = <
+                text = <"Razón del ingreso">
+                description = <"Razón por la cual el individuo es ingresado para un episodio de atención.">
+                comment = <"Por ejemplo: descanso; rehabilitación; o aislamiento por infección.
+Se recomienda registrar los diagnósticos utilizando el arquetipo EVALUATION.problem_diagnosis conjuntamente con el CLUSTER.problem_qualifier, si fuera necesario.">
+            >
+            ["at0009"] = <
+                text = <"Categoría de ingreso">
+                description = <"El tipo de ingreso.">
+                comment = <"Por ejemplo: cirugía ambulatoria; cirugía electiva o medicina de urgencias.">
+            >
+            ["at0010"] = <
+                text = <"Comentario">
+                description = <"Información adicional sobre el episodio no recogida en otros campos.">
+            >
+            ["at0011"] = <
+                text = <"Detalles adicionales">
+                description = <"Detalles adicionales estructurados sobre el episodio de atención dentro de una institución.">
+                comment = <"Por ejemplo:">
+            >
+            ["at0012"] = <
+                text = <"Destinación">
+                description = <"La organización o dirección del individuo después del ingreso.">
+            >
+            ["at0013"] = <
+                text = <"Origen">
+                description = <"El organismo o dirección donde está destinado el paciente antes del ingreso.">
+            >
+            ["at0014"] = <
+                text = <"Identificación del episodio">
+                description = <"Un identificador para el episodio de atención.">
+            >
+            ["at0015"] = <
+                text = <"Médicos responsables">
+                description = <"Detalles sobre el especialista y los médicos responsables encargados de la atención durante el episodio.">
+            >
+            ["at0016"] = <
+                text = <"Número de la historia clínica">
+                description = <"Identificación del número de la historia clínica.">
+            >
+            ["at0017"] = <
+                text = <"Ubicación">
+                description = <"Un organismo, dirección física o dirección estructurada describiendo el lugar donde el individuo estaba ubicado durante el episodio de salud.">
+                comment = <"Por ejemplo: 2a planta, ala \"Moorhouse\", Edificio \"Turnbull\" del Hospital General.">
+            >
+            ["at0018"] = <
+                text = <"Ubicación física">
+                description = <"La ubicación física del paciente dentro de la institución durante el episodio de atención.">
+            >
+            ["at0019"] = <
+                text = <"Llegada a la ubicación">
+                description = <"La fecha en que el individuo se trasladó a la ubicación interna de la institución.">
+                comment = <"Por ejemplo, la fecha en que se trasladó a un nuevo pabellón o cama.">
+            >
+            ["at0020"] = <
+                text = <"Final de la ubicación">
+                description = <"La fecha en que el paciente se trasladó fuera de la ubicación interna de la institución.">
+            >
+            ["at0021"] = <
+                text = <"Unidad responsable">
+                description = <"La unidad de servicios clínicos asignada para atender al paciente.">
+                comment = <"Por ejemplo: Unidad ortopédica A.">
+            >
+            ["at0022"] = <
+                text = <"Pabellón">
+                description = <"El nombre del pabellón dentro de la institución donde el individuo está ubicado.">
+            >
+            ["at0023"] = <
+                text = <"Habitación">
+                description = <"El nombre de la Habitación dentro de la institución donde el individuo está ubicado.">
+            >
+            ["at0024"] = <
+                text = <"Cama">
+                description = <"El nombre de la cama de la institución donde el individuo está ubicado.">
+            >
+            ["at0025"] = <
+                text = <"Categoría de ubicación">
+                description = <"El tipo de ubicación.">
+                comment = <"Por ejemplo: unidad de cuidados intensivos; unidad de alta dependencia.">
+            >
+            ["at0026"] = <
+                text = <"Categoría de la aseguradora de salud">
+                description = <"El tipo de aseguradora de salud que se puede aplicar al episodio.">
+            >
+            ["at0027"] = <
+                text = <"Médico de traslado">
+                description = <"Detalles sobre los médicos responsables de trasladar al paciente desde el origen.">
+            >
+            ["at0028"] = <
+                text = <"*DV_IDENTIFIER (en)">
+                description = <"">
+            >
+        >
+    >

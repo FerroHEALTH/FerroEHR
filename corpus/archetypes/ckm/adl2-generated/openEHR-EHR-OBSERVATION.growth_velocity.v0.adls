@@ -1,0 +1,162 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=bfee472f-78af-4a3f-9445-8fc0a2176527; build_uid=f3f9f02a-c53e-41f5-bfb2-9589ffe5521d)
+    openEHR-EHR-OBSERVATION.growth_velocity.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2018-08-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"World Health Organisation [Internet]. Geneva: World Health Organisation.The WHO Child Growth Standards; [cited 2018 Jul 23]. Available from: http://www.who.int/childgrowth/standards/en/.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"E7D923CE0D1FDBA185D627E3A5448E90">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the rate of growth for common measurements, over a known period of time.">
+            use = <"To record the rate of growth for common measurements, such as body length/height, head circumference and body weight, over a known period of time.
+
+The growth velocity will usually be positive, especially in childhood, although there may be circumstances where it is neccessary to record a negative velocity, for example in situations of loss of height with age.">
+            misuse = <"Not to be used to record the actual point-in-time measurements for body length/height, head circumference and body weight. Use the appropriate OBSERVATION archetypes for this purpose - OBSERVATION.height, OBSERVATION.head_circumference or OBSERVATION.body_weight.
+
+Not to be used to record the actual change in measurements over actual, identified time periods for body length/height, head circumference and body weight. Use the interval event model and the 'Change' mathematical function in appropriate OBSERVATION archetypes for this purpose - OBSERVATION.height, OBSERVATION.head_circumference or OBSERVATION.body_weight.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Growth velocity
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    INTERVAL_EVENT[at0002] matches {    -- Point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Body weight
+                                        value matches {
+                                            DV_QUANTITY[at9003] matches {
+                                                property matches {[at9001]}    -- Term binding for at9001, translation not known in ADL 1.4 -> ADL 2 converter
+                                                [units] matches {
+                                                    [{"g/d"}],
+                                                    [{"g/wk"}],
+                                                    [{"g/mo"}],
+                                                    [{"kg/d"}],
+                                                    [{"kg/wk"}],
+                                                    [{"kg/mo"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Body length/height
+                                        value matches {
+                                            DV_QUANTITY[at9004] matches {
+                                                property matches {[at9001]}    -- Term binding for at9001, translation not known in ADL 1.4 -> ADL 2 converter
+                                                [units] matches {
+                                                    [{"mm/d"}],
+                                                    [{"mm/wk"}],
+                                                    [{"mm/mo"}],
+                                                    [{"cm/d"}],
+                                                    [{"cm/wk"}],
+                                                    [{"cm/mo"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Head circumference
+                                        value matches {
+                                            DV_QUANTITY[at9005] matches {
+                                                property matches {[at9001]}    -- Term binding for at9001, translation not known in ADL 1.4 -> ADL 2 converter
+                                                [units] matches {
+                                                    [{"mm/d"}],
+                                                    [{"mm/wk"}],
+                                                    [{"mm/mo"}],
+                                                    [{"cm/d"}],
+                                                    [{"cm/wk"}],
+                                                    [{"cm/mo"}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9006]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0010] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0012] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Growth velocity">
+                description = <"The rate of growth, or change in growth measurements, over a period of time.">
+            >
+            ["at0002"] = <
+                text = <"Point in time event">
+                description = <"Unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Body weight">
+                description = <"The rate of change of body weight for an individual.">
+            >
+            ["at0005"] = <
+                text = <"Body length/height">
+                description = <"The rate of change in the length or height of an individual.">
+            >
+            ["at0008"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the velocity measurements, not captured in other fields.">
+            >
+            ["at0009"] = <
+                text = <"Head circumference">
+                description = <"The rate of change in the head circumference of an individual.">
+            >
+            ["at0012"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at9001"] = <
+                text = <"Term binding for at9001, translation not known in ADL 1.4 -> ADL 2 converter">
+                description = <"Term binding for at9001, translation not known in ADL 1.4 -> ADL 2 converter">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/755>
+        >
+    >

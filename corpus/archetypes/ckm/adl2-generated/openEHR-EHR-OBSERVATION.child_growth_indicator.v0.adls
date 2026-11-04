@@ -1,0 +1,253 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=acd5ab5b-cf12-4796-9fda-5d806123b809; build_uid=cb05cc9a-7408-43a9-99e3-24c1447cbb6d)
+    openEHR-EHR-OBSERVATION.child_growth_indicator.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics">
+        ["email"] = <"ian@freshehr.com">
+        ["date"] = <"2011-04-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Ocean Informatics, Australia", "Sam Heard, Ocean Informatics, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"National Center for Health Statistics [Internet]. Atlanta: Centers for Disease Control and Prevention. CDC Growth Charts; 2016 Dec 7 [cited 2018 Jul 23]. Available from: https://www.cdc.gov/growthcharts/cdc_charts.htm.">
+        ["2"] = <"National Center for Health Statistics [Internet]. Atlanta: Centers for Disease Control and Prevention. WHO Growth Charts; 2016 Dec 7 [cited 2018 Jul 23]. Available from: https://www.cdc.gov/growthcharts/who_charts.htm.">
+        ["3"] = <"WHO Multicentre Growth Reference Study Group. WHO Child Growth Standards: Length/height-for-age, weight-for-age, weight-for-length, weight-for-height and body mass index-for-age: Methods and development. Geneva: World Health Organization, 2006 (312 pages).">
+        ["4"] = <"World Health Organiation [Internet]. Geneva: World Health Organization.The WHO Child Growth Standards; [cited 2018 Jul 23]. Available from: http://www.who.int/childgrowth/standards/en/.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"648EA5EF137CC9CD635E5EC0F014D56C">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details about parameters plotted as percentiles on a growth chart.">
+            keywords = <"growth", "calculation", "centile", "percentile", "z-score", "SD", "height", "weight", "head cicrumference">
+            use = <"Use to record details about parameters plotted as percentiles on a growth chart.
+
+Use the URI to explicitly link the original measurement as recorded.
+
+Use in a template alongside OBSERVATION.age to record the adjusted age of an infant as part of monitoring child growth patterns.">
+            misuse = <"Not to be used to record actual measurements. Use appropriate OBSERVATION archetypes for this purpose - for example OBSERVATION.height, OBSERVATION.weight, OBSERVATION.head_circumference, OBSERVATION.body_segment or OBSERVATION.blood_pressure.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Child growth indicator
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Growth indicator
+                                        value matches {
+                                            DV_CODED_TEXT[at9002] matches {
+                                                defining_code matches {[ac9000]}    -- Growth indicator (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0035] occurrences matches {0..1} matches {    -- URI to original measurement
+                                        value matches {
+                                            DV_URI[at9003]
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Percentile
+                                        value matches {
+                                            DV_PROPORTION[at9004] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Z-score
+                                        value matches {
+                                            DV_QUANTITY[at9005] matches {
+                                                property matches {[at9001]}    -- Qualified real
+                                                units matches {"1"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0043] occurrences matches {0..1} matches {    -- Z-score category
+                                        value matches {
+                                            DV_TEXT[at9009]
+                                        }
+                                    }
+                                    ELEMENT[at0041] occurrences matches {0..1} matches {    -- Clinical interpretation
+                                        value matches {
+                                            DV_TEXT[at9006]
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9007]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0031] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0042] occurrences matches {0..1} matches {    -- Growth reference chart
+                        value matches {
+                            DV_TEXT[at9008]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0032] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Child growth indicator">
+                description = <"Details about parameters plotted on a growth chart to allow monitoring of a child's growth over time, relative to a reference population.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0010"] = <
+                text = <"Percentile">
+                description = <"Percentile calculated using standard normal distribution for the age (or adjusted age).">
+            >
+            ["at0011"] = <
+                text = <"Z-score">
+                description = <"The deviation of an individual's value from the median value for a reference population, divided by the standard deviation of the reference population.">
+                comment = <"Also known as the Standard deviation score (SD).">
+            >
+            ["at0014"] = <
+                text = <"Growth indicator">
+                description = <"The name of the growth parameter.">
+            >
+            ["at0019"] = <
+                text = <"Comment">
+                description = <"A comment about the growth indicator, not captured in other fields.">
+            >
+            ["at0020"] = <
+                text = <"Length/height-for-age">
+                description = <"Length or height plotted against age, or adjusted age.">
+            >
+            ["at0021"] = <
+                text = <"Sitting height-for-age">
+                description = <"Sitting height plotted against age, or adjusted age.">
+            >
+            ["at0022"] = <
+                text = <"Leg length-for-age">
+                description = <"Subischial leg length plotted against age, or adjusted age.">
+            >
+            ["at0023"] = <
+                text = <"Weight-for-age">
+                description = <"Weight plotted against age, or adjusted age.">
+            >
+            ["at0024"] = <
+                text = <"Head circumference-for-age">
+                description = <"Head circumference plotted against age, or adjusted age.">
+            >
+            ["at0025"] = <
+                text = <"Weight-for-length/height">
+                description = <"Weight plotted against height/length.">
+            >
+            ["at0026"] = <
+                text = <"Systolic blood pressure-for-age-and-height">
+                description = <"Systolic blood pressure plotted against age (or adjusted age) and height/length.">
+            >
+            ["at0027"] = <
+                text = <"Diastolic blood pressure-for-age-and-height">
+                description = <"Diastolic blood pressure plotted against age (or adjusted age) and height/length.">
+            >
+            ["at0029"] = <
+                text = <"Body mass index-for-age (BMI-for-age)">
+                description = <"Body mass index plotted against age, or adjusted age.">
+            >
+            ["at0032"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0034"] = <
+                text = <"Arm circumference-for-age">
+                description = <"Arm circumference plotted against age, or adjusted age.">
+            >
+            ["at0035"] = <
+                text = <"URI to original measurement">
+                description = <"Link to the original measurement.">
+            >
+            ["at0036"] = <
+                text = <"Subscapular skinfold-for-age">
+                description = <"Subscapular skinfold plotted against age, or adjusted age.">
+            >
+            ["at0037"] = <
+                text = <"Triceps skinfold-for-age">
+                description = <"Triceps skinfold plotted against age, or adjusted age.">
+            >
+            ["at0038"] = <
+                text = <"Weight velocity">
+                description = <"Weight velocity plotted against age, or adjusted age.">
+            >
+            ["at0039"] = <
+                text = <"Length velocity">
+                description = <"Length velociy plotted against age, or adjusted age.">
+            >
+            ["at0040"] = <
+                text = <"Head circumference velocity">
+                description = <"Head circumference velocity plotted against age, or adjusted age.">
+            >
+            ["at0041"] = <
+                text = <"Clinical interpretation">
+                description = <"Clinical interpretation of the growth indicator chart.">
+            >
+            ["at0042"] = <
+                text = <"Growth reference chart">
+                description = <"Specifies the standard or syndrome-specific reference charts used to calculate the growth indicator data.">
+                comment = <"For example, for a typical height assessment, 'WHO' might be used, whereas for children diagnosed with Turner Syndrome, the 'Turner' standard would be applicable (see the Royal College of Paediatrics and Child Health API (https://growth.rcpch.ac.uk/).">
+            >
+            ["at0043"] = <
+                text = <"Z-score category">
+                description = <"The category or grouping of the Z score.">
+                comment = <"For example:  a choice between <-3, <-2, or Normal.">
+            >
+            ["at9001"] = <
+                text = <"Qualified real">
+                description = <"Qualified real">
+            >
+            ["ac9000"] = <
+                text = <"Growth indicator (synthesised)">
+                description = <"The name of the growth parameter. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/380>
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0020", "at0023", "at0025", "at0029", "at0024", "at0034", "at0036", "at0037", "at0038", "at0039", "at0040", "at0021", "at0022", "at0026", "at0027">
+        >
+    >

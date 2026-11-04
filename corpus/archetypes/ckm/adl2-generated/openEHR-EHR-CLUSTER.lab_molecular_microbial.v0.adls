@@ -1,0 +1,247 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=8db141b8-785f-4a55-966c-f959507b6a59; build_uid=c9714185-5a61-4e22-9d3f-18bcf4b7d9cf)
+    openEHR-EHR-CLUSTER.lab_molecular_microbial.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Pascal Biermann">
+                ["organisation"] = <"Carl von Ossietzky Universität Oldenburg">
+                ["email"] = <"pascal.biermann@uni-oldenburg.de">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2024-08-09">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Nicola Ewen, SERHA/Ministry of Health and Wellness, Jamaica", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Yohann White, Ministry of Health and Wellness, Jamaica">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"https://www.rcpa.edu.au/Manuals/RCPA-Manual/Pathology-Tests/M/Molecular-genetics-microbial">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"27C40FC91E5F4C32C617ED9C1F96AEAD">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Dokumentation von qualitativen und quantitativen Befunden für einen spezifischen mikrobiologischen molekulargenetischen Test.">
+            keywords = <"nuklear, Sonde, DNA, RNA, mikrobiologisch, molekular, genetisch, Gen", ...>
+            use = <"Zur Dokumentation von qualitativen und quantitativen Befunden eines spezifischen mikrobiologischen molekulargenetischen Tests.">
+            misuse = <"Nicht zur Dokumentation von Befunden einer mikrobiologischen Kultur einer Probe zu verwenden - für diesen Zwecken ist der CLUSTER.laboratory_test_culture Archetyp zu nutzen.
+Nicht zur Dokumentation von Befunden eines Antigen- oder Antikörpertests einer Probe zu verwenden - für diesen Zweck ist der CLUSTER.laboratory_test_antibody or CLUSTER.laboratory_test_antigen Archetyp zu nutzen.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the qualitative and quantitative findings for a specific microbial molecular genetic test.">
+            keywords = <"nucleic,probe,DNA,RNA,microbial,molecular,genetic,gene", ...>
+            use = <"Use to record the qualitative and quantitative findings for a specific microbial molecular genetic test.">
+            misuse = <"Not to be used to record findings observed from microbial culture of a specimen - use the CLUSTER.laboratory_test_culture archetype for this purpose.
+
+Not to be used to record findings from antigen or antibody testing of a specimen - use the CLUSTER.laboratory_test_antibody or CLUSTER.laboratory_test_antigen archetypes for this purpose.">
+            copyright = <"© openEHR Foundation, Ministry of Health and Wellness Jamaica">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Molecular microbial test findings
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0049] occurrences matches {0..1} matches {    -- Test name
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0059] occurrences matches {0..1} matches {    -- Microbial target
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0057] occurrences matches {0..1} matches {    -- Molecular target
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0055] occurrences matches {0..1} matches {    -- Test method
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+            allow_archetype CLUSTER[at0033] matches {    -- Specimen
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0050] occurrences matches {0..1} matches {    -- Presence
+                value matches {
+                    DV_CODED_TEXT[at9006] matches {
+                        defining_code matches {[ac9000]}    -- Presence (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0054] occurrences matches {0..1} matches {    -- Quantitative result
+                value matches {
+                    DV_QUANTITY[at9007] matches {
+                        property matches {[at9001]}    -- Concentration
+                        units matches {"{copies}/mL"}
+                    }
+                }
+            }
+            ELEMENT[at0022] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9008]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Molekular mikrobiologische Testbefunde">
+                description = <"Das Ergebnis eines Labortests zum Nachweis und Identifizierung spezifischer DNA oder RNA von Mirkoorganismen in einer Probe durch Nutzung von Nukleinsäuresonden.">
+            >
+            ["at0022"] = <
+                text = <"Kommentar">
+                description = <"Zusätzlicher Freitext zum Testbefund, das nicht in anderen Feldern erfasst werden konnte.">
+            >
+            ["at0033"] = <
+                text = <"Probe">
+                description = <"Identifikator der untersuchten Probe.">
+                comment = <"Dieser SLOT kann redundant sein, falls die Gewebeprobe vorher schon bei einem höherrangigem Archetyp, wie z.B. den OBSERVATION.laboratory_test_result Archetyp, identifiziert wurde.">
+            >
+            ["at0049"] = <
+                text = <"Testname">
+                description = <"Name des durchgeführten molekularen Tests.">
+                comment = <"Wenn möglich, wird die Nutzung einer externen Terminologie empfohlen. Zum Beispiel: PCR für Mycobacterium tuberculosis oder SARS-CoV-2.">
+            >
+            ["at0050"] = <
+                text = <"Präsenz">
+                description = <"Aussage über den Nachweis des identifizierten Mikroorganismus in der Probe.">
+            >
+            ["at0051"] = <
+                text = <"Nachgewiesen">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Nicht nachgewiesen">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Quantitatives Ergebnis">
+                description = <"Quantitative Auswertung über die in der Probe identfizierte Menge des Mikroorganismus.">
+            >
+            ["at0055"] = <
+                text = <"Testmethode">
+                description = <"Die Methode, die für den molekularen Test genutzt wurde.">
+                comment = <"Zum Beispiel: PCR, RT-PCR, NGS, isothermale Amplifikation">
+            >
+            ["at0056"] = <
+                text = <"Unbestimmt">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"Molekulares Ziel">
+                description = <"Das nachgewiesene spezifische genetische Material innerhalb des Mikroorganismus.">
+                comment = <"Wenn möglich, wird die Nutzung einer externen Terminologie empfohlen. Zum Beispiel: 16S rRNA Gen (für bacteria), RdRp Gen (für SARS-CoV-2) order ITS Region (für fungi).">
+            >
+            ["at0059"] = <
+                text = <"Mikrobiologisches Ziel">
+                description = <"Der Name des nachgewiesenen Mikroorganismus.">
+                comment = <"Wenn möglich, wird die Nutzung einer externen Terminologie empfohlen. Zum Beispiel:  SARS-CoV-2, Mycobacterium tuberculosis oder Candida albicans.">
+            >
+            ["at9001"] = <
+                text = <"* Concentration (en)">
+                description = <"* Concentration (en)">
+            >
+            ["ac9000"] = <
+                text = <"Präsenz (synthesised)">
+                description = <"Aussage über den Nachweis des identifizierten Mikroorganismus in der Probe. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Molecular microbial test findings">
+                description = <"The result of a laboratory test for the detection and identification of specific micro-organism DNA or RNA in a specimen, using nucleic acid probes.">
+            >
+            ["at0022"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the test finding not captured in other fields.">
+            >
+            ["at0033"] = <
+                text = <"Specimen">
+                description = <"Identification of the specimen examined.">
+                comment = <"If the tissue specimen has previously been identified in a a higher level archetype level archetype, such as the OBSERVATION.laboratory_test_result, this SLOT may be redundant.">
+            >
+            ["at0049"] = <
+                text = <"Test name">
+                description = <"Name of the molecular test carried out.">
+                comment = <"Coding with an external terminology is recommended, if available. For example: PCR for Mycobacterium tuberculosis or SARS-CoV-2.">
+            >
+            ["at0050"] = <
+                text = <"Presence">
+                description = <"Statement about detection of the identified microorganism in the specimen.">
+            >
+            ["at0051"] = <
+                text = <"Detected">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Not detected">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Quantitative result">
+                description = <"Quantitative assessment of the amount of the identified microorganism in the specimen.">
+            >
+            ["at0055"] = <
+                text = <"Test method">
+                description = <"Method used for the molecular test.">
+                comment = <"For example: PCR, RT-PCR, NGS, isothermal amplification.">
+            >
+            ["at0056"] = <
+                text = <"Indeterminate">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"Molecular target">
+                description = <"The specific genetic material within the microorganism that is being detected.">
+                comment = <"Coding with an external terminology is recommended, if available. For example: 16S rRNA gene (for bacteria), RdRp gene (for SARS-CoV-2), or ITS region (for fungi).">
+            >
+            ["at0059"] = <
+                text = <"Microbial target">
+                description = <"The name of the microorganism being detected.">
+                comment = <"Coding with an external terminology is recommended, if available. For example: SARS-CoV-2, Mycobacterium tuberculosis, or Candida albicans.">
+            >
+            ["at9001"] = <
+                text = <"Concentration">
+                description = <"Concentration">
+            >
+            ["ac9000"] = <
+                text = <"Presence (synthesised)">
+                description = <"Statement about detection of the identified microorganism in the specimen. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/119>
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0051", "at0052", "at0056">
+        >
+    >

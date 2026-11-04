@@ -1,0 +1,924 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=0351916d-c358-4372-bcb3-31bd091a70f1; build_uid=0262f9b9-76ea-4216-ad7a-efced93e4089)
+    openEHR-EHR-CLUSTER.physical_dimensions.v1.0.3
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Jonas Bucher">
+                ["organisation"] = <"Cistec AG">
+                ["email"] = <"jonas.bucher@cistec.com">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Oscar Karlsson, Claudia Ehrentraut, Manna Vosta">
+                ["organisation"] = <"Karolinska University Hospital">
+                ["email"] = <"oscar.karlsson@regionstockholm.se, claudia.ehrentraut@regionstockholm.se, manna.vosta@regionstockholm.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen, Liv Laugen, Kanika Kuwelker">
+                ["organisation"] = <"Oslo University Hospital, Norway, Helse Vest IKT, ​Oslo University Hospital, Norway">
+                ["email"] = <"varntzen@ous-hf.no, liv.laugen@ous-hf.no, kanika.kuwelker@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Liv Laugen">
+        ["organisation"] = <"OUS/openEHR Norway">
+        ["email"] = <"liv.laugen@ous-hf.no">
+        ["date"] = <"2024-08-14">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Dag Aarhus, Vestre Viken HF, Norway", "Andreas Abildgaard, OUS, Norway", "Erling Are Hole, Helse Bergen, Norway", "Stein Arne Rimehaug, Sunnaas sykehus, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Heidi Aursand, Oslo universitetssykehus, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Paulo Bandiera-Paiva, Federal University of Sao Paulo, Brazil", "Keisha Barwise, MOHW/IDB HSSP Project, Jamaica", "Terje Bektesevic Holmlund, UiT Norges arktiske universitet, Norway", "Ivar Berge, Oslo University Hospital, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "Bjørn Christensen, Helse Bergen HF, Norway", "Candice de Lisser, Ministry of Health and Wellness, Jamaica", "Giovanni Delussu, crs4, Italy", "Stefan Dubois, Dep't of Pathology and Genetics, University Hospitals of Lund and Malmö, Sweden", "Are Edvardsen, SKDE, Helse Nord RHF, Norway", "Gunn Elin Blakkisrud, DIPS ASA, Norway", "Lars Erik Tunby, SKDE, Norway", "Peter Fedorcsak, Oslo universitetssykehus, Norway", "Kåre Flø, DIPS ASA, Norway", "Ciprian Gerstenberger, Helse Nord IKT, Norway (openEHR Editor)", "Rosane Gotardo, Systema Ltda., Brazil", "Heather Grain, Llewelyn Grain Informatics, Australia", "Johan Gustav Bellika, Norwegian Centre for Integrated Care and Telemedicine, Norway", "Elin Hallan Naderi, OUS, Norway", "Sanjeev Hiremath, IDEAMED International, Australia", "Evelyn Hovenga, EJSH Consulting, Australia", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (Nasjonal IKT redaktør)", "Gunnar Jårvik, Helse Vest IKT AS, Norway", "Anne K Fossum, OUS, Norway", "Oscar Karlsson, Karolinska Universitetssjukhuset, Sweden", "June Marie Nepstad Knappskog, Helse Nord IKT AS, Norway (openEHR Editor), Norway (openEHR Editor)", "Martin Koch, Servei Català de la Salut, Spain", "Nils Kolstrup, Skansen Legekontor og Nasjonalt Senter for samhandling og telemedisin, Norway", "Ronald Krawec, Alberta Health Services, Canada", "Anne Kristine Brekka, SSHF, Norway", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Siri Laronningen, Kreftregisteret, Norway", "Eli Larsen, UNN, Norway (openEHR Editor)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Sabine Leh, Helse Bergen, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Jens Lien, Bouvet Norge AS, Norway", "Pramil Liyanage, Ministry of Health, Sri Lanka", "Anne M Gromsrud, DIPS AS, Norway", "Manisha Mantri, C-DAC, India", "Luis Marco Ruiz, NST, Spain", "June Marie Knappskog, Helse Nord IKT AS, Norway (Nasjonal IKT redaktør), Norway (openEHR Norway redaktør)", "Cecilia Mascia, CRS4, Italy", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Svenne Naumann, Finnmarkssykehuset, Norway", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Jayashree Panickar, Karolinska Institute, Sweden", "Ingvild Paur, Nasjonal kompetansetjeneste for sykdomsrelatert underernæring, Norway", "Helge Pettersen, Helse Bergen, Norway", "Vuk Radnić, Better, Slovenia", "FREDERICO RIBEIRO, Hospital das Clínicas da UFPE, Brazil", "Terje Sagmyr, Helse Vest IKT, Norway (openEHR Editor)", "Saeed Samie, Pars Hospital, Iran", "Erik Skjemstad, Helse Nord RHF, Norway", "Alan Smith, OXLEAS NHS Mental Health Foundation Trust, United Kingdom", "Andre Smitt-Ingebretsen, Sørlandet sykehus HF, Norway", "Frode Stenvik, Helse Sør-Øst, Norway", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Erik Sundvall, Karolinska Institutet + Karolinska University Hospital, Region Stockholm + Linköping University, Sweden", "Nyree Taylor, CSIRo, Australia", "Tesfay Teame, Bærum kommune, Norway", "Marianne Thorbjørnsen, Oslo Universitetssykehus, Norway", "Anders Thurin, VGR, Sweden", "Pencho Tonchev, Medical University- Pleven, Bulgaria", "John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Manna Vosta, Karolinska University Hospital, Sweden", "Elizaveta Yurchenko, GKU IAC at Department of Information Technologies of the city of Moscow (DIT Moscow), Russia", "Wouter Zanen, Eurotranplant, Netherlands", "Lin Zhang, Taikang Insurance Group, China">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"2B1A4A28E8FD775EC27AC251FCF63534">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Erfassung der räumlichen Maße einer anatomischen Struktur, eines Objekts oder einer Flüssigkeit, die Teil des Körpers einer Person ist, sich darin befindet oder aus diesem stammt.">
+            keywords = <"Präparat, Labor, Probe, Pathologie, Größe, Fläche, Masse, Volumen, Abmessung, Länge, Breite, Durchmesser, Dicke, Fremdkörper, Höhe, Maße", ...>
+            use = <"Zu verwenden für die Erfassung der räumlichen Maße einer anatomischen Struktur, eines Objekts oder einer Flüssigkeit, die Teil des Körpers einer Person ist, sich darin befindet oder aus diesem stammt. 
+
+Beispiele hierfür sind unter anderem:
+- Die Abmessungen eines Leberlappens
+- Eine 8.0 × 10.2 × 6.5 mm große Tumorprobe aus dem Darm
+- Eine Wunde mit einer Länge von 24 mm, einer Breite von 15 mm und einer Tiefe von 4 mm
+- 7 ml Blut in einem Vakuumröhrchen
+- Eine Murmel mit einem Durchmesser von 1 cm
+
+Dieser Archetyp ist für die Verwendung im Kontext beliebiger geeigneter ENTRY- oder CLUSTER-Archetypen konzipiert, um eine gemeinsame und wiederverwendbare Struktur für die Erfassung der räumlichen Maße einer Struktur, eines Objekts oder einer Flüssigkeit bereitzustellen. Er ist speziell für die Verwendung innerhalb von CLUSTER.specimen, CLUSTER.imaging_exam und CLUSTER.exam konzipiert, kann jedoch in jedem relevanten Archetyp verwendet werden.
+
+In Modellierungssituationen, in denen die Messanforderungen nicht im Voraus absehbar sind oder noch keine speziellen Archetypen verfügbar sind, sollte dieser Archetyp als vereinbarter Ansatz zur Erfassung einzelner oder aller räumlichen Maße oder Abmessungen verwendet werden.
+
+Ist die Ausrichtung einer anatomischen Struktur oder eines Objekts unklar, kann jede Abmessung wiederholt unter Verwendung desselben Datenelements erfasst werden, beispielsweise „Länge × Länge × Länge“.">
+            misuse = <"Nicht zu verwenden für die Erfassung gängiger Körpersegmentmaße, die als separate Archetypen modelliert wurden.
+
+In Modellierungssituationen, in denen die Messanforderungen im Voraus absehbar sind und es gängige und bekannte räumliche Maße gibt, sollten diese explizit als eigenständige Datenelemente innerhalb der entsprechenden Archetypen erfasst werden. Beispiel: „Endometriumdicke“ im CLUSTER.imaging_exam-uterus.">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera de spatiala (rumsliga) måtten på en anatomisk struktur, ett föremål eller en vätska som är en del av, finns i eller kommer från en individs kropp.">
+            keywords = <"prov, laboratorium, labb, lab, patologi, storlek, yta, vikt, massa, volym, dimension, längd, bredd, diameter, tjocklek, främmande föremål, främmande kropp, höjd, mått", ...>
+            use = <"Används för att registrera de spatiala (rumsliga) måtten på en anatomisk struktur, ett föremål eller en vätska som är en del av, finns i eller kommer från en individs kropp. 
+
+Exempel inkluderar men är inte begränsade till:
+- Dimensionerna på en leverlob
+- Ett 8,0 × 10,2 × 6,5 mm stort provmaterial från tarmen
+- Ett sår som mäter 24 mm i längd, 15 mm i bredd och 4 mm i djup
+- 7 ml blod i ett vakuumrör
+- En glaskula som är 1 cm i diameter
+
+Används för att ge en gemensam och återanvändbar struktur för registrering av spatiala mått på en struktur, ett objekt eller en vätska inom relevanta ENTRY- eller CLUSTER-arketyper. Den är särskilt avsedd att användas i CLUSTER.specimen, CLUSTER.imaging_exam och CLUSTER.exam, men kan användas i alla relevanta arketyper.
+
+Används som ett tillvägagångssätt för att registrera spatiala mått eller dimensioner i modelleringssituationer där mätbehoven inte kan förutses i förväg eller där särskilda arketyper ännu inte finns tillgängliga.
+
+Om orienteringen av en kroppsstruktur eller ett objekt är oklar kan varje dimension registreras genom att samma datafält används upprepade gånger, exempelvis ”längd × längd × längd”.">
+            misuse = <"Ska inte användas för att registrera vanliga mått av kroppssegment som har modellerats som separata arketyper.
+
+Ska inte användas för att registrera spatiala mått när mätbehoven kan förutses i förväg och det finns väldefinierade mått för ändamålet. I sådana fall ska måtten registreras som separata datafält i den relevanta arketypen, exempelvis \"Endometriell tjocklek\" i CLUSTER.imaging_exam-uterus.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere de romlige målene til en anatomisk struktur, et objekt eller en væske som er en del av, finnes i, eller stammer fra et individ.">
+            keywords = <"prøve, materiale, laboratorie, patologi, volum, størrelse, lengde, bredde, tykkelse, masse, diameter, omkrets, dimensjon, areal, fremmedlegeme, høyde, dimensjon, mål", ...>
+            use = <"Brukes for å registrere de romlige målene til en anatomisk struktur, et objekt eller en væske som er en del av, finnes i, eller stammer fra et individ.
+
+Eksempler inkluderer, men er ikke begrenset til:
+- Dimensjonene til en leverlapp
+- En tumorprøve fra tarmen som måler 8,0 × 10,2 × 6,5 mm
+- Et sår som måler 24 mm i lengde, 15 mm i bredde og 4 mm i dybde
+- 7 mL blod i et vakuumrør
+- En klinkekule med en diameter på 1 cm
+
+Denne arketypen er utformet for bruk i konteksten av enhver relevant ENTRY- eller CLUSTER-arketype, for å gi en felles og gjenbrukbar struktur for registrering av romlige mål til en struktur, et objekt eller en væske. Den er spesielt laget for bruk innen CLUSTER.specimen (Prøvemateriale), CLUSTER.imaging_exam (Bildediagnostisk undersøkelse - kroppsstruktur), CLUSTER.exam (Funn ved fysisk undersøkelse), men kan benyttes i enhver relevant arketype.
+
+Ved modellering av situasjoner der målebehovene ikke kan forutses på forhånd, eller hvor dedikerte arketyper ennå ikke finnes, kan denne arketypen brukes for å registrere én eller flere romlige mål eller dimensjoner.
+
+Dersom orienteringen til en anatomisk struktur eller et objekt er uklar, kan hver dimensjon registreres ved å bruke det samme dataelementet gjentatte ganger, for eksempel: \"lengde × lengde × lengde\".">
+            misuse = <"Skal ikke brukes til å registrere vanlige kroppsdelsmålinger som allerede er modellert som egne arketyper.
+
+I modelleringssituasjoner der målebehovene kan forutses på forhånd, og det finnes vanlige og kjente romlige mål, bør disse registreres eksplisitt som separate dataelementer i relevante arketyper. For eksempel: «Endometrietykkelse» i CLUSTER.imaging_exam-uterus.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the spatial measurements of an anatomical structure, an object or a fluid that is part of, found in or originates from the body of an individual.">
+            keywords = <"specimen, laboratory, sample, pathology, size, area, mass, volume, dimension, length, width, diameter, thickness, foreign object, height, measurements", ...>
+            use = <"Use to record to record the spatial measurements of an anatomical structure, an object or a fluid that is part of, found in or originates from the body of an individual. 
+
+Examples include but are not limited to:
+- The dimensions of the lobe of a liver
+- An 8.0 × 10.2 × 6.5 mm tumour specimen from the intestine
+- A wound measuring 24 mm in length, 15 mm in width, and 4 mm in depth
+- 7 mL of blood in a vacuum tube
+- A marble that is 1 cm in diameter
+
+This archetype is designed to be used within the context of any appropriate ENTRY or CLUSTER archetypes, to provide a common and reusable structure for recording the spatial measurements of a structure, object or fluid. It is specifically designed to be used within CLUSTER.specimen, CLUSTER.imaging_exam, CLUSTER.exam, but can be used within any relevant archetype.
+
+In modelling situations, where the measurement requirements cannot be anticipated in advance or dedicated archetypes are not yet available, use this archetype as an agreed approach to record any or all spatial measurements or dimensions.
+
+If the orientation of an anatomical structure or object is unclear, each dimension may be recorded using the same data element repeatedly, for example, 'length × length × length'.">
+            misuse = <"Not to be used to record common body segment measurements that have been modelled as separate archetypes.
+
+In modelling situations, where the measurement requirements are able to be anticipated in advance and there are common and known spatial measurements, these should be explicitly recorded as discrete data elements within the relevant archetypes. For example: 'Endometrial thickness' in the CLUSTER.imaging_exam-uterus.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Physical dimensions
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0049] matches {    -- Length
+                value matches {
+                    DV_QUANTITY[at9002] matches {
+                        property matches {[at9000]}    -- Length
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"nm"}],
+                            [{|>=0.0|}, {"um"}],
+                            [{|>=0.0|}, {"mm"}],
+                            [{|>=0.0|}, {"cm"}],
+                            [{|>=0.0|}, {"m"}],
+                            [{|>=0.0|}, {"[in_i]"}],
+                            [{|>=0.0|}, {"[ft_i]"}]
+                        }
+                    }
+                    DV_INTERVAL<DV_QUANTITY>[at9003] matches {
+                        lower matches {
+                            DV_QUANTITY[at9004] matches {
+                                property matches {[at9000]}    -- Length
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"nm"}],
+                                    [{|>=0.0|}, {"um"}],
+                                    [{|>=0.0|}, {"mm"}],
+                                    [{|>=0.0|}, {"cm"}],
+                                    [{|>=0.0|}, {"m"}],
+                                    [{|>=0.0|}, {"[in_i]"}],
+                                    [{|>=0.0|}, {"[ft_i]"}]
+                                }
+                            }
+                        }
+                        upper matches {
+                            DV_QUANTITY[at9005] matches {
+                                property matches {[at9000]}    -- Length
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"nm"}],
+                                    [{|>=0.0|}, {"um"}],
+                                    [{|>=0.0|}, {"mm"}],
+                                    [{|>=0.0|}, {"cm"}],
+                                    [{|>=0.0|}, {"m"}],
+                                    [{|>=0.0|}, {"[in_i]"}],
+                                    [{|>=0.0|}, {"[ft_i]"}]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0050] matches {    -- Width
+                value matches {
+                    DV_QUANTITY[at9006] matches {
+                        property matches {[at9000]}    -- Length
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"nm"}],
+                            [{|>=0.0|}, {"um"}],
+                            [{|>=0.0|}, {"mm"}],
+                            [{|>=0.0|}, {"cm"}],
+                            [{|>=0.0|}, {"m"}],
+                            [{|>=0.0|}, {"[in_i]"}],
+                            [{|>=0.0|}, {"[ft_i]"}]
+                        }
+                    }
+                    DV_INTERVAL<DV_QUANTITY>[at9007] matches {
+                        lower matches {
+                            DV_QUANTITY[at9008] matches {
+                                property matches {[at9000]}    -- Length
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"nm"}],
+                                    [{|>=0.0|}, {"um"}],
+                                    [{|>=0.0|}, {"mm"}],
+                                    [{|>=0.0|}, {"cm"}],
+                                    [{|>=0.0|}, {"m"}],
+                                    [{|>=0.0|}, {"[in_i]"}],
+                                    [{|>=0.0|}, {"[ft_i]"}]
+                                }
+                            }
+                        }
+                        upper matches {
+                            DV_QUANTITY[at9009] matches {
+                                property matches {[at9000]}    -- Length
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"nm"}],
+                                    [{|>=0.0|}, {"um"}],
+                                    [{|>=0.0|}, {"mm"}],
+                                    [{|>=0.0|}, {"cm"}],
+                                    [{|>=0.0|}, {"m"}],
+                                    [{|>=0.0|}, {"[in_i]"}],
+                                    [{|>=0.0|}, {"[ft_i]"}]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0054] matches {    -- Height
+                value matches {
+                    DV_QUANTITY[at9010] matches {
+                        property matches {[at9000]}    -- Length
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"nm"}],
+                            [{|>=0.0|}, {"um"}],
+                            [{|>=0.0|}, {"mm"}],
+                            [{|>=0.0|}, {"cm"}],
+                            [{|>=0.0|}, {"m"}],
+                            [{|>=0.0|}, {"[in_i]"}],
+                            [{|>=0.0|}, {"[ft_i]"}]
+                        }
+                    }
+                    DV_INTERVAL<DV_QUANTITY>[at9011] matches {
+                        lower matches {
+                            DV_QUANTITY[at9012] matches {
+                                property matches {[at9000]}    -- Length
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"nm"}],
+                                    [{|>=0.0|}, {"um"}],
+                                    [{|>=0.0|}, {"mm"}],
+                                    [{|>=0.0|}, {"cm"}],
+                                    [{|>=0.0|}, {"m"}],
+                                    [{|>=0.0|}, {"[in_i]"}],
+                                    [{|>=0.0|}, {"[ft_i]"}]
+                                }
+                            }
+                        }
+                        upper matches {
+                            DV_QUANTITY[at9013] matches {
+                                property matches {[at9000]}    -- Length
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"nm"}],
+                                    [{|>=0.0|}, {"um"}],
+                                    [{|>=0.0|}, {"mm"}],
+                                    [{|>=0.0|}, {"cm"}],
+                                    [{|>=0.0|}, {"m"}],
+                                    [{|>=0.0|}, {"[in_i]"}],
+                                    [{|>=0.0|}, {"[ft_i]"}]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0053] matches {    -- Depth
+                value matches {
+                    DV_QUANTITY[at9014] matches {
+                        property matches {[at9000]}    -- Length
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"nm"}],
+                            [{|>=0.0|}, {"um"}],
+                            [{|>=0.0|}, {"mm"}],
+                            [{|>=0.0|}, {"cm"}],
+                            [{|>=0.0|}, {"m"}],
+                            [{|>=0.0|}, {"[in_i]"}],
+                            [{|>=0.0|}, {"[ft_i]"}]
+                        }
+                    }
+                    DV_INTERVAL<DV_QUANTITY>[at9015] matches {
+                        lower matches {
+                            DV_QUANTITY[at9016] matches {
+                                property matches {[at9000]}    -- Length
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"nm"}],
+                                    [{|>=0.0|}, {"um"}],
+                                    [{|>=0.0|}, {"mm"}],
+                                    [{|>=0.0|}, {"cm"}],
+                                    [{|>=0.0|}, {"m"}],
+                                    [{|>=0.0|}, {"[in_i]"}],
+                                    [{|>=0.0|}, {"[ft_i]"}]
+                                }
+                            }
+                        }
+                        upper matches {
+                            DV_QUANTITY[at9017] matches {
+                                property matches {[at9000]}    -- Length
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"nm"}],
+                                    [{|>=0.0|}, {"um"}],
+                                    [{|>=0.0|}, {"mm"}],
+                                    [{|>=0.0|}, {"cm"}],
+                                    [{|>=0.0|}, {"m"}],
+                                    [{|>=0.0|}, {"[in_i]"}],
+                                    [{|>=0.0|}, {"[ft_i]"}]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0082] matches {    -- Thickness
+                value matches {
+                    DV_QUANTITY[at9018] matches {
+                        property matches {[at9000]}    -- Length
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"nm"}],
+                            [{|>=0.0|}, {"um"}],
+                            [{|>=0.0|}, {"mm"}],
+                            [{|>=0.0|}, {"cm"}],
+                            [{|>=0.0|}, {"m"}],
+                            [{|>=0.0|}, {"[in_i]"}],
+                            [{|>=0.0|}, {"[ft_i]"}]
+                        }
+                    }
+                    DV_INTERVAL<DV_QUANTITY>[at9019] matches {
+                        lower matches {
+                            DV_QUANTITY[at9020] matches {
+                                property matches {[at9000]}    -- Length
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"nm"}],
+                                    [{|>=0.0|}, {"um"}],
+                                    [{|>=0.0|}, {"mm"}],
+                                    [{|>=0.0|}, {"cm"}],
+                                    [{|>=0.0|}, {"m"}],
+                                    [{|>=0.0|}, {"[in_i]"}],
+                                    [{|>=0.0|}, {"[ft_i]"}]
+                                }
+                            }
+                        }
+                        upper matches {
+                            DV_QUANTITY[at9021] matches {
+                                property matches {[at9000]}    -- Length
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"nm"}],
+                                    [{|>=0.0|}, {"um"}],
+                                    [{|>=0.0|}, {"mm"}],
+                                    [{|>=0.0|}, {"cm"}],
+                                    [{|>=0.0|}, {"m"}],
+                                    [{|>=0.0|}, {"[in_i]"}],
+                                    [{|>=0.0|}, {"[ft_i]"}]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0052] matches {    -- Diameter
+                value matches {
+                    DV_QUANTITY[at9022] matches {
+                        property matches {[at9000]}    -- Length
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"nm"}],
+                            [{|>=0.0|}, {"um"}],
+                            [{|>=0.0|}, {"mm"}],
+                            [{|>=0.0|}, {"cm"}],
+                            [{|>=0.0|}, {"m"}],
+                            [{|>=0.0|}, {"[in_i]"}],
+                            [{|>=0.0|}, {"[ft_i]"}]
+                        }
+                    }
+                    DV_INTERVAL<DV_QUANTITY>[at9023] matches {
+                        lower matches {
+                            DV_QUANTITY[at9024] matches {
+                                property matches {[at9000]}    -- Length
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"nm"}],
+                                    [{|>=0.0|}, {"um"}],
+                                    [{|>=0.0|}, {"mm"}],
+                                    [{|>=0.0|}, {"cm"}],
+                                    [{|>=0.0|}, {"m"}],
+                                    [{|>=0.0|}, {"[in_i]"}],
+                                    [{|>=0.0|}, {"[ft_i]"}]
+                                }
+                            }
+                        }
+                        upper matches {
+                            DV_QUANTITY[at9025] matches {
+                                property matches {[at9000]}    -- Length
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"nm"}],
+                                    [{|>=0.0|}, {"um"}],
+                                    [{|>=0.0|}, {"mm"}],
+                                    [{|>=0.0|}, {"cm"}],
+                                    [{|>=0.0|}, {"m"}],
+                                    [{|>=0.0|}, {"[in_i]"}],
+                                    [{|>=0.0|}, {"[ft_i]"}]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0080] matches {    -- Radius
+                value matches {
+                    DV_QUANTITY[at9026] matches {
+                        property matches {[at9000]}    -- Length
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"nm"}],
+                            [{|>=0.0|}, {"um"}],
+                            [{|>=0.0|}, {"mm"}],
+                            [{|>=0.0|}, {"cm"}],
+                            [{|>=0.0|}, {"m"}],
+                            [{|>=0.0|}, {"[in_i]"}],
+                            [{|>=0.0|}, {"[ft_i]"}]
+                        }
+                    }
+                    DV_INTERVAL<DV_QUANTITY>[at9027] matches {
+                        lower matches {
+                            DV_QUANTITY[at9028] matches {
+                                property matches {[at9000]}    -- Length
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"nm"}],
+                                    [{|>=0.0|}, {"um"}],
+                                    [{|>=0.0|}, {"mm"}],
+                                    [{|>=0.0|}, {"cm"}],
+                                    [{|>=0.0|}, {"m"}],
+                                    [{|>=0.0|}, {"[in_i]"}],
+                                    [{|>=0.0|}, {"[ft_i]"}]
+                                }
+                            }
+                        }
+                        upper matches {
+                            DV_QUANTITY[at9029] matches {
+                                property matches {[at9000]}    -- Length
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"nm"}],
+                                    [{|>=0.0|}, {"um"}],
+                                    [{|>=0.0|}, {"mm"}],
+                                    [{|>=0.0|}, {"cm"}],
+                                    [{|>=0.0|}, {"m"}],
+                                    [{|>=0.0|}, {"[in_i]"}],
+                                    [{|>=0.0|}, {"[ft_i]"}]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0055] matches {    -- Circumference/perimeter
+                value matches {
+                    DV_QUANTITY[at9030] matches {
+                        property matches {[at9000]}    -- Length
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"nm"}],
+                            [{|>=0.0|}, {"um"}],
+                            [{|>=0.0|}, {"mm"}],
+                            [{|>=0.0|}, {"cm"}],
+                            [{|>=0.0|}, {"m"}],
+                            [{|>=0.0|}, {"[in_i]"}],
+                            [{|>=0.0|}, {"[ft_i]"}]
+                        }
+                    }
+                    DV_INTERVAL<DV_QUANTITY>[at9031] matches {
+                        lower matches {
+                            DV_QUANTITY[at9032] matches {
+                                property matches {[at9000]}    -- Length
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"nm"}],
+                                    [{|>=0.0|}, {"um"}],
+                                    [{|>=0.0|}, {"mm"}],
+                                    [{|>=0.0|}, {"cm"}],
+                                    [{|>=0.0|}, {"m"}],
+                                    [{|>=0.0|}, {"[in_i]"}],
+                                    [{|>=0.0|}, {"[ft_i]"}]
+                                }
+                            }
+                        }
+                        upper matches {
+                            DV_QUANTITY[at9033] matches {
+                                property matches {[at9000]}    -- Length
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"nm"}],
+                                    [{|>=0.0|}, {"um"}],
+                                    [{|>=0.0|}, {"mm"}],
+                                    [{|>=0.0|}, {"cm"}],
+                                    [{|>=0.0|}, {"m"}],
+                                    [{|>=0.0|}, {"[in_i]"}],
+                                    [{|>=0.0|}, {"[ft_i]"}]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0081] occurrences matches {0..1} matches {    -- Area
+                value matches {
+                    DV_QUANTITY[at9034] matches {
+                        property matches {[at9001]}    -- Area
+                        [units] matches {
+                            [{"um2"}],
+                            [{"mm2"}],
+                            [{"cm2"}],
+                            [{"m2"}],
+                            [{"[sin_i]"}],
+                            [{"[sft_i]"}]
+                        }
+                    }
+                    DV_INTERVAL<DV_QUANTITY>[at9035] matches {
+                        lower matches {
+                            DV_QUANTITY[at9036] matches {
+                                property matches {[at9001]}    -- Area
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"um2"}],
+                                    [{|>=0.0|}, {"mm2"}],
+                                    [{|>=0.0|}, {"cm2"}],
+                                    [{|>=0.0|}, {"m2"}],
+                                    [{|>=0.0|}, {"[sin_i]"}],
+                                    [{|>=0.0|}, {"[sft_i]"}]
+                                }
+                            }
+                        }
+                        upper matches {
+                            DV_QUANTITY[at9037] matches {
+                                property matches {[at9001]}    -- Area
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"um2"}],
+                                    [{|>=0.0|}, {"mm2"}],
+                                    [{|>=0.0|}, {"cm2"}],
+                                    [{|>=0.0|}, {"m2"}],
+                                    [{|>=0.0|}, {"[sin_i]"}],
+                                    [{|>=0.0|}, {"[sft_i]"}]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0046] occurrences matches {0..1} matches {    -- Volume
+                value matches {
+                    DV_QUANTITY[at9038] matches {
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"uL"}],
+                            [{|>=0.0|}, {"ml"}],
+                            [{|>=0.0|}, {"cl"}],
+                            [{|>=0.0|}, {"dL"}],
+                            [{|>=0.0|}, {"L"}],
+                            [{|>=0.0|}, {"um3"}],
+                            [{|>=0.0|}, {"mm3"}],
+                            [{|>=0.0|}, {"cm3"}],
+                            [{|>=0.0|}, {"dm3"}],
+                            [{|>=0.0|}, {"[foz_us]"}],
+                            [{|>=0.0|}, {"[gal_us]"}],
+                            [{|>=0.0|}, {"[pt_us]"}]
+                        }
+                    }
+                    DV_INTERVAL<DV_QUANTITY>[at9039] matches {
+                        lower matches {
+                            DV_QUANTITY[at9040] matches {
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"uL"}],
+                                    [{|>=0.0|}, {"ml"}],
+                                    [{|>=0.0|}, {"cl"}],
+                                    [{|>=0.0|}, {"dL"}],
+                                    [{|>=0.0|}, {"L"}],
+                                    [{|>=0.0|}, {"um3"}],
+                                    [{|>=0.0|}, {"mm3"}],
+                                    [{|>=0.0|}, {"cm3"}],
+                                    [{|>=0.0|}, {"dm3"}],
+                                    [{|>=0.0|}, {"[foz_us]"}],
+                                    [{|>=0.0|}, {"[gal_us]"}],
+                                    [{|>=0.0|}, {"[pt_us]"}]
+                                }
+                            }
+                        }
+                        upper matches {
+                            DV_QUANTITY[at9041] matches {
+                                [magnitude, units] matches {
+                                    [{|>=0.0|}, {"uL"}],
+                                    [{|>=0.0|}, {"ml"}],
+                                    [{|>=0.0|}, {"cl"}],
+                                    [{|>=0.0|}, {"dL"}],
+                                    [{|>=0.0|}, {"L"}],
+                                    [{|>=0.0|}, {"um3"}],
+                                    [{|>=0.0|}, {"mm3"}],
+                                    [{|>=0.0|}, {"cm3"}],
+                                    [{|>=0.0|}, {"dm3"}],
+                                    [{|>=0.0|}, {"[foz_us]"}],
+                                    [{|>=0.0|}, {"[gal_us]"}],
+                                    [{|>=0.0|}, {"[pt_us]"}]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Physikalische Abmessungen">
+                description = <"Die räumlichen Maße einer anatomischen Struktur, eines Objekts oder einer Flüssigkeit, die Teil des Körpers einer Person ist, sich darin befindet oder aus diesem stammt.">
+            >
+            ["at0046"] = <
+                text = <"Volumen">
+                description = <"Der dreidimensionale Raum, den eine Struktur bzw. ein Objekt einnimmt.">
+            >
+            ["at0049"] = <
+                text = <"Länge">
+                description = <"Die längste Ausdehnung einer anatomischen Struktur oder eines Objekts, die in der Regel mit deren primärer anatomischer oder Längsachse übereinstimmt.">
+                comment = <"Dieses Datenelement kann mehrfach vorkommen, um die Erfassung von mehr als einer Länge zu ermöglichen.
+
+Ist die Ausrichtung einer anatomischen Struktur oder eines Objekts unklar, kann jede Dimension wiederholt unter Verwendung desselben Datenelements erfasst werden, zum Beispiel „Länge × Länge × Länge“.">
+            >
+            ["at0050"] = <
+                text = <"Breite">
+                description = <"Die zur Länge senkrechte Dimension, gemessen in koronaler (von links nach rechts) oder transversaler (von einer Seite zur anderen) Richtung – oft die zweitlängste Achse.">
+                comment = <"Dieses Datenelement kann mehrfach vorkommen, um zur Erfassung von mehr als einer Breite zu dienen. Beispielsweise die breiteste und die schmalste Stelle einer pathologischen Masse.">
+            >
+            ["at0052"] = <
+                text = <"Durchmesser">
+                description = <"Die Länge einer geraden Linie, die durch den Mittelpunkt eines Objekts von einer Seite zur gegenüberliegenden Seite verläuft und typischerweise an der breitesten Stelle gemessen wird.">
+                comment = <"Dieses Datenelement kann mehrfach vorkommen, um die Erfassung mehrerer Messwerte zu ermöglichen.
+
+Ist die Ausrichtung einer anatomischen Struktur oder eines Objekts unklar, verwenden Sie mehrere Vorkommen desselben Datenelements, um den Durchmesser entlang zweier oder mehrerer Achsen ohne spezifische Ausrichtung zu erfassen. Beispielsweise eine Läsion mit den angegebenen Durchmessern 3 mm × 4 mm, was Messwerte entlang zweier senkrechter Achsen angibt, ohne zu definieren, welche davon die Länge und welche die Breite ist.">
+            >
+            ["at0053"] = <
+                text = <"Tiefe">
+                description = <"Der vertikale Abstand von einer neutralen Basis oder Referenzfläche zu einem tiefer gelegenen Punkt an einer anatomischen Struktur oder einem Objekt.">
+                comment = <"Beispiel: die Tiefe einer Wunde gemessen von der normalen Hautoberfläche.
+
+Dieses Datenelement kann mehrfach vorkommen, zur Erfassung der tiefsten und flachsten Stelle einer Hautläsion oder der maximalen und minimalen Tiefe eines inneren Tumors im Weichgewebe.">
+            >
+            ["at0054"] = <
+                text = <"Höhe">
+                description = <"Der vertikale Abstand von einer neutralen Basis oder Referenzfläche zu einem höher gelegenen Punkt auf einer anatomischen Struktur oder einem Objekt.">
+                comment = <"Beispielsweise: die Höhe einer Läsion über der normalen Hautoberfläche oder die Höhe einer Probe über einer Tischplatte.
+
+Dieses Datenelement kann mehrfach vorkommen, um zur Erfassung von mehr als einer Höhe zu dienen. Beispielsweise die maximale und minimale Höhe eines Tumors über der Hautoberfläche.">
+            >
+            ["at0055"] = <
+                text = <"Umfang">
+                description = <"Der lineare Abstand entlang der Außenkante oder Begrenzung eines Objekts.">
+                comment = <"Dieses Datenelement kann mehrfach vorkommen, zur Erfassung mehrerer Messwerte. Beispielsweise der innere und äußere Umfang einer Narbe oder einer unregelmäßigen Hautveränderung oder der innere und äußere Kreisumfang einer Zyste oder eines Knotens, gemessen an verschiedenen Messorten.">
+            >
+            ["at0080"] = <
+                text = <"Radius">
+                description = <"Die Länge einer geraden Linie vom Mittelpunkt eines Objekts bis zu dessen Oberfläche oder Begrenzung, die typischerweise die Hälfte des Durchmessers darstellt.">
+                comment = <"Dieses Datenelement kann mehrfach vorkommen, um zur Erfassung mehrerer Messwerte zu dienen. Zum Beispiel den maximalen und minimalen Radius einer Zyste oder eines Knotens.">
+            >
+            ["at0081"] = <
+                text = <"Fläche">
+                description = <"Der berechnete Raum einer Struktur/eines Objekts in zwei Dimensionen.">
+            >
+            ["at0082"] = <
+                text = <"Dicke">
+                description = <"Der Abstand zwischen zwei gegenüberliegenden Oberflächen oder Begrenzungen einer anatomischen Struktur oder eines Objekts.">
+                comment = <"Beispielsweise die Dicke einer Gewebeschicht, einer Organwand oder eines Biopsieschnitts. 
+
+Dieses Datenelement kann mehrfach vorkommen, um zur Erfassung mehrerer Messwerte zu dienen. Beispielsweise die maximale und minimale Dicke einer Zystenwand.">
+            >
+            ["at9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9001"] = <
+                text = <"* Area (en)">
+                description = <"* Area (en)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Fysiska dimensioner">
+                description = <"Spatiala (rumsliga) mått på en anatomisk struktur, ett föremål eller en vätska som är en del av, finns i eller kommer från en individs kropp.">
+            >
+            ["at0046"] = <
+                text = <"Volym">
+                description = <"Den mängd tredimensionellt utrymme som upptas av en struktur eller ett föremål.">
+            >
+            ["at0049"] = <
+                text = <"Längd">
+                description = <"Den längsta dimensionen av en anatomisk struktur eller ett föremål, vanligtvis i linje med dess primära anatomiska eller longitudinella axel.">
+                comment = <"Detta datafält har flera förekomster för att möjliggöra registrering av mer än en längd.
+
+Om orienteringen av en anatomisk struktur eller ett objekt är oklar kan varje dimension registreras med hjälp av samma fält upprepade gånger, t.ex. ”längd × längd × längd”.">
+            >
+            ["at0050"] = <
+                text = <"Bredd">
+                description = <"Dimensionen vinkelrätt mot längden, mätt i koronal (vänster till höger) eller transversal (sida till sida) riktning, representerar ofta den näst längsta axeln.">
+                comment = <"Detta datafält har flera förekomster för att möjliggöra registrering av mer än en bredd. Till exempel den bredaste och smalaste delen av en onormal massa.">
+            >
+            ["at0052"] = <
+                text = <"Diameter">
+                description = <"Längden på en rak linje som går genom ett föremåls centrum från ena sidan till den motsatta sidan, vanligtvis mätt över dess bredaste del.">
+                comment = <"Detta datafält har flera förekomster för att möjliggöra registrering av flera diametrar.
+
+Om orienteringen av en anatomisk struktur eller ett objekt är oklar, använd flera förekomster av samma datafält för att registrera diametern längs två eller flera axlar utan en specifik orientering. Exempelvis en lesion med diametrar som registrerats som 3 × 4 mm avser mätningar längs två vinkelräta axlar utan att definiera vilken som är längd eller bredd.">
+            >
+            ["at0053"] = <
+                text = <"Djup">
+                description = <"Det vertikala avståndet från en neutral bas eller referensyta till en lägre punkt på en anatomisk struktur eller ett föremål.">
+                comment = <"Exempelvis djupet på ett sår från den normala hudytan.
+
+Detta datafält har flera förekomster för att möjliggöra registrering av den djupaste och grundaste delen av en hudlesion, eller det maximala och minimala djupet av en intern tumör i mjukvävnad.">
+            >
+            ["at0054"] = <
+                text = <"Höjd">
+                description = <"Det vertikala avståndet från en neutral bas eller referensyta till en högre punkt på en anatomisk struktur eller ett föremål.">
+                comment = <"Exempelvis en lesions höjd från den normala hudytan eller ett provmaterials höjd från ytan av ett bord.
+
+Detta datafält har flera förekomster för att möjliggöra registrering av mer än en höjd. Exempelvis en tumörs maximala och minimala höjd över hudytan.">
+            >
+            ["at0055"] = <
+                text = <"Omkrets/perimeter">
+                description = <"Det linjära avståndet runt ett föremåls ytterkant eller gräns.">
+                comment = <"Vanligtvis används omkrets på svenska och då för samtliga former, dvs. oregelbundna, månghörniga, cirkulära eller nästan cirkulära.
+
+Detta datafält har flera förekomster för att möjliggöra registrering av flera omkretsar. Till exempel den inre och yttre omkretsen av ett ärr eller en ojämn hudförändring eller den inre och yttre omkretsen av en cysta eller knöl som uppmätts på olika platser.">
+            >
+            ["at0080"] = <
+                text = <"Radie">
+                description = <"Längden på en rak linje från ett föremåls centrum till dess yta eller avgränsning, vilket normalt motsvarar halva diametern.">
+                comment = <"Detta datafält har flera förekomster för att möjliggöra registrering av flera radier. Exempelvis den maximala och minimala radien för en cysta eller knuta.">
+            >
+            ["at0081"] = <
+                text = <"Yta">
+                description = <"Det beräknade utrymmet för en struktur eller ett föremål i två dimensioner.">
+            >
+            ["at0082"] = <
+                text = <"Tjocklek">
+                description = <"Avståndet mellan två motsatta ytor eller gränser i en anatomisk struktur eller ett föremål.">
+                comment = <"Exempelvis, tjockleken på ett vävnadsskikt, en organvägg eller ett snitt av en biopsi.
+
+Detta datafält har flera förekomster för att möjliggöra registrering av flera tjocklekar. Exempelvis den maximala och minimala tjockleken på en cystvägg.">
+            >
+            ["at9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9001"] = <
+                text = <"* Area (en)">
+                description = <"* Area (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Fysiske dimensjoner">
+                description = <"De romlige målene til en anatomisk struktur, et objekt eller en væske som er en del av, finnes i, eller stammer fra et individ.">
+            >
+            ["at0046"] = <
+                text = <"Volum">
+                description = <"Mengden tredimensjonalt rom som opptas av en struktur eller et objekt.">
+            >
+            ["at0049"] = <
+                text = <"Lengde">
+                description = <"Den lengste dimensjonen til en anatomisk struktur eller et objekt, vanligvis orientert i henhold til den primære anatomiske eller longitudinale akse.">
+                comment = <"Dette dataelementet har multiple forekomster for å tillate registrering av mer enn én lengde.
+
+Dersom orienteringen til en anatomisk struktur eller et objekt er uklar, kan hver dimensjon registreres ved å bruke det samme dataelementet gjentatte ganger, for eksempel: «lengde × lengde × lengde».">
+            >
+            ["at0050"] = <
+                text = <"Bredde">
+                description = <"Dimensjonen som står vinkelrett på lengden, målt i koronalretning (venstre-til-høyre) eller tverrretning (side-til-side) — ofte den nest lengste aksen.">
+                comment = <"Dette dataelementet har multiple forekomster for å tillate registrering av mer enn én bredde, for eksempel den bredeste og smaleste delen av en masse som er avvikende.">
+            >
+            ["at0052"] = <
+                text = <"Diameter">
+                description = <"Lengden av en rett linje som går gjennom midten av et objekt fra én side til motsatt side, vanligvis målt over den bredeste delen.">
+                comment = <"Dette dataelementet har multiple forekomster for å tillate registrering av mer enn én måling.
+
+Hvis orienteringen til en anatomisk struktur eller et objekt er uklar, bruk flere forekomster av det samme dataelementet for å registrere diameteren langs to eller flere akser uten en spesifikk retning. For eksempel en lesjon med diametre registrert som 3 mm × 4 mm, som angir målinger langs to vinkelrette akser uten å spesifisere hva som er lengde eller bredde.">
+            >
+            ["at0053"] = <
+                text = <"Dybde">
+                description = <"Den vertikale avstanden fra en nøytral basis- eller referanseflate til et lavere punkt på en anatomisk struktur eller et objekt.">
+                comment = <"For eksempel dybden på et sår målt fra den normale hudoverflaten.
+
+Dette dataelementet har multiple forekomster for å tillate registrering av for eksempel den dypeste og grunneste delen av en hudlesjon, eller den maksimale og minimale dybden av en indre svulst i bløtvev.">
+            >
+            ["at0054"] = <
+                text = <"Høyde">
+                description = <"Den vertikale avstanden fra en nøytral basis- eller referanseflate til et høyere punkt på en anatomisk struktur eller et objekt.">
+                comment = <"For eksempel høyden på en lesjon over den normale hudoverflaten, eller høyden på en prøvemateriale fra bordoverflaten.
+
+Dette dataelementet har multiple forekomster for å tillate registrering av mer enn én høyde, for eksempel den maksimale og minimale høyden på en svulst over hudoverflaten.">
+            >
+            ["at0055"] = <
+                text = <"Omkrets">
+                description = <"Den lineære avstanden rundt ytterkanten eller yttergrensen av et objekt.">
+                comment = <"På norsk refereres både uregelmessige eller polygonale former og sirkulære eller nesten sirkulære former som omkrets. Tilsvarene er \"perimeter\" og \"circumference\" på engelsk, og dataelementet har derfor blitt gitt navnet \"Circumference/perimeter\" på i den orignale språkdrakten.
+
+Dette dataelementet har multiple forekomster for å tillate registrering av mer enn én måling. For eksempel den indre og ytre omkretsen av et arr eller en ujevn hudforandring, eller den indre og ytre omkretsen av en cyste eller knute målt på ulike steder.">
+            >
+            ["at0080"] = <
+                text = <"Radius">
+                description = <"Lengden av en rett linje fra midten av et objekt til dets overflate eller yttergrense, vanligvis tilsvarende halvparten av diameteren.">
+                comment = <"Dette dataelementet har multiple forekomster for å tillate registrering av mer enn én måling, for eksempel maksimal og minimal radius av en cyste eller knute.">
+            >
+            ["at0081"] = <
+                text = <"Areal">
+                description = <"Det beregnede arealet av strukturen/objektet i to dimensjoner.">
+            >
+            ["at0082"] = <
+                text = <"Tykkelse">
+                description = <"Avstanden mellom to motsatte flater eller grenser på en anatomisk struktur eller et objekt.">
+                comment = <"For eksempel tykkelsen på et vevslag, en organvegg eller en vevsbit fra en biopsi.
+
+Dette dataelementet har multiple forekomster for å tillate registrering av mer enn én måling, for eksempel den maksimale og minimale tykkelsen på en cystevegg.">
+            >
+            ["at9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9001"] = <
+                text = <"* Area (en)">
+                description = <"* Area (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Physical dimensions">
+                description = <"The spatial measurements of an anatomical structure, an object or a fluid that is part of, found in or originates from the body of an individual.">
+            >
+            ["at0046"] = <
+                text = <"Volume">
+                description = <"The amount of three-dimensional space occupied by a structure/object.">
+            >
+            ["at0049"] = <
+                text = <"Length">
+                description = <"The longest dimension of an anatomical structure or object, usually aligned with its primary anatomical or longitudinal axis.">
+                comment = <"This data element has multiple occurrences to allow recording of more than one length.
+
+If the orientation of an anatomical structure or object is unclear, each dimension may be recorded using the same data element repeatedly, for example, 'length × length × length'.">
+            >
+            ["at0050"] = <
+                text = <"Width">
+                description = <"The dimension perpendicular to the length, measured in the coronal (left-to-right) or transverse (side-to-side) direction — often representing the second longest axis.">
+                comment = <"This data element has multiple occurrences to allow recording of more than one width. For example, the widest and narrowest part of an abnormal mass.">
+            >
+            ["at0052"] = <
+                text = <"Diameter">
+                description = <"The length of a straight line passing through the centre of an object from one side to the opposite side, typically measured across its widest part.">
+                comment = <"This data element has multiple occurrences to allow recording of multiple measurements.
+
+If the orientation of an anatomical structure or object is unclear, use multiple occurrences of the same data element to record the diameter along two or more axes without a specific orientation. For example, a lesion with diameters recorded as 3 mm × 4 mm indicating measurements along two perpendicular axes without defining which is length or width.">
+            >
+            ["at0053"] = <
+                text = <"Depth">
+                description = <"The vertical distance from a neutral base or reference surface to a lower point on an anatomical structure or object.">
+                comment = <"For example: the depth of a wound from the normal surface of the skin.
+
+This data element has multiple occurrences to allow recording the deepest and shallowest part of a skin lesion, or the maximum and minimum depth of an internal tumor in soft tissue.">
+            >
+            ["at0054"] = <
+                text = <"Height">
+                description = <"The vertical distance from a neutral base or reference surface to a higher point on an anatomical structure or object.">
+                comment = <"For example: the height of a lesion from the normal surface of the skin; or the height of a specimen from a tabletop.
+
+This data element has multiple occurrences to allow recording of more than one height. For example, the maximum and minimum height of a tumor above the skin surface.">
+            >
+            ["at0055"] = <
+                text = <"Circumference/perimeter">
+                description = <"The linear distance around the outer edge or boundary of an object.">
+                comment = <"For irregular or polygonal shapes, this is referred to as the perimeter. For circular or nearly circular shapes, it is commonly referred to as the circumference.
+
+This data element has multiple occurrences to allow recording of multiple measurements. For example, the inner and outer perimeter of a scar or uneven skin change or the inner and outer circumference of a cyst or nodule measured at different locations.">
+            >
+            ["at0080"] = <
+                text = <"Radius">
+                description = <"The length of a straight line from the centre of an object to its surface or boundary, typically representing half the diameter.">
+                comment = <"This data element has multiple occurrences to allow recording of multiple measurements. For example, the maximum and minimum radius of a cyst or nodule.">
+            >
+            ["at0081"] = <
+                text = <"Area">
+                description = <"The calculated space of a structure/object in two dimensions.">
+            >
+            ["at0082"] = <
+                text = <"Thickness">
+                description = <"The distance between two opposite surfaces or boundaries of an anatomical structure or object.">
+                comment = <"For example, the thickness of a tissue layer, organ wall, or biopsy slice. 
+
+This data element has multiple occurrences to allow recording of multiple measurements. For example, the maximum and minimum thickness of a cyst wall.">
+            >
+            ["at9000"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["at9001"] = <
+                text = <"Area">
+                description = <"Area">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/122>
+            ["at9001"] = <http://openehr.org/id/335>
+        >
+    >

@@ -1,0 +1,415 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1a2d558b-bdc0-4cb2-86eb-ad0c7a84c418; build_uid=6bb33594-da94-4467-8f49-ba34c44a50c2)
+    openEHR-EHR-OBSERVATION.curb_65.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Mikkel Gaup Grønmo, John Tore Valand, Marit Alice Venheim">
+                ["organisation"] = <"Helse-Nord, FSE, Helse Bergen, Helse Vest IKT">
+                ["email"] = <"mikkel.johan.gaup.gronmo@helse-nord.no, mg2801fi@unn.no, john.tore.valand@helse-bergen.no, marit.alice.venheim@helse-vest-ikt.no">
+            >
+            accreditation = <"Nasjonal IKT HF">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Silje Ljosland Bakke">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no">
+        ["date"] = <"2020-04-29">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Dag Aarhus, Vestre Viken HF, Norway", "Nuno Abreu, Oporto Hospital Center, Portugal", "Erling Are Hole, Helse Bergen, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Heidi Aursand, Oslo universitetssykehus, Norway", "steve baguley, NDS, United Kingdom", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Kåre Flø, DIPS ASA, Norway", "Grant Forrest, NHS Scotland, United Kingdom", "Mikkel Gaup Grønmo, Helse-Nord, FSE, Norway (openEHR Editor)", "Evelyn Hovenga, EJSH Consulting, Australia", "Henrik Kockum, Cambio, Sweden", "Liv Laugen, Oslo universitetssykehus, Norway (Nasjonal IKT redaktør)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Mark Luciani, Bath and North East Somerset, Swindon and Wiltshire Clinical Commisioning Group, United Kingdom", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Ana Pereira, CINTESIS, CUF-Porto, Portugal", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "Anders Thurin, VGR, Sweden", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Lim WS, van der Eerden MM, Laing R, Boersma WG, Karalus N, Town GI, Lewis SA, Macfarlane JT. Defining community acquired pneumonia severity on presentation to hospital: an international derivation and validation study. Thorax. 2003 May;58(5):377-82. doi: 10.1136/thorax.58.5.377. PubMed PMID: 12728155; PubMed Central PMCID: PMC1746657.">
+        ["2"] = <"Lim WS, Baudouin SV, George RC, Hill AT, Jamieson C, Le Jeune I, Macfarlane JT, Read RC, Roberts HJ, Levy ML, Wani M, Woodhead MA. BTS guidelines for the management of community acquired pneumonia in adults: update 2009. Thorax. 2009 Oct;64 Suppl 3:iii1-55. doi: 10.1136/thx.2009.121434. PubMed PMID: 19783532. Available from: https://www.brit-thoracic.org.uk/quality-improvement/guidelines/pneumonia-adults/.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"7465364821EF52C05A84DDFAC4E668C6">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere resultatene for hvert parameter og deres totalsum for CURB-65 skår.">
+            keywords = <"pneumonia, samfunnservervet, sykehus, LRTI, CAP,", ...>
+            use = <"Brukes for å registrere resultatene for hvert parameter og deres totalsum for CURB-65 skår.">
+            misuse = <"Brukes ikke til å registrere CRB-65 skår, som er ment brukt utenfor sykehus. Bruk arketypen OBSERVATION.crb_65 til dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter and their total sum for the CURB-65 score.">
+            keywords = <"pneumonia, community, acquired, hospital, LRTI, CAP, community-acquired", ...>
+            use = <"Use to record the results for each component parameter and their total sum for the CURB-65 score.">
+            misuse = <"Not to be used to record the CRB-65 score, which is intended for use in a community or primary care setting. Use the OBSERVATION.crb_65 archetype for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- CURB-65 score
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Any point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Confusion
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- No
+                                                    [{1}, {[at0006]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Urea
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0023]}],    -- No
+                                                    [{1}, {[at0024]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Respiratory rate
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0008]}],    -- No
+                                                    [{1}, {[at0009]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Blood pressure
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0011]}],    -- No
+                                                    [{1}, {[at0012]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Age
+                                        value matches {
+                                            DV_ORDINAL[at9010] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0015]}],    -- No
+                                                    [{1}, {[at0016]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0017] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9011] matches {
+                                                magnitude matches {|0..5|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Grade
+                                        value matches {
+                                            DV_CODED_TEXT[at9012] matches {
+                                                defining_code matches {[ac9005]}    -- Grade (synthesised)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0013] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0025] matches {    -- Extension SLOT
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"CURB-65 skår">
+                description = <"En klinisk skår som brukes i sykehus til å grovt estimere alvorlighetsgraden av samfunnservervet lungebetennelse.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert tidspunkthendelse">
+                description = <"Uspesifisert tidspunkt som kan defineres mer eksplisitt i en templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Forvirring">
+                description = <"Har pasienten nyoppstått forvirring?">
+            >
+            ["at0005"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Respirasjonsfrekvens">
+                description = <"Har pasienten en repirasjonsfrekvens høyere eller lik enn 30 /min?">
+            >
+            ["at0008"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Blodtrykk">
+                description = <"Har pasienten systolisk blodtrykk <90 eller diastolisk blodtrykk ≤60 mmHg?">
+            >
+            ["at0011"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Alder">
+                description = <"Er pasienten 65 år eller eldre?">
+            >
+            ["at0015"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Total skår">
+                description = <"Summen av poeng på hvert enkelt parameter i CURB-65 skåren.">
+            >
+            ["at0018"] = <
+                text = <"Alvorlighetsgrad">
+                description = <"Alvorlighetsvurdering basert på CURB-65 skåren.">
+            >
+            ["at0019"] = <
+                text = <"Lav alvorlighetsgrad">
+                description = <"CURB-65 skår 0-1: Lav mortalitetsrisiko.">
+            >
+            ["at0020"] = <
+                text = <"Moderat alvorlighetsgrad">
+                description = <"CURB-65 skår 2: Moderat mortalitetsrisiko.">
+            >
+            ["at0021"] = <
+                text = <"Høy alvorlighetsgrad">
+                description = <"CURB-65 skår 3-5: Høy mortalitetsrisiko.">
+            >
+            ["at0022"] = <
+                text = <"Urea">
+                description = <"Har pasienten >7 mmol/L (eller 19 mg/dL) Urea i blodet?">
+            >
+            ["at0023"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["ac9012"] = <
+                text = <"Forvirring (synthesised)">
+                description = <"Har pasienten nyoppstått forvirring? (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Urea (synthesised)">
+                description = <"Har pasienten >7 mmol/L (eller 19 mg/dL) Urea i blodet? (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Respirasjonsfrekvens (synthesised)">
+                description = <"Har pasienten en repirasjonsfrekvens høyere eller lik enn 30 /min? (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Blodtrykk (synthesised)">
+                description = <"Har pasienten systolisk blodtrykk <90 eller diastolisk blodtrykk ≤60 mmHg? (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Alder (synthesised)">
+                description = <"Er pasienten 65 år eller eldre? (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Alvorlighetsgrad (synthesised)">
+                description = <"Alvorlighetsvurdering basert på CURB-65 skåren. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"CURB-65 score">
+                description = <"An assessment score used within an acute hospital setting to estimate the severity of community-acquired pneumonia.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Confusion">
+                description = <"Does the patient have recent onset confusion?">
+            >
+            ["at0005"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Respiratory rate">
+                description = <"Does the patient have a respiratory rate equal to or greater than 30 /min?">
+            >
+            ["at0008"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Blood pressure">
+                description = <"Does he patient have a systolic blood pressure <90 OR a diastolic blood pressure ≤60 mmHg?">
+            >
+            ["at0011"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Age">
+                description = <"Is the patient 65 years or older?">
+            >
+            ["at0015"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Total score">
+                description = <"The total sum of each component variable for the CURB-65 score.">
+            >
+            ["at0018"] = <
+                text = <"Grade">
+                description = <"Severity assessment based on the CURB-65 score.">
+            >
+            ["at0019"] = <
+                text = <"Low severity">
+                description = <"CURB-65 score 0-1: Low risk of death.">
+            >
+            ["at0020"] = <
+                text = <"Moderate severity">
+                description = <"CURB-65 score 2: Moderate risk of death.">
+            >
+            ["at0021"] = <
+                text = <"High severity">
+                description = <"CURB-65 score 3-5: High risk of death.">
+            >
+            ["at0022"] = <
+                text = <"Urea">
+                description = <"Does the patient have a blood urea of >7 mmol/L (or 19 mg/dL)?">
+            >
+            ["at0023"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Extension SLOT">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9012"] = <
+                text = <"Confusion (synthesised)">
+                description = <"Does the patient have recent onset confusion? (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Urea (synthesised)">
+                description = <"Does the patient have a blood urea of >7 mmol/L (or 19 mg/dL)? (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Respiratory rate (synthesised)">
+                description = <"Does the patient have a respiratory rate equal to or greater than 30 /min? (synthesised)">
+            >
+            ["ac9015"] = <
+                text = <"Blood pressure (synthesised)">
+                description = <"Does he patient have a systolic blood pressure <90 OR a diastolic blood pressure ≤60 mmHg? (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Age (synthesised)">
+                description = <"Is the patient 65 years or older? (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Grade (synthesised)">
+                description = <"Severity assessment based on the CURB-65 score. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0023", "at0024">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0005", "at0006">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0015", "at0016">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0011", "at0012">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0008", "at0009">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0019", "at0020", "at0021">
+        >
+    >

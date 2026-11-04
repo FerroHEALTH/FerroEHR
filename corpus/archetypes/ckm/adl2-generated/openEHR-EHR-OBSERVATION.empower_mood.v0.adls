@@ -1,0 +1,89 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=cb6cb412-130a-4433-a099-21d905f9a28b; build_uid=bc8fa72b-e575-4829-8780-95246bc16d94)
+    openEHR-EHR-OBSERVATION.empower_mood.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ilias Lamprinos">
+        ["organisation"] = <"Intracom Telecom">
+        ["email"] = <"labil@intracom.gr">
+        ["date"] = <"2012-11-28">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Chrysa Papadaki, Intracom Telecom,  chrpapa@intracom.gr", "Hans Demski, Helmholtz Zentrum München GmbH, demski@helmholtz-muenchen.de">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Hans Demski, Helmholtz Zentrum München GmbH, demski@helmholtz-muenchen.de">
+        ["MD5-CAM-1.0.1"] = <"C4C41ADCE0CC28BE123746D04D5DE34F">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Facilitate recording of the self-assesment of the subject's mood.
+
+Based on the data model developed within the EMPOWER project, www.empower-fp7,eu.">
+            use = <"Self-assesment of mood.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Mood (EMPOWER)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {1..*; unordered} matches {
+                                    allow_archetype CLUSTER[at0019] matches {    -- Level of Mood
+                                        include
+                                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.mood\.v0\..*/}
+                                    }
+                                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9000]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Mood (EMPOWER)">
+                description = <"Self-assesment of the level of mood as an observation of daily living.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Timepoint.">
+            >
+            ["at0013"] = <
+                text = <"Comment">
+                description = <"Indicates related information.">
+            >
+            ["at0019"] = <
+                text = <"Level of Mood">
+                description = <"Level of mood.">
+            >
+        >
+    >
+    term_bindings = <
+        ["MTH"] = <
+            ["at0000"] = <http://MTH.org/id/C0424113>
+        >
+    >

@@ -1,0 +1,365 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ab4e9399-9ba3-4601-a9d0-1d20db1e5f2a; build_uid=95daac4d-9012-4cf6-b740-270228d0c3ff)
+    openEHR-EHR-OBSERVATION.neonatal_skin_risk_assessment.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics, UK">
+        ["email"] = <"ian@freshehr.com">
+        ["date"] = <"2011-08-08">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Huffines B, Logsdon MC. The neonatal skin risk assessment scale for predicting skin breakdown in neonates. Issues in Comprehensive Pediatric Nursing 1997;20(2):103-114.">
+    >
+    other_details = <
+        ["current_contact"] = <"Dr Ian McNicoll, freshEHR Informatics, UK, ian@freshehr.com">
+        ["MD5-CAM-1.0.1"] = <"F69B1DD5EE61A5E3763D8BE112F526BA">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details of a clinical assessment of neonates at risk of skin breakdown or pressure sore development.">
+            keywords = <"braden", "neonate", "score", "skin", "pressure", "ulcer", "sore">
+            use = <"Use record details of a clinical assessment of neonates at risk of skin breakdown or pressure sore development. 
+
+It should be noted that although the purpose of the scale is similar to that of the adult Braden Scale and Braden-Q scale for older children, the scoring methodology is completely different, particularly that a high score is associated with high risk, the opposite from these other Braden scales where a low score equates to high risk.
+
+The Neonatal Skin Risk Assessment Scale (NSRAS) should only be used to assess nenoates under 21 days of age.">
+            misuse = <"Not to be used for pressure sore risk assessment in children aged over 21 days. Use OBSERVATION.braden_scale-q for children between 21 days and 5 years of age. Use  OBSERVATION.braden_scale for children over 5 years of age and adults.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Neonatal Skin Risk Assessment Scale (NSRAS)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- General physical condition
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0012]}],    -- Best
+                                                    [{2}, {[at0013]}],    -- Good
+                                                    [{3}, {[at0014]}],    -- Poor
+                                                    [{4}, {[at0015]}]    -- Very poor
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Moisture
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0017]}],    -- Rarely moist
+                                                    [{2}, {[at0018]}],    -- Occasionally moist
+                                                    [{3}, {[at0019]}],    -- Moist
+                                                    [{4}, {[at0020]}]    -- Constantly moist
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Nutrition
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0021]}],    -- Excellent
+                                                    [{2}, {[at0022]}],    -- Adequate
+                                                    [{3}, {[at0023]}],    -- Inadequate
+                                                    [{4}, {[at0024]}]    -- Very poor
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Activity
+                                        value matches {
+                                            DV_ORDINAL[at9010] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0025]}],    -- Unlimited
+                                                    [{2}, {[at0026]}],    -- Slightly limited
+                                                    [{3}, {[at0027]}],    -- Limited bed-bound
+                                                    [{4}, {[at0028]}]    -- Completely bed-bound
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Mobility
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0029]}],    -- No limitation
+                                                    [{2}, {[at0030]}],    -- Slightly limited
+                                                    [{3}, {[at0031]}],    -- Very limited
+                                                    [{4}, {[at0032]}]    -- Completely immobile
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Mental status
+                                        value matches {
+                                            DV_ORDINAL[at9012] matches {
+                                                [value, symbol] matches {
+                                                    [{1}, {[at0033]}],    -- No impairment
+                                                    [{2}, {[at0034]}],    -- Slightly limited
+                                                    [{3}, {[at0035]}],    -- Very limited
+                                                    [{4}, {[at0036]}]    -- Completely limited
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9013] matches {
+                                                magnitude matches {|2..24|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Graded risk
+                                        value matches {
+                                            DV_ORDINAL[at9014] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0038]}],    -- Not at risk - Total score less than 13
+                                                    [{1}, {[at0037]}]    -- At risk - Total score 13 or over
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9015]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Neonatal Skin Risk Assessment Scale (NSRAS)">
+                description = <"A clinical assessment for neonates at risk for skin breakdown, based on the Braden Scale used in adults.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Graded risk">
+                description = <"A graded risk derived from the 'Total score'.">
+            >
+            ["at0005"] = <
+                text = <"Moisture">
+                description = <"The degree to which the infant's skin is exposed to moisture.">
+            >
+            ["at0006"] = <
+                text = <"Nutrition">
+                description = <"The usual food intake of the neonate.">
+            >
+            ["at0007"] = <
+                text = <"Activity">
+                description = <"The amount of physical activity of the neonate.">
+            >
+            ["at0008"] = <
+                text = <"Mobility">
+                description = <"The neonate's ability to change and control body position.">
+            >
+            ["at0009"] = <
+                text = <"Mental status">
+                description = <"An evaluation of the mental status or sensory preception of the neonate.">
+            >
+            ["at0010"] = <
+                text = <"Total score">
+                description = <"The sum of all sub-scores.">
+            >
+            ["at0011"] = <
+                text = <"General physical condition">
+                description = <"An assessment of general condition, based on gestational age.">
+            >
+            ["at0012"] = <
+                text = <"Best">
+                description = <"Gestational Age > 38 Weeks To Posterm.">
+            >
+            ["at0013"] = <
+                text = <"Good">
+                description = <"Gestational Age > 33 Weeks But < 38 weeks.">
+            >
+            ["at0014"] = <
+                text = <"Poor">
+                description = <"Gestational Age > 28 Weeks But < 33 weeks.">
+            >
+            ["at0015"] = <
+                text = <"Very poor">
+                description = <"Gestational Age > 28 Weeks But < 33 weeks.">
+            >
+            ["at0016"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the Neonatal Skin Risk Assessment Scale, not captured in other fields.">
+            >
+            ["at0017"] = <
+                text = <"Rarely moist">
+                description = <"Skin is usually dry, linen requires changing only every 24 hours.">
+            >
+            ["at0018"] = <
+                text = <"Occasionally moist">
+                description = <"Skin is occasionally moist/damp. Requiring an extra linen change approximately once a day.">
+            >
+            ["at0019"] = <
+                text = <"Moist">
+                description = <"Skin is often but not always moist/damp; linen must be changed at least once a shift.">
+            >
+            ["at0020"] = <
+                text = <"Constantly moist">
+                description = <"Skin is moist/damp every time infant is moved or turned.">
+            >
+            ["at0021"] = <
+                text = <"Excellent">
+                description = <"Bottlehreastfeeds every meal which  meets nutritional needs  for growth.">
+            >
+            ["at0022"] = <
+                text = <"Adequate">
+                description = <"Is on tube feedings which  meet nutritional needs for growth.">
+            >
+            ["at0023"] = <
+                text = <"Inadequate">
+                description = <"Receives less than  optimum amount of liquid diet for growth (formula/breast milk) and supplemented with intravenous fluids.">
+            >
+            ["at0024"] = <
+                text = <"Very poor">
+                description = <"NPO on intravenous  fluids.">
+            >
+            ["at0025"] = <
+                text = <"Unlimited">
+                description = <"In an open crib.">
+            >
+            ["at0026"] = <
+                text = <"Slightly limited">
+                description = <"In a double walled isolette.">
+            >
+            ["at0027"] = <
+                text = <"Limited bed-bound">
+                description = <"In a radiant warmer without a clear plastic “saran” tent.">
+            >
+            ["at0028"] = <
+                text = <"Completely bed-bound">
+                description = <"In a radiant warmer with a clear plastic “saran” tent.">
+            >
+            ["at0029"] = <
+                text = <"No limitation">
+                description = <"Makes major and frequent changes in position without assistance (e.g., turn  head).">
+            >
+            ["at0030"] = <
+                text = <"Slightly limited">
+                description = <"Makes frequent though slight changes in body or extremity position independently.">
+            >
+            ["at0031"] = <
+                text = <"Very limited">
+                description = <"Makes occasional slight changes in body or extremity position but unable to make frequent or significant changes independently.">
+            >
+            ["at0032"] = <
+                text = <"Completely immobile">
+                description = <"Does not make even slight changes in body or extremity position without assistance (e.g., Pavulon).">
+            >
+            ["at0033"] = <
+                text = <"No impairment">
+                description = <"Alert and active.">
+            >
+            ["at0034"] = <
+                text = <"Slightly limited">
+                description = <"Lethargic.">
+            >
+            ["at0035"] = <
+                text = <"Very limited">
+                description = <"Responds only to painful stimuli (flinches, grasps, moans, increased blood pressure or heart rate).">
+            >
+            ["at0036"] = <
+                text = <"Completely limited">
+                description = <"Unresponsive (does not flinch, grasp, moan, increase blood pressure, or heart rate) to painful stimuli due to diminished level of consciousness or sedation.">
+            >
+            ["at0037"] = <
+                text = <"At risk - Total score 13 or over">
+                description = <"The neonate is not at risk of developing a pressure ulcer.">
+            >
+            ["at0038"] = <
+                text = <"Not at risk - Total score less than 13">
+                description = <"The neonate is at risk of developing a pressure ulcer.">
+            >
+            ["ac9015"] = <
+                text = <"General physical condition (synthesised)">
+                description = <"An assessment of general condition, based on gestational age. (synthesised)">
+            >
+            ["ac9016"] = <
+                text = <"Moisture (synthesised)">
+                description = <"The degree to which the infant's skin is exposed to moisture. (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Nutrition (synthesised)">
+                description = <"The usual food intake of the neonate. (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"Activity (synthesised)">
+                description = <"The amount of physical activity of the neonate. (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"Mobility (synthesised)">
+                description = <"The neonate's ability to change and control body position. (synthesised)">
+            >
+            ["ac9020"] = <
+                text = <"Mental status (synthesised)">
+                description = <"An evaluation of the mental status or sensory preception of the neonate. (synthesised)">
+            >
+            ["ac9021"] = <
+                text = <"Graded risk (synthesised)">
+                description = <"A graded risk derived from the 'Total score'. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9020"] = <
+            id = <"ac9020">
+            members = <"at0033", "at0034", "at0035", "at0036">
+        >
+        ["ac9021"] = <
+            id = <"ac9021">
+            members = <"at0038", "at0037">
+        >
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0021", "at0022", "at0023", "at0024">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0017", "at0018", "at0019", "at0020">
+        >
+        ["ac9015"] = <
+            id = <"ac9015">
+            members = <"at0012", "at0013", "at0014", "at0015">
+        >
+        ["ac9019"] = <
+            id = <"ac9019">
+            members = <"at0029", "at0030", "at0031", "at0032">
+        >
+        ["ac9018"] = <
+            id = <"ac9018">
+            members = <"at0025", "at0026", "at0027", "at0028">
+        >
+    >

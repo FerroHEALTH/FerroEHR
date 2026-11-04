@@ -1,0 +1,195 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c7be68ba-2f0e-43cc-8f0b-fc9c59b99223; build_uid=e8f67257-6008-458a-8ebd-45135c009f90)
+    openEHR-DEMOGRAPHIC-ROLE.healthcare_provider_organisation.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            author = <
+                ["name"] = <"Seung-Jong Yu">
+                ["organisation"] = <"NOUSCO Co.,Ltd.">
+            >
+            accreditation = <"Certified Board of Family Medicine in South Korea">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Sergio Miranda Freire">
+                ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+                ["email"] = <"sergio@lampada.uerj.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sergio Miranda Freire & Rigoleta Dutra Mediano Dias">
+        ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+        ["email"] = <"sergio@lampada.uerj.br">
+        ["date"] = <"2009-05-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Rigoleta Dutra, Ministry of Defense, Brazil (openEHR Editor)", "Sergio Freire, State University of Rio de Janeiro, Brazil (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"69903323C6706103CDFC9582CA3DAE97">
+    >
+    details = <
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            purpose = <"진료제공자의 역할에서 기관의 인적 데이터의 표현.">
+            keywords = <"*인적정보 서비스(ko)", "*진료 제공 기관(ko)", "*의료기관(ko)">
+            use = <"진료 제공자의 역할에서 기관에 대한 인적 데이터를 수집하는 인적정보 서비스에서 사용.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Representação dos dados de uma Organização ao exercer o papel de um prestador de assistência à saúde">
+            keywords = <"serviço demográfico", "organização prestadora de assistência à saúde">
+            use = <"Usado em serviços de demografia para coletar dados demográficos sobre uma organização no papel de prestador de assistência à saúde">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Representation of an organisations's demographic data in the role of healthcare provider">
+            keywords = <"demographic service", "healthcare provider organisation">
+            use = <"Used in demographic service to collect demographic data about an organisation in the role of a healthcare provider">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    ROLE[at0000] matches {    -- Healthcare Provider Organisation
+        details matches {
+            ITEM_TREE[at0001] matches {    -- Identifiers
+                items cardinality matches {1..*; unique} matches {
+                    allow_archetype CLUSTER[at0010] occurrences matches {1..*} matches {    -- Identifier
+                        include
+                            archetype_id/value matches {/openEHR-DEMOGRAPHIC-CLUSTER\.provider_identifier[a-zA-Z0-9_-]*\.v0\..*/}
+                    }
+                }
+            }
+        }
+        identities matches {
+            allow_archetype PARTY_IDENTITY[at0002] occurrences matches {1..*} matches {    -- Provider name
+                include
+                    archetype_id/value matches {/openEHR-DEMOGRAPHIC-PARTY_IDENTITY\.organisation_name[a-zA-Z0-9_-]*\.v0\..*/}
+            }
+        }
+        relationships cardinality matches {0..*} matches {
+            PARTY_RELATIONSHIP[at0003] occurrences matches {1} matches {    -- Third-party payer relationship
+                details matches {
+                    ITEM_TREE[at0030] matches {    -- Details
+                        items cardinality matches {1..*} matches {
+                            allow_archetype CLUSTER[at0031] occurrences matches {0..1} matches {    -- identifier used in the relationship
+                                include
+                                    archetype_id/value matches {/openEHR-DEMOGRAPHIC-CLUSTER\.provider_identifier[a-zA-Z0-9_-]*\.v0\..*/}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["ko"] = <
+            ["at0000"] = <
+                text = <"진료 제공 기관">
+                description = <"진료 제공자의 역할에서 기관.">
+            >
+            ["at0001"] = <
+                text = <"식별자">
+                description = <"진료 제공 기관으로 행동하는 기관에 의해 사용되는 식별자.">
+            >
+            ["at0002"] = <
+                text = <"제공자 이름">
+                description = <"어떻게 진료 제공 기관이 알려지는지를 나타냄.">
+            >
+            ["at0003"] = <
+                text = <"보험지불자 관계">
+                description = <"진료 제공 기관과 보험지불자 간의 관계">
+            >
+            ["at0010"] = <
+                text = <"식별자">
+                description = <"진료 제공 기관의 역할에서 기관에서 사용되는 식별자.">
+            >
+            ["at0030"] = <
+                text = <"상세내용">
+                description = <"관계의 상세내용.">
+            >
+            ["at0031"] = <
+                text = <"관계에서 사용되는 식별자">
+                description = <"보험지불자와 관계에서 진료 제공자에의해 사용되는 식별자">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Prestador de assistência à saúde">
+                description = <"Organização no papel de um prestador de assistência à saúde">
+            >
+            ["at0001"] = <
+                text = <"Identificadores">
+                description = <"Identificadores utilizados pela organização quando atua como prestador de assistência à saúde">
+            >
+            ["at0002"] = <
+                text = <"Nome do prestador">
+                description = <"Especifica como a organização prestadora de assistência à saúde é conhecida">
+            >
+            ["at0003"] = <
+                text = <"Relacionamento com fonte pagadora">
+                description = <"Relacionamento entre a organização prestadora de assistência e uma fonte pagadora">
+            >
+            ["at0010"] = <
+                text = <"Identificador">
+                description = <"Identificador utilizado pelo prestador de assistência à saúde">
+            >
+            ["at0030"] = <
+                text = <"Detalhes">
+                description = <"Detalhes do relacionamento">
+            >
+            ["at0031"] = <
+                text = <"Identificador">
+                description = <"Identificador utilizado pelo prestador no relacionamento com a fonte pagadora">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Healthcare Provider Organisation">
+                description = <"Organisation in the role of a healthcare provider">
+            >
+            ["at0001"] = <
+                text = <"Identifiers">
+                description = <"The identifiers used by the organisation acting as a healthcare provider organisation">
+            >
+            ["at0002"] = <
+                text = <"Provider name">
+                description = <"Indicates how the healthcare provider organisation is known by">
+            >
+            ["at0003"] = <
+                text = <"Third-party payer relationship">
+                description = <"relationship between the healthcare provider organisation and a third-party payer">
+            >
+            ["at0010"] = <
+                text = <"Identifier">
+                description = <"The identifier used by the organisation in the role of a healthcare provider organisation">
+            >
+            ["at0030"] = <
+                text = <"Details">
+                description = <"Relationship details">
+            >
+            ["at0031"] = <
+                text = <"identifier used in the relationship">
+                description = <"Identifier used by the healthcare provider in the relationship with the third-party payer">
+            >
+        >
+    >

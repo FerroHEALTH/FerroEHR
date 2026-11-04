@@ -1,0 +1,286 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1982c1bc-729a-4207-baa2-50fd8cf63c2e; build_uid=ae05aebf-219c-4a27-a7de-851d74c18de8)
+    openEHR-EHR-CLUSTER.lens_specification.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["date"] = <"2025-01-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"859C93548F3FFE861678173BAC82A903">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To provide a structured and standardized way to record lens specifications in clinical or optical settings, ">
+            use = <"To document lens details for patients, including those derived from refraction observations, lensmeter measurements, or prescriptions">
+            misuse = <"This Archetype is not used to document the measurement of a refractive error. ">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Lens_specification
+        items cardinality matches {1..*; unordered} matches {
+            CLUSTER[at0021] occurrences matches {0..1} matches {    -- Link to Observation on which Lens Values are based
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Link to Refraction Observation
+                        value matches {
+                            DV_URI[at9004]
+                        }
+                    }
+                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Link to Lensmeter Observation
+                        value matches {
+                            DV_URI[at9005]
+                        }
+                    }
+                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Link to Prescription
+                        value matches {
+                            DV_URI[at9006]
+                        }
+                    }
+                    ELEMENT[at0040] occurrences matches {0..1} matches {    -- Link to Glasses or Contact Lens Device
+                        value matches {
+                            DV_URI[at9007]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Lens Type
+                value matches {
+                    DV_CODED_TEXT[at9008]
+                }
+            }
+            ELEMENT[at0026] occurrences matches {0..1} matches {    -- Sphere Power
+                value matches {
+                    DV_QUANTITY[at9009] matches {
+                        property matches {[at9000]}    -- Refractive power
+                        units matches {"[diop]"}
+                    }
+                }
+            }
+            ELEMENT[at0027] occurrences matches {0..1} matches {    -- Cylinder Power
+                value matches {
+                    DV_QUANTITY[at9010] matches {
+                        property matches {[at9000]}    -- Refractive power
+                        units matches {"[diop]"}
+                    }
+                }
+            }
+            ELEMENT[at0028] occurrences matches {0..1} matches {    -- Cylinder Axis
+                value matches {
+                    DV_QUANTITY[at9011] matches {
+                        property matches {[at9001]}    -- Angle, plane
+                        units matches {"deg"}
+                    }
+                }
+            }
+            ELEMENT[at0029] occurrences matches {0..1} matches {    -- Prism Power
+                value matches {
+                    DV_QUANTITY[at9012]
+                }
+            }
+            ELEMENT[at0031] occurrences matches {0..1} matches {    -- Prism Base Direction
+                value matches {
+                    DV_CODED_TEXT[at9013] matches {
+                        defining_code matches {[ac9002]}    -- Prism Base Direction (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0036] occurrences matches {0..1} matches {    -- Intermediate Addition Power
+                value matches {
+                    DV_QUANTITY[at9014] matches {
+                        property matches {[at9000]}    -- Refractive power
+                        units matches {"[diop]"}
+                    }
+                }
+            }
+            ELEMENT[at0037] occurrences matches {0..1} matches {    -- Near Addition Power
+                value matches {
+                    DV_QUANTITY[at9015] matches {
+                        property matches {[at9000]}    -- Refractive power
+                        units matches {"[diop]"}
+                    }
+                }
+            }
+            ELEMENT[at0038] occurrences matches {0..1} matches {    -- Contact Lens Base Curve Radius
+                value matches {
+                    DV_QUANTITY[at9016] matches {
+                        property matches {[at9003]}    -- Length
+                        units matches {"mm"}
+                    }
+                }
+            }
+            ELEMENT[at0039] occurrences matches {0..1} matches {    -- Contact Lens Diameter
+                value matches {
+                    DV_QUANTITY[at9017] matches {
+                        property matches {[at9003]}    -- Length
+                        units matches {"mm"}
+                    }
+                }
+            }
+            ELEMENT[at0030] occurrences matches {0..1} matches {    -- Lens Wear Duration
+                value matches {
+                    DV_QUANTITY[at9018]
+                }
+            }
+            ELEMENT[at0041] occurrences matches {0..1} matches {    -- Color
+                value matches {
+                    DV_CODED_TEXT[at9019]
+                    DV_TEXT[at9020]
+                }
+            }
+            ELEMENT[at0042] occurrences matches {0..1} matches {    -- Brand
+                value matches {
+                    DV_CODED_TEXT[at9021]
+                    DV_TEXT[at9022]
+                }
+            }
+            ELEMENT[at0043] occurrences matches {0..1} matches {    -- Note
+                value matches {
+                    DV_TEXT[at9023]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Lens_specification">
+                description = <"This archetype defines the specifications of a lens, including its type, power, and other relevant attributes. It can also be used to specify a constellation of trial lenses, if they are positioned sufficiently closely to one another to be simplified as one lens.  It is used to document lens details for glasses or contact lenses, based on observations, prescriptions, or measurements.">
+            >
+            ["at0018"] = <
+                text = <"Link to Refraction Observation">
+                description = <"This link refers to the observation where the lens values originate, identified by its UID.">
+            >
+            ["at0019"] = <
+                text = <"Link to Lensmeter Observation">
+                description = <"This link refers to the Lensmeter where the lens values originate, identified by its UID.">
+            >
+            ["at0020"] = <
+                text = <"Link to Prescription">
+                description = <"This link refers to the Prescription where the lens values originate, identified by its UID.">
+            >
+            ["at0021"] = <
+                text = <"Link to Observation on which Lens Values are based">
+                description = <"">
+                comment = <"Is it possible to have a \"choice of...\" a link?
+">
+            >
+            ["at0024"] = <
+                text = <"Lens Type">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Sphere Power">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Cylinder Power">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Cylinder Axis">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Prism Power">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Lens Wear Duration">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Prism Base Direction">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Up">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Down">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Left">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Right">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Intermediate Addition Power">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Near Addition Power">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Contact Lens Base Curve Radius">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Contact Lens Diameter">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Link to Glasses or Contact Lens Device">
+                description = <"This link refers to the Prescription where the lens values originate, identified by its UID.">
+            >
+            ["at0041"] = <
+                text = <"Color">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Brand">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Note">
+                description = <"">
+            >
+            ["at9000"] = <
+                text = <"Refractive power">
+                description = <"Refractive power">
+            >
+            ["at9001"] = <
+                text = <"Angle, plane">
+                description = <"Angle, plane">
+            >
+            ["at9003"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["ac9002"] = <
+                text = <"Prism Base Direction (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/685>
+            ["at9001"] = <http://openehr.org/id/497>
+            ["at9003"] = <http://openehr.org/id/122>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0032", "at0033", "at0034", "at0035">
+        >
+    >

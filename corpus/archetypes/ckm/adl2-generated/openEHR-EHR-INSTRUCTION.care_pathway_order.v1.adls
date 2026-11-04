@@ -1,0 +1,389 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3b7cca9a-ec00-4062-b694-0b1ebd6cd31d; build_uid=1bfe54ec-20f1-4687-91ca-56c752d13289)
+    openEHR-EHR-INSTRUCTION.care_pathway_order.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Oscar Karlsson">
+                ["organisation"] = <"Karolinska Universitetssjukhuset">
+                ["email"] = <"oscar.karlsson@regionstockholm.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Helse Vest IKT">
+                ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Bjørn Næss">
+        ["organisation"] = <"DIPS AS">
+        ["email"] = <"bna@dips.no">
+        ["date"] = <"2015-06-20">
+    >
+    original_namespace = <"no.openehr">
+    original_publisher = <"openEHR Norway">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Koray Atalag, GALATA-Digital, New Zealand", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Tara Bonet Chinillach, Catalan Health Service, Spain", "Gunn Elin Blakkisrud, DIPS ASA, Norway", "Ciprian Gerstenberger, HN IKT, Norway", "Rosane Gotardo, Systema Ltda., Brazil", "Heather Grain, Llewelyn Grain Informatics, Australia", "Atle Hansen, Universitetssykehuset Nord-Norge, Norway", "Joost Holslag, Joost Holslag Geneeskunde & Advies, Netherlands", "Evelyn Hovenga, EJSH Consulting, Australia", "Matteus Janicki, Akershus Universitetssykehus, Norway", "Anjali Kulkarni, Karkinos, India", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, Oslo universitetssykehus, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "June Marie Knappskog, Helse Nord IKT AS, Norway, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Bjørn Næss, DIPS ASA, Norway", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Kanthan Theivendran, NHS, United Kingdom", "John Tore Valand, Helse Vest IKT, Norway", "Marte Vassli Gullesen, HNIKT, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"no.openehr">
+    custodian_organisation = <"openEHR Norway">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"International Organization for Standardization. Health informatics - System of concepts to support continuity of care; ISO 13940:2015 [Internet]. Geneva: ISO; 2015 [cited 2026 May 18]. Available from: https://www.iso.org/standard/58362.html">
+    >
+    other_details = <
+        ["current_contact"] = <"Silje Ljosland Bakke <silje.ljosland.bakke@helse-vest-ikt.no>">
+        ["MD5-CAM-1.0.1"] = <"36F1EFA2F5D20784995FC8C137935652">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att ordinera initiering av en standardiserad vårdprocess för ett specifikt tillstånd eller en behandling.">
+            keywords = <"*pathway(en)", "*care pathway(en)", "*clinical pathway(en)", "*treatment pathway(en)", "*patient pathway(en)", "*standardised patient pathway(en)", "*care plan(en)", "*protocol(en)", "*order(en)">
+            use = <"Används för att ordinera initiering av en standardiserad vårdprocess för ett specifikt tillstånd eller en behandling. Kliniska riktlinjer kan ligga till grund för strukturerade vårdförlopp, och de interventioner eller andra aktiviteter som rekommenderas inom ett sådant vårdförlopp kan omsättas i en individualiserad vårdplan.
+
+Omfattningen av denna arketyp inkluderar, men är inte begränsad till, ordinationer av standardiserade vårdförlopp för alla typer av akut, kronisk eller förebyggande vård. Exempel:
+- Standardiserade vårdförlopp inom cancervård, till exempel intravesikal instillationsbehandling efter operation vid urinblåsecancer
+- Perioperativa vårdförlopp, till exempel vid total höftprotesoperation
+- Vårdförlopp inom psykiatri, till exempel för behandling av anorexi
+- Vaccinationsscheman, till exempel barnvaccinationsprogram 0–5 år
+- Strukturerade behandlingsprogram för kroniska sjukdomar, till exempel diabetesbehandling
+
+I denna arketyp används termerna ”vårdförlopp” och ”plan” med följande betydelser:
+- Vårdförlopp: Ett vårdförlopp är en standardiserad process för ett specifikt tillstånd eller en behandling, vanligtvis med en fördefinierad start- och slutpunkt. De interventioner eller andra aktiviteter som rekommenderas inom ett vårdförlopp kan omsättas i en plan.
+- Plan: En vårdplan eller behandlingsplan är anpassad för en specifik individ, är oftast dynamisk och uppdateras i takt med att individens tillstånd förändras. Planer tas ofta fram i samarbete mellan individen och vårdteamet och är inriktade på specifika mål, interventioner och uppföljningar.">
+            misuse = <"*Not to be used to record information about the execution of the care pathway. Use the ACTION.care_pathway archetype for this purpose.
+
+Not to be used to record orders for specific activities recommended by a care pathway. Use separate and specific instances of INSTRUCTION.service_request or similar archetypes for this purpose. Examples of specific activities include, but are not limited to: multi-disciplinary team meetings, diagnostic tests, consultations, or measurements.
+
+Not to be used to record information about treatment goals. Use EVALUATION.goal or other appropriate archetypes for this purpose.(en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å ordinere et standardisert klinisk forløp for en spesifikk tilstand eller behandling.">
+            keywords = <"forløp", "behandlingsforløp", "behandlingslinje", "behandlingsplan", "protokoll", "pasientforløp", "pakkeforløp", "ordinering">
+            use = <"Brukes for å ordinere et standardisert klinisk forløp for en spesifikk tilstand eller behandling. Fremdriften i det ordinerte forløpet kan registreres ved hjelp av den tilhørende arketypen ACTION.care_pathway (Styring av klinisk forløp).
+
+Arketypen omfatter ordinering av standardiserte forløp for enhver type akutt, kronisk eller forebyggende behandling, på tvers av medisinske, kirurgiske, sykepleiefaglige og tverrfaglige fagområder. For eksempel:
+- kreftforløp, som instillasjonsbehandling etter kirurgi for blærekreft
+- perioperative forløp, som innsetting av total hofteprotese
+- forløp innen psykisk helse, som behandlingsforløp for anoreksi
+- vaksinasjonsprogrammer, som vaksinasjonsprogram for barn 0-5 år
+- protokoller for kroniske sykdommer, som diabetesbehandling
+- sykepleieforløp, som forebygging av trykksår eller sårbehandling
+
+Begrepene \"klinisk forløp\" og \"behandlingsplan\" brukes her med følgende betydning:
+- klinisk forløp: Et klinisk forløp (noen ganger kalt behandlingsforløp) er en standardisert kunnskapsressurs som beskriver en omsorgsprosess for en spesifikk tilstand eller behandling, vanligvis med en forhåndsdefinert start og slutt. Et klinisk forløp kan bygge på kliniske retningslinjer, og anbefalte intervensjoner eller andre aktiviteter kan konkretiseres i en behandlingsplan. Et klinisk forløp tilsvarer ContSys' (ISO 13940) begrep 'clinical pathway'.
+- behandlingsplan: En behandlingsplan eller pleieplan er tilpasset en spesifikk person, ofte basert på ett eller flere kliniske forløp, er vanligvis dynamisk og oppdateres etter hvert som personens tilstand endres. Planer utvikles ofte i samarbeid mellom personen og helseteamet og er orientert rundt spesifikke mål, intervensjoner og evalueringer.
+
+For flerfasede forløp der et overordnet forløp inneholder distinkte forhåndsdefinerte faser, kan arketypen brukes til å ordinere det overordnede forløpet, for eksempel en hel onkologisk protokoll. I tillegg kan separate instanser av arketypen brukes til å ordinere hver enkelt fase, for eksempel neoadjuvant behandling, kirurgi og adjuvant behandling.">
+            misuse = <"Brukes ikke for å registrere informasjon om gjennomføringen av det kliniske forløpet. Bruk arketypen ACTION.care_pathway (Styring av klinisk forløp) til dette formålet.
+
+Brukes ikke for å registrere ordinering av spesifikke aktiviteter som anbefales i et klinisk forløp. Bruk separate og spesifikke instanser av INSTRUCTION.service_request (Helsetjenesteforespørsel) eller lignende arketyper til dette formålet. Eksempler på spesifikke aktiviteter kan omfatte tverrfaglige teammøter, diagnostiske undersøkelser, konsultasjoner eller målinger.
+
+Brukes ikke for å registrere informasjon om behandlingsmål. Bruk EVALUATION.goal (Behandlingsmål) eller andre passende arketyper til dette formålet.">
+            copyright = <"© openEHR Norway">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To order a standardised care pathway for a specific condition or treatment.">
+            keywords = <"pathway", "care pathway", "clinical pathway", "treatment pathway", "patient pathway", "standardised patient pathway", "care plan", "protocol", "order">
+            use = <"Use to order a standardised care pathway for a specific condition or treatment. The progress of the ordered pathway can be recorded using the corresponding ACTION.care_pathway archetype.
+
+The scope of this archetype includes, but is not limited to orders for standardised pathways for any type of acute, chronic or preventive management, across medical, surgical, nursing and multidisciplinary domains. For example:
+- Cancer care pathways, for example post-surgical instillation treatment for bladder cancer
+- Perioperative pathways, for example total hip replacement
+- Mental health pathways, for example anorexia treatment pathway
+- Vaccination schedules, for example 0-5 childhood vaccination schedule
+- Chronic disease protocols, for example diabetes management
+- Nursing care pathways, for example pressure ulcer prevention or wound care pathway
+
+In this archetype, the terms \"care pathway\" and \"care plan\" are used to mean the following:
+- Care pathway: A care pathway (sometimes referred to as a clinical pathway) is a standardised knowledge resource describing a care process for a specific condition or treatment, commonly with a predetermined start and end. A care pathway may be informed by clinical guidelines, and the interventions or other activities recommended may be operationalised as a care plan. A care pathway is equivalent to a ContSys (ISO 13940) clinical pathway.
+- Care plan: A care plan or treatment plan is tailored to a specific individual, often based on one or more care pathways, is usually dynamic and updated as the individual's condition changes. Plans are often developed collaboratively between the individual and their healthcare team, and oriented around specific goals, interventions and evaluations.
+
+For multi-phase pathways, where a single overarching pathway contains distinct predefined phases, this archetype may be used to order the overall pathway, for example an entire oncology protocol. In addition, separate instances of this archetype may also be used to order each phase, for example neoadjuvant therapy, surgery, and adjuvant therapy.">
+            misuse = <"Not to be used to record information about the execution of the care pathway. Use the ACTION.care_pathway archetype for this purpose.
+
+Not to be used to record orders for specific activities recommended by a care pathway. Use separate and specific instances of INSTRUCTION.service_request or similar archetypes for this purpose. Examples of specific activities include, but are not limited to: multi-disciplinary team meetings, diagnostic tests, consultations, or measurements.
+
+Not to be used to record information about treatment goals. Use EVALUATION.goal or other appropriate archetypes for this purpose.">
+            copyright = <"© openEHR Norway">
+        >
+    >
+
+definition
+    INSTRUCTION[at0000] matches {    -- Care pathway order
+        activities cardinality matches {0..*; unordered} matches {
+            ACTIVITY[at0001] matches {    -- Order
+                description matches {
+                    ITEM_TREE[at0002] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Care pathway name
+                                value matches {
+                                    DV_TEXT[at9000]
+                                }
+                            }
+                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Description
+                                value matches {
+                                    DV_TEXT[at9001]
+                                }
+                            }
+                            ELEMENT[at0014] matches {    -- Clinical indication
+                                value matches {
+                                    DV_TEXT[at9002]
+                                }
+                            }
+                            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Start date/time
+                                value matches {
+                                    DV_DATE_TIME[at9003]
+                                }
+                            }
+                            ELEMENT[at0015] occurrences matches {0..1} matches {    -- End date/time
+                                value matches {
+                                    DV_DATE_TIME[at9004]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0006]    -- Additional details
+                            allow_archetype CLUSTER[at0017] matches {    -- Knowledge base reference
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.knowledge_base_reference(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                            }
+                            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Comment
+                                value matches {
+                                    DV_TEXT[at9005]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0007] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0018] matches {    -- Order identifier
+                        value matches {
+                            DV_IDENTIFIER[at9006]
+                            DV_TEXT[at9007]
+                        }
+                    }
+                    ELEMENT[at0019] matches {    -- Parent order identifier
+                        value matches {
+                            DV_TEXT[at9008]
+                        }
+                    }
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Review due
+                        value matches {
+                            DV_DATE_TIME[at9009]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0010] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Ordination av vårdförlopp">
+                description = <"En ordination av ett standardiserat vårdförlopp för ett specifikt tillstånd eller en behandling.">
+            >
+            ["at0001"] = <
+                text = <"Ordination">
+                description = <"Detaljer om den begärda ordinationen.">
+            >
+            ["at0003"] = <
+                text = <"Vårdförlopp">
+                description = <"Benämning på aktuellt vårdförlopp.">
+                comment = <"*For example: 'Breast cancer pathway' or 'STEMI pathway'. Coding of the care pathway name with a terminology is preferred, where possible.(en)">
+            >
+            ["at0004"] = <
+                text = <"Startdatum/tid">
+                description = <"Datum/tid för start av aktuellt vårdförlopp.">
+            >
+            ["at0005"] = <
+                text = <"*Description(en)">
+                description = <"*Narrative description about the care pathway order, including any relevant details about how the pathway is intended to be carried out.(en)">
+            >
+            ["at0006"] = <
+                text = <"*Additional details(en)">
+                description = <"*Additional structured details about the care pathway order.(en)">
+            >
+            ["at0010"] = <
+                text = <"*Extension(en)">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms.(en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR.(en)">
+            >
+            ["at0013"] = <
+                text = <"*Comment(en)">
+                description = <"*Additional narrative about the care pathway order not captured in other fields.(en)">
+            >
+            ["at0014"] = <
+                text = <"*Clinical indication(en)">
+                description = <"*The clinical reason for ordering care pathway.(en)">
+                comment = <"*For example: 'Cancer'. Coding of the clinical indication with a terminology is preferred, where possible.(en)">
+            >
+            ["at0015"] = <
+                text = <"Slutdatum/tid">
+                description = <"Datum/tid för avslut av aktuellt vårdförlopp.">
+            >
+            ["at0016"] = <
+                text = <"*Review due(en)">
+                description = <"*The date when the care pathway order is intended to be reviewed.(en)">
+            >
+            ["at0017"] = <
+                text = <"*Knowledge base reference(en)">
+                description = <"*Structured details about a knowledge base item used in the care pathway order.(en)">
+            >
+            ["at0018"] = <
+                text = <"*Order identifier(en)">
+                description = <"*Unique identifier for this specific care pathway order for the individual.(en)">
+                comment = <"*This element identifies this specific care pathway order, not the pathway template or protocol itself. It may be used to group all related ACTION and INSTRUCTION compositions belonging to the same patient's care pathway order. The identifier may be issued externally, for example by a national pathway registry or a referring organisation. Multiple occurrences allow more than one identifier to be recorded simultaneously if required.(en)">
+            >
+            ["at0019"] = <
+                text = <"*Parent order identifier(en)">
+                description = <"*Unique identifier of the parent of this pathway order, where an overarching pathway contains distinct predefined phases.(en)">
+                comment = <"*For example: an oncology protocol pathway may be the parent of a neoadjuvant therapy pathway.(en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Ordinering av klinisk forløp">
+                description = <"Ordinering av et standardisert klinisk forløp for en spesifikk tilstand eller behandling.">
+            >
+            ["at0001"] = <
+                text = <"Ordinering">
+                description = <"Detaljer om ordineringen.">
+            >
+            ["at0003"] = <
+                text = <"Forløpsnavn">
+                description = <"Navnet på det kliniske forløpet.">
+                comment = <"For eksempel: \"Brystkreftforløp\" eller \"STEMI-forløp\". Koding av forløpsnavnet med en terminologi er å foretrekke, der det er mulig.">
+            >
+            ["at0004"] = <
+                text = <"Startdato/-tid">
+                description = <"Dato/tid da det ordinerte kliniske forløpet er planlagt å starte.">
+            >
+            ["at0005"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse om ordineringen av det kliniske forløpet, inkludert eventuelle relevante detaljer om hvordan forløpet er tiltenkt gjennomført.">
+            >
+            ["at0006"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere strukturerte detaljer om ordineringen av det kliniske forløpet.">
+            >
+            ["at0010"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0013"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om ordineringen av det kliniske forløpet som ikke er registrert i andre felt.">
+            >
+            ["at0014"] = <
+                text = <"Klinisk indikasjon">
+                description = <"Den kliniske begrunnelsen for at det kliniske forløpet ordineres.">
+                comment = <"For eksempel: \"Kreft\". Koding av den kliniske indikasjonen med en terminologi er å foretrekke, der det er mulig.">
+            >
+            ["at0015"] = <
+                text = <"Sluttdato/-tid">
+                description = <"Dato/tid da det ordinerte kliniske forløpet er planlagt å avsluttes.">
+            >
+            ["at0016"] = <
+                text = <"Planlagt revurdering">
+                description = <"Dato da ordineringen av det kliniske forløpet er planlagt å revurderes.">
+            >
+            ["at0017"] = <
+                text = <"Referanse til kunnskapsbase">
+                description = <"Strukturerte detaljer om en kunnskapsbase som er brukt i ordineringen av det kliniske forløpet.">
+            >
+            ["at0018"] = <
+                text = <"Ordineringsidentifikator">
+                description = <"Unik identifikator for denne spesifikke ordineringen av klinisk forløp for individet.">
+                comment = <"Dette elementet identifiserer denne spesifikke ordineringen av klinisk forløp, ikke forløpsmalen eller protokollen som sådan. Den kan brukes til å gruppere alle relaterte ACTION- og INSTRUCTION-komposisjoner som tilhører samme individs kliniske forløp. Identifikatoren kan utstedes eksternt, for eksempel av et nasjonalt forløpsregister eller en henvisende organisasjon. Flere forekomster gjør det mulig å registrere mer enn én identifikator samtidig, ved behov.">
+            >
+            ["at0019"] = <
+                text = <"Identifikator for overordnet ordinering">
+                description = <"Unik identifikator for den overordnede ordineringen, der et overordnet klinisk forløp inneholder distinkte forhåndsdefinerte faser.">
+                comment = <"For eksempel kan et forløp for en onkologisk protokoll være overordnet et forløp for neoadjuvant behandling.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Care pathway order">
+                description = <"An order for a standardised care pathway for a specific condition or treatment.">
+            >
+            ["at0001"] = <
+                text = <"Order">
+                description = <"Details of the requested order.">
+            >
+            ["at0003"] = <
+                text = <"Care pathway name">
+                description = <"The name of the care pathway.">
+                comment = <"For example: 'Breast cancer pathway' or 'STEMI pathway'. Coding of the care pathway name with a terminology is preferred, where possible.">
+            >
+            ["at0004"] = <
+                text = <"Start date/time">
+                description = <"Date/time when the ordered care pathway should commence.">
+            >
+            ["at0005"] = <
+                text = <"Description">
+                description = <"Narrative description about the care pathway order, including any relevant details about how the pathway is intended to be carried out.">
+            >
+            ["at0006"] = <
+                text = <"Additional details">
+                description = <"Additional structured details about the care pathway order.">
+            >
+            ["at0010"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0013"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the care pathway order not captured in other fields.">
+            >
+            ["at0014"] = <
+                text = <"Clinical indication">
+                description = <"The clinical reason for ordering care pathway.">
+                comment = <"For example: 'Cancer'. Coding of the clinical indication with a terminology is preferred, where possible.">
+            >
+            ["at0015"] = <
+                text = <"End date/time">
+                description = <"Date/time when the ordered care pathway should end.">
+            >
+            ["at0016"] = <
+                text = <"Review due">
+                description = <"The date when the care pathway order is intended to be reviewed.">
+            >
+            ["at0017"] = <
+                text = <"Knowledge base reference">
+                description = <"Structured details about a knowledge base item used in the care pathway order.">
+            >
+            ["at0018"] = <
+                text = <"Order identifier">
+                description = <"Unique identifier for this specific care pathway order for the individual.">
+                comment = <"This element identifies this specific care pathway order, not the pathway template or protocol itself. It may be used to group all related ACTION and INSTRUCTION compositions belonging to the same patient's care pathway order. The identifier may be issued externally, for example by a national pathway registry or a referring organisation. Multiple occurrences allow more than one identifier to be recorded simultaneously if required.">
+            >
+            ["at0019"] = <
+                text = <"Parent order identifier">
+                description = <"Unique identifier of the parent of this pathway order, where an overarching pathway contains distinct predefined phases.">
+                comment = <"For example: an oncology protocol pathway may be the parent of a neoadjuvant therapy pathway.">
+            >
+        >
+    >

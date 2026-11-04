@@ -1,0 +1,353 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-CLUSTER.dermatology_therapy_summary_detail.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"HANDIHealth,UK">
+        ["email"] = <"ian@handihealth.org">
+        ["date"] = <"2015-02-18">
+    >
+    lifecycle_state = <"AuthorDraft">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"00E62B454A60D1BD6382CE9098D74226">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record details of specifc dermatology therapies for registry purposes.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Dermatology  therapy summary details
+        items cardinality matches {1..*; unordered} matches {
+            CLUSTER[at0002] occurrences matches {0..1} matches {    -- Phototherapy
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0001] occurrences matches {0..1} matches {    -- Phototherapy type
+                        value matches {
+                            DV_CODED_TEXT[at9006] matches {
+                                defining_code matches {[ac9000]}    -- Phototherapy type (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Maximum dose
+                        value matches {
+                            DV_TEXT[at9007]
+                        }
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Cumulative dose
+                        value matches {
+                            DV_TEXT[at9008]
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0007] occurrences matches {0..1} matches {    -- Systemic therapy
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Sytemic therapy type
+                        value matches {
+                            DV_CODED_TEXT[at9009] matches {
+                                defining_code matches {[ac9001]}    -- Sytemic therapy type (synthesised)
+                            }
+                            DV_TEXT[at9010]
+                        }
+                    }
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Route
+                        value matches {
+                            DV_CODED_TEXT[at9011] matches {
+                                defining_code matches {[ac9002]}    -- Route (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0020] occurrences matches {0..1} matches {    -- Topical therapy
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Topical therapy type
+                        value matches {
+                            DV_CODED_TEXT[at9012] matches {
+                                defining_code matches {[ac9003]}    -- Topical therapy type (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Potency
+                        value matches {
+                            DV_CODED_TEXT[at9013] matches {
+                                defining_code matches {[ac9004]}    -- Potency (synthesised)
+                            }
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0028] occurrences matches {0..1} matches {    -- Antihistamines
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- Antihistamine type
+                        value matches {
+                            DV_CODED_TEXT[at9014] matches {
+                                defining_code matches {[ac9005]}    -- Antihistamine type (synthesised)
+                            }
+                            DV_TEXT[at9015]
+                        }
+                    }
+                    ELEMENT[at0043] occurrences matches {0..1} matches {    -- Dose
+                        value matches {
+                            DV_TEXT[at9016]
+                        }
+                    }
+                    ELEMENT[at0044] occurrences matches {0..1} matches {    -- Adverse effects
+                        value matches {
+                            DV_TEXT[at9017]
+                        }
+                    }
+                }
+            }
+            CLUSTER[at0038] occurrences matches {0..1} matches {    -- Hospitalisation
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0037] occurrences matches {0..1} matches {    -- Reason for hospitalisation
+                        value matches {
+                            DV_TEXT[at9018]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Dermatology  therapy summary details ">
+                description = <"Details of specifc dermatology therapies for registry purposes.">
+            >
+            ["at0001"] = <
+                text = <"Phototherapy type">
+                description = <"The type of phototherapy.">
+            >
+            ["at0002"] = <
+                text = <"Phototherapy">
+                description = <"Details of phototherapy.">
+            >
+            ["at0003"] = <
+                text = <"UVA-1">
+                description = <"UVA-1.">
+            >
+            ["at0004"] = <
+                text = <"NB-UVB">
+                description = <"NB-UVB.">
+            >
+            ["at0005"] = <
+                text = <"Maximum dose">
+                description = <"The maximum dose of phototherapy.">
+            >
+            ["at0006"] = <
+                text = <"Cumulative dose">
+                description = <"The cumulative dose of phototherapy.">
+            >
+            ["at0007"] = <
+                text = <"Systemic therapy">
+                description = <"Details of systemic therapy.">
+            >
+            ["at0008"] = <
+                text = <"Sytemic therapy type">
+                description = <"The type of systemic therapy.">
+            >
+            ["at0009"] = <
+                text = <"Glucocorticosteroids">
+                description = <"Glucocorticosteroids.">
+            >
+            ["at0010"] = <
+                text = <"CsA">
+                description = <"CsA.">
+            >
+            ["at0011"] = <
+                text = <"MTX">
+                description = <"MTX.">
+            >
+            ["at0012"] = <
+                text = <"AZA">
+                description = <"AZA.">
+            >
+            ["at0013"] = <
+                text = <"MMF">
+                description = <"MMF.">
+            >
+            ["at0014"] = <
+                text = <"MPS">
+                description = <"MPS.">
+            >
+            ["at0015"] = <
+                text = <"IVIG">
+                description = <"IVIG.">
+            >
+            ["at0016"] = <
+                text = <"Route">
+                description = <"The systemic therapy route.">
+            >
+            ["at0017"] = <
+                text = <"Oral">
+                description = <"Oral.">
+            >
+            ["at0018"] = <
+                text = <"Intramuscular">
+                description = <"Intramuscular.">
+            >
+            ["at0019"] = <
+                text = <"Intravenous">
+                description = <"Intravenous.">
+            >
+            ["at0020"] = <
+                text = <"Topical therapy">
+                description = <"Details of topical therapy.">
+            >
+            ["at0021"] = <
+                text = <"Topical therapy type">
+                description = <"The type of topical therapy.">
+            >
+            ["at0022"] = <
+                text = <"Potency">
+                description = <"Potency of topical therapy.">
+            >
+            ["at0023"] = <
+                text = <"I">
+                description = <"I.">
+            >
+            ["at0024"] = <
+                text = <"II">
+                description = <"II">
+            >
+            ["at0025"] = <
+                text = <"III">
+                description = <"III.">
+            >
+            ["at0026"] = <
+                text = <"IV">
+                description = <"IV.">
+            >
+            ["at0027"] = <
+                text = <"Not applicable">
+                description = <"Not applicable.">
+            >
+            ["at0028"] = <
+                text = <"Antihistamines">
+                description = <"Details of antihistamine therapy.">
+            >
+            ["at0029"] = <
+                text = <"Antihistamine type">
+                description = <"Type of antihistamine.">
+            >
+            ["at0030"] = <
+                text = <"Aerius">
+                description = <"Aerius.">
+            >
+            ["at0031"] = <
+                text = <"Atarax">
+                description = <"Atarax.">
+            >
+            ["at0032"] = <
+                text = <"Xyzal">
+                description = <"Xyzal.">
+            >
+            ["at0033"] = <
+                text = <"Zyrtec">
+                description = <"Zyrtec.">
+            >
+            ["at0034"] = <
+                text = <"Fenistil">
+                description = <"Fenistil.">
+            >
+            ["at0035"] = <
+                text = <"Nedeltran">
+                description = <"Nedeltran.">
+            >
+            ["at0037"] = <
+                text = <"Reason for hospitalisation">
+                description = <"The reason for hospitalisation.">
+            >
+            ["at0038"] = <
+                text = <"Hospitalisation">
+                description = <"Details of hospitalisation.">
+            >
+            ["at0039"] = <
+                text = <"Corticosteroïd">
+                description = <"Corticosteroïd.">
+            >
+            ["at0040"] = <
+                text = <"Protopic">
+                description = <"Protopic.">
+            >
+            ["at0041"] = <
+                text = <"Elidel">
+                description = <"Elidel.">
+            >
+            ["at0042"] = <
+                text = <"Coal tar">
+                description = <"Coal tar.">
+            >
+            ["at0043"] = <
+                text = <"Dose">
+                description = <"The dose of antihistamines.">
+            >
+            ["at0044"] = <
+                text = <"Adverse effects">
+                description = <"Adverse effects of antihistamines.">
+            >
+            ["ac9000"] = <
+                text = <"Phototherapy type (synthesised)">
+                description = <"The type of phototherapy. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Sytemic therapy type (synthesised)">
+                description = <"The type of systemic therapy. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Route (synthesised)">
+                description = <"The systemic therapy route. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Topical therapy type (synthesised)">
+                description = <"The type of topical therapy. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Potency (synthesised)">
+                description = <"Potency of topical therapy. (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Antihistamine type (synthesised)">
+                description = <"Type of antihistamine. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0017", "at0018", "at0019">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0009", "at0010", "at0011", "at0012", "at0013", "at0014", "at0015">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0003", "at0004">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0030", "at0031", "at0032", "at0033", "at0034", "at0035">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0023", "at0024", "at0025", "at0026", "at0027">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0039", "at0040", "at0041", "at0042">
+        >
+    >

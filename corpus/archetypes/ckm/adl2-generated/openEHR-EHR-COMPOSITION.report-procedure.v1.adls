@@ -1,0 +1,588 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=a8d1333d-63ef-4db0-958f-62643d0fa6c5; build_uid=35bf5acd-965c-4119-9ebb-ac45ab088931)
+    openEHR-EHR-COMPOSITION.report-procedure.v1.1.0
+
+specialize
+    openEHR-EHR-COMPOSITION.report.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Sarah Ballout">
+                ["organisation"] = <"MHH-Hannover">
+                ["email"] = <"ballout.sarah@mh-hannover.de">
+            >
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Sofia Lång Janstad, Sofia Janstad, Sajjad Saffari, Henna Haapa Hybinette">
+                ["organisation"] = <"Karolinska University Hospital, Stockholm Region, SLSO, Region Stockholm">
+                ["email"] = <"sofia.lang-janstad@regionstockholm.se, sajjad.saffari-miandoab@regionstockholm.se, henna.haapa-hybinette@regionstockholm.se">
+            >
+        >
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            author = <
+                ["name"] = <"Seung-Jong Yu">
+                ["organisation"] = <"InfoClinic Co.,Ltd.">
+                ["email"] = <"seungjong.yu@gmail.com">
+            >
+            accreditation = <"Certified Board of Family Medicine in South Korea">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Osmeire Chamelette Sanzovo">
+                ["organisation"] = <"Hospital Sírio Libanês - SP">
+                ["email"] = <"osmeire.acsanzovo@hsl.org.br">
+            >
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            author = <
+                ["name"] = <"Francesca Frexia">
+                ["organisation"] = <"CRS4 - Center for advanced studies, research and development in Sardinia, Pula (Cagliari), Italy">
+                ["email"] = <"francesca.frexia@crs4.it">
+            >
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+            author = <
+                ["name"] = <"Lin Zhang">
+                ["organisation"] = <"Freelancer">
+                ["email"] = <"linforest@163.com">
+            >
+        >
+        ["zh"] = <
+            language = <[ISO_639-1::zh]>
+            author = <
+                ["name"] = <"Yexuan Cheng">
+                ["organisation"] = <"浙江大学">
+                ["email"] = <"3160100913@zju.edu.cn">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Laura Moral Lopez">
+                ["organisation"] = <"Sistema de Salut de Catalunya">
+                ["email"] = <"lauramoral@catsalut.cat">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen; John Tore Valand">
+                ["organisation"] = <"Oslo univeristetsykehus HF; Helse Bergen HF">
+            >
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Alan March">
+                ["organisation"] = <"Hospital Universitario Austral - Buenos Aires - Argentina">
+                ["email"] = <"alandmarch@gmail.com">
+            >
+            accreditation = <"physician">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Pieter Bos, Jelte Zeilstra">
+                ["organisation"] = <"Nedap Healthcare">
+            >
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Julio de Sosa">
+                ["organisation"] = <"Servei Català de la Salut">
+                ["email"] = <"juliodesosa@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"2012-12-10">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjoern Arntzen, Oslo university hospital, Norway", "Silje Ljosland Bakke, Bergen Hospital Trust, Norway (openEHR Editor)", "Sistine Barretto-Daniels, Ocean Informatics, Australia", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Heath Frankel, Ocean Informatics, Australia", "Heather Grain, Llewelyn Grain Informatics, Australia", "Sam Heard, Ocean Informatics, Australia", "Lars Karlsen, DIPS ASA, Norway", "Sabine Leh, Haukeland University Hospital, Department of Pathology, Norway", "Heather Leslie, Ocean Informatics, Australia (openEHR Editor)", "Hugh Leslie, Ocean Informatics, Australia", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Andrej Orel, Marand d.o.o., Slovenia", "Jussara Rotzsch, UNB, Brazil">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"5F29D55EB4B9405B18BE6721E2D54197">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Ein generischer Container-Archetyp zur Speicherung von Informationen über jede eigenständige Prozedur oder durchgeführte Operation.">
+            keywords = <"Bericht", "Prozedur", "Operation", "Verfahren", "Ablauf", "Vorgang">
+            use = <"*Use as a generic procedure-related archetype to carry information about any stand-alone procedure or operation performed. 
+
+It is anticipated that each COMPOSITION.report-procedure archetype will contain at least one ACTION.procedure (or related archetype) but depending on the complexity of the procedure it may contain a variety of other archetypes depending on the nature and complexity of the procedure performed. For example, archetypes to describe the associated anaesthetic or imaging activities carried out during the procedure.
+
+Common use cases are: 
+- any procedure that is not recorded as part of a consultation but needs to be carried out recorded as a stand-alone activity; 
+- Endoscopy Report; through to a 
+- complete Operation Report for an laparotomy or joint replacement.
+
+Record of the anaesthetic used to cover the procedure will be recorded using purpose-specific archetypes. They can be committed to the health record at the same time as the Procedure report, most likely in one of two ways:
+- in a separate Anaesthetic report. This is most likely if the anaesthetic is administered by a separate clinician to the one performing the procedure; or
+- in the same Procedure report as the procedure is recorded. This is most likely if the anaesthetic was administered by the same clinician who performed the procedure.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"Nicht für Berichte zu verwenden, die nicht mit einem Verfahren in Zusammenhang stehen. Hierfür verwenden Sie den generischen COMPOSITION.Bericht oder ggf. zweckgebundene COMPOSITIONs.
+
+Nicht für Prozeduren zu verwenden, die als Teil eines Konsultationsvermerks aufgezeichnet werden, z.B. die Entfernung einer Hautläsion in einer Erstversorgungsberatung. Hierfür verwenden Sie einen ACTION.Prozedur Archetyp innerhalb des COMPOSITION.Kontakt.
+
+Nicht für Prozeduren zu verwenden, die als Teil einer Pflegefortschrittsanzeige dokumentiert werden, z. B. Einführen eines Katheters. Hierfür verwenden Sie einen ACTION.">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"*Generic container archetype to carry information that needs to be shared with others.(en)">
+            keywords = <"*report(en)", ...>
+            use = <"*Use as a generic procedure-related archetype to carry information about any stand-alone procedure or operation performed. 
+
+It is anticipated that each COMPOSITION.report-procedure archetype will contain at least one ACTION.procedure (or related archetype) but depending on the complexity of the procedure it may contain a variety of other archetypes depending on the nature and complexity of the procedure performed. For example, archetypes to describe the associated anaesthetic or imaging activities carried out during the procedure.
+
+Common use cases are: 
+- any procedure that is not recorded as part of a consultation but needs to be carried out recorded as a stand-alone activity; 
+- Endoscopy Report; through to a 
+- complete Operation Report for an laparotomy or joint replacement.
+
+Record of the anaesthetic used to cover the procedure will be recorded using purpose-specific archetypes. They can be committed to the health record at the same time as the Procedure report, most likely in one of two ways:
+- in a separate Anaesthetic report. This is most likely if the anaesthetic is administered by a separate clinician to the one performing the procedure; or
+- in the same Procedure report as the procedure is recorded. This is most likely if the anaesthetic was administered by the same clinician who performed the procedure.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Generell containerarketyp för att hålla information om en fristående åtgärd eller operation som är utförd.">
+            keywords = <"rapport", "åtgärd", "operation">
+            use = <"Används som en generell åtgärdsrelaterad arketyp för att hålla information om en utförd fristående åtgärd eller operation.
+
+Det förväntas att varje COMPOSITION.report-procedure-arketyp innehåller minst en ACTION.-procedure (eller relaterad arketyp) men beroende på typ och komplexitet av utförd åtgärd kan den innehålla en mängd andra arketyper, till exempel arketyper för att beskriva tillhörande anestesi- eller bilddiagnostiska aktiviteter som utförs under åtgärden.
+
+Används vanligen för:
+- Alla åtgärder som inte registreras som en del av en konsultation utan måste utföras och registreras som en fristående aktivitet.
+- Endoskopirapport
+- komplett operationsberättelse för laparotomi eller implantation av ledprotes.
+
+Dokumentation av anestesi som används vid åtgärden registreras med ändamålsenliga arketyper. De kan dokumenteras i journalen vid samma tidpunkt som åtgärdsrapporten, troligen på ett av följande sätt:
+- i en separat anestesirapport. Detta är troligast om anestesimedlet administreras av annan hälso- och sjukvårdspersonal till den som utför åtgärden; eller
+- i samma åtgärdsrapport som åtgärden registreras. Detta är mest sannolikt om anestesimedlet administrerades av samma hälso- och sjukvårdspersonal som utförde åtgärden.
+
+Sektionskomponenten har medvetet lämnats obegränsad för att maximera återanvändningen av denna arketyp.">
+            misuse = <"Ska inte användas för rapporter som inte är relaterade till en åtgärd. Använd den generiska COMPOSITION.report eller ändamålsenlig COMPOSITION efter behov.
+
+Ska inte användas för åtgärder som dokumenteras som en del av besöksanteckning, till exempel avlägsnande av en hudskada vid ett primärvårdsbesök - använd en ACTION.procedure-arketyp i COMPOSITION.encouter för detta ändamål.
+
+Ska inte användas för åtgärder som dokumenteras som en del av en omvårdnadsprocess, till exempel insättning av en kateter - använd en ACTION.procedure arketyp inuti COMPOSITION.progress_note.">
+        >
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            purpose = <"다른 사람들과 공유될 필요가 있는 정보를 운반하기 위한 일반적인 컨테이너 아키타입">
+            keywords = <"리포트", ...>
+            use = <"*Use as a generic procedure-related archetype to carry information about any stand-alone procedure or operation performed. 
+
+It is anticipated that each COMPOSITION.report-procedure archetype will contain at least one ACTION.procedure (or related archetype) but depending on the complexity of the procedure it may contain a variety of other archetypes depending on the nature and complexity of the procedure performed. For example, archetypes to describe the associated anaesthetic or imaging activities carried out during the procedure.
+
+Common use cases are: 
+- any procedure that is not recorded as part of a consultation but needs to be carried out recorded as a stand-alone activity; 
+- Endoscopy Report; through to a 
+- complete Operation Report for an laparotomy or joint replacement.
+
+Record of the anaesthetic used to cover the procedure will be recorded using purpose-specific archetypes. They can be committed to the health record at the same time as the Procedure report, most likely in one of two ways:
+- in a separate Anaesthetic report. This is most likely if the anaesthetic is administered by a separate clinician to the one performing the procedure; or
+- in the same Procedure report as the procedure is recorded. This is most likely if the anaesthetic was administered by the same clinician who performed the procedure.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Arquétipo genérico para carregar informações sobre procedimentos isolados ou cirurgia realizada.">
+            keywords = <"relatório", "procedimento", "cirurgia", "operação">
+            use = <"*Use as a generic procedure-related archetype to carry information about any stand-alone procedure or operation performed. 
+
+It is anticipated that each COMPOSITION.report-procedure archetype will contain at least one ACTION.procedure (or related archetype) but depending on the complexity of the procedure it may contain a variety of other archetypes depending on the nature and complexity of the procedure performed. For example, archetypes to describe the associated anaesthetic or imaging activities carried out during the procedure.
+
+Common use cases are: 
+- any procedure that is not recorded as part of a consultation but needs to be carried out recorded as a stand-alone activity; 
+- Endoscopy Report; through to a 
+- complete Operation Report for an laparotomy or joint replacement.
+
+Record of the anaesthetic used to cover the procedure will be recorded using purpose-specific archetypes. They can be committed to the health record at the same time as the Procedure report, most likely in one of two ways:
+- in a separate Anaesthetic report. This is most likely if the anaesthetic is administered by a separate clinician to the one performing the procedure; or
+- in the same Procedure report as the procedure is recorded. This is most likely if the anaesthetic was administered by the same clinician who performed the procedure.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"Não deve ser usado para relatórios que não estão relacionados a um procedimento. Use o arquétipo genérico COMPOSITION.report ou composições específicas de uso, conforme apropriado.
+
+Não deve ser utilizado para procedimentos que são gravadas como parte de uma nota de consulta, por exemplo, a remoção de uma lesão de pele em uma consulta na assistência básica - usar um arquétipo ACTION.procedure dentro do COMPOSITION.encouter para esta finalidade.
+
+Não deve ser utilizado para procedimentos que são gravadas como parte de uma nota progresso de enfermagem, por exemplo a inserção de um catéter - usar um arquétipo ACTION.procedure dentro do COMPOSITION.progress_note.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Generic container archetype to carry information about any stand-alone procedure or operation performed.">
+            keywords = <"report", "procedure", "operation">
+            use = <"Use as a generic procedure-related archetype to carry information about any stand-alone procedure or operation performed. 
+
+It is anticipated that each COMPOSITION.report-procedure archetype will contain at least one ACTION.procedure (or related archetype) but depending on the complexity of the procedure it may contain a variety of other archetypes depending on the nature and complexity of the procedure performed. For example, archetypes to describe the associated anaesthetic or imaging activities carried out during the procedure.
+
+Common use cases are: 
+- any procedure that is not recorded as part of a consultation but needs to be carried out recorded as a stand-alone activity; 
+- Endoscopy Report; through to a 
+- complete Operation Report for an laparotomy or joint replacement.
+
+Record of the anaesthetic used to cover the procedure will be recorded using purpose-specific archetypes. They can be committed to the health record at the same time as the Procedure report, most likely in one of two ways:
+- in a separate Anaesthetic report. This is most likely if the anaesthetic is administered by a separate clinician to the one performing the procedure; or
+- in the same Procedure report as the procedure is recorded. This is most likely if the anaesthetic was administered by the same clinician who performed the procedure.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template.">
+            misuse = <"Not to be used for reports that are not related to a procedure. Use the generic COMPOSITION.report or purpose specific COMPOSITIONs as appropriate.
+
+Not to be used for procedures that are recorded as part of a consultation note, for example removal of a skin lesion in a primary care consultation - use a ACTION.procedure archetype inside the COMPOSITION.encouter for this purpose.
+
+Not to be used for procedures that are recorded as part of a nursing progress note, for example insertion of a catheter - use an ACTION.procedure archetype inside the COMPOSITION.progress_note.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"نموذج جنيس (غير محدود الملكية) يحتوي على معلومات من أجل مشاركتها مع الجميع.">
+            keywords = <"تقرير", ...>
+            use = <"*Use as a generic procedure-related archetype to carry information about any stand-alone procedure or operation performed. 
+
+It is anticipated that each COMPOSITION.report-procedure archetype will contain at least one ACTION.procedure (or related archetype) but depending on the complexity of the procedure it may contain a variety of other archetypes depending on the nature and complexity of the procedure performed. For example, archetypes to describe the associated anaesthetic or imaging activities carried out during the procedure.
+
+Common use cases are: 
+- any procedure that is not recorded as part of a consultation but needs to be carried out recorded as a stand-alone activity; 
+- Endoscopy Report; through to a 
+- complete Operation Report for an laparotomy or joint replacement.
+
+Record of the anaesthetic used to cover the procedure will be recorded using purpose-specific archetypes. They can be committed to the health record at the same time as the Procedure report, most likely in one of two ways:
+- in a separate Anaesthetic report. This is most likely if the anaesthetic is administered by a separate clinician to the one performing the procedure; or
+- in the same Procedure report as the procedure is recorded. This is most likely if the anaesthetic was administered by the same clinician who performed the procedure.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"Archetipo contenitore generico per veicolare informazioni che devono essere condivise con gli altri.">
+            keywords = <"rapporto", ...>
+            use = <"*Use as a generic procedure-related archetype to carry information about any stand-alone procedure or operation performed. 
+
+It is anticipated that each COMPOSITION.report-procedure archetype will contain at least one ACTION.procedure (or related archetype) but depending on the complexity of the procedure it may contain a variety of other archetypes depending on the nature and complexity of the procedure performed. For example, archetypes to describe the associated anaesthetic or imaging activities carried out during the procedure.
+
+Common use cases are: 
+- any procedure that is not recorded as part of a consultation but needs to be carried out recorded as a stand-alone activity; 
+- Endoscopy Report; through to a 
+- complete Operation Report for an laparotomy or joint replacement.
+
+Record of the anaesthetic used to cover the procedure will be recorded using purpose-specific archetypes. They can be committed to the health record at the same time as the Procedure report, most likely in one of two ways:
+- in a separate Anaesthetic report. This is most likely if the anaesthetic is administered by a separate clinician to the one performing the procedure; or
+- in the same Procedure report as the procedure is recorded. This is most likely if the anaesthetic was administered by the same clinician who performed the procedure.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+            purpose = <"通用的容器类原始型，用于携带需要与他方共享的信息。">
+            keywords = <"报告", "报告单">
+            use = <"*Use as a generic procedure-related archetype to carry information about any stand-alone procedure or operation performed. 
+
+It is anticipated that each COMPOSITION.report-procedure archetype will contain at least one ACTION.procedure (or related archetype) but depending on the complexity of the procedure it may contain a variety of other archetypes depending on the nature and complexity of the procedure performed. For example, archetypes to describe the associated anaesthetic or imaging activities carried out during the procedure.
+
+Common use cases are: 
+- any procedure that is not recorded as part of a consultation but needs to be carried out recorded as a stand-alone activity; 
+- Endoscopy Report; through to a 
+- complete Operation Report for an laparotomy or joint replacement.
+
+Record of the anaesthetic used to cover the procedure will be recorded using purpose-specific archetypes. They can be committed to the health record at the same time as the Procedure report, most likely in one of two ways:
+- in a separate Anaesthetic report. This is most likely if the anaesthetic is administered by a separate clinician to the one performing the procedure; or
+- in the same Procedure report as the procedure is recorded. This is most likely if the anaesthetic was administered by the same clinician who performed the procedure.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+        >
+        ["zh"] = <
+            language = <[ISO_639-1::zh]>
+            purpose = <"用作携带共享所需信息的通用容器原型。">
+            keywords = <"报告", ...>
+            use = <"*Use as a generic procedure-related archetype to carry information about any stand-alone procedure or operation performed. 
+
+It is anticipated that each COMPOSITION.report-procedure archetype will contain at least one ACTION.procedure (or related archetype) but depending on the complexity of the procedure it may contain a variety of other archetypes depending on the nature and complexity of the procedure performed. For example, archetypes to describe the associated anaesthetic or imaging activities carried out during the procedure.
+
+Common use cases are: 
+- any procedure that is not recorded as part of a consultation but needs to be carried out recorded as a stand-alone activity; 
+- Endoscopy Report; through to a 
+- complete Operation Report for an laparotomy or joint replacement.
+
+Record of the anaesthetic used to cover the procedure will be recorded using purpose-specific archetypes. They can be committed to the health record at the same time as the Procedure report, most likely in one of two ways:
+- in a separate Anaesthetic report. This is most likely if the anaesthetic is administered by a separate clinician to the one performing the procedure; or
+- in the same Procedure report as the procedure is recorded. This is most likely if the anaesthetic was administered by the same clinician who performed the procedure.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Arquetipo de contenido genérico para transmitir información que necesita ser compartida con otros.">
+            keywords = <"informe", ...>
+            use = <"*Use as a generic procedure-related archetype to carry information about any stand-alone procedure or operation performed. 
+
+It is anticipated that each COMPOSITION.report-procedure archetype will contain at least one ACTION.procedure (or related archetype) but depending on the complexity of the procedure it may contain a variety of other archetypes depending on the nature and complexity of the procedure performed. For example, archetypes to describe the associated anaesthetic or imaging activities carried out during the procedure.
+
+Common use cases are: 
+- any procedure that is not recorded as part of a consultation but needs to be carried out recorded as a stand-alone activity; 
+- Endoscopy Report; through to a 
+- complete Operation Report for an laparotomy or joint replacement.
+
+Record of the anaesthetic used to cover the procedure will be recorded using purpose-specific archetypes. They can be committed to the health record at the same time as the Procedure report, most likely in one of two ways:
+- in a separate Anaesthetic report. This is most likely if the anaesthetic is administered by a separate clinician to the one performing the procedure; or
+- in the same Procedure report as the procedure is recorded. This is most likely if the anaesthetic was administered by the same clinician who performed the procedure.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"En generisk COMPOSITION-arketype for å lagre informasjon om enkeltstående prosedyrer eller operasjoner som er gjennomført.">
+            keywords = <"rapport", "prosedyre", "operasjon", "anestesirapport", "operasjonsbeskrivelse", "operasjonsprotokoll", "prosedyrebeskrivelse">
+            use = <"En generisk container-arketype for å lagre informasjon om enkeltstående prosedyrer eller operasjoner som er gjennomført.
+
+Det forventes at hver enkelt COMPOSTION.report_procedure inneholder minst en ACTION.procedure (eller beslektet arketype), men den kan også inneholde en stor variasjon av andre arketyper avhengig av kompleksiteten av prosedyren som er gjennomført. For eksempel: arketyper som omhandler aktiviteter knyttet til anestesi eller radiologi gjennomført under prosedyren.
+
+Vanlige bruksområder:
+-Rapport etter prosedyrer som utføres som selvstendige aktiviteter, og som ikke inngår i en ordinær konsultasjon.
+-Alt fra en endoskopirapport til en komplett operasjonsbekrivelse for en laparatomi eller utskifting av et hofteledd.
+
+Innholdet i arketypen er bevisst ubegrenset, slik at alle SECTION- og/eller ENTRY-arketyper som er nødvendig/hensiktsmessig i den aktuelle kliniske konteksten kan brukes i templaten.">
+            misuse = <"Brukes ikke for å dokumentere rapporter som ikke er relatert til en prosedyre. Bruk den generiske COMPOSTION.report eller en spesfikk COMPOSITON-arketype for dette formålet.
+
+Brukes ikke for prosedyrer som er dokumentert som del av et konsultasjonsnotat. For eksempel fjerning av en hudlesjon under en konsultasjon i primærhelsetjenesten. Bruk arketypen ACTION.procedure i arketypen COMPOSITION.encouter for dette formålet.
+
+Brukes ikke for å registrere prosedyrer som er en del av et sykepleienotat, for eksempel innleggelse av urinkateter. Bruk ACTION.procedure i arketypen COMPOSTION.progess_note for dette formålet.">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Arquetipo contenedor genérico para la portación de información que necesita ser compartida con otros.">
+            keywords = <"informe", ...>
+            use = <"*Use as a generic procedure-related archetype to carry information about any stand-alone procedure or operation performed. 
+
+It is anticipated that each COMPOSITION.report-procedure archetype will contain at least one ACTION.procedure (or related archetype) but depending on the complexity of the procedure it may contain a variety of other archetypes depending on the nature and complexity of the procedure performed. For example, archetypes to describe the associated anaesthetic or imaging activities carried out during the procedure.
+
+Common use cases are: 
+- any procedure that is not recorded as part of a consultation but needs to be carried out recorded as a stand-alone activity; 
+- Endoscopy Report; through to a 
+- complete Operation Report for an laparotomy or joint replacement.
+
+Record of the anaesthetic used to cover the procedure will be recorded using purpose-specific archetypes. They can be committed to the health record at the same time as the Procedure report, most likely in one of two ways:
+- in a separate Anaesthetic report. This is most likely if the anaesthetic is administered by a separate clinician to the one performing the procedure; or
+- in the same Procedure report as the procedure is recorded. This is most likely if the anaesthetic was administered by the same clinician who performed the procedure.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sl"] = <
+            language = <[ISO_639-1::sl]>
+            purpose = <"*Generic container archetype to carry information that needs to be shared with others.(en)">
+            keywords = <"*report(en)", ...>
+            use = <"*Use as a generic procedure-related archetype to carry information about any stand-alone procedure or operation performed. 
+
+It is anticipated that each COMPOSITION.report-procedure archetype will contain at least one ACTION.procedure (or related archetype) but depending on the complexity of the procedure it may contain a variety of other archetypes depending on the nature and complexity of the procedure performed. For example, archetypes to describe the associated anaesthetic or imaging activities carried out during the procedure.
+
+Common use cases are: 
+- any procedure that is not recorded as part of a consultation but needs to be carried out recorded as a stand-alone activity; 
+- Endoscopy Report; through to a 
+- complete Operation Report for an laparotomy or joint replacement.
+
+Record of the anaesthetic used to cover the procedure will be recorded using purpose-specific archetypes. They can be committed to the health record at the same time as the Procedure report, most likely in one of two ways:
+- in a separate Anaesthetic report. This is most likely if the anaesthetic is administered by a separate clinician to the one performing the procedure; or
+- in the same Procedure report as the procedure is recorded. This is most likely if the anaesthetic was administered by the same clinician who performed the procedure.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"Generiek containerarchetype om informatie over te dragen die met anderen moet worden gedeeld.">
+            keywords = <"rapportage", ...>
+            use = <"*Use as a generic procedure-related archetype to carry information about any stand-alone procedure or operation performed. 
+
+It is anticipated that each COMPOSITION.report-procedure archetype will contain at least one ACTION.procedure (or related archetype) but depending on the complexity of the procedure it may contain a variety of other archetypes depending on the nature and complexity of the procedure performed. For example, archetypes to describe the associated anaesthetic or imaging activities carried out during the procedure.
+
+Common use cases are: 
+- any procedure that is not recorded as part of a consultation but needs to be carried out recorded as a stand-alone activity; 
+- Endoscopy Report; through to a 
+- complete Operation Report for an laparotomy or joint replacement.
+
+Record of the anaesthetic used to cover the procedure will be recorded using purpose-specific archetypes. They can be committed to the health record at the same time as the Procedure report, most likely in one of two ways:
+- in a separate Anaesthetic report. This is most likely if the anaesthetic is administered by a separate clinician to the one performing the procedure; or
+- in the same Procedure report as the procedure is recorded. This is most likely if the anaesthetic was administered by the same clinician who performed the procedure.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Arquetip contenidor genèric usat per transmetre informació que s'ha de compartir amb altres.">
+            keywords = <"informe", ...>
+            use = <"*Use as a generic procedure-related archetype to carry information about any stand-alone procedure or operation performed. 
+
+It is anticipated that each COMPOSITION.report-procedure archetype will contain at least one ACTION.procedure (or related archetype) but depending on the complexity of the procedure it may contain a variety of other archetypes depending on the nature and complexity of the procedure performed. For example, archetypes to describe the associated anaesthetic or imaging activities carried out during the procedure.
+
+Common use cases are: 
+- any procedure that is not recorded as part of a consultation but needs to be carried out recorded as a stand-alone activity; 
+- Endoscopy Report; through to a 
+- complete Operation Report for an laparotomy or joint replacement.
+
+Record of the anaesthetic used to cover the procedure will be recorded using purpose-specific archetypes. They can be committed to the health record at the same time as the Procedure report, most likely in one of two ways:
+- in a separate Anaesthetic report. This is most likely if the anaesthetic is administered by a separate clinician to the one performing the procedure; or
+- in the same Procedure report as the procedure is recorded. This is most likely if the anaesthetic was administered by the same clinician who performed the procedure.
+
+The main Sections/Content component has been deliberately left unconstrained. This will allow it to be populated with any SECTION or ENTRY archetypes appropriate for the clinical purpose within a template. (en)">
+            misuse = <"">
+        >
+    >
+
+definition
+    COMPOSITION[at0000.1] matches {    -- Procedure report
+        /context[at9002]/other_context[at0001]/items matches {
+            ELEMENT[at0005] occurrences matches {0..1}
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"Verfahrensbericht">
+                description = <"Ein Dokument, um Informationen über jedes eigenständige Verfahren oder jeden durchgeführten Vorgang zu übermitteln.">
+            >
+        >
+        ["fi"] = <
+            ["at0000.1"] = <
+                text = <"Raportti">
+                description = <"Asiakirja tiedon välittämiseksi muille, vastauksena yleensä toisen osapuolen pyyntöön.">
+            >
+        >
+        ["sv"] = <
+            ["at0000.1"] = <
+                text = <"Procedurrapport">
+                description = <"Dokument för att kommunicera information till andra om en enskild utförd åtgärd eller operation.">
+            >
+        >
+        ["ko"] = <
+            ["at0000.1"] = <
+                text = <"*Report(en)">
+                description = <"일반적으로 다른 상대의 요청에 대한 응답으로, 다른 사람들과 정보를 통신하는 문서.">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000.1"] = <
+                text = <"Relatório do procedimento">
+                description = <"Documento para comunicar informações aos outros sobre qualquer procedimento isolado ou operação executada.">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000.1"] = <
+                text = <"تقرير">
+                description = <"وثيقة لتوصيل المعلومات للآخرين, عادة كاستجابة لطلب من طرف آخر.">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Procedure report">
+                description = <"Document to communicate information to others about any stand-alone procedure or operation performed.">
+            >
+        >
+        ["it"] = <
+            ["at0000.1"] = <
+                text = <"Rapporto">
+                description = <"Documento per comunicare informazioni ad altri, comunemente in risposta ad una richiesta di un altro soggetto.">
+            >
+        >
+        ["zh-cn"] = <
+            ["at0000.1"] = <
+                text = <"报告">
+                description = <"用于向他人传达信息的文档，通常是为了响应另一方的请求。">
+            >
+        >
+        ["zh"] = <
+            ["at0000.1"] = <
+                text = <"报告">
+                description = <"用于交流信息的文件，通常是为了响应某一方的请求">
+            >
+        >
+        ["es"] = <
+            ["at0000.1"] = <
+                text = <"Informe">
+                description = <"Documento para comunicar información con otros, generalmente en respuesta a una solicitud de otra parte.">
+            >
+        >
+        ["es-ar"] = <
+            ["at0000.1"] = <
+                text = <"Informe">
+                description = <"Documento para comunicar información a otros, comunmente en respuesta a la solicitud de un tercero.">
+            >
+        >
+        ["nb"] = <
+            ["at0000.1"] = <
+                text = <"Prosedyrerapport">
+                description = <"Dokument for å kommunisere informasjon om enkeltstående prosedyrer eller operasjoner som er utført.">
+            >
+        >
+        ["sl"] = <
+            ["at0000.1"] = <
+                text = <"Poročilo">
+                description = <"*Document to communicate information to others, commonly in response to a request from another party.(en)">
+            >
+        >
+        ["nl"] = <
+            ["at0000.1"] = <
+                text = <"Rapportage">
+                description = <"Document om informatie met anderen te communiceren, vaak op verzoek van een andere partij.">
+            >
+        >
+        ["ca"] = <
+            ["at0000.1"] = <
+                text = <"Informe">
+                description = <"Document per comunicar informació a altres persones, normalment en resposta a una sol·licitud procedent d'una altra banda.">
+            >
+        >
+    >

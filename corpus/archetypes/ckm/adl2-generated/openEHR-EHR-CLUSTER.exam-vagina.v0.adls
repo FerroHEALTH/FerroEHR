@@ -1,0 +1,1571 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=3718da82-84f3-4488-b2e9-b23a03700474; build_uid=29a7137f-f984-4b6d-ac0d-8875c2a004de)
+    openEHR-EHR-CLUSTER.exam-vagina.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-CLUSTER.exam.v2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Nina Schewe, Natalia Strauch, Darin Leonhardt">
+                ["organisation"] = <"Medizinische Hochschule Hannover, PLRI für medizinische Informatik/ Medizinische Hochschule">
+                ["email"] = <"schewe.nina@mh-hannover.de, Strauch.Natalia@mh-hannover.de, leonhardt.darin@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Erik Sundvall">
+                ["organisation"] = <"Region Östergötland + Linköping University">
+                ["email"] = <"erik.sundvall@regionostergotland.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke, Vebjørn Arntzen">
+                ["organisation"] = <"Nasjonal IKT HF, Oslo University Hospital">
+                ["email"] = <"varntzen@ous-hf.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Adriana Kitajima">
+                ["organisation"] = <"Hospital Alemão Oswaldo Cruz - HAOC">
+                ["email"] = <"adrianakitajima@gmail.com">
+            >
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            author = <
+                ["name"] = <"Erasmia Partafylla">
+                ["organisation"] = <"Sigmasoft">
+                ["email"] = <"c.partafylla@sigmasoft.gr">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Julio de Sosa, Clara Calleja Vega">
+                ["organisation"] = <"Servei Català de la Salut, CatSalut. Servei Català de la Salut.">
+                ["email"] = <"juliodesosa@catsalut.cat, ccalleja@catsalut.cat">
+            >
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Laura Moral López">
+                ["organisation"] = <"Sistema de Salut de Catalunya">
+                ["email"] = <"lauramoral@catsalut.cat">
+            >
+            other_details = <
+                ["other_contributors"] = <"Tradcrea">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Keisha Barwise">
+        ["organisation"] = <"openEHR Foundation">
+        ["email"] = <"keisha.barwise@moh.gov.jm">
+        ["date"] = <"2025-07-16">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Nicola Ewen Hall, openEHR Fellow 2025, Jamaica", "Heather Leslie, openEHR Foundation, Chief Clinical Information Officer">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"7B006D8C36C0896324F7A8DBF93358B0">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To record the findings observed during the physical examination of the vagina. (en)">
+            keywords = <"*Vagina, gynaecological exam, pelvic exam, discharge, bleeding, tenderness, lesion, prolapse, inspection, palpation, speculum. (en)", ...>
+            use = <"*Use to record the observed findings during the physical examination of the vagina.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the \"Procedure detail\" SLOT within the ACTION.procedure archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. 
+
+Interpretation of the findings, for example 'No abnormality detected' or 'Moderate inflammation present', can be recorded using the 'Clinical interpretation' data element.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"Nicht zur Darstellung der klinischen Anamnese zu verwenden – verwenden Sie spezifische OBSERVATION- und CLUSTER-Archetypen. Zum Beispiel OBSERVATION.story und CLUSTER.symptom_sign.
+
+Nicht zur Darstellung der Ergebnisse einer bildgebenden Untersuchung verwenden – verwenden Sie für diesen Zweck die Archetypenfamilie CLUSTER.imaging_exam.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"*To record the findings observed during the physical examination of the vagina. (en)">
+            keywords = <"*Vagina, gynaecological exam, pelvic exam, discharge, bleeding, tenderness, lesion, prolapse, inspection, palpation, speculum. (en)", ...>
+            use = <"*Use to record the observed findings during the physical examination of the vagina.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the \"Procedure detail\" SLOT within the ACTION.procedure archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. 
+
+Interpretation of the findings, for example 'No abnormality detected' or 'Moderate inflammation present', can be recorded using the 'Clinical interpretation' data element.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"*Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used for recording the results of an imaging examination - use the CLUSTER.imaging_exam family of archetypes for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"*To record the findings observed during the physical examination of the vagina. (en)">
+            keywords = <"*Vagina, gynaecological exam, pelvic exam, discharge, bleeding, tenderness, lesion, prolapse, inspection, palpation, speculum. (en)", ...>
+            use = <"*Use to record the observed findings during the physical examination of the vagina.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the \"Procedure detail\" SLOT within the ACTION.procedure archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. 
+
+Interpretation of the findings, for example 'No abnormality detected' or 'Moderate inflammation present', can be recorded using the 'Clinical interpretation' data element.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"Skal ikke brukes til å ta opp anamnese - bruk da spesifikke OBSERVATION og CLUSTER arketyper. For eksempel OBSERVATION.story og CLUSTER.symptom_sign.
+
+Skal ikke brukes for å registrere funn ved bildeundersøkelse - bruk arketype innen gruppen av CLUSTER.imaging_exam (Bildeundersøkelse) for dette.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*To record the findings observed during the physical examination of the vagina. (en)">
+            keywords = <"*Vagina, gynaecological exam, pelvic exam, discharge, bleeding, tenderness, lesion, prolapse, inspection, palpation, speculum. (en)", ...>
+            use = <"*Use to record the observed findings during the physical examination of the vagina.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the \"Procedure detail\" SLOT within the ACTION.procedure archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. 
+
+Interpretation of the findings, for example 'No abnormality detected' or 'Moderate inflammation present', can be recorded using the 'Clinical interpretation' data element.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"*Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used for recording the results of an imaging examination - use the CLUSTER.imaging_exam family of archetypes for this purpose. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["el"] = <
+            language = <[ISO_639-1::el]>
+            purpose = <"*To record the findings observed during the physical examination of the vagina. (en)">
+            keywords = <"*Vagina, gynaecological exam, pelvic exam, discharge, bleeding, tenderness, lesion, prolapse, inspection, palpation, speculum. (en)", ...>
+            use = <"*Use to record the observed findings during the physical examination of the vagina.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the \"Procedure detail\" SLOT within the ACTION.procedure archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. 
+
+Interpretation of the findings, for example 'No abnormality detected' or 'Moderate inflammation present', can be recorded using the 'Clinical interpretation' data element.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"*Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used for recording the results of an imaging examination - use the CLUSTER.imaging_exam family of archetypes for this purpose.(en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the findings observed during the physical examination of the vagina.">
+            keywords = <"Vagina, gynaecological exam, pelvic exam, discharge, bleeding, tenderness, lesion, prolapse, inspection, palpation, speculum.", ...>
+            use = <"Use to record the observed findings during the physical examination of the vagina.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the \"Procedure detail\" SLOT within the ACTION.procedure archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. 
+
+Interpretation of the findings, for example 'No abnormality detected' or 'Moderate inflammation present', can be recorded using the 'Clinical interpretation' data element.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.">
+            misuse = <"Not to be used for recording the clinical history - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom_sign.
+
+Not to be used for recording the results of an imaging examination - use the CLUSTER.imaging_exam family of archetypes for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"*To record the findings observed during the physical examination of the vagina. (en)">
+            keywords = <"*Vagina, gynaecological exam, pelvic exam, discharge, bleeding, tenderness, lesion, prolapse, inspection, palpation, speculum. (en)", ...>
+            use = <"*Use to record the observed findings during the physical examination of the vagina.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the \"Procedure detail\" SLOT within the ACTION.procedure archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. 
+
+Interpretation of the findings, for example 'No abnormality detected' or 'Moderate inflammation present', can be recorded using the 'Clinical interpretation' data element.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"No debe utilizarse para registrar la historia clínica; utilice los arquetipos específicos OBSERVATION y CLUSTER. Por ejemplo, OBSERVATION.story y CLUSTER.symptom_sign.
+
+No debe utilizarse para registrar los resultados de un examen de imagen; utilice la familia de arquetipos CLUSTER.imaging_exam para este fin.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"*To record the findings observed during the physical examination of the vagina. (en)">
+            keywords = <"*Vagina, gynaecological exam, pelvic exam, discharge, bleeding, tenderness, lesion, prolapse, inspection, palpation, speculum. (en)", ...>
+            use = <"*Use to record the observed findings during the physical examination of the vagina.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the \"Procedure detail\" SLOT within the ACTION.procedure archetype, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. 
+
+Interpretation of the findings, for example 'No abnormality detected' or 'Moderate inflammation present', can be recorded using the 'Clinical interpretation' data element.
+
+Use to provide a framework in which CLUSTER archetypes can be nested in the 'Examination findings' SLOT to record additional structured physical examination findings.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"No s'ha d'utilitzar per registrar la història clínica - utilitzar els arquetipis OBSERVATION i CLUSTER. Exemple: OBSERVATION.story i CLUSTER.symptom_sign.
+
+No s'ha d'utilitzar per registrar els resultats d'un examen d'imatge - utilitzar la família d'arquetips CLUSTER.imaging_exam per a aquest propòsit.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Examination of the vagina
+        items matches {
+            ELEMENT[at0.6] occurrences matches {0..1} matches {    -- Bleeding presence
+                value matches {
+                    DV_CODED_TEXT[at0.9007] matches {
+                        defining_code matches {[ac0.9001]}    -- Bleeding presence (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.10] occurrences matches {0..1} matches {    -- Bleeding description
+                value matches {
+                    DV_TEXT[at0.9008]
+                }
+            }
+            allow_archetype CLUSTER[at0.11] matches {    -- Bleeding details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            allow_archetype CLUSTER[at0.12] matches {    -- Lesion details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0.13] occurrences matches {0..1} matches {    -- Tenderness presence
+                value matches {
+                    DV_CODED_TEXT[at0.9009] matches {
+                        defining_code matches {[ac0.9002]}    -- Tenderness presence (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.17] occurrences matches {0..1} matches {    -- Tenderness description
+                value matches {
+                    DV_TEXT[at0.9010]
+                }
+            }
+            allow_archetype CLUSTER[at0.18] matches {    -- Tenderness details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0.19] occurrences matches {0..1} matches {    -- Prolapse presence
+                value matches {
+                    DV_CODED_TEXT[at0.9011] matches {
+                        defining_code matches {[ac0.9003]}    -- Prolapse presence (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.23] occurrences matches {0..1} matches {    -- Prolapse description
+                value matches {
+                    DV_TEXT[at0.9012]
+                }
+            }
+            ELEMENT[at0.24] occurrences matches {0..1} matches {    -- Mucosa description
+                value matches {
+                    DV_TEXT[at0.9013]
+                }
+            }
+            allow_archetype CLUSTER[at0.25] matches {    -- Mucosa details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            ELEMENT[at0.26] occurrences matches {0..1} matches {    -- Foreign body presence
+                value matches {
+                    DV_CODED_TEXT[at0.9014] matches {
+                        defining_code matches {[ac0.9004]}    -- Foreign body presence (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.30] occurrences matches {0..1} matches {    -- Foreign body description
+                value matches {
+                    DV_TEXT[at0.9015]
+                }
+            }
+            allow_archetype CLUSTER[at0.31] matches {    -- Foreign body details
+                include
+                    archetype_id/value matches {/.*/}
+            }
+            after [at0007]
+            ELEMENT[at0.1] occurrences matches {0..1} matches {    -- Discharge presence
+                value matches {
+                    DV_CODED_TEXT[at0.9005] matches {
+                        defining_code matches {[ac0.9000]}    -- Discharge presence (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0.5] occurrences matches {0..1} matches {    -- Discharge description
+                value matches {
+                    DV_TEXT[at0.9006]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"*Examination of the vagina (en)">
+                description = <"*Findings observed during the physical examination of the vagina. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Discharge presence (en)">
+                description = <"*Assertion about the observed presence or absence of discharge on examination. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.5"] = <
+                text = <"*Discharge description (en)">
+                description = <"*Narrative description of discharge found on examination. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Bleeding presence (en)">
+                description = <"*Assertion about the observed presence or absence of bleeding on examination. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.8"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.9"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.10"] = <
+                text = <"*Bleeding description (en)">
+                description = <"*Narrative description of bleeding found on examination. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Bleeding details (en)">
+                description = <"*Structured details observed about bleeding. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Lesion details (en)">
+                description = <"*Structured details observed on examination of lesions. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Tenderness presence (en)">
+                description = <"*Assertion about the observed presence or absence of tenderness on examination. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.15"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.16"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.17"] = <
+                text = <"*Tenderness description (en)">
+                description = <"*Narrative description of tenderness found on examination. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Tenderness details (en)">
+                description = <"*Structured details observed about tenderness. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Prolapse presence (en)">
+                description = <"*Assertion about the observed presence or absence of prolaps on examination. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.21"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.22"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.23"] = <
+                text = <"*Prolapse description (en)">
+                description = <"*Narrative description of prolapse found on examination. (en)">
+            >
+            ["at0.24"] = <
+                text = <"*Mucosa description (en)">
+                description = <"*Narrative description of mucosa found on examination. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Mucosa details (en)">
+                description = <"*Structured details observed about the mucosa. (en)">
+            >
+            ["at0.26"] = <
+                text = <"*Foreign body presence (en)">
+                description = <"*Assertion about the observed presence or absence of a foreign body on examination. (en)">
+            >
+            ["at0.27"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.28"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.29"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.30"] = <
+                text = <"*Foreign body description (en)">
+                description = <"*Narrative description of a foreign body found on examination. (en)">
+            >
+            ["at0.31"] = <
+                text = <"*Foreign body details (en)">
+                description = <"*Structured details observed about a foreign body. (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Discharge presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of discharge on examination. (en) (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"*Bleeding presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of bleeding on examination. (en) (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"*Tenderness presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of tenderness on examination. (en) (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"*Prolapse presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of prolaps on examination. (en) (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Foreign body presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of a foreign body on examination. (en) (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000.1"] = <
+                text = <"*Examination of the vagina (en)">
+                description = <"*Findings observed during the physical examination of the vagina. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Discharge presence (en)">
+                description = <"*Assertion about the observed presence or absence of discharge on examination. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.5"] = <
+                text = <"*Discharge description (en)">
+                description = <"*Narrative description of discharge found on examination. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Bleeding presence (en)">
+                description = <"*Assertion about the observed presence or absence of bleeding on examination. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.8"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.9"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.10"] = <
+                text = <"*Bleeding description (en)">
+                description = <"*Narrative description of bleeding found on examination. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Bleeding details (en)">
+                description = <"*Structured details observed about bleeding. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Lesion details (en)">
+                description = <"*Structured details observed on examination of lesions. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Tenderness presence (en)">
+                description = <"*Assertion about the observed presence or absence of tenderness on examination. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.15"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.16"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.17"] = <
+                text = <"*Tenderness description (en)">
+                description = <"*Narrative description of tenderness found on examination. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Tenderness details (en)">
+                description = <"*Structured details observed about tenderness. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Prolapse presence (en)">
+                description = <"*Assertion about the observed presence or absence of prolaps on examination. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.21"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.22"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.23"] = <
+                text = <"*Prolapse description (en)">
+                description = <"*Narrative description of prolapse found on examination. (en)">
+            >
+            ["at0.24"] = <
+                text = <"*Mucosa description (en)">
+                description = <"*Narrative description of mucosa found on examination. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Mucosa details (en)">
+                description = <"*Structured details observed about the mucosa. (en)">
+            >
+            ["at0.26"] = <
+                text = <"*Foreign body presence (en)">
+                description = <"*Assertion about the observed presence or absence of a foreign body on examination. (en)">
+            >
+            ["at0.27"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.28"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.29"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.30"] = <
+                text = <"*Foreign body description (en)">
+                description = <"*Narrative description of a foreign body found on examination. (en)">
+            >
+            ["at0.31"] = <
+                text = <"*Foreign body details (en)">
+                description = <"*Structured details observed about a foreign body. (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Discharge presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of discharge on examination. (en) (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"*Bleeding presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of bleeding on examination. (en) (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"*Tenderness presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of tenderness on examination. (en) (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"*Prolapse presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of prolaps on examination. (en) (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Foreign body presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of a foreign body on examination. (en) (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000.1"] = <
+                text = <"*Examination of the vagina (en)">
+                description = <"*Findings observed during the physical examination of the vagina. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Discharge presence (en)">
+                description = <"*Assertion about the observed presence or absence of discharge on examination. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.5"] = <
+                text = <"*Discharge description (en)">
+                description = <"*Narrative description of discharge found on examination. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Bleeding presence (en)">
+                description = <"*Assertion about the observed presence or absence of bleeding on examination. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.8"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.9"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.10"] = <
+                text = <"*Bleeding description (en)">
+                description = <"*Narrative description of bleeding found on examination. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Bleeding details (en)">
+                description = <"*Structured details observed about bleeding. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Lesion details (en)">
+                description = <"*Structured details observed on examination of lesions. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Tenderness presence (en)">
+                description = <"*Assertion about the observed presence or absence of tenderness on examination. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.15"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.16"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.17"] = <
+                text = <"*Tenderness description (en)">
+                description = <"*Narrative description of tenderness found on examination. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Tenderness details (en)">
+                description = <"*Structured details observed about tenderness. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Prolapse presence (en)">
+                description = <"*Assertion about the observed presence or absence of prolaps on examination. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.21"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.22"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.23"] = <
+                text = <"*Prolapse description (en)">
+                description = <"*Narrative description of prolapse found on examination. (en)">
+            >
+            ["at0.24"] = <
+                text = <"*Mucosa description (en)">
+                description = <"*Narrative description of mucosa found on examination. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Mucosa details (en)">
+                description = <"*Structured details observed about the mucosa. (en)">
+            >
+            ["at0.26"] = <
+                text = <"*Foreign body presence (en)">
+                description = <"*Assertion about the observed presence or absence of a foreign body on examination. (en)">
+            >
+            ["at0.27"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.28"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.29"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.30"] = <
+                text = <"*Foreign body description (en)">
+                description = <"*Narrative description of a foreign body found on examination. (en)">
+            >
+            ["at0.31"] = <
+                text = <"*Foreign body details (en)">
+                description = <"*Structured details observed about a foreign body. (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Discharge presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of discharge on examination. (en) (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"*Bleeding presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of bleeding on examination. (en) (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"*Tenderness presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of tenderness on examination. (en) (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"*Prolapse presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of prolaps on examination. (en) (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Foreign body presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of a foreign body on examination. (en) (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000.1"] = <
+                text = <"*Examination of the vagina (en)">
+                description = <"*Findings observed during the physical examination of the vagina. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Discharge presence (en)">
+                description = <"*Assertion about the observed presence or absence of discharge on examination. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.5"] = <
+                text = <"*Discharge description (en)">
+                description = <"*Narrative description of discharge found on examination. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Bleeding presence (en)">
+                description = <"*Assertion about the observed presence or absence of bleeding on examination. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.8"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.9"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.10"] = <
+                text = <"*Bleeding description (en)">
+                description = <"*Narrative description of bleeding found on examination. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Bleeding details (en)">
+                description = <"*Structured details observed about bleeding. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Lesion details (en)">
+                description = <"*Structured details observed on examination of lesions. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Tenderness presence (en)">
+                description = <"*Assertion about the observed presence or absence of tenderness on examination. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.15"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.16"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.17"] = <
+                text = <"*Tenderness description (en)">
+                description = <"*Narrative description of tenderness found on examination. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Tenderness details (en)">
+                description = <"*Structured details observed about tenderness. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Prolapse presence (en)">
+                description = <"*Assertion about the observed presence or absence of prolaps on examination. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.21"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.22"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.23"] = <
+                text = <"*Prolapse description (en)">
+                description = <"*Narrative description of prolapse found on examination. (en)">
+            >
+            ["at0.24"] = <
+                text = <"*Mucosa description (en)">
+                description = <"*Narrative description of mucosa found on examination. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Mucosa details (en)">
+                description = <"*Structured details observed about the mucosa. (en)">
+            >
+            ["at0.26"] = <
+                text = <"*Foreign body presence (en)">
+                description = <"*Assertion about the observed presence or absence of a foreign body on examination. (en)">
+            >
+            ["at0.27"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.28"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.29"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.30"] = <
+                text = <"*Foreign body description (en)">
+                description = <"*Narrative description of a foreign body found on examination. (en)">
+            >
+            ["at0.31"] = <
+                text = <"*Foreign body details (en)">
+                description = <"*Structured details observed about a foreign body. (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Discharge presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of discharge on examination. (en) (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"*Bleeding presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of bleeding on examination. (en) (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"*Tenderness presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of tenderness on examination. (en) (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"*Prolapse presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of prolaps on examination. (en) (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Foreign body presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of a foreign body on examination. (en) (synthesised)">
+            >
+        >
+        ["el"] = <
+            ["at0000.1"] = <
+                text = <"*Examination of the vagina (en)">
+                description = <"*Findings observed during the physical examination of the vagina. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Discharge presence (en)">
+                description = <"*Assertion about the observed presence or absence of discharge on examination. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.5"] = <
+                text = <"*Discharge description (en)">
+                description = <"*Narrative description of discharge found on examination. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Bleeding presence (en)">
+                description = <"*Assertion about the observed presence or absence of bleeding on examination. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.8"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.9"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.10"] = <
+                text = <"*Bleeding description (en)">
+                description = <"*Narrative description of bleeding found on examination. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Bleeding details (en)">
+                description = <"*Structured details observed about bleeding. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Lesion details (en)">
+                description = <"*Structured details observed on examination of lesions. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Tenderness presence (en)">
+                description = <"*Assertion about the observed presence or absence of tenderness on examination. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.15"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.16"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.17"] = <
+                text = <"*Tenderness description (en)">
+                description = <"*Narrative description of tenderness found on examination. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Tenderness details (en)">
+                description = <"*Structured details observed about tenderness. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Prolapse presence (en)">
+                description = <"*Assertion about the observed presence or absence of prolaps on examination. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.21"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.22"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.23"] = <
+                text = <"*Prolapse description (en)">
+                description = <"*Narrative description of prolapse found on examination. (en)">
+            >
+            ["at0.24"] = <
+                text = <"*Mucosa description (en)">
+                description = <"*Narrative description of mucosa found on examination. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Mucosa details (en)">
+                description = <"*Structured details observed about the mucosa. (en)">
+            >
+            ["at0.26"] = <
+                text = <"*Foreign body presence (en)">
+                description = <"*Assertion about the observed presence or absence of a foreign body on examination. (en)">
+            >
+            ["at0.27"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.28"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.29"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.30"] = <
+                text = <"*Foreign body description (en)">
+                description = <"*Narrative description of a foreign body found on examination. (en)">
+            >
+            ["at0.31"] = <
+                text = <"*Foreign body details (en)">
+                description = <"*Structured details observed about a foreign body. (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Discharge presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of discharge on examination. (en) (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"*Bleeding presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of bleeding on examination. (en) (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"*Tenderness presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of tenderness on examination. (en) (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"*Prolapse presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of prolaps on examination. (en) (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Foreign body presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of a foreign body on examination. (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Examination of the vagina">
+                description = <"Findings observed during the physical examination of the vagina.">
+            >
+            ["at0.1"] = <
+                text = <"Discharge presence">
+                description = <"Assertion about the observed presence or absence of discharge on examination.">
+            >
+            ["at0.2"] = <
+                text = <"Present">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"Absent">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"Indeterminate">
+                description = <"">
+            >
+            ["at0.5"] = <
+                text = <"Discharge description">
+                description = <"Narrative description of discharge found on examination.">
+            >
+            ["at0.6"] = <
+                text = <"Bleeding presence">
+                description = <"Assertion about the observed presence or absence of bleeding on examination.">
+            >
+            ["at0.7"] = <
+                text = <"Present">
+                description = <"">
+            >
+            ["at0.8"] = <
+                text = <"Absent">
+                description = <"">
+            >
+            ["at0.9"] = <
+                text = <"Indeterminate">
+                description = <"">
+            >
+            ["at0.10"] = <
+                text = <"Bleeding description">
+                description = <"Narrative description of bleeding found on examination.">
+            >
+            ["at0.11"] = <
+                text = <"Bleeding details">
+                description = <"Structured details observed about bleeding.">
+            >
+            ["at0.12"] = <
+                text = <"Lesion details">
+                description = <"Structured details observed on examination of lesions.">
+            >
+            ["at0.13"] = <
+                text = <"Tenderness presence">
+                description = <"Assertion about the observed presence or absence of tenderness on examination.">
+            >
+            ["at0.14"] = <
+                text = <"Present">
+                description = <"">
+            >
+            ["at0.15"] = <
+                text = <"Absent">
+                description = <"">
+            >
+            ["at0.16"] = <
+                text = <"Indeterminate">
+                description = <"">
+            >
+            ["at0.17"] = <
+                text = <"Tenderness description">
+                description = <"Narrative description of tenderness found on examination.">
+            >
+            ["at0.18"] = <
+                text = <"Tenderness details">
+                description = <"Structured details observed about tenderness.">
+            >
+            ["at0.19"] = <
+                text = <"Prolapse presence">
+                description = <"Assertion about the observed presence or absence of prolaps on examination.">
+            >
+            ["at0.20"] = <
+                text = <"Present">
+                description = <"">
+            >
+            ["at0.21"] = <
+                text = <"Absent">
+                description = <"">
+            >
+            ["at0.22"] = <
+                text = <"Indeterminate">
+                description = <"">
+            >
+            ["at0.23"] = <
+                text = <"Prolapse description">
+                description = <"Narrative description of prolapse found on examination.">
+            >
+            ["at0.24"] = <
+                text = <"Mucosa description">
+                description = <"Narrative description of mucosa found on examination.">
+            >
+            ["at0.25"] = <
+                text = <"Mucosa details">
+                description = <"Structured details observed about the mucosa.">
+            >
+            ["at0.26"] = <
+                text = <"Foreign body presence">
+                description = <"Assertion about the observed presence or absence of a foreign body on examination.">
+            >
+            ["at0.27"] = <
+                text = <"Present">
+                description = <"">
+            >
+            ["at0.28"] = <
+                text = <"Absent">
+                description = <"">
+            >
+            ["at0.29"] = <
+                text = <"Indeterminate">
+                description = <"">
+            >
+            ["at0.30"] = <
+                text = <"Foreign body description">
+                description = <"Narrative description of a foreign body found on examination.">
+            >
+            ["at0.31"] = <
+                text = <"Foreign body details">
+                description = <"Structured details observed about a foreign body.">
+            >
+            ["ac0.9000"] = <
+                text = <"Discharge presence (synthesised)">
+                description = <"Assertion about the observed presence or absence of discharge on examination. (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"Bleeding presence (synthesised)">
+                description = <"Assertion about the observed presence or absence of bleeding on examination. (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"Tenderness presence (synthesised)">
+                description = <"Assertion about the observed presence or absence of tenderness on examination. (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"Prolapse presence (synthesised)">
+                description = <"Assertion about the observed presence or absence of prolaps on examination. (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"Foreign body presence (synthesised)">
+                description = <"Assertion about the observed presence or absence of a foreign body on examination. (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000.1"] = <
+                text = <"*Examination of the vagina (en)">
+                description = <"*Findings observed during the physical examination of the vagina. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Discharge presence (en)">
+                description = <"*Assertion about the observed presence or absence of discharge on examination. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.5"] = <
+                text = <"*Discharge description (en)">
+                description = <"*Narrative description of discharge found on examination. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Bleeding presence (en)">
+                description = <"*Assertion about the observed presence or absence of bleeding on examination. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.8"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.9"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.10"] = <
+                text = <"*Bleeding description (en)">
+                description = <"*Narrative description of bleeding found on examination. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Bleeding details (en)">
+                description = <"*Structured details observed about bleeding. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Lesion details (en)">
+                description = <"*Structured details observed on examination of lesions. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Tenderness presence (en)">
+                description = <"*Assertion about the observed presence or absence of tenderness on examination. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.15"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.16"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.17"] = <
+                text = <"*Tenderness description (en)">
+                description = <"*Narrative description of tenderness found on examination. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Tenderness details (en)">
+                description = <"*Structured details observed about tenderness. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Prolapse presence (en)">
+                description = <"*Assertion about the observed presence or absence of prolaps on examination. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.21"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.22"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.23"] = <
+                text = <"*Prolapse description (en)">
+                description = <"*Narrative description of prolapse found on examination. (en)">
+            >
+            ["at0.24"] = <
+                text = <"*Mucosa description (en)">
+                description = <"*Narrative description of mucosa found on examination. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Mucosa details (en)">
+                description = <"*Structured details observed about the mucosa. (en)">
+            >
+            ["at0.26"] = <
+                text = <"*Foreign body presence (en)">
+                description = <"*Assertion about the observed presence or absence of a foreign body on examination. (en)">
+            >
+            ["at0.27"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.28"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.29"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.30"] = <
+                text = <"*Foreign body description (en)">
+                description = <"*Narrative description of a foreign body found on examination. (en)">
+            >
+            ["at0.31"] = <
+                text = <"*Foreign body details (en)">
+                description = <"*Structured details observed about a foreign body. (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Discharge presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of discharge on examination. (en) (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"*Bleeding presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of bleeding on examination. (en) (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"*Tenderness presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of tenderness on examination. (en) (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"*Prolapse presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of prolaps on examination. (en) (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Foreign body presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of a foreign body on examination. (en) (synthesised)">
+            >
+        >
+        ["ca"] = <
+            ["at0000.1"] = <
+                text = <"*Examination of the vagina (en)">
+                description = <"*Findings observed during the physical examination of the vagina. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Discharge presence (en)">
+                description = <"*Assertion about the observed presence or absence of discharge on examination. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.3"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.4"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.5"] = <
+                text = <"*Discharge description (en)">
+                description = <"*Narrative description of discharge found on examination. (en)">
+            >
+            ["at0.6"] = <
+                text = <"*Bleeding presence (en)">
+                description = <"*Assertion about the observed presence or absence of bleeding on examination. (en)">
+            >
+            ["at0.7"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.8"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.9"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.10"] = <
+                text = <"*Bleeding description (en)">
+                description = <"*Narrative description of bleeding found on examination. (en)">
+            >
+            ["at0.11"] = <
+                text = <"*Bleeding details (en)">
+                description = <"*Structured details observed about bleeding. (en)">
+            >
+            ["at0.12"] = <
+                text = <"*Lesion details (en)">
+                description = <"*Structured details observed on examination of lesions. (en)">
+            >
+            ["at0.13"] = <
+                text = <"*Tenderness presence (en)">
+                description = <"*Assertion about the observed presence or absence of tenderness on examination. (en)">
+            >
+            ["at0.14"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.15"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.16"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.17"] = <
+                text = <"*Tenderness description (en)">
+                description = <"*Narrative description of tenderness found on examination. (en)">
+            >
+            ["at0.18"] = <
+                text = <"*Tenderness details (en)">
+                description = <"*Structured details observed about tenderness. (en)">
+            >
+            ["at0.19"] = <
+                text = <"*Prolapse presence (en)">
+                description = <"*Assertion about the observed presence or absence of prolaps on examination. (en)">
+            >
+            ["at0.20"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.21"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.22"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.23"] = <
+                text = <"*Prolapse description (en)">
+                description = <"*Narrative description of prolapse found on examination. (en)">
+            >
+            ["at0.24"] = <
+                text = <"*Mucosa description (en)">
+                description = <"*Narrative description of mucosa found on examination. (en)">
+            >
+            ["at0.25"] = <
+                text = <"*Mucosa details (en)">
+                description = <"*Structured details observed about the mucosa. (en)">
+            >
+            ["at0.26"] = <
+                text = <"*Foreign body presence (en)">
+                description = <"*Assertion about the observed presence or absence of a foreign body on examination. (en)">
+            >
+            ["at0.27"] = <
+                text = <"*Present (en)">
+                description = <"">
+            >
+            ["at0.28"] = <
+                text = <"*Absent (en)">
+                description = <"">
+            >
+            ["at0.29"] = <
+                text = <"*Indeterminate (en)">
+                description = <"">
+            >
+            ["at0.30"] = <
+                text = <"*Foreign body description (en)">
+                description = <"*Narrative description of a foreign body found on examination. (en)">
+            >
+            ["at0.31"] = <
+                text = <"*Foreign body details (en)">
+                description = <"*Structured details observed about a foreign body. (en)">
+            >
+            ["ac0.9000"] = <
+                text = <"*Discharge presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of discharge on examination. (en) (synthesised)">
+            >
+            ["ac0.9001"] = <
+                text = <"*Bleeding presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of bleeding on examination. (en) (synthesised)">
+            >
+            ["ac0.9002"] = <
+                text = <"*Tenderness presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of tenderness on examination. (en) (synthesised)">
+            >
+            ["ac0.9003"] = <
+                text = <"*Prolapse presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of prolaps on examination. (en) (synthesised)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Foreign body presence (en) (synthesised)">
+                description = <"*Assertion about the observed presence or absence of a foreign body on examination. (en) (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.2", "at0.3", "at0.4">
+        >
+        ["ac0.9003"] = <
+            id = <"ac0.9003">
+            members = <"at0.20", "at0.21", "at0.22">
+        >
+        ["ac0.9004"] = <
+            id = <"ac0.9004">
+            members = <"at0.27", "at0.28", "at0.29">
+        >
+        ["ac0.9001"] = <
+            id = <"ac0.9001">
+            members = <"at0.7", "at0.8", "at0.9">
+        >
+        ["ac0.9002"] = <
+            id = <"ac0.9002">
+            members = <"at0.14", "at0.15", "at0.16">
+        >
+    >

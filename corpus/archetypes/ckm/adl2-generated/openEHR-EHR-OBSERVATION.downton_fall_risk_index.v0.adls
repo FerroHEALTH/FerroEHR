@@ -1,0 +1,595 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=f81715c3-cea2-41e8-b274-a947c2ad5a4c; build_uid=c0a9a19e-197a-4677-b8ac-8fd1fb6c0459)
+    openEHR-EHR-OBSERVATION.downton_fall_risk_index.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Emma Malm">
+                ["organisation"] = <"Karolinska Universitetssjukhuset">
+                ["email"] = <"emma.malm@cambio.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Bjørn Næss, Mikkel Johan Gaup Grønmo, June Marie Knappskog">
+                ["organisation"] = <"DIPS AS, Regional forvaltning EPJ Helse Nord, Regional forvaltning EPJ, Helse Nord, Helse Nord IKT">
+                ["email"] = <"bna@dips.no, mikkel.johan.gaup.gronmo@helse-nord.no, june.marie.nepstad.knappskog@hnikt.no">
+            >
+            accreditation = <"Nasjonal IKT">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-01-18">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Downton JH, Andrews K. Prevalence, characteristics and factors associated with falls among the elderly living at home. Aging (Milano). 1991 Sep;3(3):219-28. doi: 10.1007/BF03324009. PMID: 1764490.">
+        ["2"] = <"Rosendahl E, Lundin-Olsson L, Kallin K, Jensen J, Gustafson Y, Nyberg L. Prediction of falls among older people in residential care facilities by the Downton index. Aging Clin Exp Res. 2003 Apr;15(2):142-7. doi: 10.1007/BF03324492. PMID: 12889846. Available from: https://www.researchgate.net/publication/6432597_Prediction_of_falls_among_older_people_in_residential_care_facilities_by_the_Downton_index.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia">
+        ["MD5-CAM-1.0.1"] = <"E6D380B64CDAABF69AE26280889AD921">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Att registrera resultaten av bedömningsinstrumentet DFRI.">
+            keywords = <"Downton Fall Risk Index", "DFRI", "äldre", "fall", "risk", "Senior Alert">
+            use = <"Används för att registrera resultaten av bedömningsinstrumentet DFRI.">
+            misuse = <"">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere resultatet av DFRI risikovurderingen.">
+            keywords = <"Downton Fall Risk Index", "DFRI", "eldre", "fall", "risko", "hjemmealarm">
+            use = <"Brukes for å registrere resultatet av DFRI risikovurderingen.">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results of the DFRI risk assessment.">
+            keywords = <"Downton Fall Risk Index", "DFRI", "elderly", "fall", "risk", "Senior Alert">
+            use = <"Use to record the results of the DFRI risk assessment.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Downton Fall Risk Index (DFRI)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Known previous falls
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- No
+                                                    [{1}, {[at0006]}]    -- Yes
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0007] occurrences matches {0..5} matches {    -- Medications
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0008]}],    -- None
+                                                    [{1}, {[at0009]}],    -- Tranquillisers/sedatives
+                                                    [{1}, {[at0010]}],    -- Diuretics
+                                                    [{1}, {[at0011]}],    -- Antihypertensives (other than diuretics)
+                                                    [{1}, {[at0012]}],    -- Antiparkinsonian drugs
+                                                    [{1}, {[at0013]}],    -- Antidepressants
+                                                    [{0}, {[at0014]}]    -- Other medications
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..3} matches {    -- Sensory deficits
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0016]}],    -- None
+                                                    [{1}, {[at0017]}],    -- Visual impairment
+                                                    [{1}, {[at0018]}],    -- Hearing impairment
+                                                    [{1}, {[at0019]}]    -- Limbs (amputation, stroke, neuropathy, etc.)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Mental state
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0021]}],    -- Orientated
+                                                    [{1}, {[at0022]}]    -- Confused (MTS <7/10)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Gait
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0024]}],    -- Normal
+                                                    [{0}, {[at0025]}],    -- Safe with walking aids
+                                                    [{1}, {[at0026]}],    -- Unsafe with/without aids
+                                                    [{0}, {[at0027]}]    -- Unable
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9010] matches {
+                                                magnitude matches {|0..11|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0029] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0030] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Downton Fall Risk Index (DFRI)">
+                description = <"Ett validerat bedömningsverktyg som används för att identifiera riskfaktorer för fall.">
+            >
+            ["at0002"] = <
+                text = <"Ospecificerad händelse">
+                description = <"Ospecificerad standardhändelse vid en tidpunkt eller inom ett tidsintervall som explicit kan definieras i en mall eller genereras automatiskt av vissa IT-system.">
+            >
+            ["at0004"] = <
+                text = <"Tidigare kända fall">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Nej">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Läkemedel">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Inga">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Lugnande medel/sedativa">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Diuretika">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Antihypertensiva medel (andra än diuretika)">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Antiparkinsonläkemedel">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Antidepressiva">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Andra läkemedel">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Sensorisk funktionsnedsättning">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Inga">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Synnedsättning">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Hörselnedsättning">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Förlust av extremitet">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Psykiskt tillstånd">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Orienterad">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Förvirrad (MTS <7/10)">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Gångförmåga">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Normal">
+                description = <"Säker utan gånghjälpmedel.">
+            >
+            ["at0025"] = <
+                text = <"Säker med gånghjälpmedel">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Osäker">
+                description = <"Med eller utan gånghjälpmedel.">
+            >
+            ["at0027"] = <
+                text = <"Kan inte gå">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Totalpoäng">
+                description = <"Den totala summan av varje komponentparameter för DFRI.">
+            >
+            ["at0030"] = <
+                text = <"Tilläggsinformation">
+                description = <"Plats för att infoga tilläggsinformation som krävs för lokala anpassningar eller anpassning till andra referensmodeller eller formella krav.">
+                comment = <"Exempelvis lokala informationskrav eller metadata för anpassning till FHIR- eller CIMI-motsvarigheter.">
+            >
+            ["ac9010"] = <
+                text = <"Tidigare kända fall (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Läkemedel (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Sensorisk funktionsnedsättning (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Psykiskt tillstånd (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Gångförmåga (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Downton Fall Risk Index (DFRI)">
+                description = <"Et validert vurderingsverktøy som brukes til å identifisere risikofaktorer for fall.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Tidligere kjente fall">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Bruk av legemidler">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Ingen">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Beroligende/sovetabletter/neuroleptika">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Diuretika">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Antihypertensiva (ikke diuretika)">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Antiparkinson-midler">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Antidepressiva">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Andre legemidler">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Sensorisk funksjon">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Ingen nedsatt funksjon">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Nedsatt syn">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Nedsatt hørsel">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Ekstremiteter (amputasjon, slag, nevropati, etc.)">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Kognitiv funksjon">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Orientert">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Ikke orientert (nedsatt kognitiv funksjon)">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Gangfunksjon">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Normal">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Sikker gange med hjelpemiddel">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Usikker gange med/uten hjelpemiddel">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Mangler gangfunksjon">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Sum risikofaktorer">
+                description = <"Den totale summen av de enkelte parameterne for Downton fall risk index.">
+            >
+            ["at0030"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["ac9010"] = <
+                text = <"Tidligere kjente fall (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Bruk av legemidler (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Sensorisk funksjon (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Kognitiv funksjon (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Gangfunksjon (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Downton Fall Risk Index (DFRI)">
+                description = <"A validated assessment tool used to identify risk factors for falls.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Known previous falls">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Medications">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Tranquillisers/sedatives">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Diuretics">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Antihypertensives (other than diuretics)">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Antiparkinsonian drugs">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Antidepressants">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Other medications">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Sensory deficits">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Visual impairment">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Hearing impairment">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Limbs (amputation, stroke, neuropathy, etc.)">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Mental state">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Orientated">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Confused (MTS <7/10)">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Gait">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Normal">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Safe with walking aids">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Unsafe with/without aids">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Unable">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"Total score">
+                description = <"The total sum of each component parameter for the DFRI.">
+            >
+            ["at0030"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9010"] = <
+                text = <"Known previous falls (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Medications (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9012"] = <
+                text = <"Sensory deficits (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Mental state (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9014"] = <
+                text = <"Gait (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0021", "at0022">
+        >
+        ["ac9012"] = <
+            id = <"ac9012">
+            members = <"at0016", "at0017", "at0018", "at0019">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0008", "at0009", "at0010", "at0011", "at0012", "at0013", "at0014">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0005", "at0006">
+        >
+        ["ac9014"] = <
+            id = <"ac9014">
+            members = <"at0024", "at0025", "at0026", "at0027">
+        >
+    >

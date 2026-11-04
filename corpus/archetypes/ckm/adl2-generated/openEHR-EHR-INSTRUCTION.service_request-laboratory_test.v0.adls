@@ -1,0 +1,487 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=9d0f49c7-f910-41cc-9627-640f152566ed; build_uid=0f03531b-dff1-4203-b1e2-4de2cec6df8b)
+    openEHR-EHR-INSTRUCTION.service_request-laboratory_test.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-INSTRUCTION.service_request.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Alina Rehberg, Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"rehberg.alina@mh-hannover.de, Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Sofia Janstad">
+                ["organisation"] = <"SLL">
+                ["email"] = <"sofia.lang-janstad@sll.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke, Marit Alice Venheim">
+                ["organisation"] = <"Nasjonal IKT HF, Norway, Helse Vest IKT">
+                ["email"] = <"marit.alice.venheim@helse-vest-ikt.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Vladimir Pizzo">
+                ["organisation"] = <"Clínica Parente Pizzo">
+                ["email"] = <"vrppizzo@gmail.com">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            author = <
+                ["name"] = <"Francesca Frexia">
+                ["organisation"] = <"CRS4 - Center for advanced studies, research and development in Sardinia, Pula (Cagliari), Italy">
+                ["email"] = <"francesca.frexia@crs4.it">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Mattijs Kuhlmann, Joost Holslag">
+                ["organisation"] = <"Nedap">
+                ["email"] = <"mattijs.kuhlmann@nedap.com, joost.holslag@nedap.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Dr Heather Leslie">
+        ["organisation"] = <"Atomica Informatics, Australia">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2024-04-04">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Fatima Almeida, Critical SW, Portugal", "Tomas Alme, DIPS ASA, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Anita Bjørnnes, Helse Bergen, Norway", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Einar Fosse, UNN HF, Norwegian Centre for Integrated Care and Telemedicine, Norway", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom", "Heather Grain, Llewelyn Grain Informatics, Australia", "Knut Harboe, Stavanger Universitetssjukehus, Norway", "Sam Heard, Ocean Informatics, Australia", "Ingrid Heitmann, Oslo universitetssykehus HF, Norway", "Andreas Hering, Helse Bergen HF, Haukeland universitetssjukehus, Norway", "Anca Heyd, DIPS ASA, Norway", "Hilde Hollås, DIPS AS, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Shinji Kobayashi, Kyoto University, Japan", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hallvard Lærum, Direktoratet for e-helse, Norway", "Rose Mari Eikås, Helse Bergen, Norway", "Ole Martin Sand, DIPS ASA, Norway", "Hildegard McNicoll, freshEHR Clinical Informatics Ltd., United Kingdom", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Anne Pauline Anderssen, Helse Nord RHF, Norway", "Pablo Pazos, CaboLabs.com Health Informatics, Uruguay", "Rune Pedersen, Universitetssykehuset i Nord Norge, Norway", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Line Sæle, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Richard Townley-O'Neill, Australian Digital Health Agency, Australia", "Gro-Hilde Ulriksen, Norwegian center for ehealthresearch, Norway">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Anecdotal evidence provided by existing laboratory test request forms.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"4DD919538C02E62364AB6EFF08F0D009">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To record a request for a laboratory test service. (en)">
+            keywords = <"Anfrage", "Bestellung", "Dienst", "Bereitstellung", "Empfehlung", "Überweisung">
+            use = <"*Use to record a request for a laboratory test service.
+
+The archetype has been designed to represent a request for one or more laboratory test services, in one of two ways:
+- If multiple services need to be requested but the information recorded in the 'protocol' (for example 'Receiver') is the same - use a separate 'Activity' instance within this archetype for each request. The user interface in the clinical system may be able to support duplication of request details such as 'Fasting status', 'Clinical Indication', 'Reason for request', and 'Service due') where these are identical for each activity.
+- If multiple services need to be requested and the information recorded in the 'protocol' (for example 'Receiver') is different - use a separate instance of this archetype for each request.
+
+The 'Service due' data element supports common use cases for stipulating the simple timing for delivery of the request/s on a single occasion. For situations with more complicated timing requirements or a series of services, use the CLUSTER.service_direction archetype within the 'Complex timing' SLOT.
+
+Implementation examples:
+- Consider a clinician managing an elderly patient with Type 2 Diabetes ordering 'HbA1c' and a fasting 'Glucose' - the 'Service name' will carry both 'Haemoglobin A1C' and 'Glucose'; the 'Clinical indication' may be 'Type 2 Diabetes'; the 'Reason for request' may be 'Monitor glucose control' and 'Fasting status' will be 'Fasting'.
+- Consider a clinician managing a patient with chest pain - the 'Service name' will carry 'Urea', 'Electrolytes', 'Creatinine', 'GFR estimated (eGFR)', 'Glucose', 'Liver function tests', 'Troponin I', 'Troponin T', and 'Full blood count'; 'Clinical indication' will be 'Chest pain'; the 'Reason for request may be 'Exclude AMI'; and the 'Clinical context' may be '4 hours of atypical left-sided chest pain and associated nausea'.
+- Consider a clinician ordering a recurring blood test, such as an INR. The complex timing for this requires the use of the CLUSTER.service_direction and associated CLUSTER.timing_nondaily archetype nested within the 'Complex timing' SLOT to clearly define the frequency and timing for each sequence in a series of tests, such as 'daily for one week, weekly for 4 weeks, monthly for 6 months'.
+
+In many situations, it will be possible to record the steps that occur as part of this request being carried out using the corresponding generic ACTION.service. However, there will be many occasions where the required ACTION archetype will be very specific for purpose, as the data requirements for recording provision of many health-related services will need quite unique data elements, recording patterns or pathway steps. For example: ACTION.screening or ACTION.health_education. (en)">
+            misuse = <"*Not to be used to record details about the activities that document how an order or request has been carried out - use an ACTION archetype for this purpose. For example ACTION.service archetype or a more purpose-specific archetype from the ACTION class for this purpose.
+
+Not to be used to record a Laboratory test result - use the OBSERVATION.laboratory_test_result for this purpose. (en)">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"*To record a request for a laboratory test service. (en)">
+            keywords = <"remiss", "förfrågan", "beställning", "tjänst", "tillhandahålla", "patientremittering">
+            use = <"*Use to record a request for a laboratory test service.
+
+The archetype has been designed to represent a request for one or more laboratory test services, in one of two ways:
+- If multiple services need to be requested but the information recorded in the 'protocol' (for example 'Receiver') is the same - use a separate 'Activity' instance within this archetype for each request. The user interface in the clinical system may be able to support duplication of request details such as 'Fasting status', 'Clinical Indication', 'Reason for request', and 'Service due') where these are identical for each activity.
+- If multiple services need to be requested and the information recorded in the 'protocol' (for example 'Receiver') is different - use a separate instance of this archetype for each request.
+
+The 'Service due' data element supports common use cases for stipulating the simple timing for delivery of the request/s on a single occasion. For situations with more complicated timing requirements or a series of services, use the CLUSTER.service_direction archetype within the 'Complex timing' SLOT.
+
+Implementation examples:
+- Consider a clinician managing an elderly patient with Type 2 Diabetes ordering 'HbA1c' and a fasting 'Glucose' - the 'Service name' will carry both 'Haemoglobin A1C' and 'Glucose'; the 'Clinical indication' may be 'Type 2 Diabetes'; the 'Reason for request' may be 'Monitor glucose control' and 'Fasting status' will be 'Fasting'.
+- Consider a clinician managing a patient with chest pain - the 'Service name' will carry 'Urea', 'Electrolytes', 'Creatinine', 'GFR estimated (eGFR)', 'Glucose', 'Liver function tests', 'Troponin I', 'Troponin T', and 'Full blood count'; 'Clinical indication' will be 'Chest pain'; the 'Reason for request may be 'Exclude AMI'; and the 'Clinical context' may be '4 hours of atypical left-sided chest pain and associated nausea'.
+- Consider a clinician ordering a recurring blood test, such as an INR. The complex timing for this requires the use of the CLUSTER.service_direction and associated CLUSTER.timing_nondaily archetype nested within the 'Complex timing' SLOT to clearly define the frequency and timing for each sequence in a series of tests, such as 'daily for one week, weekly for 4 weeks, monthly for 6 months'.
+
+In many situations, it will be possible to record the steps that occur as part of this request being carried out using the corresponding generic ACTION.service. However, there will be many occasions where the required ACTION archetype will be very specific for purpose, as the data requirements for recording provision of many health-related services will need quite unique data elements, recording patterns or pathway steps. For example: ACTION.screening or ACTION.health_education. (en)">
+            misuse = <"*Not to be used to record details about the activities that document how an order or request has been carried out - use an ACTION archetype for this purpose. For example ACTION.service archetype or a more purpose-specific archetype from the ACTION class for this purpose.
+
+Not to be used to record a Laboratory test result - use the OBSERVATION.laboratory_test_result for this purpose. (en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"*To record a request for a laboratory test service. (en)">
+            keywords = <"rekvisisjon", "bestilling", "foreskriving", "tjeneste", "tjenesteyter", "rekvirere", "bestille", "anmodning", "forespørre", "forespørsel", "anmode", "tilsyn">
+            use = <"*Use to record a request for a laboratory test service.
+
+The archetype has been designed to represent a request for one or more laboratory test services, in one of two ways:
+- If multiple services need to be requested but the information recorded in the 'protocol' (for example 'Receiver') is the same - use a separate 'Activity' instance within this archetype for each request. The user interface in the clinical system may be able to support duplication of request details such as 'Fasting status', 'Clinical Indication', 'Reason for request', and 'Service due') where these are identical for each activity.
+- If multiple services need to be requested and the information recorded in the 'protocol' (for example 'Receiver') is different - use a separate instance of this archetype for each request.
+
+The 'Service due' data element supports common use cases for stipulating the simple timing for delivery of the request/s on a single occasion. For situations with more complicated timing requirements or a series of services, use the CLUSTER.service_direction archetype within the 'Complex timing' SLOT.
+
+Implementation examples:
+- Consider a clinician managing an elderly patient with Type 2 Diabetes ordering 'HbA1c' and a fasting 'Glucose' - the 'Service name' will carry both 'Haemoglobin A1C' and 'Glucose'; the 'Clinical indication' may be 'Type 2 Diabetes'; the 'Reason for request' may be 'Monitor glucose control' and 'Fasting status' will be 'Fasting'.
+- Consider a clinician managing a patient with chest pain - the 'Service name' will carry 'Urea', 'Electrolytes', 'Creatinine', 'GFR estimated (eGFR)', 'Glucose', 'Liver function tests', 'Troponin I', 'Troponin T', and 'Full blood count'; 'Clinical indication' will be 'Chest pain'; the 'Reason for request may be 'Exclude AMI'; and the 'Clinical context' may be '4 hours of atypical left-sided chest pain and associated nausea'.
+- Consider a clinician ordering a recurring blood test, such as an INR. The complex timing for this requires the use of the CLUSTER.service_direction and associated CLUSTER.timing_nondaily archetype nested within the 'Complex timing' SLOT to clearly define the frequency and timing for each sequence in a series of tests, such as 'daily for one week, weekly for 4 weeks, monthly for 6 months'.
+
+In many situations, it will be possible to record the steps that occur as part of this request being carried out using the corresponding generic ACTION.service. However, there will be many occasions where the required ACTION archetype will be very specific for purpose, as the data requirements for recording provision of many health-related services will need quite unique data elements, recording patterns or pathway steps. For example: ACTION.screening or ACTION.health_education. (en)">
+            misuse = <"*Not to be used to record details about the activities that document how an order or request has been carried out - use an ACTION archetype for this purpose. For example ACTION.service archetype or a more purpose-specific archetype from the ACTION class for this purpose.
+
+Not to be used to record a Laboratory test result - use the OBSERVATION.laboratory_test_result for this purpose. (en)">
+            copyright = <"© openEHR Foundation, Nasjonal IKT HF">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*To record a request for a laboratory test service. (en)">
+            keywords = <"solicitação", "requisição", "ordem", "pedido", "serviço", "referência", "encaminhamento">
+            use = <"*Use to record a request for a laboratory test service.
+
+The archetype has been designed to represent a request for one or more laboratory test services, in one of two ways:
+- If multiple services need to be requested but the information recorded in the 'protocol' (for example 'Receiver') is the same - use a separate 'Activity' instance within this archetype for each request. The user interface in the clinical system may be able to support duplication of request details such as 'Fasting status', 'Clinical Indication', 'Reason for request', and 'Service due') where these are identical for each activity.
+- If multiple services need to be requested and the information recorded in the 'protocol' (for example 'Receiver') is different - use a separate instance of this archetype for each request.
+
+The 'Service due' data element supports common use cases for stipulating the simple timing for delivery of the request/s on a single occasion. For situations with more complicated timing requirements or a series of services, use the CLUSTER.service_direction archetype within the 'Complex timing' SLOT.
+
+Implementation examples:
+- Consider a clinician managing an elderly patient with Type 2 Diabetes ordering 'HbA1c' and a fasting 'Glucose' - the 'Service name' will carry both 'Haemoglobin A1C' and 'Glucose'; the 'Clinical indication' may be 'Type 2 Diabetes'; the 'Reason for request' may be 'Monitor glucose control' and 'Fasting status' will be 'Fasting'.
+- Consider a clinician managing a patient with chest pain - the 'Service name' will carry 'Urea', 'Electrolytes', 'Creatinine', 'GFR estimated (eGFR)', 'Glucose', 'Liver function tests', 'Troponin I', 'Troponin T', and 'Full blood count'; 'Clinical indication' will be 'Chest pain'; the 'Reason for request may be 'Exclude AMI'; and the 'Clinical context' may be '4 hours of atypical left-sided chest pain and associated nausea'.
+- Consider a clinician ordering a recurring blood test, such as an INR. The complex timing for this requires the use of the CLUSTER.service_direction and associated CLUSTER.timing_nondaily archetype nested within the 'Complex timing' SLOT to clearly define the frequency and timing for each sequence in a series of tests, such as 'daily for one week, weekly for 4 weeks, monthly for 6 months'.
+
+In many situations, it will be possible to record the steps that occur as part of this request being carried out using the corresponding generic ACTION.service. However, there will be many occasions where the required ACTION archetype will be very specific for purpose, as the data requirements for recording provision of many health-related services will need quite unique data elements, recording patterns or pathway steps. For example: ACTION.screening or ACTION.health_education. (en)">
+            misuse = <"*Not to be used to record details about the activities that document how an order or request has been carried out - use an ACTION archetype for this purpose. For example ACTION.service archetype or a more purpose-specific archetype from the ACTION class for this purpose.
+
+Not to be used to record a Laboratory test result - use the OBSERVATION.laboratory_test_result for this purpose. (en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a request for a laboratory test service.">
+            keywords = <"request", "order", "service", "provide", "referral">
+            use = <"Use to record a request for a laboratory test service.
+
+The archetype has been designed to represent a request for one or more laboratory test services, in one of two ways:
+- If multiple services need to be requested but the information recorded in the 'protocol' (for example 'Receiver') is the same - use a separate 'Activity' instance within this archetype for each request. The user interface in the clinical system may be able to support duplication of request details such as 'Fasting status', 'Clinical Indication', 'Reason for request', and 'Service due') where these are identical for each activity.
+- If multiple services need to be requested and the information recorded in the 'protocol' (for example 'Receiver') is different - use a separate instance of this archetype for each request.
+
+The 'Service due' data element supports common use cases for stipulating the simple timing for delivery of the request/s on a single occasion. For situations with more complicated timing requirements or a series of services, use the CLUSTER.service_direction archetype within the 'Complex timing' SLOT.
+
+Implementation examples:
+- Consider a clinician managing an elderly patient with Type 2 Diabetes ordering 'HbA1c' and a fasting 'Glucose' - the 'Service name' will carry both 'Haemoglobin A1C' and 'Glucose'; the 'Clinical indication' may be 'Type 2 Diabetes'; the 'Reason for request' may be 'Monitor glucose control' and 'Fasting status' will be 'Fasting'.
+- Consider a clinician managing a patient with chest pain - the 'Service name' will carry 'Urea', 'Electrolytes', 'Creatinine', 'GFR estimated (eGFR)', 'Glucose', 'Liver function tests', 'Troponin I', 'Troponin T', and 'Full blood count'; 'Clinical indication' will be 'Chest pain'; the 'Reason for request may be 'Exclude AMI'; and the 'Clinical context' may be '4 hours of atypical left-sided chest pain and associated nausea'.
+- Consider a clinician ordering a recurring blood test, such as an INR. The complex timing for this requires the use of the CLUSTER.service_direction and associated CLUSTER.timing_nondaily archetype nested within the 'Complex timing' SLOT to clearly define the frequency and timing for each sequence in a series of tests, such as 'daily for one week, weekly for 4 weeks, monthly for 6 months'.
+
+In many situations, it will be possible to record the steps that occur as part of this request being carried out using the corresponding generic ACTION.service. However, there will be many occasions where the required ACTION archetype will be very specific for purpose, as the data requirements for recording provision of many health-related services will need quite unique data elements, recording patterns or pathway steps. For example: ACTION.screening or ACTION.health_education.">
+            misuse = <"Not to be used to record details about the activities that document how an order or request has been carried out - use an ACTION archetype for this purpose. For example ACTION.service archetype or a more purpose-specific archetype from the ACTION class for this purpose.
+
+Not to be used to record a Laboratory test result - use the OBSERVATION.laboratory_test_result for this purpose.">
+            copyright = <"© openEHR Foundation, Nasjonal IKT HF">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"*To record a request for a laboratory test service. (en)">
+            keywords = <"richiesta, ordine, servizio, fornire, indirizzamento", ...>
+            use = <"*Use to record a request for a laboratory test service.
+
+The archetype has been designed to represent a request for one or more laboratory test services, in one of two ways:
+- If multiple services need to be requested but the information recorded in the 'protocol' (for example 'Receiver') is the same - use a separate 'Activity' instance within this archetype for each request. The user interface in the clinical system may be able to support duplication of request details such as 'Fasting status', 'Clinical Indication', 'Reason for request', and 'Service due') where these are identical for each activity.
+- If multiple services need to be requested and the information recorded in the 'protocol' (for example 'Receiver') is different - use a separate instance of this archetype for each request.
+
+The 'Service due' data element supports common use cases for stipulating the simple timing for delivery of the request/s on a single occasion. For situations with more complicated timing requirements or a series of services, use the CLUSTER.service_direction archetype within the 'Complex timing' SLOT.
+
+Implementation examples:
+- Consider a clinician managing an elderly patient with Type 2 Diabetes ordering 'HbA1c' and a fasting 'Glucose' - the 'Service name' will carry both 'Haemoglobin A1C' and 'Glucose'; the 'Clinical indication' may be 'Type 2 Diabetes'; the 'Reason for request' may be 'Monitor glucose control' and 'Fasting status' will be 'Fasting'.
+- Consider a clinician managing a patient with chest pain - the 'Service name' will carry 'Urea', 'Electrolytes', 'Creatinine', 'GFR estimated (eGFR)', 'Glucose', 'Liver function tests', 'Troponin I', 'Troponin T', and 'Full blood count'; 'Clinical indication' will be 'Chest pain'; the 'Reason for request may be 'Exclude AMI'; and the 'Clinical context' may be '4 hours of atypical left-sided chest pain and associated nausea'.
+- Consider a clinician ordering a recurring blood test, such as an INR. The complex timing for this requires the use of the CLUSTER.service_direction and associated CLUSTER.timing_nondaily archetype nested within the 'Complex timing' SLOT to clearly define the frequency and timing for each sequence in a series of tests, such as 'daily for one week, weekly for 4 weeks, monthly for 6 months'.
+
+In many situations, it will be possible to record the steps that occur as part of this request being carried out using the corresponding generic ACTION.service. However, there will be many occasions where the required ACTION archetype will be very specific for purpose, as the data requirements for recording provision of many health-related services will need quite unique data elements, recording patterns or pathway steps. For example: ACTION.screening or ACTION.health_education. (en)">
+            misuse = <"*Not to be used to record details about the activities that document how an order or request has been carried out - use an ACTION archetype for this purpose. For example ACTION.service archetype or a more purpose-specific archetype from the ACTION class for this purpose.
+
+Not to be used to record a Laboratory test result - use the OBSERVATION.laboratory_test_result for this purpose. (en)">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"*To record a request for a laboratory test service. (en)">
+            keywords = <"verzoek", "opdracht", "dienst", "voorschrift", "verwijzing">
+            use = <"*Use to record a request for a laboratory test service.
+
+The archetype has been designed to represent a request for one or more laboratory test services, in one of two ways:
+- If multiple services need to be requested but the information recorded in the 'protocol' (for example 'Receiver') is the same - use a separate 'Activity' instance within this archetype for each request. The user interface in the clinical system may be able to support duplication of request details such as 'Fasting status', 'Clinical Indication', 'Reason for request', and 'Service due') where these are identical for each activity.
+- If multiple services need to be requested and the information recorded in the 'protocol' (for example 'Receiver') is different - use a separate instance of this archetype for each request.
+
+The 'Service due' data element supports common use cases for stipulating the simple timing for delivery of the request/s on a single occasion. For situations with more complicated timing requirements or a series of services, use the CLUSTER.service_direction archetype within the 'Complex timing' SLOT.
+
+Implementation examples:
+- Consider a clinician managing an elderly patient with Type 2 Diabetes ordering 'HbA1c' and a fasting 'Glucose' - the 'Service name' will carry both 'Haemoglobin A1C' and 'Glucose'; the 'Clinical indication' may be 'Type 2 Diabetes'; the 'Reason for request' may be 'Monitor glucose control' and 'Fasting status' will be 'Fasting'.
+- Consider a clinician managing a patient with chest pain - the 'Service name' will carry 'Urea', 'Electrolytes', 'Creatinine', 'GFR estimated (eGFR)', 'Glucose', 'Liver function tests', 'Troponin I', 'Troponin T', and 'Full blood count'; 'Clinical indication' will be 'Chest pain'; the 'Reason for request may be 'Exclude AMI'; and the 'Clinical context' may be '4 hours of atypical left-sided chest pain and associated nausea'.
+- Consider a clinician ordering a recurring blood test, such as an INR. The complex timing for this requires the use of the CLUSTER.service_direction and associated CLUSTER.timing_nondaily archetype nested within the 'Complex timing' SLOT to clearly define the frequency and timing for each sequence in a series of tests, such as 'daily for one week, weekly for 4 weeks, monthly for 6 months'.
+
+In many situations, it will be possible to record the steps that occur as part of this request being carried out using the corresponding generic ACTION.service. However, there will be many occasions where the required ACTION archetype will be very specific for purpose, as the data requirements for recording provision of many health-related services will need quite unique data elements, recording patterns or pathway steps. For example: ACTION.screening or ACTION.health_education. (en)">
+            misuse = <"*Not to be used to record details about the activities that document how an order or request has been carried out - use an ACTION archetype for this purpose. For example ACTION.service archetype or a more purpose-specific archetype from the ACTION class for this purpose.
+
+Not to be used to record a Laboratory test result - use the OBSERVATION.laboratory_test_result for this purpose. (en)">
+        >
+    >
+
+definition
+    INSTRUCTION[at0000.1] matches {    -- Laboratory test request
+        /activities[at0001]/description[at0009]/items matches {
+            ELEMENT[at0154] matches {
+                value matches {
+                    DV_TEXT[at0.9003]
+                }
+            }
+            after [at0121]
+            ELEMENT[at0.1] occurrences matches {0..1} matches {    -- Fasting status
+                value matches {
+                    DV_CODED_TEXT[at0.9004] matches {
+                        defining_code matches {[ac0.9004]}    -- Fasting status (synthesised)
+                    }
+                    DV_TEXT[at0.9005]
+                }
+            }
+            after [at0151]
+            allow_archetype CLUSTER[at0.4] matches {    -- Requested specimen
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.specimen(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0.5] matches {    -- Collected specimen
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.specimen(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"*Laboratory test request (en)">
+                description = <"*An order or instruction for a laboratory test service. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Fasting status (en)">
+                description = <"*Request requirement for the patient to be fasted at the time of specimen collection. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Fasting (en)">
+                description = <"*The test should be carried out on a fasted individual. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Non-fasting (en)">
+                description = <"*The test should be carried out on a non-fasted individual. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Requested specimen (en)">
+                description = <"*Details about specific specimen and collection conditions required as part of this laboratory request. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Collected specimen (en)">
+                description = <"*Details about a specimen that has been collected either by the requester or self-collected by the patient, and submitted for analysis as part of this laboratory request. (en)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Fasting status (en) (synthesised)">
+                description = <"*Request requirement for the patient to be fasted at the time of specimen collection. (en) (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000.1"] = <
+                text = <"*Laboratory test request (en)">
+                description = <"*An order or instruction for a laboratory test service. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Fasting status (en)">
+                description = <"*Request requirement for the patient to be fasted at the time of specimen collection. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Fasting (en)">
+                description = <"*The test should be carried out on a fasted individual. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Non-fasting (en)">
+                description = <"*The test should be carried out on a non-fasted individual. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Requested specimen (en)">
+                description = <"*Details about specific specimen and collection conditions required as part of this laboratory request. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Collected specimen (en)">
+                description = <"*Details about a specimen that has been collected either by the requester or self-collected by the patient, and submitted for analysis as part of this laboratory request. (en)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Fasting status (en) (synthesised)">
+                description = <"*Request requirement for the patient to be fasted at the time of specimen collection. (en) (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000.1"] = <
+                text = <"*Laboratory test request (en)">
+                description = <"*An order or instruction for a laboratory test service. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Fasting status (en)">
+                description = <"*Request requirement for the patient to be fasted at the time of specimen collection. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Fasting (en)">
+                description = <"*The test should be carried out on a fasted individual. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Non-fasting (en)">
+                description = <"*The test should be carried out on a non-fasted individual. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Requested specimen (en)">
+                description = <"*Details about specific specimen and collection conditions required as part of this laboratory request. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Collected specimen (en)">
+                description = <"*Details about a specimen that has been collected either by the requester or self-collected by the patient, and submitted for analysis as part of this laboratory request. (en)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Fasting status (en) (synthesised)">
+                description = <"*Request requirement for the patient to be fasted at the time of specimen collection. (en) (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000.1"] = <
+                text = <"*Laboratory test request (en)">
+                description = <"*An order or instruction for a laboratory test service. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Fasting status (en)">
+                description = <"*Request requirement for the patient to be fasted at the time of specimen collection. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Fasting (en)">
+                description = <"*The test should be carried out on a fasted individual. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Non-fasting (en)">
+                description = <"*The test should be carried out on a non-fasted individual. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Requested specimen (en)">
+                description = <"*Details about specific specimen and collection conditions required as part of this laboratory request. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Collected specimen (en)">
+                description = <"*Details about a specimen that has been collected either by the requester or self-collected by the patient, and submitted for analysis as part of this laboratory request. (en)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Fasting status (en) (synthesised)">
+                description = <"*Request requirement for the patient to be fasted at the time of specimen collection. (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Laboratory test request">
+                description = <"An order or instruction for a laboratory test service.">
+            >
+            ["at0.1"] = <
+                text = <"Fasting status">
+                description = <"Request requirement for the patient to be fasted at the time of specimen collection.">
+            >
+            ["at0.2"] = <
+                text = <"Fasting">
+                description = <"The test should be carried out on a fasted individual.">
+            >
+            ["at0.3"] = <
+                text = <"Non-fasting">
+                description = <"The test should be carried out on a non-fasted individual.">
+            >
+            ["at0.4"] = <
+                text = <"Requested specimen">
+                description = <"Details about specific specimen and collection conditions required as part of this laboratory request.">
+            >
+            ["at0.5"] = <
+                text = <"Collected specimen">
+                description = <"Details about a specimen that has been collected either by the requester or self-collected by the patient, and submitted for analysis as part of this laboratory request.">
+            >
+            ["ac0.9004"] = <
+                text = <"Fasting status (synthesised)">
+                description = <"Request requirement for the patient to be fasted at the time of specimen collection. (synthesised)">
+            >
+        >
+        ["it"] = <
+            ["at0000.1"] = <
+                text = <"*Laboratory test request (en)">
+                description = <"*An order or instruction for a laboratory test service. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Fasting status (en)">
+                description = <"*Request requirement for the patient to be fasted at the time of specimen collection. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Fasting (en)">
+                description = <"*The test should be carried out on a fasted individual. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Non-fasting (en)">
+                description = <"*The test should be carried out on a non-fasted individual. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Requested specimen (en)">
+                description = <"*Details about specific specimen and collection conditions required as part of this laboratory request. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Collected specimen (en)">
+                description = <"*Details about a specimen that has been collected either by the requester or self-collected by the patient, and submitted for analysis as part of this laboratory request. (en)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Fasting status (en) (synthesised)">
+                description = <"*Request requirement for the patient to be fasted at the time of specimen collection. (en) (synthesised)">
+            >
+        >
+        ["nl"] = <
+            ["at0000.1"] = <
+                text = <"*Laboratory test request (en)">
+                description = <"*An order or instruction for a laboratory test service. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Fasting status (en)">
+                description = <"*Request requirement for the patient to be fasted at the time of specimen collection. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Fasting (en)">
+                description = <"*The test should be carried out on a fasted individual. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Non-fasting (en)">
+                description = <"*The test should be carried out on a non-fasted individual. (en)">
+            >
+            ["at0.4"] = <
+                text = <"*Requested specimen (en)">
+                description = <"*Details about specific specimen and collection conditions required as part of this laboratory request. (en)">
+            >
+            ["at0.5"] = <
+                text = <"*Collected specimen (en)">
+                description = <"*Details about a specimen that has been collected either by the requester or self-collected by the patient, and submitted for analysis as part of this laboratory request. (en)">
+            >
+            ["ac0.9004"] = <
+                text = <"*Fasting status (en) (synthesised)">
+                description = <"*Request requirement for the patient to be fasted at the time of specimen collection. (en) (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9004"] = <
+            id = <"ac0.9004">
+            members = <"at0.2", "at0.3">
+        >
+    >

@@ -1,0 +1,229 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=27762887-d4aa-47ef-9e1e-9b1b9c5e734f; build_uid=a692ca56-c510-4723-a7cf-77e37543a3d4)
+    openEHR-EHR-CLUSTER.deep_tendon_reflex.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2023-05-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Shahla Foozonkhah, Iran ministry of health and education, Iran", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom (openEHR Editor)", "Mikkel Gaup Grønmo, FSE, Helse Nord, Norway (Nasjonal IKT redaktør)", "Ingrid Heitmann, Oslo universitetssykehus HF, Norway", "Hilde Hollås, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Ivar Mehlum, Helse Bergen HF, Norway", "Sabine Leh, Haukeland University Hospital, Department of Pathology, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Lars Morgan Karlsen, DIPS ASA, Norway", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Vladimir Pizzo, Hospital Sírio Libanês, Brazil", "Jussara Rotzsch, UNB, Brazil", "Anoop Shah, University College London, United Kingdom", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia (openEHR Editor)", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "Jon Tysdahl, Furst medlab AS, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"C078D48F7C8AB6E4CA55E415B53DC30E">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the findings observed during the physical examination of a single deep tendon reflex.">
+            use = <"Use to record the observed findings during the physical examination of a single deep tendon reflex.
+
+This archetype has been specifically designed to be used in the 'Examination detail' SLOT within the OBSERVATION.exam or the CLUSTER.exam-nervous_system archetype. It can also be nested within any other relevant OBSERVATION or Physical examination-related family of CLUSTER archetypes, where clinically appropriate. 
+
+In clinical scenarios requiring the documentation of more than one deep tendon reflex response, use a separate instance of this archetype for each tendon type, and also for each side in a paired reflex.">
+            misuse = <"Not to be used to represent superficial reflexes, such as superficial abdominal, sphincteric, and bulbospongiosus reflexes. Use appropriate archetypes for this purpose.
+
+Not to be used to represent pathological reflexes, such as Babinski, snout, rooting, or grasp reflexes. Use appropriate archetypes for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Deep tendon reflex response
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- Reflex
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9000]}    -- Reflex (synthesised)
+                    }
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Relative response
+                value matches {
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[ac9001]}    -- Relative response (synthesised)
+                    }
+                    DV_TEXT[at9006]
+                }
+            }
+            ELEMENT[at0018] occurrences matches {0..1} matches {    -- Graded response
+                value matches {
+                    DV_ORDINAL[at9007] matches {
+                        [value, symbol] matches {
+                            [{0}, {[at0019]}],    -- Absent
+                            [{1}, {[at0020]}],    -- Slight
+                            [{2}, {[at0021]}],    -- Normal
+                            [{3}, {[at0022]}],    -- Brisk
+                            [{4}, {[at0023]}],    -- Non-sustained clonus
+                            [{5}, {[at0024]}]    -- Sustained clonus
+                        }
+                    }
+                    DV_TEXT[at9008]
+                }
+            }
+            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Augmented response
+                value matches {
+                    DV_BOOLEAN[at9009]
+                }
+            }
+            ELEMENT[at0026] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9010]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Deep tendon reflex response">
+                description = <"Findings observed during the physical examination of a single deep tendon reflex.">
+            >
+            ["at0026"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the reflex response findings, not captured in other fields.">
+            >
+            ["at0001"] = <
+                text = <"Reflex">
+                description = <"Identification of the deep tendon reflex or group of reflexes being examined.">
+            >
+            ["at0013"] = <
+                text = <"Relative response">
+                description = <"The elicited reflex response represented as relative to a 'normal' response.">
+            >
+            ["at0015"] = <
+                text = <"Normal">
+                description = <"The elicited response is considered within the expected range of responses.">
+            >
+            ["at0014"] = <
+                text = <"Increased">
+                description = <"The elicited response appears increased, compared with normal.">
+            >
+            ["at0016"] = <
+                text = <"Decreased">
+                description = <"The elicited response appears decreased, compared with normal.">
+            >
+            ["at0025"] = <
+                text = <"Augmented response">
+                description = <"Was the response augmented or reinforced?">
+            >
+            ["at0002"] = <
+                text = <"Right biceps">
+                description = <"Testing the C5 and C6 nerve roots.">
+            >
+            ["at0004"] = <
+                text = <"Right brachioradialis">
+                description = <"Testing the C6 nerve root.">
+            >
+            ["at0006"] = <
+                text = <"Right triceps">
+                description = <"Testing the C7 nerve root.">
+            >
+            ["at0007"] = <
+                text = <"Left triceps">
+                description = <"Testing the C7 nerve root.">
+            >
+            ["at0008"] = <
+                text = <"Right quadriceps">
+                description = <"Also known as patellar or knee jerk. Testing the L4 nerve root.">
+            >
+            ["at0010"] = <
+                text = <"Right achilles">
+                description = <"Also known as ankle jerk. Testing the S1 nerve root.">
+            >
+            ["at0012"] = <
+                text = <"Jaw">
+                description = <"Testing the 5th cranial nerve root.">
+            >
+            ["at0003"] = <
+                text = <"Left biceps">
+                description = <"Testing the C5 and C6 nerve roots.">
+            >
+            ["at0005"] = <
+                text = <"Left brachioradialis">
+                description = <"Testing the C6 nerve root.">
+            >
+            ["at0009"] = <
+                text = <"Left quadriceps">
+                description = <"Also known as patellar or knee jerk. Testing the L4 nerve root.">
+            >
+            ["at0011"] = <
+                text = <"Left achilles">
+                description = <"Also known as ankle jerk. Testing the S1 nerve root.">
+            >
+            ["at0018"] = <
+                text = <"Graded response">
+                description = <"The elicited reflex response represented as a grade.">
+            >
+            ["at0019"] = <
+                text = <"Absent">
+                description = <"Reflex is not evident. May be recorded as '0' or '-'.">
+            >
+            ["at0020"] = <
+                text = <"Slight">
+                description = <"Reflex is present but less than normal amplitude, or only seen with reinforcement. May be recorded as '+' or '1+'.">
+            >
+            ["at0021"] = <
+                text = <"Normal">
+                description = <"Reflex is present at normal amplitude. May be recorded as '++' or '2+'.">
+            >
+            ["at0022"] = <
+                text = <"Brisk">
+                description = <"Reflex is present at greater than normal amplitude. May be recorded as '+++' or '3+'.">
+            >
+            ["at0023"] = <
+                text = <"Non-sustained clonus">
+                description = <"Reflex is repeating but not sustained. May be recorded as '++++' or '4+'.">
+            >
+            ["at0024"] = <
+                text = <"Sustained clonus">
+                description = <"Reflex is repeating and sustained. May be recorded as '+++++' or '5+'.">
+            >
+            ["at0017"] = <
+                text = <"Absent">
+                description = <"No response can be elicited.">
+            >
+            ["ac9000"] = <
+                text = <"Reflex (synthesised)">
+                description = <"Identification of the deep tendon reflex or group of reflexes being examined. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Relative response (synthesised)">
+                description = <"The elicited reflex response represented as relative to a 'normal' response. (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Graded response (synthesised)">
+                description = <"The elicited reflex response represented as a grade. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0014", "at0015", "at0016", "at0017">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0002", "at0003", "at0004", "at0005", "at0006", "at0007", "at0008", "at0009", "at0010", "at0011", "at0012">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0019", "at0020", "at0021", "at0022", "at0023", "at0024">
+        >
+    >

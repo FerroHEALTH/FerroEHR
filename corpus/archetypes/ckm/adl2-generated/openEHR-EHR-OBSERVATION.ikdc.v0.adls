@@ -1,0 +1,834 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=202db227-f957-4150-aa17-86a0e963d515; build_uid=78335608-07ee-4094-af71-d96ba53e3eee)
+    openEHR-EHR-OBSERVATION.ikdc.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Hildegard McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"hildi@freshehr.com">
+        ["date"] = <"2018-09-17">
+    >
+    original_namespace = <"uk.org.clinicalmodels">
+    original_publisher = <"Apperta UK">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"uk.org.clinicalmodels">
+    custodian_organisation = <"Apperta UK">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Derived from: <Add reference to original resource here>">
+        ["2"] = <"https://www.aaos.org/uploadedFiles/PreProduction/Quality/Measures/IKDCEnglishUS.pdf cited 17-Sep-2018.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"0C5A89078F56BD988528DB3C17724D64">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For the recording and reporting of the patient reported results of the Subjective knee evaluation score developed by the International Knee Documentation Committee.">
+            keywords = <"knee, evaluation, subjective, score, PROM", ...>
+            use = <"Use to record the patient reported results of the Subjective knee evaluation score developed by the International Knee Documentation Committee.
+
+While openEHR archetypes are all freely available under an open license, the specific content of this archetype may be copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners where a copyright exists.">
+            misuse = <"Not to be used unless the terms of copyright have been observed (if a copyright exists).">
+            copyright = <"© Apperta Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- IKDC subjective knee evaluation
+        data matches {
+            HISTORY[at0001] matches {    -- History
+                events cardinality matches {0..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {1..*} matches {    -- Point in time
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    CLUSTER[at0014] occurrences matches {0..1} matches {    -- Symptoms
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Highest level of activity without pain
+                                                value matches {
+                                                    DV_ORDINAL[at9014] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0009]}],    -- Unable to perform any activities
+                                                            [{1}, {[at0010]}],    -- Light activities
+                                                            [{2}, {[at0011]}],    -- Moderate activities
+                                                            [{3}, {[at0012]}],    -- Strenuous activities
+                                                            [{4}, {[at0013]}]    -- Very strenuous activities
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Frequency of pain
+                                                value matches {
+                                                    DV_COUNT[at9015] matches {
+                                                        magnitude matches {|>0..<10|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Severity of pain
+                                                value matches {
+                                                    DV_COUNT[at9016] matches {
+                                                        magnitude matches {|>0..<10|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Stiff or swollen knee
+                                                value matches {
+                                                    DV_ORDINAL[at9017] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0018]}],    -- Extremely
+                                                            [{1}, {[at0019]}],    -- Very
+                                                            [{2}, {[at0020]}],    -- Moderately
+                                                            [{3}, {[at0021]}],    -- Mildly
+                                                            [{4}, {[at0022]}]    -- Not at all
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Highest level of activity without swelling
+                                                value matches {
+                                                    DV_ORDINAL[at9018] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0024]}],    -- Unable to perform any activities
+                                                            [{1}, {[at0025]}],    -- Light activities
+                                                            [{2}, {[at0026]}],    -- Moderate activities
+                                                            [{3}, {[at0027]}],    -- Strenuous activities
+                                                            [{4}, {[at0028]}]    -- Very strenuous activities
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0029] occurrences matches {0..1} matches {    -- Locked or caught
+                                                value matches {
+                                                    DV_BOOLEAN[at9019]
+                                                }
+                                            }
+                                            ELEMENT[at0030] occurrences matches {0..1} matches {    -- Highest level of activity without giving way
+                                                value matches {
+                                                    DV_ORDINAL[at9020] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0031]}],    -- Unable to perform any activities
+                                                            [{1}, {[at0032]}],    -- Light activities
+                                                            [{2}, {[at0033]}],    -- Moderate activities
+                                                            [{3}, {[at0034]}],    -- Strenuous activities
+                                                            [{4}, {[at0035]}]    -- Very strenuous activities
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0037] occurrences matches {0..1} matches {    -- Sport Activities
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0038] occurrences matches {0..1} matches {    -- Highest level of activity you can participate in
+                                                value matches {
+                                                    DV_ORDINAL[at9021] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0039]}],    -- Unable to perform any activities
+                                                            [{1}, {[at0040]}],    -- Light activities
+                                                            [{2}, {[at0041]}],    -- Moderate activities
+                                                            [{3}, {[at0042]}],    -- Strenuous activities
+                                                            [{4}, {[at0043]}]    -- Very strenuous activities
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            CLUSTER[at0044] occurrences matches {0..1} matches {    -- How does knee affect your ability to
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0045] occurrences matches {0..1} matches {    -- Go up stairs
+                                                        value matches {
+                                                            DV_ORDINAL[at9022] matches {
+                                                                [value, symbol] matches {
+                                                                    [{0}, {[at0046]}],    -- Unable to do
+                                                                    [{1}, {[at0047]}],    -- Extremely difficult
+                                                                    [{2}, {[at0048]}],    -- Moderately difficult
+                                                                    [{3}, {[at0049]}],    -- Minimally difficult
+                                                                    [{4}, {[at0050]}]    -- Not difficult at all
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0051] occurrences matches {0..1} matches {    -- Go down stairs
+                                                        value matches {
+                                                            DV_ORDINAL[at9023] matches {
+                                                                [value, symbol] matches {
+                                                                    [{0}, {[at0052]}],    -- Unable to do
+                                                                    [{1}, {[at0053]}],    -- Extremely difficult
+                                                                    [{2}, {[at0054]}],    -- Moderately difficult
+                                                                    [{3}, {[at0055]}],    -- Minimally difficult
+                                                                    [{4}, {[at0056]}]    -- Not difficult at all
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0057] occurrences matches {0..1} matches {    -- Kneel on front of knee
+                                                        value matches {
+                                                            DV_ORDINAL[at9024] matches {
+                                                                [value, symbol] matches {
+                                                                    [{0}, {[at0058]}],    -- Unable to do
+                                                                    [{1}, {[at0059]}],    -- Extremely difficult
+                                                                    [{2}, {[at0060]}],    -- Moderately difficult
+                                                                    [{3}, {[at0061]}],    -- Minimally difficult
+                                                                    [{4}, {[at0062]}]    -- Not difficult at all
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0063] occurrences matches {0..1} matches {    -- Squat
+                                                        value matches {
+                                                            DV_ORDINAL[at9025] matches {
+                                                                [value, symbol] matches {
+                                                                    [{0}, {[at0064]}],    -- Unable to do
+                                                                    [{1}, {[at0065]}],    -- Extremely difficult
+                                                                    [{2}, {[at0066]}],    -- Moderately difficult
+                                                                    [{3}, {[at0067]}],    -- Minimally difficult
+                                                                    [{4}, {[at0068]}]    -- Not difficult at all
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0069] occurrences matches {0..1} matches {    -- Sit with your knee bent
+                                                        value matches {
+                                                            DV_ORDINAL[at9026] matches {
+                                                                [value, symbol] matches {
+                                                                    [{0}, {[at0070]}],    -- Unable to do
+                                                                    [{1}, {[at0071]}],    -- Extremely difficult
+                                                                    [{2}, {[at0072]}],    -- Moderately difficult
+                                                                    [{3}, {[at0073]}],    -- Minimally difficult
+                                                                    [{4}, {[at0074]}]    -- Not difficult at all
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0075] occurrences matches {0..1} matches {    -- Rise from a chair
+                                                        value matches {
+                                                            DV_ORDINAL[at9027] matches {
+                                                                [value, symbol] matches {
+                                                                    [{0}, {[at0076]}],    -- Unable to do
+                                                                    [{1}, {[at0077]}],    -- Extremely difficult
+                                                                    [{2}, {[at0078]}],    -- Moderately difficult
+                                                                    [{3}, {[at0079]}],    -- Minimally difficult
+                                                                    [{4}, {[at0080]}]    -- Not difficult at all
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0081] occurrences matches {0..1} matches {    -- Run straight ahead
+                                                        value matches {
+                                                            DV_ORDINAL[at9028] matches {
+                                                                [value, symbol] matches {
+                                                                    [{0}, {[at0082]}],    -- Unable to do
+                                                                    [{1}, {[at0083]}],    -- Extremely difficult
+                                                                    [{2}, {[at0084]}],    -- Moderately difficult
+                                                                    [{3}, {[at0085]}],    -- Minimally difficult
+                                                                    [{4}, {[at0086]}]    -- Not difficult at all
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0087] occurrences matches {0..1} matches {    -- Jump and land on your involved leg
+                                                        value matches {
+                                                            DV_ORDINAL[at9029] matches {
+                                                                [value, symbol] matches {
+                                                                    [{0}, {[at0088]}],    -- Unable to do
+                                                                    [{1}, {[at0089]}],    -- Extremely difficult
+                                                                    [{2}, {[at0090]}],    -- Moderately difficult
+                                                                    [{3}, {[at0091]}],    -- Minimally difficult
+                                                                    [{4}, {[at0092]}]    -- Not difficult at all
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    ELEMENT[at0093] occurrences matches {0..1} matches {    -- Stop and start quickly
+                                                        value matches {
+                                                            DV_ORDINAL[at9030] matches {
+                                                                [value, symbol] matches {
+                                                                    [{0}, {[at0094]}],    -- Unable to do
+                                                                    [{1}, {[at0095]}],    -- Extremely difficult
+                                                                    [{2}, {[at0096]}],    -- Moderately difficult
+                                                                    [{3}, {[at0097]}],    -- Minimally difficult
+                                                                    [{4}, {[at0098]}]    -- Not difficult at all
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0099] occurrences matches {0..1} matches {    -- Function
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0100] occurrences matches {0..1} matches {    -- Function prior
+                                                value matches {
+                                                    DV_COUNT[at9031] matches {
+                                                        magnitude matches {|>0..<10|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0103] occurrences matches {0..1} matches {    -- Function current
+                                                value matches {
+                                                    DV_COUNT[at9032] matches {
+                                                        magnitude matches {|>0..<10|}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0104] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9033] matches {
+                                                magnitude matches {|0..87|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0105] occurrences matches {0..1} matches {    -- Total score as percentage
+                                        value matches {
+                                            DV_PROPORTION[at9034] matches {
+                                                numerator matches {|0.0..100.0|}
+                                                type matches {2}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0006] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0007] occurrences matches {0..1} matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"IKDC subjective knee evaluation">
+                description = <"International Knee Documentation Committee (IKDC) Subjective knee evaluation score.">
+            >
+            ["at0001"] = <
+                text = <"History">
+                description = <"*">
+            >
+            ["at0002"] = <
+                text = <"Point in time">
+                description = <"A specific date and/or time which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0007"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+            >
+            ["at0008"] = <
+                text = <"Highest level of activity without pain">
+                description = <"Patient reported highest level of activity they can perform without significant knee pain.">
+            >
+            ["at0009"] = <
+                text = <"Unable to perform any activities">
+                description = <"Patient reports that they are unable to perform any activities due to knee pain.">
+            >
+            ["at0010"] = <
+                text = <"Light activities">
+                description = <"Patient reports that they are able to perform light activities like walking, housework or gardening.">
+            >
+            ["at0011"] = <
+                text = <"Moderate activities">
+                description = <"Patient reports that they are able to perform moderate activities like moderate physical work, running or jogging.">
+            >
+            ["at0012"] = <
+                text = <"Strenuous activities">
+                description = <"Patient reports that they are able to perform strenuous activities like heavy physical work, skiing or tennis.">
+            >
+            ["at0013"] = <
+                text = <"Very strenuous activities">
+                description = <"Patient reports that they are able to perform very strenuous activities like jumping or pivoting as in gymnastics or football.">
+            >
+            ["at0014"] = <
+                text = <"Symptoms">
+                description = <"Patient reported extent of symptoms due to knee pain.">
+            >
+            ["at0015"] = <
+                text = <"Frequency of pain">
+                description = <"Patient reported frequency of pain during past 4 weeks or since injury where 0 represents never and 10 represents constant.">
+            >
+            ["at0016"] = <
+                text = <"Severity of pain">
+                description = <"Patient reported severity of pain where 0 represents no pain and 10 represents worst pain imaginable.">
+            >
+            ["at0017"] = <
+                text = <"Stiff or swollen knee">
+                description = <"Patient reported degree of stiffness or swelling of knee during past 4 weeks or since injury.">
+            >
+            ["at0018"] = <
+                text = <"Extremely">
+                description = <"Patient reports that knee has been extremely stiff or swollen during past 4 weeks or since injury.">
+            >
+            ["at0019"] = <
+                text = <"Very">
+                description = <"Patient reports that knee has been very stiff or swollen during past 4 weeks or since injury.">
+            >
+            ["at0020"] = <
+                text = <"Moderately">
+                description = <"Patient reports that knee has been moderately stiff or swollen during past 4 week or since injury.">
+            >
+            ["at0021"] = <
+                text = <"Mildly">
+                description = <"Patient reports that knee has been mildly stiff or swollen during past 4 weeks or since injury.">
+            >
+            ["at0022"] = <
+                text = <"Not at all">
+                description = <"Patient reports that knee has not at all been stiff or swollen during past 4 weeks or since injury.">
+            >
+            ["at0023"] = <
+                text = <"Highest level of activity without swelling">
+                description = <"Patient reported highest level of activity they can perform without significant swelling in knee.">
+            >
+            ["at0024"] = <
+                text = <"Unable to perform any activities">
+                description = <"Patient reports that they are unable to perform any activities due to knee swelling.">
+            >
+            ["at0025"] = <
+                text = <"Light activities">
+                description = <"Patient reports that they are able to perform light activities like walking, housework or gardening.">
+            >
+            ["at0026"] = <
+                text = <"Moderate activities">
+                description = <"Patient reports that they are able to perform moderate activities like moderate physical work, running or jogging.">
+            >
+            ["at0027"] = <
+                text = <"Strenuous activities">
+                description = <"Patient reports that they are able to perform strenuous activities like heavy physical work, skiing or tennis.">
+            >
+            ["at0028"] = <
+                text = <"Very strenuous activities">
+                description = <"Patient reports that they are able to perform very strenuous activities like jumping or pivoting as in gymnastics or football.">
+            >
+            ["at0029"] = <
+                text = <"Locked or caught">
+                description = <"Patient indicates if knee has locked or caught in the past 4 weeks.">
+                comment = <"Question:
+During the past 4 weeks, or since your injury, has your knee locked or caught?">
+            >
+            ["at0030"] = <
+                text = <"Highest level of activity without giving way">
+                description = <"Patient reported highest level of activity they can perform without significant giving way in their knee.">
+                comment = <"Question:
+What is the highest level of activity you can perform without significant giving way in your knee?">
+            >
+            ["at0031"] = <
+                text = <"Unable to perform any activities">
+                description = <"Patient reports that they are unable to perform any activities due to knee pain.">
+            >
+            ["at0032"] = <
+                text = <"Light activities">
+                description = <"Patient reports that they are able to perform light activities like walking, housework or gardening.">
+            >
+            ["at0033"] = <
+                text = <"Moderate activities">
+                description = <"Patient reports that they are able to perform moderate activities like moderate physical work, running or jogging.">
+            >
+            ["at0034"] = <
+                text = <"Strenuous activities">
+                description = <"Patient reports that they are able to perform strenuous activities like heavy physical work, skiing or tennis.">
+            >
+            ["at0035"] = <
+                text = <"Very strenuous activities">
+                description = <"Patient reports that they are able to perform very strenuous activities like jumping or pivoting as in gymnastics or football.">
+            >
+            ["at0037"] = <
+                text = <"Sport Activities">
+                description = <"Patient reported impact on sporting activities undertaken due to knee pain.">
+            >
+            ["at0038"] = <
+                text = <"Highest level of activity you can participate in">
+                description = <"Patient reported highest level of activity they can participate in on a regular basis.">
+                comment = <"Question:
+What is the highest level of activity you can participate in on a regular basis?">
+            >
+            ["at0039"] = <
+                text = <"Unable to perform any activities">
+                description = <"Patient reports that they are unable to perform any activities on a regular basis.">
+            >
+            ["at0040"] = <
+                text = <"Light activities">
+                description = <"Patient reports that they are able to perform light activities like walking, housework or gardening on a regular basis.">
+            >
+            ["at0041"] = <
+                text = <"Moderate activities">
+                description = <"Patient reports that they are able to perform moderate activities like moderate physical work, running or jogging on a regular basis.">
+            >
+            ["at0042"] = <
+                text = <"Strenuous activities">
+                description = <"Patient reports that they are able to perform strenuous activities like heavy physical work, skiing or tennis on a regular basis.">
+            >
+            ["at0043"] = <
+                text = <"Very strenuous activities">
+                description = <"Patient reports that they are able to perform very strenuous activities like jumping or pivoting as in gymnastics or football on a regular basis.">
+            >
+            ["at0044"] = <
+                text = <"How does knee affect your ability to">
+                description = <"Collection of questions relating to the patients ability to participate in various activities.">
+            >
+            ["at0045"] = <
+                text = <"Go up stairs">
+                description = <"Patient reported ability to go up stairs.">
+            >
+            ["at0046"] = <
+                text = <"Unable to do">
+                description = <"The patient is unable to perform the activity.">
+            >
+            ["at0047"] = <
+                text = <"Extremely difficult">
+                description = <"The patient finds it extremely difficult to perform the activity.">
+            >
+            ["at0048"] = <
+                text = <"Moderately difficult">
+                description = <"The patient finds it moderately difficult to perform the activity.">
+            >
+            ["at0049"] = <
+                text = <"Minimally difficult">
+                description = <"The patient finds it minimally difficult to perform the activity.">
+            >
+            ["at0050"] = <
+                text = <"Not difficult at all">
+                description = <"The patient finds it not difficult at all to perform the activity.">
+            >
+            ["at0051"] = <
+                text = <"Go down stairs">
+                description = <"Patient reported ability to go down stairs.">
+            >
+            ["at0052"] = <
+                text = <"Unable to do">
+                description = <"The patient is unable to perform the activity.">
+            >
+            ["at0053"] = <
+                text = <"Extremely difficult">
+                description = <"The patient finds it extremely difficult to perform the activity.">
+            >
+            ["at0054"] = <
+                text = <"Moderately difficult">
+                description = <"The patient finds it moderately difficult to perform the activity.">
+            >
+            ["at0055"] = <
+                text = <"Minimally difficult">
+                description = <"The patient finds it minimally difficult to perform the activity.">
+            >
+            ["at0056"] = <
+                text = <"Not difficult at all">
+                description = <"The patient finds it not difficult at all to perform the activity.">
+            >
+            ["at0057"] = <
+                text = <"Kneel on front of knee">
+                description = <"Patient reported ability to kneel on front of knee.">
+            >
+            ["at0058"] = <
+                text = <"Unable to do">
+                description = <"The patient is unable to perform the activity.">
+            >
+            ["at0059"] = <
+                text = <"Extremely difficult">
+                description = <"The patient finds it extremely difficult to perform the activity.">
+            >
+            ["at0060"] = <
+                text = <"Moderately difficult">
+                description = <"The patient finds it moderately difficult to perform the activity.">
+            >
+            ["at0061"] = <
+                text = <"Minimally difficult">
+                description = <"The patient finds it minimally difficult to perform the activity.">
+            >
+            ["at0062"] = <
+                text = <"Not difficult at all">
+                description = <"The patient finds it not difficult at all to perform the activity.">
+            >
+            ["at0063"] = <
+                text = <"Squat">
+                description = <"Patient reported ability to squat.">
+            >
+            ["at0064"] = <
+                text = <"Unable to do">
+                description = <"The patient is unable to perform the activity.">
+            >
+            ["at0065"] = <
+                text = <"Extremely difficult">
+                description = <"The patient finds it extremely difficult to perform the activity.">
+            >
+            ["at0066"] = <
+                text = <"Moderately difficult">
+                description = <"The patient finds it moderately difficult to perform the activity.">
+            >
+            ["at0067"] = <
+                text = <"Minimally difficult">
+                description = <"The patient finds it minimally difficult to perform the activity.">
+            >
+            ["at0068"] = <
+                text = <"Not difficult at all">
+                description = <"The patient finds it not difficult at all to perform the activity.">
+            >
+            ["at0069"] = <
+                text = <"Sit with your knee bent">
+                description = <"Patient reported ability to sit with your knee bent.">
+            >
+            ["at0070"] = <
+                text = <"Unable to do">
+                description = <"The patient is unable to perform the activity.">
+            >
+            ["at0071"] = <
+                text = <"Extremely difficult">
+                description = <"The patient finds it extremely difficult to perform the activity.">
+            >
+            ["at0072"] = <
+                text = <"Moderately difficult">
+                description = <"The patient finds it moderately difficult to perform the activity.">
+            >
+            ["at0073"] = <
+                text = <"Minimally difficult">
+                description = <"The patient finds it minimally difficult to perform the activity.">
+            >
+            ["at0074"] = <
+                text = <"Not difficult at all">
+                description = <"The patient finds it not difficult at all to perform the activity.">
+            >
+            ["at0075"] = <
+                text = <"Rise from a chair">
+                description = <"Patient reported ability to rise from a chair.">
+            >
+            ["at0076"] = <
+                text = <"Unable to do">
+                description = <"The patient is unable to perform the activity.">
+            >
+            ["at0077"] = <
+                text = <"Extremely difficult">
+                description = <"The patient finds it extremely difficult to perform the activity.">
+            >
+            ["at0078"] = <
+                text = <"Moderately difficult">
+                description = <"The patient finds it moderately difficult to perform the activity.">
+            >
+            ["at0079"] = <
+                text = <"Minimally difficult">
+                description = <"The patient finds it minimally difficult to perform the activity.">
+            >
+            ["at0080"] = <
+                text = <"Not difficult at all">
+                description = <"The patient finds it not difficult at all to perform the activity.">
+            >
+            ["at0081"] = <
+                text = <"Run straight ahead">
+                description = <"Patient reported ability to run straight ahead.">
+            >
+            ["at0082"] = <
+                text = <"Unable to do">
+                description = <"The patient is unable to perform the activity.">
+            >
+            ["at0083"] = <
+                text = <"Extremely difficult">
+                description = <"The patient finds it extremely difficult to perform the activity.">
+            >
+            ["at0084"] = <
+                text = <"Moderately difficult">
+                description = <"The patient finds it moderately difficult to perform the activity.">
+            >
+            ["at0085"] = <
+                text = <"Minimally difficult">
+                description = <"The patient finds it minimally difficult to perform the activity.">
+            >
+            ["at0086"] = <
+                text = <"Not difficult at all">
+                description = <"The patient finds it not difficult at all to perform the activity.">
+            >
+            ["at0087"] = <
+                text = <"Jump and land on your involved leg">
+                description = <"Patient reported ability to jump and land on your involved leg.">
+            >
+            ["at0088"] = <
+                text = <"Unable to do">
+                description = <"The patient is unable to perform the activity.">
+            >
+            ["at0089"] = <
+                text = <"Extremely difficult">
+                description = <"The patient finds it extremely difficult to perform the activity.">
+            >
+            ["at0090"] = <
+                text = <"Moderately difficult">
+                description = <"The patient finds it moderately difficult to perform the activity.">
+            >
+            ["at0091"] = <
+                text = <"Minimally difficult">
+                description = <"The patient finds it minimally difficult to perform the activity.">
+            >
+            ["at0092"] = <
+                text = <"Not difficult at all">
+                description = <"The patient finds it not difficult at all to perform the activity.">
+            >
+            ["at0093"] = <
+                text = <"Stop and start quickly">
+                description = <"Patient reported ability to stop and start quickly.">
+            >
+            ["at0094"] = <
+                text = <"Unable to do">
+                description = <"The patient is unable to perform the activity.">
+            >
+            ["at0095"] = <
+                text = <"Extremely difficult">
+                description = <"The patient finds it extremely difficult to perform the activity.">
+            >
+            ["at0096"] = <
+                text = <"Moderately difficult">
+                description = <"The patient finds it moderately difficult to perform the activity.">
+            >
+            ["at0097"] = <
+                text = <"Minimally difficult">
+                description = <"The patient finds it minimally difficult to perform the activity.">
+            >
+            ["at0098"] = <
+                text = <"Not difficult at all">
+                description = <"The patient finds it not difficult at all to perform the activity.">
+            >
+            ["at0099"] = <
+                text = <"Function">
+                description = <"Patient reported knee function before injury and current state.">
+            >
+            ["at0100"] = <
+                text = <"Function prior">
+                description = <"Patient reported function prior to knee injury where 0 represents couldn't perform daily activities and 10 represents no limitation in daily activities.">
+            >
+            ["at0103"] = <
+                text = <"Function current">
+                description = <"Patient reported current knee function where 0 represents couldn't perform daily activities and 10 represents no limitation in daily activities.">
+            >
+            ["at0104"] = <
+                text = <"Total score">
+                description = <"Total score from Questions 1 to 10 ">
+            >
+            ["at0105"] = <
+                text = <"Total score as percentage">
+                description = <"Total score from all questions as a percentage.">
+            >
+            ["ac9034"] = <
+                text = <"Highest level of activity without pain (synthesised)">
+                description = <"Patient reported highest level of activity they can perform without significant knee pain. (synthesised)">
+            >
+            ["ac9035"] = <
+                text = <"Stiff or swollen knee (synthesised)">
+                description = <"Patient reported degree of stiffness or swelling of knee during past 4 weeks or since injury. (synthesised)">
+            >
+            ["ac9036"] = <
+                text = <"Highest level of activity without swelling (synthesised)">
+                description = <"Patient reported highest level of activity they can perform without significant swelling in knee. (synthesised)">
+            >
+            ["ac9037"] = <
+                text = <"Highest level of activity without giving way (synthesised)">
+                description = <"Patient reported highest level of activity they can perform without significant giving way in their knee. (synthesised)">
+            >
+            ["ac9038"] = <
+                text = <"Highest level of activity you can participate in (synthesised)">
+                description = <"Patient reported highest level of activity they can participate in on a regular basis. (synthesised)">
+            >
+            ["ac9039"] = <
+                text = <"Go up stairs (synthesised)">
+                description = <"Patient reported ability to go up stairs. (synthesised)">
+            >
+            ["ac9040"] = <
+                text = <"Go down stairs (synthesised)">
+                description = <"Patient reported ability to go down stairs. (synthesised)">
+            >
+            ["ac9041"] = <
+                text = <"Kneel on front of knee (synthesised)">
+                description = <"Patient reported ability to kneel on front of knee. (synthesised)">
+            >
+            ["ac9042"] = <
+                text = <"Squat (synthesised)">
+                description = <"Patient reported ability to squat. (synthesised)">
+            >
+            ["ac9043"] = <
+                text = <"Sit with your knee bent (synthesised)">
+                description = <"Patient reported ability to sit with your knee bent. (synthesised)">
+            >
+            ["ac9044"] = <
+                text = <"Rise from a chair (synthesised)">
+                description = <"Patient reported ability to rise from a chair. (synthesised)">
+            >
+            ["ac9045"] = <
+                text = <"Run straight ahead (synthesised)">
+                description = <"Patient reported ability to run straight ahead. (synthesised)">
+            >
+            ["ac9046"] = <
+                text = <"Jump and land on your involved leg (synthesised)">
+                description = <"Patient reported ability to jump and land on your involved leg. (synthesised)">
+            >
+            ["ac9047"] = <
+                text = <"Stop and start quickly (synthesised)">
+                description = <"Patient reported ability to stop and start quickly. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9035"] = <
+            id = <"ac9035">
+            members = <"at0018", "at0019", "at0020", "at0021", "at0022">
+        >
+        ["ac9034"] = <
+            id = <"ac9034">
+            members = <"at0009", "at0010", "at0011", "at0012", "at0013">
+        >
+        ["ac9039"] = <
+            id = <"ac9039">
+            members = <"at0046", "at0047", "at0048", "at0049", "at0050">
+        >
+        ["ac9038"] = <
+            id = <"ac9038">
+            members = <"at0039", "at0040", "at0041", "at0042", "at0043">
+        >
+        ["ac9037"] = <
+            id = <"ac9037">
+            members = <"at0031", "at0032", "at0033", "at0034", "at0035">
+        >
+        ["ac9036"] = <
+            id = <"ac9036">
+            members = <"at0024", "at0025", "at0026", "at0027", "at0028">
+        >
+        ["ac9042"] = <
+            id = <"ac9042">
+            members = <"at0064", "at0065", "at0066", "at0067", "at0068">
+        >
+        ["ac9041"] = <
+            id = <"ac9041">
+            members = <"at0058", "at0059", "at0060", "at0061", "at0062">
+        >
+        ["ac9040"] = <
+            id = <"ac9040">
+            members = <"at0052", "at0053", "at0054", "at0055", "at0056">
+        >
+        ["ac9046"] = <
+            id = <"ac9046">
+            members = <"at0088", "at0089", "at0090", "at0091", "at0092">
+        >
+        ["ac9045"] = <
+            id = <"ac9045">
+            members = <"at0082", "at0083", "at0084", "at0085", "at0086">
+        >
+        ["ac9044"] = <
+            id = <"ac9044">
+            members = <"at0076", "at0077", "at0078", "at0079", "at0080">
+        >
+        ["ac9043"] = <
+            id = <"ac9043">
+            members = <"at0070", "at0071", "at0072", "at0073", "at0074">
+        >
+        ["ac9047"] = <
+            id = <"ac9047">
+            members = <"at0094", "at0095", "at0096", "at0097", "at0098">
+        >
+    >

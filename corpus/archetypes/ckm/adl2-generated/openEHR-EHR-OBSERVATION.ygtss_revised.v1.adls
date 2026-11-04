@@ -1,0 +1,2417 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=0a37f3b6-1424-44c9-a78c-8615389f1d22; build_uid=c95b116a-0c82-4572-bd67-461050561680)
+    openEHR-EHR-OBSERVATION.ygtss_revised.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand, Marit Alice Venheim">
+                ["organisation"] = <"Helse Bergen, Helse Vest IKT">
+                ["email"] = <"john.tore.valand@helse-vest-ikt.no, marit.alice.venheim@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"John Tore Valand">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["email"] = <"john.tore.valand@helse-vest-ikt.no">
+        ["date"] = <"2020-11-16">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Terje Bektesevic Holmlund, UiT Norges arktiske universitet, Norway", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Heike Eichele, Regionalt fagmiljø for autimse, ADHD, Tourettes syndrom og narkolepsi Helse Vest, Kronstad DPS, Haukeland universitetssykehus, Bergen, Norway", "Heather Grain, Llewelyn Grain Informatics, Australia", "Mikkel Johan Gaup Grønmo, Forvaltningssenter EPJ, Helse-Nord, Norway (openEHR Editor)", "Evelyn Hovenga, EJSH Consulting, Australia", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "May Lisbeth Østerbøe, Helse-Bergen, HAVO, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Jack Schjelderup, Helse-Bergen, HAVO, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Rikke Tverberg, Helse-Bergen, HAVO, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Lise Å Boye, Helse-Bergen, HAVO, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Leckman, J. F., Riddle, M. A., Hardin, M. T., Ort, S. I., Swartz, K. L., Stevenson, J. O. H. N., & Cohen, D. J. (1989). The Yale Global Tic Severity Scale: initial testing of a clinician-rated scale of tic severity. Journal of the American Academy of Child & Adolescent Psychiatry, 28(4), 566-573">
+        ["2"] = <"Storch, Eric A.,Murphy, Tanya K.,Geffken, Gary R.,Sajid, Muhammad,Allen, Pam,Roberti, Jonathan W.,Goodman, Wayne K. (2005). Reliability and validity of the Yale Global Tic Severity Scale. Psychological Assessment, 17(4), 486–491.">
+        ["3"] = <"Canadian Paediatric society. Revised Version, September 2017. Access date 16.11.21. Retrieved from: https://cps.ca/en/mental-health-screening-tools.">
+        ["4"] = <"Norwegian translation by Heike Eichele (2021), Regionalt fagmiljø for autisme, ADHD, Tourettes syndrom og narkolepsi Helse Vest, after permission from J. Leckman og J. McGuire. https://www.helsebiblioteket.no/psykisk-helse/skaringsverktoy/ygtss-r-yale-global-tic-severity-scale-revidert?lenkedetaljer=vis">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"CA8BDF6F34305BF58BFB1C4C0EC4ABEA">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere resultatene for hvert parameter, Total poengskår for tics og Global alvorlighetsgrad skår.">
+            keywords = <"tics, score", ...>
+            use = <"Brukes for å registrere resultatene for hvert parameter, Total poengskår for tics og Global alvorlighetsgrad skår.
+">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the results for each component parameter, the Total tic score and the Global severity score.">
+            keywords = <"tics, score", ...>
+            use = <"Use to record the results for each component parameter, the Total tic score and the Global severity score.">
+            misuse = <"">
+            copyright = <"© Nasjonal IKT HF, openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Yale Global Tic Severity Scale - Revised (YGTSS-R)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    INTERVAL_EVENT[at0002] matches {    -- Over the past week
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    CLUSTER[at0006] occurrences matches {0..1} matches {    -- Simple Motor Tics Checklist
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Eye blinking
+                                                value matches {
+                                                    DV_BOOLEAN[at9007] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0167] occurrences matches {0..1} matches {    -- Eye blinking description
+                                                value matches {
+                                                    DV_TEXT[at9089]
+                                                }
+                                            }
+                                            ELEMENT[at0009] occurrences matches {0..1} matches {    -- Eye movements
+                                                value matches {
+                                                    DV_BOOLEAN[at9008] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0168] occurrences matches {0..1} matches {    -- Eye movements description
+                                                value matches {
+                                                    DV_TEXT[at9090]
+                                                }
+                                            }
+                                            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Nose movements
+                                                value matches {
+                                                    DV_BOOLEAN[at9009] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0169] occurrences matches {0..1} matches {    -- Nose movements description
+                                                value matches {
+                                                    DV_TEXT[at9091]
+                                                }
+                                            }
+                                            ELEMENT[at0158] occurrences matches {0..1} matches {    -- Mouth movements
+                                                value matches {
+                                                    DV_BOOLEAN[at9010] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0170] occurrences matches {0..1} matches {    -- Mouth movements description
+                                                value matches {
+                                                    DV_TEXT[at9092]
+                                                }
+                                            }
+                                            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Facial grimace
+                                                value matches {
+                                                    DV_BOOLEAN[at9011] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0171] occurrences matches {0..1} matches {    -- Facial grimace description
+                                                value matches {
+                                                    DV_TEXT[at9093]
+                                                }
+                                            }
+                                            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Head jerks/movements
+                                                value matches {
+                                                    DV_BOOLEAN[at9012] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0172] occurrences matches {0..1} matches {    -- Head jerks/movements description
+                                                value matches {
+                                                    DV_TEXT[at9094]
+                                                }
+                                            }
+                                            ELEMENT[at0017] occurrences matches {0..1} matches {    -- Shoulder shrugs
+                                                value matches {
+                                                    DV_BOOLEAN[at9013] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0173] occurrences matches {0..1} matches {    -- Shoulder shrugs description
+                                                value matches {
+                                                    DV_TEXT[at9095]
+                                                }
+                                            }
+                                            ELEMENT[at0019] occurrences matches {0..1} matches {    -- Arm movements
+                                                value matches {
+                                                    DV_BOOLEAN[at9014] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0174] occurrences matches {0..1} matches {    -- Arm movements description
+                                                value matches {
+                                                    DV_TEXT[at9096]
+                                                }
+                                            }
+                                            ELEMENT[at0021] occurrences matches {0..1} matches {    -- Hand movements
+                                                value matches {
+                                                    DV_BOOLEAN[at9015] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0175] occurrences matches {0..1} matches {    -- Hand movements description
+                                                value matches {
+                                                    DV_TEXT[at9097]
+                                                }
+                                            }
+                                            ELEMENT[at0023] occurrences matches {0..1} matches {    -- Abdominal tensing
+                                                value matches {
+                                                    DV_BOOLEAN[at9016] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0176] occurrences matches {0..1} matches {    -- Abdominal tensing description
+                                                value matches {
+                                                    DV_TEXT[at9098]
+                                                }
+                                            }
+                                            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Leg, foot, or toe movements
+                                                value matches {
+                                                    DV_BOOLEAN[at9017] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0177] occurrences matches {0..1} matches {    -- Leg, foot, or toe movements description
+                                                value matches {
+                                                    DV_TEXT[at9099]
+                                                }
+                                            }
+                                            CLUSTER[at0104] matches {    -- Other simple motor tics
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0105] occurrences matches {0..1} matches {    -- Name
+                                                        value matches {
+                                                            DV_TEXT[at9018]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0106] occurrences matches {0..1} matches {    -- Description
+                                                        value matches {
+                                                            DV_TEXT[at9019]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0029] occurrences matches {0..1} matches {    -- Complex Motor Tics Checklist
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0030] occurrences matches {0..1} matches {    -- Eye movements
+                                                value matches {
+                                                    DV_BOOLEAN[at9020] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0178] occurrences matches {0..1} matches {    -- Eye movements description
+                                                value matches {
+                                                    DV_TEXT[at9100]
+                                                }
+                                            }
+                                            ELEMENT[at0032] occurrences matches {0..1} matches {    -- Mouth movements
+                                                value matches {
+                                                    DV_BOOLEAN[at9021] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0179] occurrences matches {0..1} matches {    -- Mouth movements description
+                                                value matches {
+                                                    DV_TEXT[at9101]
+                                                }
+                                            }
+                                            ELEMENT[at0034] occurrences matches {0..1} matches {    -- Facial movements or expressions
+                                                value matches {
+                                                    DV_BOOLEAN[at9022] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0180] occurrences matches {0..1} matches {    -- Facial movements or expressions description
+                                                value matches {
+                                                    DV_TEXT[at9102]
+                                                }
+                                            }
+                                            ELEMENT[at0036] occurrences matches {0..1} matches {    -- Head gestures or movements
+                                                value matches {
+                                                    DV_BOOLEAN[at9023] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0182] occurrences matches {0..1} matches {    -- Head gestures or movements description
+                                                value matches {
+                                                    DV_TEXT[at9103]
+                                                }
+                                            }
+                                            ELEMENT[at0038] occurrences matches {0..1} matches {    -- Shoulder movements
+                                                value matches {
+                                                    DV_BOOLEAN[at9024] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0181] occurrences matches {0..1} matches {    -- Shoulder movements description
+                                                value matches {
+                                                    DV_TEXT[at9104]
+                                                }
+                                            }
+                                            ELEMENT[at0040] occurrences matches {0..1} matches {    -- Arm movements
+                                                value matches {
+                                                    DV_BOOLEAN[at9025] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0183] occurrences matches {0..1} matches {    -- Arm movements description
+                                                value matches {
+                                                    DV_TEXT[at9105]
+                                                }
+                                            }
+                                            ELEMENT[at0042] occurrences matches {0..1} matches {    -- Hand movements
+                                                value matches {
+                                                    DV_BOOLEAN[at9026] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0184] occurrences matches {0..1} matches {    -- Hand movements description
+                                                value matches {
+                                                    DV_TEXT[at9106]
+                                                }
+                                            }
+                                            ELEMENT[at0044] occurrences matches {0..1} matches {    -- Writing tics
+                                                value matches {
+                                                    DV_BOOLEAN[at9027] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0185] occurrences matches {0..1} matches {    -- Writing tics description
+                                                value matches {
+                                                    DV_TEXT[at9107]
+                                                }
+                                            }
+                                            ELEMENT[at0046] occurrences matches {0..1} matches {    -- Dystonic postures
+                                                value matches {
+                                                    DV_BOOLEAN[at9028] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0186] occurrences matches {0..1} matches {    -- Dystonic postures description
+                                                value matches {
+                                                    DV_TEXT[at9108]
+                                                }
+                                            }
+                                            ELEMENT[at0048] occurrences matches {0..1} matches {    -- Bending or gyrating
+                                                value matches {
+                                                    DV_BOOLEAN[at9029] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0187] occurrences matches {0..1} matches {    -- Bending or gyrating description
+                                                value matches {
+                                                    DV_TEXT[at9109]
+                                                }
+                                            }
+                                            ELEMENT[at0050] occurrences matches {0..1} matches {    -- Rotating
+                                                value matches {
+                                                    DV_BOOLEAN[at9030] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0188] occurrences matches {0..1} matches {    -- Rotating description
+                                                value matches {
+                                                    DV_TEXT[at9110]
+                                                }
+                                            }
+                                            ELEMENT[at0052] occurrences matches {0..1} matches {    -- Leg or foot or toe movements
+                                                value matches {
+                                                    DV_BOOLEAN[at9031] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0189] occurrences matches {0..1} matches {    -- Leg or foot or toe movements description
+                                                value matches {
+                                                    DV_TEXT[at9111]
+                                                }
+                                            }
+                                            ELEMENT[at0054] occurrences matches {0..1} matches {    -- Blocking
+                                                value matches {
+                                                    DV_BOOLEAN[at9032] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0190] occurrences matches {0..1} matches {    -- Blocking description
+                                                value matches {
+                                                    DV_TEXT[at9112]
+                                                }
+                                            }
+                                            ELEMENT[at0056] occurrences matches {0..1} matches {    -- Tic related compulsive behaviors
+                                                value matches {
+                                                    DV_BOOLEAN[at9033] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0191] occurrences matches {0..1} matches {    -- Tic related compulsive behaviors description
+                                                value matches {
+                                                    DV_TEXT[at9113]
+                                                }
+                                            }
+                                            ELEMENT[at0058] occurrences matches {0..1} matches {    -- Copropraxia
+                                                value matches {
+                                                    DV_BOOLEAN[at9034] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0192] occurrences matches {0..1} matches {    -- Copropraxia description
+                                                value matches {
+                                                    DV_TEXT[at9114]
+                                                }
+                                            }
+                                            ELEMENT[at0060] occurrences matches {0..1} matches {    -- Self-abusive behavior
+                                                value matches {
+                                                    DV_BOOLEAN[at9035] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0193] occurrences matches {0..1} matches {    -- Self-abusive behavior description
+                                                value matches {
+                                                    DV_TEXT[at9115]
+                                                }
+                                            }
+                                            ELEMENT[at0062] occurrences matches {0..1} matches {    -- Paroxysms of tics (displays)
+                                                value matches {
+                                                    DV_BOOLEAN[at9036] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0194] occurrences matches {0..1} matches {    -- Paroxysms of tics (displays) description
+                                                value matches {
+                                                    DV_TEXT[at9116]
+                                                }
+                                            }
+                                            ELEMENT[at0064] occurrences matches {0..1} matches {    -- Paroxysms of tics duration
+                                                value matches {
+                                                    DV_DURATION[at9037] matches {
+                                                        value matches {PTS/|>=PT0S|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0102] occurrences matches {0..1} matches {    -- Disinhibited behavior
+                                                value matches {
+                                                    DV_BOOLEAN[at9038] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0103] occurrences matches {0..1} matches {    -- Disinhibited behavior description
+                                                value matches {
+                                                    DV_TEXT[at9039]
+                                                }
+                                            }
+                                            CLUSTER[at0069] matches {    -- Other complex motor tics
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Name
+                                                        value matches {
+                                                            DV_TEXT[at9040]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Description
+                                                        value matches {
+                                                            DV_TEXT[at9041]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0068] occurrences matches {0..1} matches {    -- Simple Phonic symptoms checklist
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0070] occurrences matches {0..1} matches {    -- Coughing
+                                                value matches {
+                                                    DV_BOOLEAN[at9042] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0195] occurrences matches {0..1} matches {    -- Coughing description
+                                                value matches {
+                                                    DV_TEXT[at9117]
+                                                }
+                                            }
+                                            ELEMENT[at0071] occurrences matches {0..1} matches {    -- Throat clearing
+                                                value matches {
+                                                    DV_BOOLEAN[at9043] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0196] occurrences matches {0..1} matches {    -- Throat clearing description
+                                                value matches {
+                                                    DV_TEXT[at9118]
+                                                }
+                                            }
+                                            ELEMENT[at0072] occurrences matches {0..1} matches {    -- Sniffing
+                                                value matches {
+                                                    DV_BOOLEAN[at9044] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0197] occurrences matches {0..1} matches {    -- Sniffing description
+                                                value matches {
+                                                    DV_TEXT[at9119]
+                                                }
+                                            }
+                                            ELEMENT[at0073] occurrences matches {0..1} matches {    -- Snorting
+                                                value matches {
+                                                    DV_BOOLEAN[at9045] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0198] occurrences matches {0..1} matches {    -- Snorting description
+                                                value matches {
+                                                    DV_TEXT[at9120]
+                                                }
+                                            }
+                                            ELEMENT[at0074] occurrences matches {0..1} matches {    -- Grunting
+                                                value matches {
+                                                    DV_BOOLEAN[at9046] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0199] occurrences matches {0..1} matches {    -- Grunting description
+                                                value matches {
+                                                    DV_TEXT[at9121]
+                                                }
+                                            }
+                                            ELEMENT[at0075] occurrences matches {0..1} matches {    -- Gulping
+                                                value matches {
+                                                    DV_BOOLEAN[at9047] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0200] occurrences matches {0..1} matches {    -- Gulping description
+                                                value matches {
+                                                    DV_TEXT[at9122]
+                                                }
+                                            }
+                                            ELEMENT[at0076] occurrences matches {0..1} matches {    -- Whistling
+                                                value matches {
+                                                    DV_BOOLEAN[at9048] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0201] occurrences matches {0..1} matches {    -- Whistling
+                                                value matches {
+                                                    DV_TEXT[at9123]
+                                                }
+                                            }
+                                            ELEMENT[at0077] occurrences matches {0..1} matches {    -- Humming
+                                                value matches {
+                                                    DV_BOOLEAN[at9049] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0202] occurrences matches {0..1} matches {    -- Humming description
+                                                value matches {
+                                                    DV_TEXT[at9124]
+                                                }
+                                            }
+                                            ELEMENT[at0078] occurrences matches {0..1} matches {    -- Mouth noises
+                                                value matches {
+                                                    DV_BOOLEAN[at9050] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0203] occurrences matches {0..1} matches {    -- Mouth noises description
+                                                value matches {
+                                                    DV_TEXT[at9125]
+                                                }
+                                            }
+                                            ELEMENT[at0079] occurrences matches {0..1} matches {    -- Burping
+                                                value matches {
+                                                    DV_BOOLEAN[at9051] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0204] occurrences matches {0..1} matches {    -- Burping description
+                                                value matches {
+                                                    DV_TEXT[at9126]
+                                                }
+                                            }
+                                            ELEMENT[at0080] occurrences matches {0..1} matches {    -- Hiccups
+                                                value matches {
+                                                    DV_BOOLEAN[at9052] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0205] occurrences matches {0..1} matches {    -- Hiccups description
+                                                value matches {
+                                                    DV_TEXT[at9127]
+                                                }
+                                            }
+                                            ELEMENT[at0081] occurrences matches {0..1} matches {    -- Atypical breathing tics
+                                                value matches {
+                                                    DV_BOOLEAN[at9053] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0206] occurrences matches {0..1} matches {    -- Atypical breathing tics description
+                                                value matches {
+                                                    DV_TEXT[at9128]
+                                                }
+                                            }
+                                            ELEMENT[at0082] occurrences matches {0..1} matches {    -- Chirping or other bird noises
+                                                value matches {
+                                                    DV_BOOLEAN[at9054] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0159] occurrences matches {0..1} matches {    -- Chirping or other bird noises description
+                                                value matches {
+                                                    DV_TEXT[at9055]
+                                                }
+                                            }
+                                            ELEMENT[at0084] occurrences matches {0..1} matches {    -- Barking or other dog noises
+                                                value matches {
+                                                    DV_BOOLEAN[at9056] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0160] occurrences matches {0..1} matches {    -- Barking or other dog noises description
+                                                value matches {
+                                                    DV_TEXT[at9057]
+                                                }
+                                            }
+                                            ELEMENT[at0086] occurrences matches {0..1} matches {    -- Other animal noises
+                                                value matches {
+                                                    DV_BOOLEAN[at9058] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0207] occurrences matches {0..1} matches {    -- Other animal noises description
+                                                value matches {
+                                                    DV_TEXT[at9129]
+                                                }
+                                            }
+                                            CLUSTER[at0087] matches {    -- Other simple phonic tics
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0088] occurrences matches {0..1} matches {    -- Name
+                                                        value matches {
+                                                            DV_TEXT[at9059]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0089] occurrences matches {0..1} matches {    -- Description
+                                                        value matches {
+                                                            DV_TEXT[at9060]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0067] occurrences matches {0..1} matches {    -- Complex Phonic Symptoms Checklist
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0090] occurrences matches {0..1} matches {    -- Syllables
+                                                value matches {
+                                                    DV_BOOLEAN[at9061] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0161] occurrences matches {0..1} matches {    -- Syllables descripion
+                                                value matches {
+                                                    DV_TEXT[at9062]
+                                                }
+                                            }
+                                            ELEMENT[at0091] occurrences matches {0..1} matches {    -- Words
+                                                value matches {
+                                                    DV_BOOLEAN[at9063] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0162] occurrences matches {0..1} matches {    -- Words description
+                                                value matches {
+                                                    DV_TEXT[at9064]
+                                                }
+                                            }
+                                            ELEMENT[at0092] occurrences matches {0..1} matches {    -- Phrases
+                                                value matches {
+                                                    DV_BOOLEAN[at9065] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0163] occurrences matches {0..1} matches {    -- Phrases description
+                                                value matches {
+                                                    DV_TEXT[at9066]
+                                                }
+                                            }
+                                            ELEMENT[at0093] occurrences matches {0..1} matches {    -- Coprolalia
+                                                value matches {
+                                                    DV_BOOLEAN[at9067] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0164] occurrences matches {0..1} matches {    -- Coprolalia description
+                                                value matches {
+                                                    DV_TEXT[at9068]
+                                                }
+                                            }
+                                            ELEMENT[at0094] occurrences matches {0..1} matches {    -- Echolalia
+                                                value matches {
+                                                    DV_BOOLEAN[at9069] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0208] occurrences matches {0..1} matches {    -- Echolalia description
+                                                value matches {
+                                                    DV_TEXT[at9130]
+                                                }
+                                            }
+                                            ELEMENT[at0095] occurrences matches {0..1} matches {    -- Palalalia
+                                                value matches {
+                                                    DV_BOOLEAN[at9070] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0209] occurrences matches {0..1} matches {    -- Palalalia description
+                                                value matches {
+                                                    DV_TEXT[at9131]
+                                                }
+                                            }
+                                            ELEMENT[at0096] occurrences matches {0..1} matches {    -- Blocking
+                                                value matches {
+                                                    DV_BOOLEAN[at9071] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0210] occurrences matches {0..1} matches {    -- Blocking description
+                                                value matches {
+                                                    DV_TEXT[at9132]
+                                                }
+                                            }
+                                            ELEMENT[at0097] occurrences matches {0..1} matches {    -- Speech atypicalities
+                                                value matches {
+                                                    DV_BOOLEAN[at9072] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0165] occurrences matches {0..1} matches {    -- Speech atypicalities description
+                                                value matches {
+                                                    DV_TEXT[at9073]
+                                                }
+                                            }
+                                            ELEMENT[at0098] occurrences matches {0..1} matches {    -- Disinhibited speech
+                                                value matches {
+                                                    DV_BOOLEAN[at9074] matches {
+                                                        value matches {True}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0166] occurrences matches {0..1} matches {    -- Disinhibited speech description
+                                                value matches {
+                                                    DV_TEXT[at9075]
+                                                }
+                                            }
+                                            CLUSTER[at0099] matches {    -- Other complex phonic tics
+                                                items cardinality matches {1..*; unordered} matches {
+                                                    ELEMENT[at0100] occurrences matches {0..1} matches {    -- Name
+                                                        value matches {
+                                                            DV_TEXT[at9076]
+                                                        }
+                                                    }
+                                                    ELEMENT[at0101] occurrences matches {0..1} matches {    -- Description
+                                                        value matches {
+                                                            DV_TEXT[at9077]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0107] occurrences matches {0..2} matches {    -- Score
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0108] occurrences matches {0..1} matches {    -- Number
+                                                value matches {
+                                                    DV_ORDINAL[at9079] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0109]}],    -- None
+                                                            [{1}, {[at0110]}],    -- Minimal
+                                                            [{2}, {[at0111]}],    -- Mild
+                                                            [{3}, {[at0112]}],    -- Moderate
+                                                            [{4}, {[at0113]}],    -- Marked
+                                                            [{5}, {[at0114]}]    -- Severe
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0115] occurrences matches {0..1} matches {    -- Frequency
+                                                value matches {
+                                                    DV_ORDINAL[at9080] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0116]}],    -- None
+                                                            [{1}, {[at0117]}],    -- Minimal
+                                                            [{2}, {[at0118]}],    -- Mild
+                                                            [{3}, {[at0119]}],    -- Moderate
+                                                            [{4}, {[at0120]}],    -- Marked
+                                                            [{5}, {[at0121]}]    -- Severe
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0122] occurrences matches {0..1} matches {    -- Intensity
+                                                value matches {
+                                                    DV_ORDINAL[at9081] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0123]}],    -- None
+                                                            [{1}, {[at0124]}],    -- Minimal
+                                                            [{2}, {[at0125]}],    -- Mild
+                                                            [{3}, {[at0126]}],    -- Moderate
+                                                            [{4}, {[at0127]}],    -- Marked
+                                                            [{5}, {[at0128]}]    -- Severe
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0129] occurrences matches {0..1} matches {    -- Complexity
+                                                value matches {
+                                                    DV_ORDINAL[at9082] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0130]}],    -- None
+                                                            [{1}, {[at0131]}],    -- Minimal
+                                                            [{2}, {[at0132]}],    -- Mild
+                                                            [{3}, {[at0133]}],    -- Moderate
+                                                            [{4}, {[at0134]}],    -- Marked
+                                                            [{5}, {[at0135]}]    -- Severe
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0136] occurrences matches {0..1} matches {    -- Interference
+                                                value matches {
+                                                    DV_ORDINAL[at9083] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0137]}],    -- None
+                                                            [{1}, {[at0138]}],    -- Minimal
+                                                            [{2}, {[at0139]}],    -- Mild
+                                                            [{3}, {[at0140]}],    -- Moderate
+                                                            [{4}, {[at0141]}],    -- Marked
+                                                            [{5}, {[at0142]}]    -- Severe
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        name matches {
+                                            DV_CODED_TEXT[at9078] matches {
+                                                defining_code matches {[ac9000]}    -- Score (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0143] occurrences matches {0..1} matches {    -- Impairment scale
+                                        value matches {
+                                            DV_ORDINAL[at9084] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0144]}],    -- None
+                                                    [{10}, {[at0145]}],    -- Minimal
+                                                    [{20}, {[at0146]}],    -- Mild
+                                                    [{30}, {[at0147]}],    -- Moderate
+                                                    [{40}, {[at0148]}],    -- Marked
+                                                    [{50}, {[at0149]}]    -- Severe
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0150] occurrences matches {0..1} matches {    -- Total tic score
+                                        value matches {
+                                            DV_COUNT[at9085] matches {
+                                                magnitude matches {|0..50|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0151] occurrences matches {0..1} matches {    -- Global severity score
+                                        value matches {
+                                            DV_COUNT[at9086] matches {
+                                                magnitude matches {|0..100|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        width matches {
+                            DV_DURATION[at9087] matches {
+                                value matches {P7D; P7D}
+                            }
+                        }
+                    }
+                    EVENT[at0004] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            use_node ITEM_TREE[at9088] /data[at0001]/events[at0002]/data[at0003]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0152] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0153] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Yale Global Tic Severity Scale - Revidert (YGTSS-R)">
+                description = <"En vurderingsskår som brukes for å kartlegge alvorlighetsgrad av tics">
+            >
+            ["at0002"] = <
+                text = <"I løpet av den siste uken">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Uspesifisert tidspunkt som kan defineres mer eksplisitt i en templat eller i en applikasjon.">
+            >
+            ["at0006"] = <
+                text = <"Sjekkliste for enkle motoriske tics">
+                description = <"Enkle motoriske tics som har forekommet i løpet av den siste uken.">
+                comment = <"Raske, sprettende, \"meningsløse\".">
+            >
+            ["at0007"] = <
+                text = <"Blunking">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Øyebevegelser">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Nesebevegelser">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Ansiktsgrimaser">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Hoderykninger/-bevegelser">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Skuldertrekninger">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Armbevegelser">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Håndbevegelser">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Spenning av magemuskler">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Ben-, fot- eller tåbevegelser">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Navn">
+                description = <"Navn på kompleks motorisk tic.">
+            >
+            ["at0028"] = <
+                text = <"Beskrivelse">
+                description = <"Beskrivelse av kompleks motorisk tic.">
+            >
+            ["at0029"] = <
+                text = <"Sjekkliste for komplekse motoriske tics">
+                description = <"Komplekse motoriske tics som har forekommet i løpet av den siste uken.">
+                comment = <"Mer langvarige, \"målrettet\".">
+            >
+            ["at0030"] = <
+                text = <"Øyebevegelser">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Munnbevegelser">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Ansiktsbevegelser eller ansiktsuttrykk">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Hodegester eller -bevegelser">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Skulderbevegelser">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Armbevegelser">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Håndbevegelser">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Skrivetics">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Dystone stillinger">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Bøying eller snurring">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Rotering">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Ben-, fot- eller tåbevegelser">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Blokkering">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"Tic-relatert tvangsmessig atferd">
+                description = <"Berøring, slå på ting med fingrene, stryke ut skrukker på klærne, utjevning.">
+            >
+            ["at0058"] = <
+                text = <"Kopropraksi">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Selvskadende atferd">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"Utbrudd av tics (fremstillinger)">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"Utbrudd av tics">
+                description = <"Varighet i sekunder.">
+            >
+            ["at0067"] = <
+                text = <"Sjekkliste for komplekse vokale symptomer">
+                description = <"Komplekse vokale symptomer som har forekommet i løpet av den siste uken.">
+                comment = <"Språk: ord, uttrykk, utsagn.">
+            >
+            ["at0068"] = <
+                text = <"Sjekkliste for enkle vokale symptomer">
+                description = <"Enkle vokale tics som har forekommet i løpet av den siste uken, (raske, \"meningsløse\" lyder).">
+                comment = <"Raske, \"meningsløse\" lyder.">
+            >
+            ["at0069"] = <
+                text = <"Andre komplekse motoriske tics">
+                description = <"Noter og beskriv.">
+            >
+            ["at0070"] = <
+                text = <"Hosting">
+                description = <"">
+            >
+            ["at0071"] = <
+                text = <"Harking">
+                description = <"">
+            >
+            ["at0072"] = <
+                text = <"Snufsing">
+                description = <"">
+            >
+            ["at0073"] = <
+                text = <"Snøfting">
+                description = <"">
+            >
+            ["at0074"] = <
+                text = <"Grynting">
+                description = <"">
+            >
+            ["at0075"] = <
+                text = <"Gulping">
+                description = <"">
+            >
+            ["at0076"] = <
+                text = <"Plystring">
+                description = <"">
+            >
+            ["at0077"] = <
+                text = <"Nynning">
+                description = <"">
+            >
+            ["at0078"] = <
+                text = <"Munnlyder">
+                description = <"For eksempel klikking, gurgling, smatting, kysselyder.">
+            >
+            ["at0079"] = <
+                text = <"Raping">
+                description = <"">
+            >
+            ["at0080"] = <
+                text = <"Hikking">
+                description = <"">
+            >
+            ["at0081"] = <
+                text = <"Atypiske pustetics">
+                description = <"For eksempel: Kraftig utpusting, hvesing, gisping, pesing.">
+            >
+            ["at0082"] = <
+                text = <"Kvitrelyder eller andre fuglelyder">
+                description = <"For eksempel: skriking.">
+            >
+            ["at0084"] = <
+                text = <"Bjeffing eller andre hundelyder">
+                description = <"For eksempel: knurring.">
+            >
+            ["at0086"] = <
+                text = <"Andre dyrelyder">
+                description = <"For eksempel: hvining.">
+            >
+            ["at0087"] = <
+                text = <"Andre enkle vokale tics">
+                description = <"Noter og beskriv.">
+            >
+            ["at0088"] = <
+                text = <"Navn">
+                description = <"Navn på det enkle vokale tic.">
+            >
+            ["at0089"] = <
+                text = <"Beskrivelse">
+                description = <"Beskrivelse av det enkle vokale tic.">
+            >
+            ["at0090"] = <
+                text = <"Stavelser">
+                description = <"For eksempel: \"ahhh\", \"uuh\", \"hmmm\".">
+            >
+            ["at0091"] = <
+                text = <"Ord">
+                description = <"For eksempel: \"hva\", \"pang\", \"ok\".">
+            >
+            ["at0092"] = <
+                text = <"Setninger">
+                description = <"For eksempel: \"å nei\", \"sånn, ja\", \"jeg vet\".">
+            >
+            ["at0093"] = <
+                text = <"Koprolali">
+                description = <"For eksempel: obskøne ord.">
+            >
+            ["at0094"] = <
+                text = <"Ekkolali">
+                description = <"For eksempel: gjentakelse av andres ord eller uttrykk.">
+            >
+            ["at0095"] = <
+                text = <"Palilali">
+                description = <"For eksempel: gjenta seg selv.">
+            >
+            ["at0096"] = <
+                text = <"Blokkering">
+                description = <"For eksempel: stanset tale, blokkert tale, stamming.">
+            >
+            ["at0097"] = <
+                text = <"Atypisk tale">
+                description = <"For eksempel: langsom/rask talehastighet, nasal tale, skjelvende stemme, høyt eller lavt 
+stemmeleie/tone/volum.">
+            >
+            ["at0098"] = <
+                text = <"Uhemmet tale">
+                description = <"For eksempel: plumper ut med ord, snakker eksessivt.">
+            >
+            ["at0099"] = <
+                text = <"Andre komplekse vokale tics">
+                description = <"Noter og beskriv.">
+            >
+            ["at0100"] = <
+                text = <"Navn">
+                description = <"Navnet på det komplekse vokale tic.">
+            >
+            ["at0101"] = <
+                text = <"Beskrivelse">
+                description = <"Beskrivelse av det komplekse vokale tic.">
+            >
+            ["at0102"] = <
+                text = <"Uhemmet atferd">
+                description = <"">
+            >
+            ["at0103"] = <
+                text = <"Beskrivelse av uhemmet atferd">
+                description = <"Fritekstbeskrivelse av uhemmet atferd.">
+            >
+            ["at0104"] = <
+                text = <"Andre enkle motoriske tics">
+                description = <"Noter og beskriv.">
+            >
+            ["at0105"] = <
+                text = <"Navn">
+                description = <"Navnet på det enkle motoriske tic.">
+            >
+            ["at0106"] = <
+                text = <"Beskrivelse">
+                description = <"Beskrivelse av det enkle motoriske tic.">
+            >
+            ["at0107"] = <
+                text = <"Skår">
+                description = <"">
+            >
+            ["at0108"] = <
+                text = <"Antall">
+                description = <"">
+            >
+            ["at0109"] = <
+                text = <"Ingen">
+                description = <"Ingen tics til stede.">
+            >
+            ["at0110"] = <
+                text = <"Minimal">
+                description = <"Ett tic til stede.">
+            >
+            ["at0111"] = <
+                text = <"Mild">
+                description = <"Flere avgrensete tics (2-5).">
+            >
+            ["at0112"] = <
+                text = <"Moderat">
+                description = <"Flere avgrensete tics (>5).">
+            >
+            ["at0113"] = <
+                text = <"Markert">
+                description = <"Flere avgrensete tics pluss minst ett arrangert mønster av flere samtidige eller sekvensielle tics, hvor det er vanskelig å skille ut avgrensete tics.">
+            >
+            ["at0114"] = <
+                text = <"Alvorlig">
+                description = <"Flere avgrensete tics pluss flere (>2) orkestrerte mønstre av flere samtidige eller sekvensielle tics, hvor det er vanskelig å skille mellom de enkelte ticsene.">
+            >
+            ["at0115"] = <
+                text = <"Frekvens">
+                description = <"">
+            >
+            ["at0116"] = <
+                text = <"Ingen">
+                description = <"Ingen tics til stede.">
+            >
+            ["at0117"] = <
+                text = <"Minimal">
+                description = <"Spesifikke tics forekommer vanligvis daglig, men det er lange tic-frie intervaller i løpet av dagen. Serier/episoder av tics kan forekomme noen ganger, men pågår da ikke i mer enn noen minutter om gangen.">
+            >
+            ["at0118"] = <
+                text = <"Mild">
+                description = <"Spesifikke tics er til stede på daglig basis. Tic-frie intervaller som varer så lenge som 3 timer er ikke uvanlige. Serier/episoder av tics forekommer regelmessig, men vanligvis begrenset til en spesiell situasjon.">
+            >
+            ["at0119"] = <
+                text = <"Moderat">
+                description = <"Spesifikke tics er til stede så å si hver våkne time hver dag. Serier/episoder av tics er vanlige og kan ikke begrenses til en enkel situasjon.">
+            >
+            ["at0120"] = <
+                text = <"Markert">
+                description = <"Spesifikke tics er til stede hver våkne time. Utbrudd av tics er vanlige og kan forekomme i flere situasjoner.">
+            >
+            ["at0121"] = <
+                text = <"Alvorlig">
+                description = <"Spesifikke tics er til stede så å si hele tiden. Tic-frie intervaller er vanskelige å identifisere og varer ikke lenger enn 5 til 10 minutter på det meste. Serier/episoder av tics er veldig vanlige og forekommer i flere situasjoner.">
+            >
+            ["at0122"] = <
+                text = <"Intensitet">
+                description = <"">
+            >
+            ["at0123"] = <
+                text = <"Ingen">
+                description = <"Ingen tics til stede.">
+            >
+            ["at0124"] = <
+                text = <"Minimal">
+                description = <"Tics er ikke synlige eller hørbare (basert bare på pasientens egen opplevelse), eller tics er mindre kraftige enn sammenlignbare frivillige handlinger og blir vanligvis ikke lagt merke til på grunn av intensiteten sin.">
+            >
+            ["at0125"] = <
+                text = <"Mild">
+                description = <"Tics er ikke kraftigere enn sammenlignbare frivillige handlinger eller ytringer, og blir vanligvis ikke lagt merke til på grunn av intensiteten sin.">
+            >
+            ["at0126"] = <
+                text = <"Moderat">
+                description = <"Tics er kraftigere enn sammenlignbare frivillige handlinger, men er ikke utenfor spekteret av normale uttrykk for sammenlignbare frivillige handlinger eller ytringer. De kan skape oppmerksomhet om personen fordi de har en kraftig karakter.">
+            >
+            ["at0127"] = <
+                text = <"Markert">
+                description = <"Tics er kraftigere enn sammenlignbare frivillige handlinger eller ytringer og har vanligvis en \"overdreven\" karakter. Slike tics kan ofte tiltrekke oppmerksomhet til individet på grunn av sin kraftige og overdrevne karakter.
+">
+            >
+            ["at0128"] = <
+                text = <"Alvorlig">
+                description = <"Tics er ekstremt kraftige og overdrevne i uttrykket. Disse ticsene tiltrekker oppmerksomhet til individet og kan føre til risiko for fysisk skade (utilsiktet, provosert eller selvforskyldt) på grunn av sin kraftige fremtoning.">
+            >
+            ["at0129"] = <
+                text = <"Kompleksitet">
+                description = <"">
+            >
+            ["at0130"] = <
+                text = <"Ingen">
+                description = <"Ingen tics til stede.">
+            >
+            ["at0131"] = <
+                text = <"Minimal">
+                description = <"Hvis de forekommer, er alle tics \"enkle\" (plutselige, korte, uten hensikt) i karakter.">
+            >
+            ["at0132"] = <
+                text = <"Mild">
+                description = <"Noen tics er ikke tydelig \"enkle\" i karakter.">
+            >
+            ["at0133"] = <
+                text = <"Moderat">
+                description = <"Noen tics er tydelig \"komplekse\" (målrettet i fremtoning) og etterligner kort \"automatisert\" oppførsel, for eksempel som å stryke seg over håret/stryke ut skrukker på klærne, si stavelser eller korte meningsfulle ytringer som «aha» eller «hei» som kan kamufleres.">
+            >
+            ["at0134"] = <
+                text = <"Markert">
+                description = <"Noen tics er mer \"komplekse\" (mer målrettet og vedvarende i fremtoning) og kan forekomme i arrangerte serier/episoder som kan være vanskelige å kamuflere, men kan rasjonaliseres eller «forklares» som normal atferd eller tale (slå på ting med fingrene, å si «ja da» eller «vennen min», å banne, korte ekkolalier).">
+            >
+            ["at0135"] = <
+                text = <"Alvorlig">
+                description = <"Noen tics involverer lengre serier/episoder med arrangert atferd eller tale som vil være umulig å kamuflere eller rasjonalisere som normal atferd eller tale på grunn av sin varighet og/eller uvanlige, upassende, bisarre eller obskøne karakter (langvarig forvrengning av ansiktet, berøring av genitalier, ekkolali, unormale ytringer, serier av kopropraksi, selvskadende atferd, koprolali).">
+            >
+            ["at0136"] = <
+                text = <"Interferens">
+                description = <"">
+            >
+            ["at0137"] = <
+                text = <"Ingen">
+                description = <"Ingen tics til stede.">
+            >
+            ["at0138"] = <
+                text = <"Minimal">
+                description = <"Når tics forekommer, forstyrrer de ikke atferds- eller taleflyten.">
+            >
+            ["at0139"] = <
+                text = <"Mild">
+                description = <"Når tics forekommer, forstyrrer de noen ganger atferds- eller taleflyten.">
+            >
+            ["at0140"] = <
+                text = <"Moderat">
+                description = <"Når tics forekommer, forstyrrer de hyppig atferds- eller taleflyten, men de avbryter ikke planlagt atferd eller kommunikasjon.">
+            >
+            ["at0141"] = <
+                text = <"Markert">
+                description = <"Når tics forekommer, forstyrrer de hyppig atferds- eller taleflyten, og de avbryter noen ganger planlagte handlinger eller kommunikasjon.
+">
+            >
+            ["at0142"] = <
+                text = <"Alvorlig">
+                description = <"Når tics forekommer, avbryter de ofte planlagte handlinger eller kommunikasjon.">
+            >
+            ["at0143"] = <
+                text = <"Skala for funksjonsnedsettelse">
+                description = <"">
+            >
+            ["at0144"] = <
+                text = <"Ingen">
+                description = <"">
+            >
+            ["at0145"] = <
+                text = <"Minimal">
+                description = <"Tics assosiert med subtile vansker med selvtillit, familieliv, sosial aksept, eller fungering i skole eller på jobb (sjelden opprørt eller bekymret for tics med tanke på fremtiden, periodisk en svak økning av stress i familien på grunn av tics, venner eller bekjente kan noen ganger merke eller kommentere tics på en sårende måte.)
+">
+            >
+            ["at0146"] = <
+                text = <"Mild">
+                description = <"Tics assosiert med mindre vansker med selvtillit, familieliv, sosial aksept eller fungering i skole eller jobb.">
+            >
+            ["at0147"] = <
+                text = <"Moderat">
+                description = <"Tics assosiert med noen tydelige problemer med selvtillit, familieliv, sosial aksept, eller fungering i skole eller på jobb (episoder med nedstemthet, periodisk uro og kaos i familien, hyppig erting fra jevnaldrende eller episodisk sosial unngåelse, periodisk påvirkning på prestasjoner i skole eller på jobb på grunn av tics).">
+            >
+            ["at0148"] = <
+                text = <"Markert">
+                description = <"Tics forbundet med store vansker med selvtillit, familieliv, sosial aksept eller fungering i skole eller på jobb.">
+            >
+            ["at0149"] = <
+                text = <"Alvorlig">
+                description = <"Tics assosiert med ekstreme vansker med selvtillit, familieliv, sosial aksept eller fungering i skole eller på jobb (alvorlig depresjon med selvmordstanker, brudd i familien (separasjon/skilsmisse, boligplassering), forstyrrelse av sosialt liv på grunn av tics - alvorlig begrenset liv på grunn av sosial stigma og sosial tilbaketrekking, utestenging fra skole eller tap av jobb).">
+            >
+            ["at0150"] = <
+                text = <"Total poengskår for tics">
+                description = <"Summen av motoriske og vokale tics skår.">
+            >
+            ["at0151"] = <
+                text = <"Global alvorlighetsgrad skår">
+                description = <"Total poengsum for tics og poengsum for funksjonsnedsettelse.">
+            >
+            ["at0153"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0154"] = <
+                text = <"Motorisk skår">
+                description = <"">
+            >
+            ["at0155"] = <
+                text = <"Vokal skår">
+                description = <"">
+            >
+            ["at0158"] = <
+                text = <"Munnbevegelser">
+                description = <"">
+            >
+            ["at0159"] = <
+                text = <"Beskrivelse av kvitrelyder eller andre fuglelyder">
+                description = <"Fritekstbeskrivelse av kvitrelyder eller andre fuglelyder.">
+            >
+            ["at0160"] = <
+                text = <"Beskrivelse av bjeffing eller andre hundelyder">
+                description = <"Fritekstbeskrivelse av bjeffing eller andre hundelyder.">
+            >
+            ["at0161"] = <
+                text = <"Beskrivelse av stavelser">
+                description = <"Fritekstbeskrivelse av stavelser.">
+            >
+            ["at0162"] = <
+                text = <"Beskrivelse av ord">
+                description = <"Fritekstbeskrivelse av ord.">
+            >
+            ["at0163"] = <
+                text = <"Beskrivelse av setninger">
+                description = <"Fritekstbeskrivelse av setninger.">
+            >
+            ["at0164"] = <
+                text = <"Beskrivelse av koprolali">
+                description = <"Fritekstbeskrivelse av koprolali.">
+            >
+            ["at0165"] = <
+                text = <"Beskrivelse av atypisk tale">
+                description = <"Fritekstbeskrivelse av atypisk tale.">
+            >
+            ["at0166"] = <
+                text = <"Beskrivelse av uhemmet tale">
+                description = <"Fritekstbeskrivelse av uhemmet tale.">
+            >
+            ["at0167"] = <
+                text = <"Beskrivelse av blunking">
+                description = <"Fritekstbeskrivelse av blunking.">
+            >
+            ["at0168"] = <
+                text = <"Beskrivelse av øyebevegelser">
+                description = <"Fritekstbeskrivelse av øyebevegelser.">
+            >
+            ["at0169"] = <
+                text = <"Beskrivelse av nesebevegelser">
+                description = <"Fritekstbeskrivelse av nesebevegelser.">
+            >
+            ["at0170"] = <
+                text = <"Beskrivelse av munnbevegelser">
+                description = <"Fritekstbeskrivelse av munnbevegelser.">
+            >
+            ["at0171"] = <
+                text = <"Beskrivelse av ansiktsgrimaser">
+                description = <"Fritekstbeskrivelse av ansiktsgrimaser.">
+            >
+            ["at0172"] = <
+                text = <"Beskrivelse av hoderykninger/-bevegelser">
+                description = <"Fritekstbeskrivelse av hoderykninger/-bevegelser.">
+            >
+            ["at0173"] = <
+                text = <"Beskrivelse av skuldertrekninger">
+                description = <"Fritekstbeskrivelse av skuldertrekninger.">
+            >
+            ["at0174"] = <
+                text = <"Beskrivelse av armbevegelser">
+                description = <"Fritekstbeskrivelse av armbevegelser.">
+            >
+            ["at0175"] = <
+                text = <"Beskrivelse av håndbevegelser">
+                description = <"Fritekstbeskrivelse av håndbevegelser.">
+            >
+            ["at0176"] = <
+                text = <"Beskrivelse av spenning av magemuskler">
+                description = <"Fritekstbeskrivelse av spenning av magemuskler.">
+            >
+            ["at0177"] = <
+                text = <"Beskrivelse av ben-, fot- eller tåbevegelser">
+                description = <"Fritekstbeskrivelse av ben-, fot- eller tåbevegelser.">
+            >
+            ["at0178"] = <
+                text = <"Beskrivelse av øyebevegelser">
+                description = <"Fritekstbeskrivelse av øyebevegelser.">
+            >
+            ["at0179"] = <
+                text = <"Beskrivelse av munnbevegelser">
+                description = <"Friteksbeskrivelse av munnbevegelser.">
+            >
+            ["at0180"] = <
+                text = <"Beskrivelse av ansiktsbevegelser eller ansiktsuttrykk">
+                description = <"Fritekstbeskrivelse av ansiktsbevegelser eller ansiktsuttrykk.">
+            >
+            ["at0181"] = <
+                text = <"Beskrivelse av skulderbevegelser">
+                description = <"Fritekstbeskrivelse av skulderbevegelser.">
+            >
+            ["at0182"] = <
+                text = <"Beskrivelse av hodegester eller -bevegelser">
+                description = <"Fritekstbeskrivelse av hodegester eller -bevegelser.">
+            >
+            ["at0183"] = <
+                text = <"Beskrivelse av armbevegelser">
+                description = <"Fritekstbeskrivelse av armbevegelser.">
+            >
+            ["at0184"] = <
+                text = <"Beskrivelse av håndbevegelser">
+                description = <"Fritekstbeskrivelse av håndbevegelser.">
+            >
+            ["at0185"] = <
+                text = <"Beskrivelse av skrivetics">
+                description = <"Fritekstbeskrivelse av skrivetics.">
+            >
+            ["at0186"] = <
+                text = <"Beskrivelse av dystone stillinger">
+                description = <"Fritekstbeskrivelse av dystone stillinger.">
+            >
+            ["at0187"] = <
+                text = <"Beskrivelse av bøying eller snurring">
+                description = <"Fritekstbeskrivelse av bøying eller snurring.">
+            >
+            ["at0188"] = <
+                text = <"Beskrivelse av rotering">
+                description = <"Fritekstbeskrivelse av rotering.">
+            >
+            ["at0189"] = <
+                text = <"Beskrivelse av ben-, fot- eller tåbevegelser">
+                description = <"Fritekstbeskrivelse av ben-, fot- eller tåbevegelser.">
+            >
+            ["at0190"] = <
+                text = <"Beskrivelse av blokkering">
+                description = <"Fritekstbeskrivelse av blokkering.">
+            >
+            ["at0191"] = <
+                text = <"Beskrivelse av tic-relatert tvangsmessig atferd">
+                description = <"Fritekstbeskrivelse av tic-relatert tvangsmessig atferd.">
+            >
+            ["at0192"] = <
+                text = <"Beskrivelse av kopropraksi">
+                description = <"Fritekstbeskrivelse av kopropraksi.">
+            >
+            ["at0193"] = <
+                text = <"Beskrivelse av selvskadende atferd">
+                description = <"Fritekstbeskrivelse av selvskadende atferd.">
+            >
+            ["at0194"] = <
+                text = <"Beskrivelse av utbrudd av tics (fremstillinger)">
+                description = <"Fritekstbeskrivelse av utbrudd av tics (fremstillinger).">
+            >
+            ["at0195"] = <
+                text = <"Beskrivelse av hosting">
+                description = <"Fritekstbeskrivelse av hosting.">
+            >
+            ["at0196"] = <
+                text = <"Beskrivelse av harking">
+                description = <"Fritekstbeskrivelse av harking.">
+            >
+            ["at0197"] = <
+                text = <"Beskrivelse av snufsing.">
+                description = <"Fritekstbeskrivelse av snufsing.">
+            >
+            ["at0198"] = <
+                text = <"Beskrivelse av snøfting">
+                description = <"Fritekstbeskrivelse av snøfting.">
+            >
+            ["at0199"] = <
+                text = <"Beskrivelse av grynting">
+                description = <"Fritekstbeskrivelse av grynting.">
+            >
+            ["at0200"] = <
+                text = <"Beskrivelse av gulping">
+                description = <"Fritekstbeskrivelse av gulping.">
+            >
+            ["at0201"] = <
+                text = <"Beskrivelse av plystring">
+                description = <"Fritekstbeskrivelse av plystring.">
+            >
+            ["at0202"] = <
+                text = <"Beskrivelse av nynning">
+                description = <"Fritekstbeskrivelse av nynning.">
+            >
+            ["at0203"] = <
+                text = <"Beskrivelse av munnlyder">
+                description = <"Fritekstbeskrivelse av munnlyder.">
+            >
+            ["at0204"] = <
+                text = <"Beskrivelse av raping">
+                description = <"Fritekstbeskrivelse av raping.">
+            >
+            ["at0205"] = <
+                text = <"Beskrivelse av hikking">
+                description = <"Fritekstbeskrivelse av hikking.">
+            >
+            ["at0206"] = <
+                text = <"Beskrivelse av atypiske pustetics">
+                description = <"Fritekstbeskrivelse av atypiske pustetics.">
+            >
+            ["at0207"] = <
+                text = <"Beskrivelse av andre dyrelyder">
+                description = <"Fritekstbeskrivelse av andre dyrelyder.">
+            >
+            ["at0208"] = <
+                text = <"Beskrivelse av ekkolali">
+                description = <"Fritekstbeskrivelse av ekkolali.">
+            >
+            ["at0209"] = <
+                text = <"Beskrivelse av palilali">
+                description = <"Fritekstbeskrivelse av palilali.">
+            >
+            ["at0210"] = <
+                text = <"Beskrivelse av blokkering">
+                description = <"Fritekstbeskrivelse av blokkering.">
+            >
+            ["ac9088"] = <
+                text = <"Antall (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9089"] = <
+                text = <"Frekvens (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9090"] = <
+                text = <"Intensitet (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9091"] = <
+                text = <"Kompleksitet (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9092"] = <
+                text = <"Interferens (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9000"] = <
+                text = <"Skår (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9093"] = <
+                text = <"Skala for funksjonsnedsettelse (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Yale Global Tic Severity Scale - Revised (YGTSS-R)">
+                description = <"Assessment tool used to quantify the severity of tic symptoms.">
+            >
+            ["at0002"] = <
+                text = <"Over the past week">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0006"] = <
+                text = <"Simple Motor Tics Checklist">
+                description = <"Simple motor tics that were present over the past week.">
+                comment = <"Rapid, Darting, \"Meaningless\".">
+            >
+            ["at0007"] = <
+                text = <"Eye blinking">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Eye movements">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Nose movements">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Facial grimace">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Head jerks/movements">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Shoulder shrugs">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Arm movements">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Hand movements">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Abdominal tensing">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Leg, foot, or toe movements">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Name">
+                description = <"The name of other complex motor tic.">
+            >
+            ["at0028"] = <
+                text = <"Description">
+                description = <"Description of other complex motor tic.">
+            >
+            ["at0029"] = <
+                text = <"Complex Motor Tics Checklist">
+                description = <"Complex motor tics that were present over the past week.">
+                comment = <"Slower, \"Purposeful\".">
+            >
+            ["at0030"] = <
+                text = <"Eye movements">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Mouth movements">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"Facial movements or expressions">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Head gestures or movements">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Shoulder movements">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"Arm movements">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Hand movements">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Writing tics">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"Dystonic postures">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Bending or gyrating">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Rotating">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"Leg or foot or toe movements">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Blocking">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"Tic related compulsive behaviors">
+                description = <"Touching, tapping, grooming, evening-up.">
+            >
+            ["at0058"] = <
+                text = <"Copropraxia">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Self-abusive behavior">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"Paroxysms of tics (displays)">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"Paroxysms of tics duration">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"Complex Phonic Symptoms Checklist">
+                description = <"Complex phonic tics that were present over the past week.">
+                comment = <"Language: Words, Phrases, Statements.">
+            >
+            ["at0068"] = <
+                text = <"Simple Phonic symptoms checklist">
+                description = <"Simple phonic tics that were present over the past week.">
+                comment = <"Fast, \"Meaningless\" Sounds.">
+            >
+            ["at0069"] = <
+                text = <"Other complex motor tics">
+                description = <"List and describe.">
+            >
+            ["at0070"] = <
+                text = <"Coughing">
+                description = <"">
+            >
+            ["at0071"] = <
+                text = <"Throat clearing">
+                description = <"">
+            >
+            ["at0072"] = <
+                text = <"Sniffing">
+                description = <"">
+            >
+            ["at0073"] = <
+                text = <"Snorting">
+                description = <"">
+            >
+            ["at0074"] = <
+                text = <"Grunting">
+                description = <"">
+            >
+            ["at0075"] = <
+                text = <"Gulping">
+                description = <"">
+            >
+            ["at0076"] = <
+                text = <"Whistling">
+                description = <"">
+            >
+            ["at0077"] = <
+                text = <"Humming">
+                description = <"">
+            >
+            ["at0078"] = <
+                text = <"Mouth noises">
+                description = <"For example: clicking, gargling, popping, kissing noises.">
+            >
+            ["at0079"] = <
+                text = <"Burping">
+                description = <"">
+            >
+            ["at0080"] = <
+                text = <"Hiccups">
+                description = <"">
+            >
+            ["at0081"] = <
+                text = <"Atypical breathing tics">
+                description = <"For example: forceful exhalation, wheezing, gasping, panting.">
+            >
+            ["at0082"] = <
+                text = <"Chirping or other bird noises">
+                description = <"For example: screeching.">
+            >
+            ["at0084"] = <
+                text = <"Barking or other dog noises">
+                description = <"For example: growling.">
+            >
+            ["at0086"] = <
+                text = <"Other animal noises">
+                description = <"For example: squealing.">
+            >
+            ["at0087"] = <
+                text = <"Other simple phonic tics">
+                description = <"List and describe.">
+            >
+            ["at0088"] = <
+                text = <"Name">
+                description = <"The name of other simple phonic tic.">
+            >
+            ["at0089"] = <
+                text = <"Description">
+                description = <"Description of other simple phonic tic.">
+            >
+            ["at0090"] = <
+                text = <"Syllables">
+                description = <"For example: \"ahhh\", \"woo\", \"hmmm\".">
+            >
+            ["at0091"] = <
+                text = <"Words">
+                description = <"For example: \"what\", \"dang\", \"Okay\".">
+            >
+            ["at0092"] = <
+                text = <"Phrases">
+                description = <"For example: \"oh no\", \"here we go\", \"I know\".">
+            >
+            ["at0093"] = <
+                text = <"Coprolalia">
+                description = <"For example: obscene words.">
+            >
+            ["at0094"] = <
+                text = <"Echolalia">
+                description = <"For example: repeating others words or phrases.">
+            >
+            ["at0095"] = <
+                text = <"Palalalia">
+                description = <"For example: repeating self.">
+            >
+            ["at0096"] = <
+                text = <"Blocking">
+                description = <"For example: halted speech blocked speech, stuttering.">
+            >
+            ["at0097"] = <
+                text = <"Speech atypicalities">
+                description = <"For example: slow/fast speech rate, nasal speech, quivering voice, high or low pitch/tone/volume.">
+            >
+            ["at0098"] = <
+                text = <"Disinhibited speech">
+                description = <"For example: blurting out words, talking excessively.">
+            >
+            ["at0099"] = <
+                text = <"Other complex phonic tics">
+                description = <"List and describe.">
+            >
+            ["at0100"] = <
+                text = <"Name">
+                description = <"The name of other complex phonic tic.">
+            >
+            ["at0101"] = <
+                text = <"Description">
+                description = <"Description of other complex phonic tic.">
+            >
+            ["at0102"] = <
+                text = <"Disinhibited behavior">
+                description = <"">
+            >
+            ["at0103"] = <
+                text = <"Disinhibited behavior description">
+                description = <"Narrative description of the disinhibited behavior.">
+            >
+            ["at0104"] = <
+                text = <"Other simple motor tics">
+                description = <"List and describe.">
+            >
+            ["at0105"] = <
+                text = <"Name">
+                description = <"The name of other simple motor tic.">
+            >
+            ["at0106"] = <
+                text = <"Description">
+                description = <"Description of other simple motor tic.">
+            >
+            ["at0107"] = <
+                text = <"Score">
+                description = <"">
+            >
+            ["at0108"] = <
+                text = <"Number">
+                description = <"">
+            >
+            ["at0109"] = <
+                text = <"None">
+                description = <"No tics present.">
+            >
+            ["at0110"] = <
+                text = <"Minimal">
+                description = <"Single tic present.">
+            >
+            ["at0111"] = <
+                text = <"Mild">
+                description = <"Multiple discrete tics (2-5).">
+            >
+            ["at0112"] = <
+                text = <"Moderate">
+                description = <"Multiple discrete tics (>5).">
+            >
+            ["at0113"] = <
+                text = <"Marked">
+                description = <"Multiple discrete tics plus as least one orchestrated pattem of multiple simultaneous or sequential tics, where it is difficult to distinguish discrete tics.">
+            >
+            ["at0114"] = <
+                text = <"Severe">
+                description = <"Multiple discrete tics plus several (>2) orchestrated paroxysms of multiple simultaneous or sequential tics, where it is difficult to distinguish discrete tics.">
+            >
+            ["at0115"] = <
+                text = <"Frequency">
+                description = <"">
+            >
+            ["at0116"] = <
+                text = <"None">
+                description = <"No tics present.">
+            >
+            ["at0117"] = <
+                text = <"Minimal">
+                description = <"Specific tics are usually present on a daily basis, but there are long tic-free intervals during the day. Bouts of tics may occur on occasion, but are not sustained for more than a few minutes at a time.">
+            >
+            ["at0118"] = <
+                text = <"Mild">
+                description = <"Specific tics are present on a daily basis. Tic free intervals as long as 3 hours are not uncommon. Bouts of tics occur regularly, but generally limited to a single setting.">
+            >
+            ["at0119"] = <
+                text = <"Moderate">
+                description = <"Specific tics are present virtually every waking hour of every day. Bouts of tics are common and may not be limited to a single setting.">
+            >
+            ["at0120"] = <
+                text = <"Marked">
+                description = <"Specific tics are present every waking hour. Bouts of tics are common and may occur in multiple settings.">
+            >
+            ["at0121"] = <
+                text = <"Severe">
+                description = <"Specific tics are present virtually all the time. Tic free intervals are difficult to identify and do not last more than 5 to 10 minutes. Bouts of tics are very common and occur in multiple settings.">
+            >
+            ["at0122"] = <
+                text = <"Intensity">
+                description = <"">
+            >
+            ["at0123"] = <
+                text = <"None">
+                description = <"No tics present.">
+            >
+            ["at0124"] = <
+                text = <"Minimal">
+                description = <"Tics not visible or audible (based solely on patient's private experience), or tics are less forceful than comparable voluntary actions and are typically not noticed because of their intensity.">
+            >
+            ["at0125"] = <
+                text = <"Mild">
+                description = <"Tics are not more forceful than comparable voluntary actions or utterances, and are typically not noticed because of their intensity.">
+            >
+            ["at0126"] = <
+                text = <"Moderate">
+                description = <"Tics are more forceful than comparable voluntary actions, but are not outside the range of normal expression for comparable voluntary actions or utterances.">
+            >
+            ["at0127"] = <
+                text = <"Marked">
+                description = <"Tics are more forceful than comparable voluntary actions or utterances and typically have an \"exaggerated\" character.">
+            >
+            ["at0128"] = <
+                text = <"Severe">
+                description = <"Tics are extremely forceful and exaggerated in expression. These tics call attention to the individual and may result in risk of physical injury (accidental, provoked, or self-inflicted) because of their forceful expression.">
+            >
+            ["at0129"] = <
+                text = <"Complexity">
+                description = <"">
+            >
+            ["at0130"] = <
+                text = <"None">
+                description = <"No tics present.">
+            >
+            ["at0131"] = <
+                text = <"Minimal">
+                description = <"If present, all tics are clearly \"simple\" (sudden, brief, purposeless) in character.">
+            >
+            ["at0132"] = <
+                text = <"Mild">
+                description = <"Some tics are not clearly \"simple\" in character.">
+            >
+            ["at0133"] = <
+                text = <"Moderate">
+                description = <"Some tics are clearly \"complex\" (purposive in appearance) and mimic brief \"automatic\" behaviors, such as grooming, syllables, or brief meaningful utterances such as \"ah huh\" or \"hi\" that could be camouflaged.">
+            >
+            ["at0134"] = <
+                text = <"Marked">
+                description = <"Some tics are more \"complex\" (more purposive and sustained in appearance) and may occur in orchestrated bouts that would be difficult to camouflage, but could be rationalized or \"explained\" as normal behavior or speech (tapping, saying \"you bet\", \"honey\", \"FF\", \"sh\", or brief echolalia).">
+            >
+            ["at0135"] = <
+                text = <"Severe">
+                description = <"Some tics are very \"complex\" in character and tend to occur in sustained orchestrated bouts that would be difficult to camouflage and could not be easily rationalized as normal behavior or speech because of their duration and/ or their unusual, inappropriate, bizarre or obscene character (a lengthy facial contortion, touching genitals, echolalia, speech atypicalities, bouts of copropraxia, self-abusive behavior, coprolalia).">
+            >
+            ["at0136"] = <
+                text = <"Interference">
+                description = <"">
+            >
+            ["at0137"] = <
+                text = <"None">
+                description = <"No tics present.">
+            >
+            ["at0138"] = <
+                text = <"Minimal">
+                description = <"When ties are present, they do not interrupt the flow of behavior or speech.">
+            >
+            ["at0139"] = <
+                text = <"Mild">
+                description = <"When tics are present, they occasionally interrupt the flow of behavior or speech.">
+            >
+            ["at0140"] = <
+                text = <"Moderate">
+                description = <"When tics are present, they frequently interrupt the flow of behavior or speech, but do not disrupt intended behavior or speech.">
+            >
+            ["at0141"] = <
+                text = <"Marked">
+                description = <"When tics are present, they frequently interrupt the flow of behavior or speech, and they occasionally disrupt intended action or communication.">
+            >
+            ["at0142"] = <
+                text = <"Severe">
+                description = <"When tics are present, they frequently disrupt intended action or communication.">
+            >
+            ["at0143"] = <
+                text = <"Impairment scale">
+                description = <"">
+            >
+            ["at0144"] = <
+                text = <"None">
+                description = <"">
+            >
+            ["at0145"] = <
+                text = <"Minimal">
+                description = <"Tics associated with subtle difficulties in self-esteem, family life, social acceptance, oi school oi Job functioning (infrequent upset or concern about tics vis a vis the future, periodic, slight increase in family tensions because of tics, friends or acquaintances may occasionally notice or comment about tics in an upsetting way).">
+            >
+            ["at0146"] = <
+                text = <"Mild">
+                description = <"Tics associated with minor difficulties in self-esteem, family life, social acceptance, or school or Job functioning.">
+            >
+            ["at0147"] = <
+                text = <"Moderate">
+                description = <"Tics associated with some clear problems in self-esteem family life, social acceptance, or school or Job functioning (episodes of dysphoria, periodic distress and upheaval in die family, frequent teasing by peers or episodic social avoidance, periodic interference in school or Job performance because of tics).">
+            >
+            ["at0148"] = <
+                text = <"Marked">
+                description = <"Tics associated with major difficulties in self-esteem, family life, social acceptance, or school or Job functioning.">
+            >
+            ["at0149"] = <
+                text = <"Severe">
+                description = <"Tics associated with extreme difficulties in self-esteem, family life, social acceptance, or school or Job functioning (severe depression with suicidai ideation, disruption of the family (separation/divorce, residential placement), disruption of social ties - severely restricted life because of social stigma and social avoidance, removal from school or loss of job).">
+            >
+            ["at0150"] = <
+                text = <"Total tic score">
+                description = <"Sum of motor and phonic tic severity scales.">
+            >
+            ["at0151"] = <
+                text = <"Global severity score">
+                description = <"Sum of total tic score and impairment score.">
+            >
+            ["at0153"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0154"] = <
+                text = <"Motor score">
+                description = <"">
+            >
+            ["at0155"] = <
+                text = <"Phonic score">
+                description = <"">
+            >
+            ["at0158"] = <
+                text = <"Mouth movements">
+                description = <"">
+            >
+            ["at0159"] = <
+                text = <"Chirping or other bird noises description">
+                description = <"Narrative description of the chirping or other bird noises.">
+            >
+            ["at0160"] = <
+                text = <"Barking or other dog noises description">
+                description = <"Narrative description of the barking or other dog noises.">
+            >
+            ["at0161"] = <
+                text = <"Syllables descripion">
+                description = <"Narrative description of the syllables.">
+            >
+            ["at0162"] = <
+                text = <"Words description">
+                description = <"Narrative description of the words.">
+            >
+            ["at0163"] = <
+                text = <"Phrases description">
+                description = <"Narrative description of the phrases.">
+            >
+            ["at0164"] = <
+                text = <"Coprolalia description">
+                description = <"Narrative description of the coprolalia.">
+            >
+            ["at0165"] = <
+                text = <"Speech atypicalities description">
+                description = <"Narrative description of the speech atypicalities.">
+            >
+            ["at0166"] = <
+                text = <"Disinhibited speech description">
+                description = <"Narrative description of the disinhibited speech.">
+            >
+            ["at0167"] = <
+                text = <"Eye blinking description">
+                description = <"Narrative description of the eye blinking.">
+            >
+            ["at0168"] = <
+                text = <"Eye movements description">
+                description = <"Narrative description of the eye movements.">
+            >
+            ["at0169"] = <
+                text = <"Nose movements description">
+                description = <"Narrative description of the nose movements.">
+            >
+            ["at0170"] = <
+                text = <"Mouth movements description">
+                description = <"Narrative description of the mouth movements.">
+            >
+            ["at0171"] = <
+                text = <"Facial grimace description">
+                description = <"Narrative description of the facial grimace.">
+            >
+            ["at0172"] = <
+                text = <"Head jerks/movements description">
+                description = <"Narrative description of the head jerks/movements.">
+            >
+            ["at0173"] = <
+                text = <"Shoulder shrugs description">
+                description = <"Narrative description of the shoulder shrugs.">
+            >
+            ["at0174"] = <
+                text = <"Arm movements description">
+                description = <"Narrative description of the arm movements.">
+            >
+            ["at0175"] = <
+                text = <"Hand movements description">
+                description = <"Narrative description of the hand movements.">
+            >
+            ["at0176"] = <
+                text = <"Abdominal tensing description">
+                description = <"Narrative description of the abdominal tensing.">
+            >
+            ["at0177"] = <
+                text = <"Leg, foot, or toe movements description">
+                description = <"Narrative description of the leg, foot, or toe movements.">
+            >
+            ["at0178"] = <
+                text = <"Eye movements description">
+                description = <"Narrative description of the eye movements.">
+            >
+            ["at0179"] = <
+                text = <"Mouth movements description">
+                description = <"Narrative description of the mouth movements.">
+            >
+            ["at0180"] = <
+                text = <"Facial movements or expressions description">
+                description = <"Narrative description of the facial movements or expressions.">
+            >
+            ["at0181"] = <
+                text = <"Shoulder movements description">
+                description = <"Narrative description of the shoulder movements.">
+            >
+            ["at0182"] = <
+                text = <"Head gestures or movements description">
+                description = <"Narrative description of the head gestures or movements.">
+            >
+            ["at0183"] = <
+                text = <"Arm movements description">
+                description = <"Narrative description of the arm movements.">
+            >
+            ["at0184"] = <
+                text = <"Hand movements description">
+                description = <"Narrative description of the hand movements.">
+            >
+            ["at0185"] = <
+                text = <"Writing tics description">
+                description = <"Narrative description of the writing tics.">
+            >
+            ["at0186"] = <
+                text = <"Dystonic postures description">
+                description = <"Narrative description of the dystonic postures.">
+            >
+            ["at0187"] = <
+                text = <"Bending or gyrating description">
+                description = <"Narrative description of the bending or gyrating.">
+            >
+            ["at0188"] = <
+                text = <"Rotating description">
+                description = <"Narrative description of the rotating.">
+            >
+            ["at0189"] = <
+                text = <"Leg or foot or toe movements description">
+                description = <"Narrative description of the leg or foot or toe movements.">
+            >
+            ["at0190"] = <
+                text = <"Blocking description">
+                description = <"Narrative description of the blocking.">
+            >
+            ["at0191"] = <
+                text = <"Tic related compulsive behaviors description">
+                description = <"Narrative description of the tic related compulsive behaviors.">
+            >
+            ["at0192"] = <
+                text = <"Copropraxia description">
+                description = <"Narrative description of the copropraxia.">
+            >
+            ["at0193"] = <
+                text = <"Self-abusive behavior description">
+                description = <"Narrative description of the self-abusive behavior.">
+            >
+            ["at0194"] = <
+                text = <"Paroxysms of tics (displays) description">
+                description = <"Narrative description of the paroxysms of tics (displays).">
+            >
+            ["at0195"] = <
+                text = <"Coughing description">
+                description = <"Narrative description of the coughing.">
+            >
+            ["at0196"] = <
+                text = <"Throat clearing description">
+                description = <"Narrative description of the throat clearing.">
+            >
+            ["at0197"] = <
+                text = <"Sniffing description">
+                description = <"Narrative description of the sniffing.">
+            >
+            ["at0198"] = <
+                text = <"Snorting description">
+                description = <"Narrative description of the snorting.">
+            >
+            ["at0199"] = <
+                text = <"Grunting description">
+                description = <"Narrative description of the grunting.">
+            >
+            ["at0200"] = <
+                text = <"Gulping description">
+                description = <"Narrative description of the gulping.">
+            >
+            ["at0201"] = <
+                text = <"Whistling">
+                description = <"Narrative description of the whistling.">
+            >
+            ["at0202"] = <
+                text = <"Humming description">
+                description = <"Narrative description of the humming.">
+            >
+            ["at0203"] = <
+                text = <"Mouth noises description">
+                description = <"Narrative description of the mouth noises.">
+            >
+            ["at0204"] = <
+                text = <"Burping description">
+                description = <"Narrative description of the burping.">
+            >
+            ["at0205"] = <
+                text = <"Hiccups description">
+                description = <"Narrative description of the hiccups.">
+            >
+            ["at0206"] = <
+                text = <"Atypical breathing tics description">
+                description = <"Narrative description of the atypical breathing tics.">
+            >
+            ["at0207"] = <
+                text = <"Other animal noises description">
+                description = <"Narrative description of the other animal noises.">
+            >
+            ["at0208"] = <
+                text = <"Echolalia description">
+                description = <"Narrative description of the echolalia.">
+            >
+            ["at0209"] = <
+                text = <"Palalalia description">
+                description = <"Narrative description of the palalalia.">
+            >
+            ["at0210"] = <
+                text = <"Blocking description">
+                description = <"Narrative description of the blocking.">
+            >
+            ["ac9088"] = <
+                text = <"Number (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9089"] = <
+                text = <"Frequency (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9090"] = <
+                text = <"Intensity (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9091"] = <
+                text = <"Complexity (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9092"] = <
+                text = <"Interference (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9000"] = <
+                text = <"Score (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9093"] = <
+                text = <"Impairment scale (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9093"] = <
+            id = <"ac9093">
+            members = <"at0144", "at0145", "at0146", "at0147", "at0148", "at0149">
+        >
+        ["ac9092"] = <
+            id = <"ac9092">
+            members = <"at0137", "at0138", "at0139", "at0140", "at0141", "at0142">
+        >
+        ["ac9091"] = <
+            id = <"ac9091">
+            members = <"at0130", "at0131", "at0132", "at0133", "at0134", "at0135">
+        >
+        ["ac9090"] = <
+            id = <"ac9090">
+            members = <"at0123", "at0124", "at0125", "at0126", "at0127", "at0128">
+        >
+        ["ac9089"] = <
+            id = <"ac9089">
+            members = <"at0116", "at0117", "at0118", "at0119", "at0120", "at0121">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0154", "at0155">
+        >
+        ["ac9088"] = <
+            id = <"ac9088">
+            members = <"at0109", "at0110", "at0111", "at0112", "at0113", "at0114">
+        >
+    >

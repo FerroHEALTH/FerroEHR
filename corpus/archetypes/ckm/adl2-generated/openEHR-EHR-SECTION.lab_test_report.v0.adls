@@ -1,0 +1,89 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=4e4213fd-138d-4f17-a6c7-dcd2d7f0d1a6; build_uid=4d6832c8-cc4a-485e-9b31-9134cdeba566)
+    openEHR-EHR-SECTION.lab_test_report.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, United Kingdom">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"25/03/2010">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Ocean Informatics, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"205791AC9FB8353573AA369F5ED15863">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Provides a framework to record the outline of a lab test report, inlcuding one or more lab tests and the orginal request and associated information.">
+            keywords = <"Lab", "Report">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Lab report
+        items cardinality matches {1..*; unordered} matches {
+            SECTION[at0001] occurrences matches {0..1} matches {    -- Lab report detail
+                items cardinality matches {1..*; unordered} matches {
+                    allow_archetype SECTION[at0002] occurrences matches {0..1} matches {    -- Request detail
+                        include
+                            archetype_id/value matches {/openEHR-EHR-SECTION\.referral_details(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype SECTION[at0003] occurrences matches {0..1} matches {    -- Result detail
+                        include
+                            archetype_id/value matches {/openEHR-EHR-SECTION\.result_details(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype ENTRY[at0004] matches {    -- Other
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+            allow_archetype EVALUATION[at0005] matches {    -- Synopsis
+                include
+                    archetype_id/value matches {/openEHR-EHR-EVALUATION\.clinical_synopsis(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Lab report">
+                description = <"of a lab test report, including details of the original lab request and associated information">
+            >
+            ["at0001"] = <
+                text = <"Lab report detail">
+                description = <"Lab report details">
+            >
+            ["at0002"] = <
+                text = <"Request detail">
+                description = <"Details of the original test request.">
+            >
+            ["at0003"] = <
+                text = <"Result detail">
+                description = <"Details of the test result">
+            >
+            ["at0004"] = <
+                text = <"Other">
+                description = <"Other Entry level details.">
+            >
+            ["at0005"] = <
+                text = <"Synopsis ">
+                description = <"*">
+            >
+        >
+    >

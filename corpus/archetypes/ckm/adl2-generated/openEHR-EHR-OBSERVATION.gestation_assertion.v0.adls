@@ -1,0 +1,309 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=19de240d-26a0-49f4-a81e-a611b7ef23bc; build_uid=097b26e3-218f-4051-9337-c4797a4f7894)
+    openEHR-EHR-OBSERVATION.gestation_assertion.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen">
+                ["organisation"] = <"Oslo University Hospital">
+                ["email"] = <"varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"NT mEHR Project">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2012-01-04">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Mongelli M. Evaluation of Gestation. Medscape Reference. See http://emedicine.medscape.com/article/259269-overview#showall (accessed Jan 2012)">
+        ["2"] = <"Peek MJ, Devonald KJ, Beilby R, Ellwood D. The value of routine early pregnancy ultrasound in the antenatal booking clinic. Aust N Z J Obstet Gynaecol. May 1994;34(2):140-3.">
+        ["3"] = <"Geirsson RT, Busby-Earle RM. Certain dates may not provide a reliable estimate of gestational age. Br J Obstet Gynaecol. Jan 1991;98(1):108-9.">
+        ["4"] = <"Guerrero R, Florez PE. The duration of pregnancy. Lancet. Aug 2 1969;2(7614):268-9.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"1FC0ADBACFC434B9FE18DCD9CD10CC68">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"*To record the estimated or known duration of an active pregnancy at a point in time. (en)">
+            keywords = <"*gestation (en)", "*gestational age (en)", "*conceptional age (en)">
+            use = <"*To record the estimated or known duration of an active pregnancy at a point in time, especially to provide clinical context for associated pregnancy-related findings or assessments. For example: in the context of an antenatal consultation, an assertion by the clinician that the history, findings, assessments and plans were recorded on the basis of an assertion that the gestation of the pregnancy was 32 weeks. (en)">
+            misuse = <"*Not to record the historical gestational age of the fetus at or after birth. This is recorded in the CLUSTER.birth_detail. (en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the estimated or known duration of an active pregnancy at a point in time.">
+            keywords = <"gestation", "gestational age", "conceptional age">
+            use = <"To record the estimated or known duration of an active pregnancy at a point in time, especially to provide clinical context for associated pregnancy-related findings or assessments. For example: in the context of an antenatal consultation, an assertion by the clinician that the history, findings, assessments and plans were recorded on the basis of an assertion that the gestation of the pregnancy was 32 weeks.">
+            misuse = <"Not to record the historical gestational age of the fetus at or after birth. This is recorded in the CLUSTER.birth_detail.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Gestation assertion
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {1..*} matches {    -- Date of measurement
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Gestational age
+                                        value matches {
+                                            DV_DURATION[at9002] matches {
+                                                value matches {PWD/|P0D..P420D|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Fetal age
+                                        value matches {
+                                            DV_DURATION[at9003] matches {
+                                                value matches {PWD/|P0D..P420D|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Trimester
+                                        value matches {
+                                            DV_CODED_TEXT[at9004] matches {
+                                                defining_code matches {[ac9000]}    -- Trimester (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9005]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0017] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Gestational age basis
+                        value matches {
+                            DV_CODED_TEXT[at9006] matches {
+                                defining_code matches {[ac9001]}    -- Gestational age basis (synthesised)
+                            }
+                            DV_TEXT[at9007]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Gestasjonsalder">
+                description = <"*A statement or declaration by a clinician about the estimated or known duration of an active pregnancy at a specific point-in-time, usually based on EDD estimations and used as the basis for clinical decision-making. (en)">
+            >
+            ["at0002"] = <
+                text = <"Dato for måling">
+                description = <"Dato eller Dato/Tid for målingen av gestasjonsalder.">
+            >
+            ["at0004"] = <
+                text = <"Gestasjonsalder">
+                description = <"*Estimated duration of an active pregnancy. (en)">
+                comment = <"*Commonly this is estimated using the same method used to calculate the agreed or active 'Estimated Date of Delivery (EDD)' - frequently using the onset of the last menstrual period (LMP), or calculated from the measurement of fetal parameters during a pregnancy ultrasound. (en)">
+            >
+            ["at0005"] = <
+                text = <"*Fetal age (en)">
+                description = <"*Calculated duration of an active pregnancy based on a known date/time of conception. (en)">
+            >
+            ["at0006"] = <
+                text = <"*Gestational age basis (en)">
+                description = <"*The rationale underpinning the calculation of gestational age. (en)">
+            >
+            ["at0007"] = <
+                text = <"Ultralyd - første trimester">
+                description = <"En ultralydundersøkelse gjennomført før uke 14.">
+            >
+            ["at0008"] = <
+                text = <"Ultralyd - andre trimester">
+                description = <"En ultralydundersøkelse gjennomført mellom uke 14 og 28.">
+            >
+            ["at0009"] = <
+                text = <"Ultralyd - tredje trimester">
+                description = <"En ultralydundersøkelse gjennomført senere enn uke 28.">
+            >
+            ["at0010"] = <
+                text = <"*Onset of Last Menstrual Period (LMP) (en)">
+                description = <"Dato for den første dagen av siste menstruasjon.">
+            >
+            ["at0011"] = <
+                text = <"Konsepsjonsdato">
+                description = <"Datoen fertiliseringen skjedde er kjent.">
+            >
+            ["at0012"] = <
+                text = <"Livmorundersøkelse - første trimester">
+                description = <"Størrelsen av livmoren før uke 14.">
+            >
+            ["at0013"] = <
+                text = <"Livmorundersøkelse - andre trimester">
+                description = <"Høyden på fundus målt mellom uke 14 og 28.">
+            >
+            ["at0014"] = <
+                text = <"Livmorundersøkelse - tredje trimester">
+                description = <"Høyden på fundus målt etter uke 28.">
+            >
+            ["at0015"] = <
+                text = <"Dato for første positive graviditetstest">
+                description = <"*Dato den første graviditetstesten var positiv, fortrinnsvis med en *serial?* graviditetstest med en kjent sensitivitet.">
+            >
+            ["at0016"] = <
+                text = <"*Expected Date of Delivery (EDD) (en)">
+                description = <"*Calculated back from the agreed or active EDD. (en)">
+            >
+            ["at0019"] = <
+                text = <"Kommentar">
+                description = <"*Narrative description about the assertion of gestation, not captured in other fields. (en)">
+            >
+            ["at0020"] = <
+                text = <"Trimester">
+                description = <"Varighet av svangerskap, gruppert i intervaller av 12-14 uker.">
+            >
+            ["at0021"] = <
+                text = <"Første trimester">
+                description = <"Første dag av siste normale menstruasjonsperiode fram til slutten av 12. uke i et svangerskap.">
+            >
+            ["at0022"] = <
+                text = <"Andre trimester">
+                description = <"Begynnelsen av uke 13 til slutten av uke 28 i et svangerskap.">
+            >
+            ["at0023"] = <
+                text = <"Tredje trimester">
+                description = <"Begynnelsen av uke 29 fram til fødsel.">
+            >
+            ["ac9000"] = <
+                text = <"Trimester (synthesised)">
+                description = <"Varighet av svangerskap, gruppert i intervaller av 12-14 uker. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"*Gestational age basis (en) (synthesised)">
+                description = <"*The rationale underpinning the calculation of gestational age. (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Gestation assertion">
+                description = <"A statement or declaration by a clinician about the estimated or known duration of an active pregnancy at a specific point-in-time, usually based on EDD estimations and used as the basis for clinical decision-making.">
+            >
+            ["at0002"] = <
+                text = <"Date of measurement">
+                description = <"The date and time of the measurement of gestation.">
+            >
+            ["at0004"] = <
+                text = <"Gestational age">
+                description = <"Estimated duration of an active pregnancy.">
+                comment = <"Commonly this is estimated using the same method used to calculate the agreed or active 'Estimated Date of Delivery (EDD)' - frequently using the onset of the last menstrual period (LMP), or calculated from the measurement of fetal parameters during a pregnancy ultrasound.">
+            >
+            ["at0005"] = <
+                text = <"Fetal age">
+                description = <"Calculated duration of an active pregnancy based on a known date/time of conception.">
+            >
+            ["at0006"] = <
+                text = <"Gestational age basis">
+                description = <"The rationale underpinning the calculation of gestational age.">
+            >
+            ["at0007"] = <
+                text = <"Ultrasound - first trimester">
+                description = <"An ultrasound done before 14 weeks gestation.">
+            >
+            ["at0008"] = <
+                text = <"Ultrasound - second trimester">
+                description = <"An ultrasound done between 14 and 28 weeks gestation.">
+            >
+            ["at0009"] = <
+                text = <"Ultrasound - third trimester">
+                description = <"An ultrasound done greater than 28 weeks gestation.">
+            >
+            ["at0010"] = <
+                text = <"Onset of Last Menstrual Period (LMP)">
+                description = <"The date of the first day of the last menstruation.">
+            >
+            ["at0011"] = <
+                text = <"Date of conception">
+                description = <"The date of conception is known.">
+            >
+            ["at0012"] = <
+                text = <"Uterine examination - first trimester">
+                description = <"The size of the uterus before 14 weeks gestation.">
+            >
+            ["at0013"] = <
+                text = <"Uterine examination - second trimester">
+                description = <"The fundal height measured between 14 and 28 weeks gestation.">
+            >
+            ["at0014"] = <
+                text = <"Uterine examination - third trimester">
+                description = <"The fundal height after 28 weeks gestation.">
+            >
+            ["at0015"] = <
+                text = <"Date of first positive pregnancy test">
+                description = <"Date of first positive pregnancy test, ideally involving serial pregnancy tests with a known sensitivity.">
+            >
+            ["at0016"] = <
+                text = <"Expected Date of Delivery (EDD)">
+                description = <"Calculated back from the agreed or active EDD.">
+            >
+            ["at0019"] = <
+                text = <"Comment">
+                description = <"Narrative description about the assertion of gestation, not captured in other fields.">
+            >
+            ["at0020"] = <
+                text = <"Trimester">
+                description = <"Duration of pregnancy grouped into 12-14 week intervals.">
+            >
+            ["at0021"] = <
+                text = <"First trimester">
+                description = <"First day of last normal menstrual period until the end of week 12 of a pregnancy.">
+            >
+            ["at0022"] = <
+                text = <"Second trimester">
+                description = <"Beginning of week 13 to the end of week 28 of a pregnancy.">
+            >
+            ["at0023"] = <
+                text = <"Third trimester">
+                description = <"Beginning of week 29 until birth.">
+            >
+            ["ac9000"] = <
+                text = <"Trimester (synthesised)">
+                description = <"Duration of pregnancy grouped into 12-14 week intervals. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Gestational age basis (synthesised)">
+                description = <"The rationale underpinning the calculation of gestational age. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0007", "at0008", "at0009", "at0010", "at0011", "at0012", "at0013", "at0014", "at0015", "at0016">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0021", "at0022", "at0023">
+        >
+    >

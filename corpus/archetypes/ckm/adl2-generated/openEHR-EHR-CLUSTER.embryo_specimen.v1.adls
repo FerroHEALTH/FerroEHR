@@ -1,0 +1,233 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=9face2b6-e7d9-4249-9764-2555766c94e1; build_uid=303bba27-e2d4-4c5c-8038-21ab67ef374d)
+    openEHR-EHR-CLUSTER.embryo_specimen.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Liv Laugen">
+                ["organisation"] = <"​Oslo University Hospital, Norway">
+                ["email"] = <"liv.laugen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Liv Laugen">
+        ["organisation"] = <"​Oslo University Hospital, Norway">
+        ["email"] = <"liv.laugen@ous-hf.no">
+        ["date"] = <"2022-10-27">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Peter Fedorcsak, University of Oslo, Norway (openEHR Editor)", "Evelyn Hovenga, EJSH Consulting, Australia", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Natalia Strauch, Medizinische Hochschule Hannover, Germany">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Ashford, P., et al., Standard terminology for reproductive tissue and cell products for use in ART. Human Reproduction Open, 2019. 2019(2): p. hoz005.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"6D7E4CED638F3D0FC2D7A99F01E7BB51">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere detaljert informasjon om en eller flere zygoter eller embryoer.">
+            keywords = <"ivf, assistert reproduksjon, zygote, embryo, morula, blastocyst, inseminasjon, bioprøve", ...>
+            use = <"Brukes for å registrere detaljert informasjon om en eller flere zygoter eller embryoer.
+
+Denne arketypen er designet for å registrere mer spesifikke detaljer om zygoter og embryoer i forbindelse med assistert befruktning, og kan bli nøstet i \"Ytterligere detaljer\" SLOTet i arketypen CLUSTER.specimen (Prøvemateriale).">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To document more detailed information about one or more zygotes or embryos.">
+            keywords = <"embryo, morula, blastocyt, ivf, artificial insemination, art", ...>
+            use = <"Use to document more detailed information about one or more zygotes or embryos.
+
+This archetype has been designed to document more specific details about zygotes or embryos in assisted reproduction treatment and can be nested within the \"Additional details slot\" in the CLUSTER.specimen archetype.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Embryo specimen
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Embryo development stage
+                value matches {
+                    DV_CODED_TEXT[at9002] matches {
+                        defining_code matches {[ac9000]}    -- Embryo development stage (synthesised)
+                    }
+                    DV_TEXT[at9003]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Embryo preservation day
+                value matches {
+                    DV_CODED_TEXT[at9004] matches {
+                        defining_code matches {[ac9001]}    -- Embryo preservation day (synthesised)
+                    }
+                    DV_TEXT[at9005]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Embryo prøvemateriale">
+                description = <"For å registrere detaljert informasjon om en eller flere zygoter eller embryoer.">
+            >
+            ["at0001"] = <
+                text = <"Embryo utviklingsstadie">
+                description = <"Utviklingsstadiet til embryoet.">
+            >
+            ["at0003"] = <
+                text = <"Embryo dag">
+                description = <"Nummer på dagen etter inseminering.">
+            >
+            ["at0004"] = <
+                text = <"Delingsstadie">
+                description = <"Embryoutvikling mellom to-cellestadium og opp til, men ikke inkludert, morulastadiet.">
+            >
+            ["at0005"] = <
+                text = <"Morula">
+                description = <"Embryo under kompaktering, typisk 4 dager etter inseminasjon eller ICSI.">
+            >
+            ["at0006"] = <
+                text = <"Blastocyst">
+                description = <"Embryo på blastocyststadiet inneholder et væskefylt hulrom, et ytre lag med celler og en indre gruppe celler, vanligvis på dag 5–6 etter inseminering.">
+            >
+            ["at0007"] = <
+                text = <"Ukjent">
+                description = <"Ingen informasjon om embryo utviklingsstadie er gitt, eller det er ikke aktuelt.">
+            >
+            ["at0008"] = <
+                text = <"Dag 1">
+                description = <"Embryo på dag 1 etter inseminering.">
+            >
+            ["at0009"] = <
+                text = <"Dag 2">
+                description = <"Embryo på dag 2 etter inseminering.">
+            >
+            ["at0010"] = <
+                text = <"Dag 3">
+                description = <"Embryo på dag 3 etter inseminering.">
+            >
+            ["at0011"] = <
+                text = <"Dag 4">
+                description = <"Embryo på dag 4 etter inseminering.">
+            >
+            ["at0012"] = <
+                text = <"dag 5">
+                description = <"Embryo på dag 5 etter inseminering.">
+            >
+            ["at0013"] = <
+                text = <"Dag 6">
+                description = <"Embryo på dag 6 etter inseminering.">
+            >
+            ["at0014"] = <
+                text = <"Dag 7">
+                description = <"Embryo på dag 7 etter inseminering.">
+            >
+            ["at0015"] = <
+                text = <"Ukjent">
+                description = <"Ingen informasjon om dag etter inseminering er gitt, eller det er ikke aktuelt.">
+            >
+            ["ac9000"] = <
+                text = <"Embryo utviklingsstadie (synthesised)">
+                description = <"Utviklingsstadiet til embryoet. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Embryo dag (synthesised)">
+                description = <"Nummer på dagen etter inseminering. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Embryo specimen">
+                description = <"To document detailed information about one or more zygotes or embryos.">
+            >
+            ["at0001"] = <
+                text = <"Embryo development stage">
+                description = <"The stage of development of the embryo.">
+            >
+            ["at0003"] = <
+                text = <"Embryo preservation day">
+                description = <"The number of calendar days following insemination on which the embryo was preserved.">
+            >
+            ["at0004"] = <
+                text = <"Cleavage stage">
+                description = <"Embryo beginning at the two cell stage and up to, but not including, the morula stage.">
+            >
+            ["at0005"] = <
+                text = <"Morula stage">
+                description = <"Embryo after completion of compaction, typically 4 days after insemination or ICSI.">
+            >
+            ["at0006"] = <
+                text = <"Blastocyst stage">
+                description = <"Embryo at the blastocyst stage, containing a fluid filled central cavity, an outer layer of cells and an inner group of cells. Typically occurs at day 5–6 after insemination.">
+            >
+            ["at0007"] = <
+                text = <"Unknown">
+                description = <"No information about the embryo development stage is provided or not applicable.">
+            >
+            ["at0008"] = <
+                text = <"Day 1">
+                description = <"Embryo preserved on day 1 after insemination.">
+            >
+            ["at0009"] = <
+                text = <"Day 2">
+                description = <"Embryo preserved on day 2 after insemination.">
+            >
+            ["at0010"] = <
+                text = <"Day 3">
+                description = <"Embryo preserved on day 3 after insemination.">
+            >
+            ["at0011"] = <
+                text = <"Day 4">
+                description = <"Embryo preserved on day 4 after insemination.">
+            >
+            ["at0012"] = <
+                text = <"Day 5">
+                description = <"Embryo preserved on day 5 after insemination.">
+            >
+            ["at0013"] = <
+                text = <"Day 6">
+                description = <"Embryo preserved on day 6 after insemination.">
+            >
+            ["at0014"] = <
+                text = <"Day 7">
+                description = <"Embryo preserved on day 7 after insemination.">
+            >
+            ["at0015"] = <
+                text = <"Unknown">
+                description = <"No information about the embryo preservation day is provided or not applicable.">
+            >
+            ["ac9000"] = <
+                text = <"Embryo development stage (synthesised)">
+                description = <"The stage of development of the embryo. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Embryo preservation day (synthesised)">
+                description = <"The number of calendar days following insemination on which the embryo was preserved. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0008", "at0009", "at0010", "at0011", "at0012", "at0013", "at0014", "at0015">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0004", "at0005", "at0006", "at0007">
+        >
+    >

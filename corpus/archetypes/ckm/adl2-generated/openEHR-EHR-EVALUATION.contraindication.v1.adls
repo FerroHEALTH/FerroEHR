@@ -1,0 +1,381 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c1665474-ff4a-4ff2-ab22-f2c8661c3589; build_uid=036eb903-b22d-4443-9fc5-e30e46c27883)
+    openEHR-EHR-EVALUATION.contraindication.v1.1.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen">
+                ["organisation"] = <"Oslo University Hospital">
+                ["email"] = <"varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"14-11-2012">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Fatima Almeida, Critical SW, Portugal", "Tomas Alme, DIPS, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway", "Koray Atalag, University of Auckland, New Zealand", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Hildegard Franke, freshEHR Clinical Informatics Ltd., United Kingdom", "Heather Grain, Llewelyn Grain Informatics, Australia", "Sam Heard, Ocean Informatics, Australia", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Karlsen, DIPS ASA, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hildegard McNicoll, freshEHR Clinical Informatics Ltd., United Kingdom", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Bjoern Naess, DIPS ASA, Norway", "Bjørn Næss, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "John Tore Valand, Helse Bergen, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"5DA20010F4C4E40F5C5B5342334000E4">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en kontraindikasjon for en klinisk intervensjon (for eksempel - men ikke begrenset til, en behandling, en prøve eller prosedyre) som ikke må utføres på pasienten på grunn av sannsynlighet eller mulighet for at individet kan påføres skade.">
+            keywords = <"forebygge", "unngå", "uønsket hendelse", "forsiktighet", "advarsel">
+            use = <"Brukes for å registrere en kontraindikasjon for en klinisk intervensjon i journalen på grunn av sannsynlighet eller mulighet for at individet kan påføres skade om intervensjonen utføres.
+
+Denne arketypen kan også brukes å opprette en kontraindikasjon for en klinisk intervensjon i journalen til en pasient også i tilfeller hvor den uønskede kliniske effekten kan påføre andre skade og ikke direkte pasienten selv. For eksempel: Administrasjon av levende vaksiner bør registreres som en kontraindikasjon hos et individ som har familiemedlemmer som er immunosupprimert eller som er i en aktiv immunosupprimerende behandling fordi dette familiemedlemmet kan ha en stor risiko for å få en infeksjonssykdom.
+
+Denne arketypen bør regnes som en viktig arketype for beslutningsstøttesystemer i forbindelse med forordning av nye kliniske intervensjoner.
+
+Kontraindikasjonen kan angis på en rekke måter, for eksempel:
+- Tidligere erfaring med en utført prosedyre og med påfølgende klinisk vurdering om at dette ikke skal gjentas.
+- Implantasjon av metallimplantater som utelukker noen bildediagnostiske undersøkelser.
+- Resultat av genundersøkelser som indikerer at en uønsket hendelse kan forekomme om en behandling utføres eller et legemiddel administreres.
+- Ugunstig effekt av liknende behandling, legemiddel eller prosedyre hos familiemedlemmer.
+
+I tilfeller som omhandler legemidler eller vaksiner vil denne arketypen supplere arketypen EVALUATION.adverse_reaction_risk (Risiko for overfølsomhetsreaksjon) ved å angi andre årsaker til at et legemiddel eller en vaksine ikke bør administreres, utover overfølsomhetsreaksjoner. I lys av dette bør klinisk beslutningsstøtte for ordinering inneholde en referanse til denne arketypen samt arketypen EVALUATION.adverse_reaction_risk som en del av en trygg ordineringsprosess.">
+            misuse = <"Brukes ikke for å registrere forekomst av en overfølsomhetsreaksjon knyttet til en substans eller agens. EVALUATION.adverse_reaction_risk (Risiko for overfølsomhetsreaksjon) er en veldig spesifikk type kontraindikasjon, og på grunn av dens allestedsnærværende bruk i journalsystemer er modellert som en egen arketype. 
+
+Brukes ikke for å registrere en tilstand hos et individ som er klinisk signifikant og unikt for dette individet og som er vurdert som viktig informasjon for å gjøre valg om behandling. Bruk arketypen EVALUATION.precaution (Forholdsregel) for dette.
+
+Brukes ikke til å registrere individets personlige preferanser. Bruk spesifikke arketyper for dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a contraindication for a clinical intervention (including, but not limited to, a treatment, test or procedure) that should not be carried out due to the likelihood, or possibility, of harm being caused to an individual.">
+            keywords = <"contraindication", "prevent", "avoid", "adverse event", "caution", "alert", "warning">
+            use = <"To record a contraindication for a clinical intervention in the health record of an individual due to the likelihood, or possibility, of causing harm to the individual if the identified intervention is carried out. 
+
+This archetype may also be used to record a contraindication for a clinical intervention in the health record of the individual, even though the resulting clinical effect may cause harm to others and not directly on the individual. For example: administration of live vaccines should be contraindicated in an individual who has a family member in an immunosuppressed state or actively taking immunosuppressive therapy, as that family member may be at significant risk of contracting the infectious disease. 
+
+This archetype should be regarded as a critical archetype by any clinical decision support system testing for any relevant therapeutic precautions as a clinician commences a new clinical Intervention for an individual.
+
+This contraindication may be identified in a number of ways including, but not limited to: 
+- previous experience of a procedure being performed and subsequent clinical assessment that this should not be repeated; 
+- implantation of a metal device which precludes some imaging examinations
+- genomic test results that indicate an adverse event may take place if a treatment or medication is administered; or
+- adverse experience by a family member to a similar treatment, medication or procedure.
+
+In the case of medications or vaccines, this archetype complements the EVALUATION.adverse_reaction_risk archetype by identifying other reasons why a medication or vaccine should not be administered, other than an adverse reaction. In view of this, clinical decision support for prescribing should include reference to this archetype plus the EVALUATION.adverse_reaction_risk as part of a safe prescribing process.">
+            misuse = <"Not to be used to record the occurrence of an adverse reaction to a substance or agent. Adverse reaction risk is a very specific type of contradiction and because of its ubiquity has been modelled separately as EVALUATION.adverse_reaction_risk for this purpose.
+
+Not to be used to record a condition or state of the individual that is clinically significant and unique or idiosyncratic for this individual, and is considered vital information when making treatment decisions. Use EVALUATION.precaution for this purpose.
+
+Not to be used to record personal preferences of the individual. Use specific archetypes for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Contraindication
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0002] occurrences matches {1} matches {    -- Contraindicated intervention
+                        value matches {
+                            DV_TEXT[at9000]
+                        }
+                    }
+                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Status
+                        value matches {
+                            DV_CODED_TEXT[at9007] matches {
+                                defining_code matches {[ac9005]}    -- Status (synthesised)
+                            }
+                            DV_TEXT[at9008]
+                        }
+                    }
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Criticality
+                        value matches {
+                            DV_CODED_TEXT[at9009] matches {
+                                defining_code matches {[ac9006]}    -- Criticality (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Clinical indication
+                        value matches {
+                            DV_TEXT[at9011]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Rationale
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Category
+                        value matches {
+                            DV_TEXT[at9010]
+                        }
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0006] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0020] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- Valid period start
+                        value matches {
+                            DV_DATE_TIME[at9012]
+                        }
+                    }
+                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Valid period end
+                        value matches {
+                            DV_DATE_TIME[at9013]
+                        }
+                    }
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Review date
+                        value matches {
+                            DV_DATE_TIME[at9005]
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9002]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Kontraindikasjon">
+                description = <"Et klinisk tiltak (for eksempel - men ikke begrenset til, en behandling, en prøve eller prosedyre) som ikke må utføres på pasienten på grunn av sannsynlighet eller mulighet for at individet kan påføres skade.">
+            >
+            ["at0002"] = <
+                text = <"Kontraindisert intervensjon">
+                description = <"Navnet på den kliniske intervensjonen eller type tiltak som ikke bør utføres. For eksempel - men ikke begrenset til, en behandling, en prøve eller prosedyre.">
+                comment = <"Det er ønskelig at \"Kontraindisert intervensjon\" kodes med en terminologi dersom mulig.">
+            >
+            ["at0003"] = <
+                text = <"Rasjonale">
+                description = <"Fritekstbeskrivelse som forklarer forholdet mellom \"Klinisk indikasjon\" og \"Kontraindisert intervensjon\".">
+            >
+            ["at0004"] = <
+                text = <"Sist oppdatert">
+                description = <"Dato da kontraindikasjonen sist ble oppdatert.">
+            >
+            ["at0007"] = <
+                text = <"Kritikalitet">
+                description = <"En indikasjon av potensiale for kritisk organskade eller livstruende konsekvenser.">
+            >
+            ["at0008"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere informasjon om kontraindikasjonen, som ikke er fanget i andre felt.">
+            >
+            ["at0009"] = <
+                text = <"Dato for evaluering">
+                description = <"Dato for neste kliniske evaluering.">
+                comment = <"Ved tilfeller en kontraindikasjon ikke er på ubestemt tid eller livslang, kan dette dataelementet brukes til å registrere når kontraindikasjonen bør evalueres. For eksempel: Planlegg en evalueringsdato når det er forventet at familiemedlemmet ikke lenger vil ta immunhemmende behandling, kontraindikasjonen er da opphørt og levende vaksiner kan administreres til individet igjen.">
+            >
+            ["at0010"] = <
+                text = <"Lav">
+                description = <"Utførelse av \"Kontraindisert intervensjon\" vil sannsynligvis ikke resultere i kritisk organskade eller livstruende konsekvenser for individet eller familiemedlemmet. Fremtidig eksponering for den identifiserte intervensjonen bør regnes som en relativ kontraindikasjon under ordinære kliniske omstendigheter.">
+            >
+            ["at0011"] = <
+                text = <"Høy">
+                description = <"Utførelse av \"Kontraindisert intervensjon\" kan resultere i kritisk organskade eller livstruende konsekvenser. Fremtidig eksponering for den identifiserte intervensjonen bør regnes som en absolutt kontraindikasjon under ordinære kliniske omstendigheter.">
+            >
+            ["at0012"] = <
+                text = <"Ubestemt">
+                description = <"Umulig å vurdere med tilgjengelig informasjon.">
+            >
+            ["at0013"] = <
+                text = <"Kategori">
+                description = <"Kategorisering av \"Kontraindisert intervensjon\".">
+                comment = <"Dette dataelementet er inkludert fordi det brukes i flere eksisterende kliniske systemer. Informasjonen kan avledes fra \"Kontraindisert intervensjon\" dersom hierarkiske kodesystemer er brukt, og vil i slike tilfeller være redundant.">
+            >
+            ["at0014"] = <
+                text = <"Status">
+                description = <"Påstand om hvor sikkert det er at individet har en fremtidig skaderisiko på grunn \"Kontraindisert intervensjon\".">
+                comment = <"Beslutningsstøtte vil typisk utløse advarsler for \"Mistenkt\", \"Sannsynlig\", \"Bekreftet\", og ignorere \"Avkreftet\". Kliniske systemer kan velge å ikke vise registreringer av en kontraindikasjon med status \"Avkreftet\" i en liste over kontraindikasjoner. Likevel kan \"Avkreftet\" være nyttig for sammenstilling av ulike lister over kontraindikasjoner eller ved kommunikasjon mellom systemer. Noen systemer kan velge å gjøre dette elementet obligatorisk. \"Opphørt\" kan brukes ulikt i ulike systemer avhengig av klinisk bruk og kontekst. Fritekst-datatypen tillater lokal variasjon ved å gjøre det mulig å bruke andre verdisett for dette dataelementet i et templat. Det er i denne situasjonen anbefalt å kode verdiene med en terminologi.">
+            >
+            ["at0015"] = <
+                text = <"Mistenkt">
+                description = <"En lav grad av klinisk sikkerhet om utførelse av \"Kontraindisert intervensjon\" vil påføre individet eller familiemedlemmet skade.">
+            >
+            ["at0016"] = <
+                text = <"Sannsynlig">
+                description = <"En rimelig grad av klinisk sikkerhet at utførelse av \"Kontraindisert intervensjon\" vil påføre individet eller familiemedlemmet skade.">
+            >
+            ["at0017"] = <
+                text = <"Bekreftet">
+                description = <"En stor grad av klinisk sikkerhet at utførelse av \"Kontraindisert intervensjon\" vil påføre individet eller familiemedlemmet skade.">
+            >
+            ["at0018"] = <
+                text = <"Opphørt">
+                description = <"Den tidligere påstanden om at individet ikke bør eksponeres for \"Kontraindisert intervensjon\" er klinisk revurdert og er ikke lenger vurdert som en aktiv risiko.">
+            >
+            ["at0019"] = <
+                text = <"Avkreftet">
+                description = <"Den tidligere påstanden om at individet ikke bør eksponeres for \"Kontraindisert intervensjon\" er avvist med høy grad av klinisk sikkerhet ved testing.">
+            >
+            ["at0020"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0021"] = <
+                text = <"Klinisk indikasjon">
+                description = <"Den kliniske årsaken til at den identifiserte \"Kontraindisert intervensjon\" ikke skal benyttes eller utføres.">
+                comment = <"I denne arketypen vil dataelementet \"Klinisk indikasjon\" representere den kliniske årsaken til at den identifiserte intervensjonen ikke skal utføres. For eksempel \"Implantert pacemaker\" som indikasjon for å hindre undersøkelse med MR. Koding av \"Indikasjon\" med en terminologi er ønskelig, der det er mulig. Merk: en valgfri URI lenke til dokumentasjon i pasientjournalen er også tillatt ved å benytte attributter fra referansemodellen. Siden denne URI-lenken kan være utilgjengelig i en melding eller av mottakende system, bør en beskrivelse i fritekst med rasjonale være registrert.">
+            >
+            ["at0022"] = <
+                text = <"Gyldighetsperiode start">
+                description = <"Dato/Tid når kontraindikasjonen blir aktiv.">
+                comment = <"Dette dataelementet er ment for å brukes når en kontraindikasjon er ment å starte på et tidspunkt i fremtiden. For eksempel: kontraindikasjonen for MR undersøkelse vil bare være relevant etter at en pacemaker er implantert.">
+            >
+            ["at0023"] = <
+                text = <"Gyldighetsperiode slutt">
+                description = <"Dato/Tid når kontraindikasjonen blir inaktiv.">
+                comment = <"Dette dataelementet er ment for å brukes når en kontraindikasjon er ment å opphøre på et tidspunkt i fremtiden. For eksempel om et medikament som er en kontraindikasjon for en spesifikk prosedyre, skal tas for en begrenset tidsperiode, vil dato i dette elementet kunne settes til den siste dagen det aktuelle medikamentet skal tas.">
+            >
+            ["ac9005"] = <
+                text = <"Status (synthesised)">
+                description = <"Påstand om hvor sikkert det er at individet har en fremtidig skaderisiko på grunn \"Kontraindisert intervensjon\". (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Kritikalitet (synthesised)">
+                description = <"En indikasjon av potensiale for kritisk organskade eller livstruende konsekvenser. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Contraindication">
+                description = <"A clinical intervention (including, but not limited to, use of a treatment or performance of a test or procedure) that should not be carried out due to the likelihood, or possibility, of harm being caused to an individual.">
+            >
+            ["at0002"] = <
+                text = <"Contraindicated intervention">
+                description = <"Identification, by name, of a clinical intervention or class of intervention including, but not limited to, a treatment, test or procedure that should not be performed.">
+                comment = <"Coding of the identified 'Contraindicated intervention' with a terminology is desirable, where possible.">
+            >
+            ["at0003"] = <
+                text = <"Rationale">
+                description = <"Narrative description explaining the relationship between the 'Indication' and the 'Contraindicated intervention'.">
+            >
+            ["at0004"] = <
+                text = <"Last updated">
+                description = <"Date when the contraindication information was last updated.">
+            >
+            ["at0007"] = <
+                text = <"Criticality">
+                description = <"An indication of the potential for critical system organ damage or life threatening consequence.">
+            >
+            ["at0008"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the contraindication, not captured in other fields.">
+            >
+            ["at0009"] = <
+                text = <"Review date">
+                description = <"Date when next due for review by a clinician.">
+                comment = <"In circumstances where contraindications are not indefinite or life-long, use this data element to record when this contraindication should be reassessed in the context of the clinical circumstances at the time. For example: schedule a review date that matches when it is expected that the family member will cease taking immunosuppressive therapy, such that live vaccines could safely be administered to the individual again and the contraindication is effectively resolved.">
+            >
+            ["at0010"] = <
+                text = <"Low">
+                description = <"Carrying out of the 'Contraindicated intervention' is unlikely to result in critical system organ damage or life threatening consequences for the individual or family member. Future exposure to the identified intervention should be considered a relative contraindication in normal clinical circumstances.">
+            >
+            ["at0011"] = <
+                text = <"High">
+                description = <"Carrying out of the 'Contraindicated intervention' may result in critical organ system damage or life threatening consequences for the individual or family member. Future exposure to the identified intervention should be considered an absolute contraindication in normal clinical circumstances.">
+            >
+            ["at0012"] = <
+                text = <"Indeterminate">
+                description = <"Unable to assess with information available.">
+            >
+            ["at0013"] = <
+                text = <"Category">
+                description = <"Category of the identified 'Contraindicated intervention'.">
+                comment = <"This data element has been included because it is currently being captured in some clinical systems. This information could be derived from the Intervention where coding systems are used, and is effectively redundant in that situation.">
+            >
+            ["at0014"] = <
+                text = <"Status">
+                description = <"Assertion about the certainty or potential future risk, of the identified 'Contraindicated intervention'.">
+                comment = <"Decision support would typically raise alerts for 'Suspected', 'Likely', 'Confirmed', and ignore a 'Refuted' reaction. Clinical systems may choose not to display Contraindication entries with a 'Refuted' status in the Contraindication list. However, 'Refuted' may be useful for reconciliation of the Contraindication list or when communicating between systems . Some implementations may choose to make this field mandatory. 'Resolved' may be used variably across systems, depending on clinical use and context. The free text data type will allow for local variation by enabling other value sets to be applied to this data element in a template - in this situation it is recommended that values should be coded using a terminology.">
+            >
+            ["at0015"] = <
+                text = <"Suspected">
+                description = <"A low level of clinical certainty that carrying out the 'Contraindicated intervention' will cause harm to the individual or family member.">
+            >
+            ["at0016"] = <
+                text = <"Likely">
+                description = <"A reasonable level of clinical certainty that carrying out the 'Contraindicated intervention' will cause harm to the individual or family member.">
+            >
+            ["at0017"] = <
+                text = <"Confirmed">
+                description = <"A high level of clinical certainty that carrying out the 'Contraindicated intervention' will cause harm to the individual or family member.">
+            >
+            ["at0018"] = <
+                text = <"Resolved">
+                description = <"The previous assertion that the subject should not be exposed to the 'Contraindicated intervention' has been clinically reassessed and considered no longer to be an active risk.">
+            >
+            ["at0019"] = <
+                text = <"Refuted">
+                description = <"The previous assertion that the subject should not be exposed to the 'Contraindicated intervention' has been clinically reassessed or has been disproved with a high level of clinical certainty by testing.">
+            >
+            ["at0020"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0021"] = <
+                text = <"Clinical indication">
+                description = <"Identification of the clinical reason why the identified 'Contraindicated intervention' should not be used or performed.">
+                comment = <"In the context of this contraindication archetype, this 'Indication' data element represents the clinical reason why the identified Intervention should not be used or performed. Example: 'Pacemaker inserted' as indication to avoid performing an MRI Intervention. Coding of the 'Indication' with a terminology is desirable, where possible. Please note: an optional URI link to evidence within the health record is also permitted using Reference Model attributes. As this URI link may not be accessible from a message or by receiving clinical system it is desirable that a narrative description of the rationale should be explicitly recorded.">
+            >
+            ["at0022"] = <
+                text = <"Valid period start">
+                description = <"Date/time when the contraindication becomes active.">
+                comment = <"This data element is intended for use when a contraindication is identified to start at some time in the future. For example: the contraindication for MRI would only be relevant after the date of the procedure for insertion of the pacemaker.">
+            >
+            ["at0023"] = <
+                text = <"Valid period end">
+                description = <"Date/time when the contraindication becomes inactive.">
+                comment = <"This data element is intended for use when a contraindication is identified to end at some time in the future. For example: if a medication, which is a contraindication for a specific procedure, is to be taken for a limited period only, the date in this element can be equal to the last day of the planned medication.">
+            >
+            ["ac9005"] = <
+                text = <"Status (synthesised)">
+                description = <"Assertion about the certainty or potential future risk, of the identified 'Contraindicated intervention'. (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"Criticality (synthesised)">
+                description = <"An indication of the potential for critical system organ damage or life threatening consequence. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9006"] = <
+            id = <"ac9006">
+            members = <"at0010", "at0011", "at0012">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0015", "at0016", "at0017", "at0018", "at0019">
+        >
+    >

@@ -1,0 +1,304 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=57a17316-f7ae-4a17-8474-2459c90abacd; build_uid=9e13438c-d390-4b44-8031-60c6579bdc11)
+    openEHR-EHR-CLUSTER.tumour_colorectal_staging_non_tnm.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"freshEHR Informatics, United Kingdom">
+        ["email"] = <"ian@freshehr.com">
+        ["date"] = <"2009-08-19">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Davis N, Newland R. The reporting of colorectal cancer: The Australian clinico-pathological staging system. ANZ Journal of Surgery. 1982 ;52(4):395-397.">
+        ["2"] = <"Royal College of Pathologists. Dataset for colorectal cancer (2nd edition) [Internet]. 2007 Dec 4;[cited 2009 Jul 29 ]">
+        ["3"] = <"Available from: http://www.rcpath.org/index.asp?PageID=1153">
+    >
+    other_details = <
+        ["current_contact"] = <"Ian McNicoll, freshEHR Informatics<ian@freshehr.com>">
+        ["MD5-CAM-1.0.1"] = <"7C0C3544652991921C46E1073056A249">
+    >
+    details = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل أحراز تحديد مرحلة سرطان القولون و المستقيم بطريقة مختلفة عن (و ل م)">
+            keywords = <"تحديد المرحلة", "السرطان", "الورم", "الهيستوباثولوجيا", "الخباثة">
+            use = <"يستخدم مع مجموعة من النماذج المتعلقة بالهيستوباثولوجيا أو مع نموذج التشخيص">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record non-TNM staging scores for colorectal cancer.">
+            keywords = <"staging", "cancer", "tumour", "histo-pathology", "malignancy">
+            use = <"Use in conjunction with a suite of histo-pathology related archetypes or with a Diagnosis archetype.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Tumour - Colorectal staging (non-TNM)
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Dukes Score
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9000]}    -- Dukes Score (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- ACPS Score
+                value matches {
+                    DV_CODED_TEXT[at9004] matches {
+                        defining_code matches {[ac9001]}    -- ACPS Score (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0016] occurrences matches {0..1} matches {    -- ACPS Concord variant
+                value matches {
+                    DV_CODED_TEXT[at9005] matches {
+                        defining_code matches {[ac9002]}    -- ACPS Concord variant (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Tumour - Colorectal staging (non-TNM)">
+                description = <"Non-TNM staging scores for colorectal cancer.">
+            >
+            ["at0001"] = <
+                text = <"Dukes Score">
+                description = <"Dukes classification for colorectal cancer (Dukes and Bussey modification).">
+            >
+            ["at0002"] = <
+                text = <"ACPS Score">
+                description = <"Australian clinicopathological staging (ACPS) system.">
+            >
+            ["at0007"] = <
+                text = <"Dukes A">
+                description = <"Tumour limited to the wall of the bowel, lymph nodes negative.">
+            >
+            ["at0008"] = <
+                text = <"Dukes B">
+                description = <"Tumour spread beyond muscularis propria, lymph nodes negative.">
+            >
+            ["at0009"] = <
+                text = <"Dukes C1">
+                description = <"Lymph nodes positive but highest node spared.">
+            >
+            ["at0010"] = <
+                text = <"Dukes C2">
+                description = <"Highest lymph node involved.">
+            >
+            ["at0011"] = <
+                text = <"Stage A0">
+                description = <"Mucosa involved.">
+            >
+            ["at0012"] = <
+                text = <"Stage A">
+                description = <"Submucosa involved.">
+            >
+            ["at0013"] = <
+                text = <"Stage B">
+                description = <"Muscularis propria involved.">
+            >
+            ["at0014"] = <
+                text = <"Stage C">
+                description = <"Local nodes involved.">
+            >
+            ["at0015"] = <
+                text = <"Stage D">
+                description = <"Tumour transected (histological).">
+            >
+            ["at0016"] = <
+                text = <"ACPS Concord variant">
+                description = <"Concord substage variant of Australian clinicopathological staging (ACPS) system.">
+            >
+            ["at0017"] = <
+                text = <"Stage A1">
+                description = <"Mucosa involved.">
+            >
+            ["at0018"] = <
+                text = <"Stage A2">
+                description = <"Submucosa involved.">
+            >
+            ["at0019"] = <
+                text = <"Stage A3">
+                description = <"Muscularis propria involved.">
+            >
+            ["at0020"] = <
+                text = <"Stage B1">
+                description = <"Involvement beyond muscularis propria.">
+            >
+            ["at0021"] = <
+                text = <"Stage B2">
+                description = <"Involvement of free serosal surface.">
+            >
+            ["at0022"] = <
+                text = <"Stage C1">
+                description = <"Local nodes involved.">
+            >
+            ["at0023"] = <
+                text = <"Stage C2">
+                description = <"Apical nodes involved.">
+            >
+            ["at0024"] = <
+                text = <"Stage D1">
+                description = <"Tumour transected (histological).">
+            >
+            ["at0025"] = <
+                text = <"Stage D2">
+                description = <"Distant metastases (clinical or histological).">
+            >
+            ["ac9000"] = <
+                text = <"Dukes Score (synthesised)">
+                description = <"Dukes classification for colorectal cancer (Dukes and Bussey modification). (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"ACPS Score (synthesised)">
+                description = <"Australian clinicopathological staging (ACPS) system. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"ACPS Concord variant (synthesised)">
+                description = <"Concord substage variant of Australian clinicopathological staging (ACPS) system. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"الورم - تحديد مرحلة سرطان القولون و المستقيم (بطريقة مختلفة عن تصنيف (و ل م))">
+                description = <"تحديد أحراز مرحلة سرطان القولون و المستقيم بطريقة مختلفة عن تصنيف (و ل م)">
+            >
+            ["at0001"] = <
+                text = <"حرز ديوكس">
+                description = <"تصنيف ديوكس لسرطان القولون و المستقيم (تعديل ديوكس و باسي)">
+            >
+            ["at0002"] = <
+                text = <"حرز النظام الأسترالي لتحديد المرحلة السريرية و الباثولوجية">
+                description = <"النظام الأسترالي لتحديد المرحلة السريرية الباثولوجية ">
+            >
+            ["at0007"] = <
+                text = <"ديوكس أ">
+                description = <"الورم محدود في جدار الأمعاء, و لم يصل إلى العقد الليمفاوية">
+            >
+            ["at0008"] = <
+                text = <"ديوكس ب">
+                description = <"انتشر الورم فيما يتجاوز النسيج العضلي المخصوص, و لم يصل إلى العقد الليمفاوية">
+            >
+            ["at0009"] = <
+                text = <"ديوكس ج 1">
+                description = <"العقد الليمفاوية بها ورم, و لكن العقد المرتفعة في الجسم خالية من الورم">
+            >
+            ["at0010"] = <
+                text = <"ديوكس ج 2">
+                description = <"حدث اكتناف للعقد الليمفاوية العلوية">
+            >
+            ["at0011"] = <
+                text = <"المرحلة أ 0">
+                description = <"تم اكتناف النسيج المخاطي">
+            >
+            ["at0012"] = <
+                text = <"المرحلة أ">
+                description = <"تم اكتناف النسيج تحت المخاطي">
+            >
+            ["at0013"] = <
+                text = <"المرحلة ب">
+                description = <"تم اكتناف النسيج العضلي المخصوص">
+            >
+            ["at0014"] = <
+                text = <"المرحلة ج">
+                description = <"تم اكتناف العقد الليمفاوية الموضعية">
+            >
+            ["at0015"] = <
+                text = <"المرحلة د">
+                description = <"الورم مقطوع - هيستولوجي">
+            >
+            ["at0016"] = <
+                text = <"متغير التوافق المتعلق بالنظام الأسترالي لتحديد المرحلة السريرية و الباثولوجية">
+                description = <"متغير التوافق المتعلق بالنظام الأسترالي لتحديد(تحت المرحلة) السريرية و الباثولوجية
+">
+            >
+            ["at0017"] = <
+                text = <"المرحلة 1 أ">
+                description = <"تم اكتناف الغشاء المخاطي">
+            >
+            ["at0018"] = <
+                text = <"المرحلة 2 أ">
+                description = <"تم اكتناف الغشاء تحت المخاطي">
+            >
+            ["at0019"] = <
+                text = <"المرحلة 3 أ">
+                description = <"تم اكتناف النسيج العضلي المخصوص">
+            >
+            ["at0020"] = <
+                text = <"المرحلة ب 1">
+                description = <"الاكتناف يتجاوز النسيج العضلي المخصوص">
+            >
+            ["at0021"] = <
+                text = <"المرحلة ب 2">
+                description = <"اكتناف السطح المَصْلي الحر ">
+            >
+            ["at0022"] = <
+                text = <"المرحلة ج 1">
+                description = <"تم اكتناف العقد الليمفاوية">
+            >
+            ["at0023"] = <
+                text = <"المرحلة ج 2">
+                description = <"تم اكتناف العقد القِمِّية">
+            >
+            ["at0024"] = <
+                text = <"المرحلة د 1">
+                description = <"تم قطع الورم (هيستولوجي)">
+            >
+            ["at0025"] = <
+                text = <"المرحلة د 2">
+                description = <"توجد نقائل بعيدة (سريرية أو هيستولوجية)">
+            >
+            ["ac9000"] = <
+                text = <"حرز ديوكس (synthesised)">
+                description = <"تصنيف ديوكس لسرطان القولون و المستقيم (تعديل ديوكس و باسي) (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"حرز النظام الأسترالي لتحديد المرحلة السريرية و الباثولوجية (synthesised)">
+                description = <"النظام الأسترالي لتحديد المرحلة السريرية الباثولوجية  (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"متغير التوافق المتعلق بالنظام الأسترالي لتحديد المرحلة السريرية و الباثولوجية (synthesised)">
+                description = <"متغير التوافق المتعلق بالنظام الأسترالي لتحديد(تحت المرحلة) السريرية و الباثولوجية
+ (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0017", "at0018", "at0019", "at0020", "at0021", "at0022", "at0023", "at0024", "at0025">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0011", "at0012", "at0013", "at0014", "at0015">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0007", "at0008", "at0009", "at0010">
+        >
+    >

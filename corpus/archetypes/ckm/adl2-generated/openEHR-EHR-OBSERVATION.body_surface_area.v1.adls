@@ -1,0 +1,576 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=47c86b03-8289-497c-8203-5234618614ad; build_uid=6e3a6a82-ca93-42b9-a7bb-1d06aa6e994a)
+    openEHR-EHR-OBSERVATION.body_surface_area.v1.1.4
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Aljoscha Kindermann">
+                ["organisation"] = <"University Hospital of Heidelberg">
+                ["email"] = <"aljoscha.kindermann@med.uni-heidelberg.de">
+            >
+            accreditation = <"Data Steward HiGHmed Use Case Cardiology">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            author = <
+                ["name"] = <"Vesa Peltola">
+                ["organisation"] = <"Tieto Finland">
+                ["email"] = <"vesa.peltola@tieto.com">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand">
+                ["organisation"] = <"Haukeland Universitetssjukehus">
+                ["email"] = <"john.tore.valand@helse-bergen.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Cailin Lowry">
+        ["organisation"] = <"The Chris O'Brien Lifehouse at RPA">
+        ["email"] = <"cailin.lowry@lifehouserpa.org.au">
+        ["date"] = <"2012-12-07">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Tomas Alme, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway", "Koray Atalag, University of Auckland, New Zealand", "Heidi Aursand, Oslo universitetssykehus, Norway", "Gustavo Bacelar-Silva, Healthcare Designs, Brazil (openEHR Editor)", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Malin Berg, DIPS ASA, Norway", "Lars Bitsch-Larsen, Haukeland University hospital, Norway", "Laila Bruun, Oslo universitetssykehus HF, Norway", "Margaret Campbell, Queensland Health, Australia", "Rong Chen, Cambio Healthcare Systems, Sweden", "Lisbeth Dahlhaug, Helse Midt - Norge IT, Norway", "Einar Fosse, National Centre for Integrated Care and Telemedicine, Norway", "Sebastian Garde, Ocean Informatics, Germany", "Christian Ghan, Lifehouse, Australia", "Heather Grain, Llewelyn Grain Informatics, Australia", "Sam Heard, Ocean Informatics, Australia", "Hilde Hollås, DIPS AS, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Karlsen, DIPS ASA, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Thomas Kilvær, Universitetssykehuset Nord Norge, Norway", "Shinji Kobayashi, Kyoto University, Japan", "Harmony Kosola, Alberta Health Services, Canada", "Liv Laugen, Oslo universitetssykehus, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Siv Marie Lien, DIPS ASA, Norway", "Ole Martin Sand, DIPS ASA, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Lars Ivar Mehlum, Nasjonal IKT HF, Norway", "Bjoern Naess, DIPS ASA, Norway", "Andrej Orel, Marand d.o.o., Slovenia", "Jussara Rotzsch, Hospital Alemão Oswaldo Cruz, Brazil", "Elisabeth Sagafos, Sykehuset Telemark HF, Norway", "Gro-Hilde Severinsen, Norwegian center for ehealthresearch, Norway", "Line Silsand, Universitetssykehuset i Nord-Norge, Norway", "Trine Strand, Oslo Universitetssykehus (OUS), Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Micaela Thierley, Helse Bergen/Haraldsplass sykehus, Norway", "Rowan Thomas, St. Vincent's Hospital Melbourne, Australia", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Richard Townley-O'Neill, Australian Digital Health Agency, Australia", "Gro-Hilde Ulriksen, Norwegian center for ehealthresearch, Norway", "Dennis Valk, Code24 BV, Netherlands">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.
+">
+    references = <
+        ["1"] = <"Wikipedia contributors. Body surface area. Wikipedia, The Free Encyclopedia. April 3, 2018. Available at: https://en.wikipedia.org/wiki/Body_surface_area. Accessed April 18, 2018.">
+        ["2"] = <"Mosteller RD: Simplified Calculation of Body Surface Area. N Engl J Med 1987 Oct 22;317(17):1098 (letter)">
+        ["3"] = <"DuBois D; DuBois EF: A formula to estimate the approximate surface area if height and weight be known. Arch Int Med 1916 17:863-71.">
+        ["4"] = <"Haycock G.B., Schwartz G.J.,Wisotsky D.H.  Geometric method for measuring body surface area: A height weight formula validated in infants, children and adults.   The Journal of Pediatrics 1978  93:1:62-66">
+        ["5"] = <"Gehan EA, George SL, Estimation of human body surface area from height and weight.   Cancer Chemother Rep 1970 54:225-35.">
+        ["6"] = <"Boyd E, The growth of the surface area of the human body. Minneapolis: university of Minnesota Press, 1935.  (Formula from: http://www.ispub.com/journals/IJA/Vol2N2/bsa.htm )">
+        ["7"] = <"Lam TK, Leung DT: More on simplified calculation of body-surface area. N Engl J Med 1988 Apr 28;318(17):1130, (letter).">
+        ["8"] = <"Wang Y, Moss J, Thisted R. Predictors of body surface area. J Clin Anesth. 1992; 4(1):4-10.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B6177F5A0C830BE41AA01450D8805282">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Repräsentation der gemessenen oder berechneten Oberfläche des menschlichen Körpers.">
+            keywords = <"Körper", "Oberfläche", "Fläche", "Körperoberfläche", "KOF", "BSA">
+            use = <"Zur Repräsentation der gemessenen oder berechneten Oberfläche des menschlichen Körpers.
+
+KOF bzw. BSA kann zur Unterstützung der klinischen Entscheidungsfindung verwendet werden, einschließlich, aber nicht beschränkt auf:
+- die Bestimmung der Dosierung der Chemotherapie und anderer Medikamente mit einem engen therapeutischen Index;
+- der Berechnung des Herzindex; und
+- der Berechnung des intravenösen Flüssigkeitsbedarfs.">
+            misuse = <"Nicht zur Repräsentation des prozentualen Anteils der Körperoberfläche, der an Verbrennungen oder anderen Hautschäden usw. beteiligt ist. Diese Informationen sollten in separaten spezifischen Archetypen zur Beurteilung von Verbrennungen erfasst werden.
+
+Nicht zu verwenden, um die angepasste Körperoberflächenfläche aufzuzeichnen, z.B. eine Berechnung der KOF/BSA einer Person mit Gliedmaßenamputation, basierend auf anderen Körperteilmessungen und einem Algorithmus - verwenden Sie OBSERVATION.body_surface_area-adjusted.">
+        >
+        ["fi"] = <
+            language = <[ISO_639-1::fi]>
+            purpose = <"*To record the measured or calculated surface area of a human body.(en)">
+            keywords = <"*body(en)", "*surface(en)", "*area(en)", "*BSA(en)", "*surface area(en)">
+            use = <"*Use to record the measured or calculated surface area of a human body. 
+
+BSA can be used to support clinical decision-making, including but not limited to:
+- determine the dosage of chemotherapy and other drugs with a narrow therapeutic index; 
+- calculation of the cardiac index; and
+- calculation of intravenous fluid requirements.(en)">
+            misuse = <"*Not to be used to record the percentage of body surface area involvement in burns or other skin damage etc. This information should be carried in separate specific archetypes related to burns assessment.
+
+Not to be used to record the adjusted Body surface area eg a calculation of the BSA of a person with limb amputation, based on other body part measurements and an algorithm - use OBSERVATION.body_surface_area-adjusted.(en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere måling eller beregning av en persons kroppsoverflate.">
+            keywords = <"kropp", "overflate", "areal", "BSA">
+            use = <"Brukes for å registrere måling eller beregning av en persons kroppsoverflate.
+
+Kroppsoverflaten kan brukes for å understøtte kliniske beslutninger som for eksempel:
+- å beregne riktig dose av et legemiddel som har smal terapeutisk indeks som f.eks kjemoterapeutiske medikamenter 
+- beregning av minuttvolum per overflate (Cardiac Index)
+- beregning av behov for intravenøse væsker">
+            misuse = <"Brukes ikke for å registrere prosentandel av kroppsoverflaten som er påvirket av brannskade eller andre skader i huden. Dette registreres i egne arketyper som er relatert til vurdering av brannskader eller sår.
+
+Brukes ikke for å registrere justert kroppsoverflate, for eksempel en utregning av kroppsoverflate hos en person som har amputert en kroppsdel. Bruk arketypen OBSERVATION.body_surface_area-adjusted.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the measured or calculated surface area of a human body.">
+            keywords = <"body", "surface", "area", "BSA", "surface area">
+            use = <"Use to record the measured or calculated surface area of a human body. 
+
+BSA can be used to support clinical decision-making, including but not limited to:
+- determine the dosage of chemotherapy and other drugs with a narrow therapeutic index; 
+- calculation of the cardiac index; and
+- calculation of intravenous fluid requirements.">
+            misuse = <"Not to be used to record the percentage of body surface area involvement in burns or other skin damage etc. This information should be carried in separate specific archetypes related to burns assessment.
+
+Not to be used to record the adjusted Body surface area eg a calculation of the BSA of a person with limb amputation, based on other body part measurements and an algorithm - use OBSERVATION.body_surface_area-adjusted.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Body surface area
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {1} matches {    -- Body Surface Area
+                                        value matches {
+                                            DV_QUANTITY[at9001] matches {
+                                                property matches {[at9000]}    -- Area
+                                                magnitude matches {|>=0.0|}
+                                                units matches {"m2"}
+                                                precision matches {2}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9004]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0020] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9007]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0005] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Method
+                        value matches {
+                            DV_CODED_TEXT[at9005] matches {
+                                defining_code matches {[ac9002]}    -- Method (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Formula
+                        value matches {
+                            DV_CODED_TEXT[at9006] matches {
+                                defining_code matches {[ac9003]}    -- Formula (synthesised)
+                            }
+                            DV_TEXT[at9002]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0008] matches {    -- Device
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0007] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Körperoberfläche">
+                description = <"Die gemessene oder berechnete Oberfläche des menschlichen Körpers.">
+                comment = <"Wird auch als BSA oder KOF bezeichnet.">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Standardwert, ein undefinierter/s Zeitpunkt oder Intervallereignis, das explizit im Template oder zur Laufzeit der Anwendung definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Körperoberfläche">
+                description = <"Die gemessene oder berechnete Oberfläche des menschlichen Körpers.">
+                comment = <"Zum Beispiel: \"1,81 m2\"">
+            >
+            ["at0006"] = <
+                text = <"Formel">
+                description = <"Formel, die verwendet wurde um die KOF bzw. BSA zu berechnen.">
+                comment = <"Zum Beispiel: Mosteller, DuBois und DuBois, Haycock und Boyd.">
+            >
+            ["at0007"] = <
+                text = <"Erweiterungen">
+                description = <"Zusätzliche Informationen, die zur Erfassung lokaler Inhalte oder zur Anpassung an andere Referenzmodelle/ Formalismen erforderlich sind.">
+                comment = <"Zum Beispiel: Lokale Informationsanforderungen oder zusätzliche Metadaten, um Verknüpfungen mit FHIR oder CIMI Äquivalenten herzustellen.">
+            >
+            ["at0008"] = <
+                text = <"Gerät">
+                description = <"Das Gerät, das für die Messung oder Abschätzung der Körperoberfläche verwendet wurde.">
+            >
+            ["at0009"] = <
+                text = <"Methode">
+                description = <"Die Methode, mit der die Körperoberfläche im klinischen System erfasst wurde.">
+            >
+            ["at0010"] = <
+                text = <"Systemeingabe">
+                description = <"Die Fläche wurde automatisch durch das klinische System und ohne manuelles Eingreifen des Klinikers erfasst.">
+            >
+            ["at0011"] = <
+                text = <"Manueller Eintrag">
+                description = <"Die Fläche wurde manuell durch den Kliniker erfasst.">
+            >
+            ["at0012"] = <
+                text = <"DuBois und DuBois">
+                description = <"Die Formel nach DuBois und DuBois (DuBois-Formel) wurde verwendet um die Körperoberfläche zu berechnen.">
+            >
+            ["at0013"] = <
+                text = <"Mosteller">
+                description = <"Die Mosteller-Formel wurde verwendet, um die Körperoberfläche zu berechnen.">
+            >
+            ["at0014"] = <
+                text = <"Haycock">
+                description = <"Die Haycock-Formel wurde verwendet, um die Körperoberfläche zu berechnen.">
+            >
+            ["at0015"] = <
+                text = <"Gehan und George">
+                description = <"Die Gehan-George-Formel wurde verwendet, um die Körperoberfläche zu berechnen.">
+            >
+            ["at0016"] = <
+                text = <"Boyd">
+                description = <"Die Boyd-Formel wurde verwendet, um die Körperoberfläche zu berechnen.">
+            >
+            ["at0017"] = <
+                text = <"Fujimoto">
+                description = <"Die Fujimoto-Formel wurde verwendet, um die Körperoberfläche zu berechnen.">
+            >
+            ["at0018"] = <
+                text = <"Takihara">
+                description = <"Die Takihara-Formel wurde verwendet, um die Körperoberfläche zu berechnen.">
+            >
+            ["at0019"] = <
+                text = <"Kommentar">
+                description = <"Sonstige Informationen über die Messung, die in keinem anderen Feld erfasst wurden.">
+            >
+            ["at0021"] = <
+                text = <"Störfaktoren">
+                description = <"Aufzeichnung aller Probleme oder Faktoren, die sich auf die Messung oder Berechnung der Körperoberfläche auswirken können.">
+                comment = <"Zum Beispiel: Feststellung von Gliedmaßenamputationen; oder Hautkrankheiten.">
+            >
+            ["at9000"] = <
+                text = <"* Area (en)">
+                description = <"* Area (en)">
+            >
+            ["ac9002"] = <
+                text = <"Methode (synthesised)">
+                description = <"Die Methode, mit der die Körperoberfläche im klinischen System erfasst wurde. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Formel (synthesised)">
+                description = <"Formel, die verwendet wurde um die KOF bzw. BSA zu berechnen. (synthesised)">
+            >
+        >
+        ["fi"] = <
+            ["at0000"] = <
+                text = <"Kehon pinta-ala">
+                description = <"Mitattu tai laskettu ihmiskehon pinta-ala.">
+                comment = <"May also be referred to as BSA.">
+            >
+            ["at0002"] = <
+                text = <"Mikä tahansa tapahtuma">
+                description = <"Oletusarvoinen, määrittämättömänä ajanhetkenä tai ajanjaksolla ilmenevä tapahtuma, joka voi olla määritetty tarkasti jossakin mallissa tai suorituksen aikana.">
+            >
+            ["at0004"] = <
+                text = <"Kehon pinta-ala">
+                description = <"Mitattu tai laskettu ihmiskehon pinta-ala.">
+                comment = <"For example: '1.81 m2'">
+            >
+            ["at0006"] = <
+                text = <"Kaava">
+                description = <"Kehon pinta-alan laskennassa käytettävä kaava.">
+                comment = <"For example: Mosteller, DuBois and DuBois, Haycock and Boyd.">
+            >
+            ["at0007"] = <
+                text = <"Laajennus">
+                description = <"Lisätiedot, joita tarvitaan paikallisen sisällön kirjaamiseksi tai yhtenäistämiseksi muiden viitemallien tai formalismien kanssa.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0008"] = <
+                text = <"Laite">
+                description = <"Laite, jolla kehon pinta-ala mitataan tai arvioidaan.">
+            >
+            ["at0009"] = <
+                text = <"Menetelmä">
+                description = <"Menetelmä, jolla kehon pinta-ala kirjattiin kliiniseen järjestelmään.">
+            >
+            ["at0010"] = <
+                text = <"Järjestelmään kirjaaminen">
+                description = <"Kliininen järjestelmä kirjasi pinta-alan automaattisesti ilman kliinikon käsin tekemiä toimia.">
+            >
+            ["at0011"] = <
+                text = <"Käsinkirjaus">
+                description = <"Kliinikko kirjasi pinta-alan käsin.">
+            >
+            ["at0012"] = <
+                text = <"Dubois ja Dubois">
+                description = <"Kehon pinta-ala lasketaan Dubois’n ja Dubois’n kaavalla.">
+            >
+            ["at0013"] = <
+                text = <"Mosteller">
+                description = <"Kehon pinta-ala lasketaan Mostellerin kaavalla.">
+            >
+            ["at0014"] = <
+                text = <"Haycock">
+                description = <"Kehon pinta-ala lasketaan Haycockin kaavalla.">
+            >
+            ["at0015"] = <
+                text = <"Gehan ja George">
+                description = <"Kehon pinta-ala lasketaan Gehanin ja Georgen kaavalla.">
+            >
+            ["at0016"] = <
+                text = <"Boyd">
+                description = <"Kehon pinta-ala lasketaan Boydin kaavalla.">
+            >
+            ["at0017"] = <
+                text = <"Fujimoto">
+                description = <"Kehon pinta-ala lasketaan Fujimoton kaavalla.">
+            >
+            ["at0018"] = <
+                text = <"Takihara">
+                description = <"Kehon pinta-ala lasketaan Takiharan kaavalla.">
+            >
+            ["at0019"] = <
+                text = <"Kommentti">
+                description = <"Mittauksen kertomusmuodossa olevat lisätiedot, joita ei voida ilmoittaa muissa kentissä.">
+            >
+            ["at0021"] = <
+                text = <"Sekoittavat tekijät">
+                description = <"Kirjaus ongelmista tai tekijöistä, jotka saattavat vaikuttaa kehon pinta-alan mittaukseen tai laskentaan.">
+                comment = <"For example: noting limb amputation; or skin diseases.">
+            >
+            ["at9000"] = <
+                text = <"* Area (en)">
+                description = <"* Area (en)">
+            >
+            ["ac9002"] = <
+                text = <"Menetelmä (synthesised)">
+                description = <"Menetelmä, jolla kehon pinta-ala kirjattiin kliiniseen järjestelmään. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Kaava (synthesised)">
+                description = <"Kehon pinta-alan laskennassa käytettävä kaava. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Kroppsoverflate">
+                description = <"Måling eller beregning av en persons kroppsoverflate.">
+                comment = <"Refereres også til som BSA (body surface area).">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i en templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Kroppsoverflate">
+                description = <"Et individs målte eller beregnede kroppsoverflate.">
+                comment = <"For eksempel: \"1,81 m²\".">
+            >
+            ["at0006"] = <
+                text = <"Formel">
+                description = <"Formelen som er benyttet for å regne ut kroppsoverflaten. En rekke ulike formler er etablert.">
+                comment = <"For eksempel: Mosteller, DuBois og DuBois, Haycock og Boyd.">
+            >
+            ["at0007"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+            ["at0008"] = <
+                text = <"Medisinsk utstyr">
+                description = <"Utstyret som ble brukt for å estimere kroppsoverflaten.">
+            >
+            ["at0009"] = <
+                text = <"Metode">
+                description = <"Metoden man har brukt for å estimere kroppsoverflate.">
+            >
+            ["at0010"] = <
+                text = <"Automatisk registrering">
+                description = <"Målingen ble beregnet og registrert automatisk av applikasjonen, uten noen manuell handling fra en kliniker.">
+            >
+            ["at0011"] = <
+                text = <"Manuell registrering">
+                description = <"Målingen ble registrert manuelt av en kliniker.">
+            >
+            ["at0012"] = <
+                text = <"Dubois og Dubois">
+                description = <"Dubois og Dubois-formelen ble benyttet for å regne ut kroppsoverflaten.">
+            >
+            ["at0013"] = <
+                text = <"Mosteller">
+                description = <"Mosteller-formelen ble benyttet for å regne ut kroppsoverflaten.">
+            >
+            ["at0014"] = <
+                text = <"Haycock">
+                description = <"Haycock-formelen ble benyttet for å regne ut kroppsoverflaten.">
+            >
+            ["at0015"] = <
+                text = <"Gehan og George">
+                description = <"Gehan og George-formelen ble benyttet for å regne ut kroppsoverflaten.">
+            >
+            ["at0016"] = <
+                text = <"Boyd">
+                description = <"Boyd-formelen ble benyttet for å regne ut kroppsoverflaten.">
+            >
+            ["at0017"] = <
+                text = <"Fujimoto">
+                description = <"Fujimoto-formelen ble benyttet for å regne ut kroppsoverflaten.">
+            >
+            ["at0018"] = <
+                text = <"Takihara">
+                description = <"Takihara-formelen ble benyttet for å regne ut kroppsoverflaten.">
+            >
+            ["at0019"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om målingen som ikke er registrert i andre felt.">
+            >
+            ["at0021"] = <
+                text = <"Konfunderende faktorer">
+                description = <"Problemer eller faktorer som kan ha innvirkning på målingen eller beregningen av kroppsoverflate.">
+                comment = <"For eksempel: amputasjoner, eller hudsykdommer.">
+            >
+            ["at9000"] = <
+                text = <"* Area (en)">
+                description = <"* Area (en)">
+            >
+            ["ac9002"] = <
+                text = <"Metode (synthesised)">
+                description = <"Metoden man har brukt for å estimere kroppsoverflate. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Formel (synthesised)">
+                description = <"Formelen som er benyttet for å regne ut kroppsoverflaten. En rekke ulike formler er etablert. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Body surface area">
+                description = <"The measured or calculated surface area of a human body.">
+                comment = <"May also be referred to as BSA.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Body Surface Area">
+                description = <"The measured or calculated surface area of a human body.">
+                comment = <"For example: '1.81 m2'">
+            >
+            ["at0006"] = <
+                text = <"Formula">
+                description = <"Formula used to calculate the BSA.">
+                comment = <"For example: Mosteller, DuBois and DuBois, Haycock and Boyd.">
+            >
+            ["at0007"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0008"] = <
+                text = <"Device">
+                description = <"The device used to measure or estimate the body surface area.">
+            >
+            ["at0009"] = <
+                text = <"Method">
+                description = <"The method by which the body surface area was entered into the clinical system.">
+            >
+            ["at0010"] = <
+                text = <"System entry">
+                description = <"The Area was entered automatically by the clinical system and without manual intervention of the clinician.">
+            >
+            ["at0011"] = <
+                text = <"Manual entry">
+                description = <"The Area was entered manually by the clinician.">
+            >
+            ["at0012"] = <
+                text = <"Dubois and Dubois">
+                description = <"The Dubois and Dubois formula was used to calculate the body surface area.">
+            >
+            ["at0013"] = <
+                text = <"Mosteller">
+                description = <"The Mosteller formula was used to calculate the body surface area.">
+            >
+            ["at0014"] = <
+                text = <"Haycock">
+                description = <"The Haycock formula was used to calculate the body surface area.">
+            >
+            ["at0015"] = <
+                text = <"Gehan and George">
+                description = <"The Gehan and George formula was used to calculate the body surface area.">
+            >
+            ["at0016"] = <
+                text = <"Boyd">
+                description = <"The Boyd formula was used to calculate the body surface area.">
+            >
+            ["at0017"] = <
+                text = <"Fujimoto">
+                description = <"The Fujimoto formula was used to calculate the body surface area.">
+            >
+            ["at0018"] = <
+                text = <"Takihara">
+                description = <"The Takihara formula was used to calculate the body surface area.">
+            >
+            ["at0019"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the measurement, not captured in other fields.">
+            >
+            ["at0021"] = <
+                text = <"Confounding factors">
+                description = <"Record of any issues or factors that may impact on the measurement or calculation of body surface area.">
+                comment = <"For example: noting limb amputation; or skin diseases.">
+            >
+            ["at9000"] = <
+                text = <"Area">
+                description = <"Area">
+            >
+            ["ac9002"] = <
+                text = <"Method (synthesised)">
+                description = <"The method by which the body surface area was entered into the clinical system. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Formula (synthesised)">
+                description = <"Formula used to calculate the BSA. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/335>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0010", "at0011">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0012", "at0013", "at0014", "at0015", "at0016", "at0017", "at0018">
+        >
+    >

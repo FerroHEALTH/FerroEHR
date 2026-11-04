@@ -1,0 +1,161 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=a6a436f3-04ca-4644-81a3-b630e6b9b0c0; build_uid=b97fb4aa-292b-45e2-beb7-9e6fac17e940)
+    openEHR-EHR-CLUSTER.outbreak_identification.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Dr Ian McNicoll">
+        ["organisation"] = <"Ocean Informatics, United Kingdom">
+        ["email"] = <"ian.mcnicoll@oceaninformatics.com">
+        ["date"] = <"08/12/2009">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"IHE, Laboratory Technical Framework, Volume 3 Content [Internet]. 2008;Available from: http://www.ihe.net/Technical_Framework/upload/ihe_lab_TF_rel2_1-Vol-3_FT_2008-08-08.pdf">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"310802F429B94ABC4F007C90FEA000BC">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record Outbreak identification details for public health purposes.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"لتسجيل تفاصيل التعرف على الفاشية لأغراض الصحة العامة">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Outbreak identification
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Outbreak identifier
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Date outbreak identified
+                value matches {
+                    DV_DATE_TIME[at9002]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Status
+                value matches {
+                    DV_CODED_TEXT[at9003] matches {
+                        defining_code matches {[ac9000]}    -- Status (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Outbreak
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Outbreak identification">
+                description = <"To record Outbreak identification details for public health purposes.">
+            >
+            ["at0001"] = <
+                text = <"Outbreak identifier">
+                description = <"*">
+            >
+            ["at0002"] = <
+                text = <"Date outbreak identified">
+                description = <"The date that the outbreak was identified.">
+            >
+            ["at0003"] = <
+                text = <"Status">
+                description = <"The status of the outbreak association with the subject.  A status of completed means the patient has been associated with the outbreak. 
+A status of aborted means the patient was associated with the outbreak in error.">
+            >
+            ["at0004"] = <
+                text = <"Completed">
+                description = <"The case has been associated with the given case identifier.">
+            >
+            ["at0005"] = <
+                text = <"Aborted">
+                description = <"The subject was associated with the case identifier in error.">
+            >
+            ["at0006"] = <
+                text = <"Outbreak">
+                description = <"Text or coded description of the outbreak identified e.g. Salmonella.">
+            >
+            ["ac9000"] = <
+                text = <"Status (synthesised)">
+                description = <"The status of the outbreak association with the subject.  A status of completed means the patient has been associated with the outbreak. 
+A status of aborted means the patient was associated with the outbreak in error. (synthesised)">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"تعريف الفاشية">
+                description = <"لتسجيل تفاصيل التعرف على الفاشية لأغراض الصحة العامة">
+            >
+            ["at0001"] = <
+                text = <"العنصر التعريفي الفريد للفاشية">
+                description = <"*">
+            >
+            ["at0002"] = <
+                text = <"تاريخ التعرف على الفاشية">
+                description = <"التاريخ الذي تم فيه التعرف على الفاشية">
+            >
+            ["at0003"] = <
+                text = <"الحالة">
+                description = <"حالة تعلق الفاشية مع الشخص. 
+إذا كانت الحالة (مكتملة) فإن ذلك يعني أن المريض متعلق بالفاشية.
+إذا كانت الحالة (توقف فجأة) يعني أن المريض متعلق بالفاشية و لكن حدث خطأ مفاجئ.">
+            >
+            ["at0004"] = <
+                text = <"مكتمل">
+                description = <"الحالة متعلقة بالعنصر التعريفي الذي تم إعطاؤه لها">
+            >
+            ["at0005"] = <
+                text = <"توقف فجأة">
+                description = <"تم تعلق الشخص مع العنصر التعريفي للحالة (الذي تم فيه خطأ ما)">
+            >
+            ["at0006"] = <
+                text = <"الفاشية">
+                description = <"وصف نصي أو مُرمَز للفاشية التي تم التعرف عليها, مثلا: السالمونيلا.">
+            >
+            ["ac9000"] = <
+                text = <"الحالة (synthesised)">
+                description = <"حالة تعلق الفاشية مع الشخص. 
+إذا كانت الحالة (مكتملة) فإن ذلك يعني أن المريض متعلق بالفاشية.
+إذا كانت الحالة (توقف فجأة) يعني أن المريض متعلق بالفاشية و لكن حدث خطأ مفاجئ. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0004", "at0005">
+        >
+    >

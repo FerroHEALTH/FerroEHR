@@ -1,0 +1,239 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=c9f5e9cd-f89c-44cd-b9d6-421d6a181791; build_uid=f71c68b4-0dca-4b62-b868-a1e649a3465d)
+    openEHR-EHR-CLUSTER.imaging_exam-placenta.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-CLUSTER.imaging_exam.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Peter Fedorcsak, Vebjørn Arntzen">
+                ["organisation"] = <"University of Oslo, Oslo University Hospital">
+                ["email"] = <"peterfe@uio.no, varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-11-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Marit Alice Venheim, Helse Vest IKT, Norway (Nasjonal IKT redaktør)", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Randi Brendberg, Helse Nord RHF, Norway", "Peter Fedorcsak, University of Oslo, Norway (openEHR Editor)", "Heather Grain, Llewelyn Grain Informatics, Australia", "Anne Helbig, MD PhD, Oslo University Hospital, Norway", "Anca Heyd, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway (Nasjonal IKT redaktør)", "Anjali Kulkarni, Karkinos, India", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Tina Tellum, Oslo Universitetssykehus, Norway", "John Tore Valand, Haukeland Universitetssjukehus, Norway (Nasjonal IKT redaktør)", "Ina Wille, Helse-Vest RHF, Norway">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"FEF372C7B70BFE3BCCC6D632CDAE971D">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To record the findings on radiological examination of a placenta, and their interpretation. (en)">
+            keywords = <"Befund, Ergebnis, Bildgebung, Körper, Organ, System, Struktur, Region, Beobachtung, Diagnostik, Radiologie, Bild", ...>
+            use = <"*Use to record the findings on radiological examination of a placenta, and their interpretation.
+
+The intended scope for this archetype is to eventually record all detailed findings on radiological examination of the placenta using any modality. It is anticipated that further data elements may be added as requirements are identified and confirmed.
+
+This archetype is designed to be nested within the 'Placental findings' SLOT in the CLUSTER.imaging_exam-pregnant_uterus or within other relevant CLUSTER.imaging_exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. If this archetype needs to be extended with further levels of structured findings, additional instances of the CLUSTER.imaging_exam or its specialisations can be nested in the 'Additional details' SLOT. (en)">
+            misuse = <"*Not to be used to record imaging examination findings for any body structure or region other than a placenta. Use other archetypes from the CLUSTER.imaging_exam family for this purpose.
+
+Not to be used to record details related to the overall findings, context or technical details related to a complete imaging examination test result. Use the OBERSERVATION.imaging_exam_result for this purpose. For example, comments on the study quality, differential diagnoses, and overall impression. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"*To record the findings on radiological examination of a placenta, and their interpretation. (en)">
+            use = <"*Use to record the findings on radiological examination of a placenta, and their interpretation.
+
+The intended scope for this archetype is to eventually record all detailed findings on radiological examination of the placenta using any modality. It is anticipated that further data elements may be added as requirements are identified and confirmed.
+
+This archetype is designed to be nested within the 'Placental findings' SLOT in the CLUSTER.imaging_exam-pregnant_uterus or within other relevant CLUSTER.imaging_exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. If this archetype needs to be extended with further levels of structured findings, additional instances of the CLUSTER.imaging_exam or its specialisations can be nested in the 'Additional details' SLOT. (en)">
+            misuse = <"*Not to be used to record imaging examination findings for any body structure or region other than a placenta. Use other archetypes from the CLUSTER.imaging_exam family for this purpose.
+
+Not to be used to record details related to the overall findings, context or technical details related to a complete imaging examination test result. Use the OBERSERVATION.imaging_exam_result for this purpose. For example, comments on the study quality, differential diagnoses, and overall impression. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the findings on radiological examination of a placenta, and their interpretation.">
+            use = <"Use to record the findings on radiological examination of a placenta, and their interpretation.
+
+The intended scope for this archetype is to eventually record all detailed findings on radiological examination of the placenta using any modality. It is anticipated that further data elements may be added as requirements are identified and confirmed.
+
+This archetype is designed to be nested within the 'Placental findings' SLOT in the CLUSTER.imaging_exam-pregnant_uterus or within other relevant CLUSTER.imaging_exam archetypes, but can also be used within other ENTRY or CLUSTER archetypes, where clinically appropriate. If this archetype needs to be extended with further levels of structured findings, additional instances of the CLUSTER.imaging_exam or its specialisations can be nested in the 'Additional details' SLOT.">
+            misuse = <"Not to be used to record imaging examination findings for any body structure or region other than a placenta. Use other archetypes from the CLUSTER.imaging_exam family for this purpose.
+
+Not to be used to record details related to the overall findings, context or technical details related to a complete imaging examination test result. Use the OBERSERVATION.imaging_exam_result for this purpose. For example, comments on the study quality, differential diagnoses, and overall impression.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000.1] matches {    -- Imaging examination of a placenta
+        items matches {
+            ELEMENT[at0001.1] matches {    -- Body structure
+                value matches {
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code matches {[at0.1]}    -- Placenta
+                    }
+                }
+            }
+            ELEMENT[at0002.1] matches {    -- Placental site
+                value matches {
+                    DV_TEXT[at0.9002]
+                }
+            }
+            allow_archetype CLUSTER[at0.3] matches {    -- Umbilical cord findings
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.imaging_exam-umbilical_cord(-[a-zA-Z0-9_]+)*\.v0\..*/}
+            }
+            ELEMENT[at0.2] occurrences matches {0..1} matches {    -- Thickness
+                value matches {
+                    DV_QUANTITY[at0.9003] matches {
+                        property matches {[at0.9000]}    -- Length
+                        [magnitude, units] matches {
+                            [{|0.0..100.0|}, {"mm"}],
+                            [{|0.0..10.0|}, {"cm"}]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000.1"] = <
+                text = <"*Imaging examination of a placenta (en)">
+                description = <"*Findings on radiological examination of a placenta. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"Körperstruktur">
+                description = <"Identifizierung der untersuchten Körperstruktur oder Region.">
+                comment = <"*If the body structure has been fully identified in this 'Body structure' element, then the 'Body site' data element and 'Structured body site' SLOT becomes redundant. (en)">
+            >
+            ["at0.1"] = <
+                text = <"*Placenta (en)">
+                description = <"">
+            >
+            ["at0002.1"] = <
+                text = <"*Placental site (en)">
+                description = <"*Identification of the area of the uterus where the placenta/placental mass is located. (en)">
+            >
+            ["at0003.1"] = <
+                text = <"*Structured placental site (en)">
+                description = <"*Structured details about the area of the uterus where the placenta/placental mass is located. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Thickness (en)">
+                description = <"*Measured thickness of the placenta. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Umbilical cord findings (en)">
+                description = <"*Structured details about a single umbilical cord. (en)">
+            >
+            ["at0.9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0.1"] = <
+                text = <"*Placenta (en)">
+                description = <"">
+            >
+            ["at0000.1"] = <
+                text = <"*Imaging examination of a placenta (en)">
+                description = <"*Findings on radiological examination of a placenta. (en)">
+            >
+            ["at0001.1"] = <
+                text = <"Struktur">
+                description = <"Navn av undersøkt struktur eller område på eller i kroppen.">
+                comment = <"*If the body structure has been fully identified in this 'Body structure' element, then the 'Body site' data element and 'Structured body site' SLOT becomes redundant. (en)">
+            >
+            ["at0002.1"] = <
+                text = <"*Placental site (en)">
+                description = <"*Identification of the area of the uterus where the placenta/placental mass is located. (en)">
+            >
+            ["at0003.1"] = <
+                text = <"*Structured placental site (en)">
+                description = <"*Structured details about the area of the uterus where the placenta/placental mass is located. (en)">
+            >
+            ["at0.2"] = <
+                text = <"*Thickness (en)">
+                description = <"*Measured thickness of the placenta. (en)">
+            >
+            ["at0.3"] = <
+                text = <"*Umbilical cord findings (en)">
+                description = <"*Structured details about a single umbilical cord. (en)">
+            >
+            ["at0.9000"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000.1"] = <
+                text = <"Imaging examination of a placenta">
+                description = <"Findings on radiological examination of a placenta.">
+            >
+            ["at0001.1"] = <
+                text = <"Body structure">
+                description = <"Identification of the body structure or region examined.">
+                comment = <"If the body structure has been fully identified in this 'Body structure' element, then the 'Body site' data element and 'Structured body site' SLOT becomes redundant.">
+            >
+            ["at0.1"] = <
+                text = <"Placenta">
+                description = <"">
+            >
+            ["at0002.1"] = <
+                text = <"Placental site">
+                description = <"Identification of the area of the uterus where the placenta/placental mass is located.">
+            >
+            ["at0003.1"] = <
+                text = <"Structured placental site">
+                description = <"Structured details about the area of the uterus where the placenta/placental mass is located.">
+            >
+            ["at0.2"] = <
+                text = <"Thickness">
+                description = <"Measured thickness of the placenta.">
+            >
+            ["at0.3"] = <
+                text = <"Umbilical cord findings">
+                description = <"Structured details about a single umbilical cord.">
+            >
+            ["at0.9000"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at0.9000"] = <http://openehr.org/id/122>
+        >
+        ["SNOMED-CT"] = <
+            ["at0.1"] = <http://snomed.info/id/78067005>
+        >
+    >

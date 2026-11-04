@@ -1,0 +1,245 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=52c3c495-8736-4e6d-85b9-613095d12883; build_uid=195b369e-9c21-4b82-91d7-853b1b1f5ec0)
+    openEHR-EHR-CLUSTER.exam_tendon_reflexes.v0.0.2-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2018-09-12">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Silje Ljosland Bakke, Nasjonal IKT HF, Norway", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "John Tore Valand, Haukeland Universitetssjukehus, Norway">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"FC7BFEDDD82A0939EDDC8FC78A4DB367">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For recording a description and clinical interpretation of the findings observed during the physical examination of deep tendon reflexes in the limbs.">
+            keywords = <"examination", "nervous system", "reflexes", "tendon">
+            use = <"Use to record a description of the overall findings observed during the physical examination of deep tendon reflexes. This initial draft archetype consists only of the core examination pattern data elements (as per CLUSTER.exam_pattern) and will likely be expanded further over time as specific clinical requirements are identified.
+
+This archetype has been specifically designed to be used in the 'Examination findings' SLOT within the CLUSTER.exam_nervous_system archetype, but can also be used within the OBSERVATION.exam and other OBSERVATION or CLUSTER archetypes, where clinically appropriate.
+
+The CLUSTER.exclusion_exam archetype can be nested within the 'Examination not done' SLOT to optionally record explicit details about the examination not being performed.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.">
+            misuse = <"Not to be used for recording the clinical history about deep tendon reflexes - use specific OBSERVATION and CLUSTER archetypes. For example OBSERVATION.story and CLUSTER.symptom.
+
+Not to be used to record the response to Masseter reflex (Jaw jerk). Use CLUSTER.exam_cranial_nerves for this purpose.
+
+Not to be used to record the respons to the Plantar reflex (Babinski response/sign). Use CLUSTER.exam.foot for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Examination of deep tendon reflexes
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- No abnormality detected
+                value matches {
+                    DV_BOOLEAN[at9002] matches {
+                        value matches {True}
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Clinical description
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            CLUSTER[at0012] occurrences matches {0..1} matches {    -- Per reflex
+                name matches {
+                    DV_CODED_TEXT[at9004] matches {
+                        defining_code matches {[ac9000]}    -- Per reflex (synthesised)
+                    }
+                }
+                items cardinality matches {1..*; unordered} matches {
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Response
+                        value matches {
+                            DV_CODED_TEXT[at9005] matches {
+                                defining_code matches {[ac9001]}    -- Response (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- With recruitment?
+                        value matches {
+                            DV_BOOLEAN[at9006] matches {
+                                value matches {True}
+                            }
+                        }
+                    }
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9007]
+                        }
+                    }
+                }
+            }
+            allow_archetype CLUSTER[at0005] matches {    -- Multimedia representation
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.multimedia(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0006] matches {    -- Clinical interpretation
+                value matches {
+                    DV_TEXT[at9008]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9009]
+                }
+            }
+            allow_archetype CLUSTER[at0008] matches {    -- Examination not done
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Examination of deep tendon reflexes">
+                description = <"Findings observed during the physical examination of deep tendon reflexes in the limbs.">
+            >
+            ["at0002"] = <
+                text = <"No abnormality detected">
+                description = <"Statement that no abnormality was detected (NAD) on physical examination.">
+                comment = <"Record as True if no abnormality was detected on examination. Specific statements about the examination can be included in the 'Clinical Interpretation' data element.">
+            >
+            ["at0003"] = <
+                text = <"Clinical description">
+                description = <"Narrative description of the overall findings observed during the physical examination.">
+            >
+            ["at0005"] = <
+                text = <"Multimedia representation">
+                description = <"Digital image, video or diagram representing the physical examination findings.">
+            >
+            ["at0006"] = <
+                text = <"Clinical interpretation">
+                description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the physical examination findings.">
+            >
+            ["at0007"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the physical examination findings, not captured in other fields.">
+            >
+            ["at0008"] = <
+                text = <"Examination not done">
+                description = <"Details to explicitly record that this examination was not performed.">
+            >
+            ["at0012"] = <
+                text = <"Per reflex">
+                description = <"Details per reflex.">
+            >
+            ["at0013"] = <
+                text = <"Response">
+                description = <"Strength of the reflex response.">
+            >
+            ["at0014"] = <
+                text = <"With recruitment?">
+                description = <"Record as true if muscle recruitment was used to accentuate the response.">
+            >
+            ["at0015"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the reflex response findings, not captured in other fields.">
+            >
+            ["at0017"] = <
+                text = <"Left biceps">
+                description = <"Stretch reflex used to test the status of C5 & C6.">
+            >
+            ["at0018"] = <
+                text = <"Left brachioradialis">
+                description = <"Stretch reflex used to test the status of C6. Also known as Supinator jerk.">
+            >
+            ["at0019"] = <
+                text = <"Left triceps">
+                description = <"Stretch reflex used to test the status of C7.">
+            >
+            ["at0020"] = <
+                text = <"Left patellar">
+                description = <"Stretch reflex used to test the status of L4. Also known as Knee jerk.">
+            >
+            ["at0021"] = <
+                text = <"Left achilles">
+                description = <"Stretch reflex used to test the status of S1.">
+            >
+            ["at0022"] = <
+                text = <"Absent">
+                description = <"Reflex not evident. May be recorded as '0'.">
+            >
+            ["at0023"] = <
+                text = <"Equivocal">
+                description = <"Reflex possibly present. May be recorded as '+/-'.">
+            >
+            ["at0024"] = <
+                text = <"Slight">
+                description = <"Reflex present but less than normal amplitude, or only seen with reinforcement. May be recorded as '+' or '1+'.">
+            >
+            ["at0025"] = <
+                text = <"Normal">
+                description = <"Reflex present at normal amplitude. May be recorded as '++' or '2+'.">
+            >
+            ["at0026"] = <
+                text = <"Brisk">
+                description = <"Reflex present at greater than normal amplitude. May be recorded as '+++' or '3+'.">
+            >
+            ["at0027"] = <
+                text = <"Non-sustained clonus">
+                description = <"Reflex is repeating but not sustained. May be recorded as '++++' or '4+'.">
+            >
+            ["at0028"] = <
+                text = <"Sustained clonus">
+                description = <"Reflex is repeating and sustained. May be recorded as '+++++' or '5+'.">
+            >
+            ["at0029"] = <
+                text = <"Right biceps">
+                description = <"Stretch reflex used to test the status of C5 & C6.">
+            >
+            ["at0030"] = <
+                text = <"Right brachioradialis">
+                description = <"Stretch reflex used to test the status of C6. Also known as Supinator jerk.">
+            >
+            ["at0031"] = <
+                text = <"Right triceps">
+                description = <"Stretch reflex used to test the status of C7.">
+            >
+            ["at0032"] = <
+                text = <"Right patellar">
+                description = <"Stretch reflex used to test the status of L4. Also known as Knee jerk.">
+            >
+            ["at0033"] = <
+                text = <"Right achilles">
+                description = <"Stretch reflex used to test the status of S1.">
+            >
+            ["ac9000"] = <
+                text = <"Per reflex (synthesised)">
+                description = <"Details per reflex. (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Response (synthesised)">
+                description = <"Strength of the reflex response. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0022", "at0023", "at0024", "at0025", "at0026", "at0027", "at0028">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0017", "at0018", "at0019", "at0020", "at0021", "at0029", "at0030", "at0031", "at0032", "at0033">
+        >
+    >

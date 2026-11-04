@@ -1,0 +1,233 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=4ce52f85-f342-47bc-8969-14cc64e506d7; build_uid=5e8dd72e-d2c0-4ac9-aa70-e1283fd88cd8)
+    openEHR-EHR-CLUSTER.anatomical_pathology_exam_jm.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Aurelie Tomczak">
+                ["organisation"] = <"Institute of Pathology, University Hospital Heidelberg">
+                ["email"] = <"au.tomczak@yahoo.com ">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Nasjonal IKT HF">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Silje Ljosland Bakke">
+        ["organisation"] = <"Nasjonal IKT HF">
+        ["email"] = <"silje.ljosland.bakke@nasjonalikt.no">
+        ["date"] = <"2016-11-23">
+    >
+    original_namespace = <"no.nasjonalikt">
+    original_publisher = <"Nasjonal IKT">
+    other_contributors = <"Vebjørn Arntzen, Oslo universitetssykehus, Norway", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway (Nasjonal IKT redaktør)", "Kristin Eik, Kreftregisteret, Norway", "Anca Heyd, DIPS ASA, Norway", "Sabine Leh, Helse-Bergen, Norway (Nasjonal IKT redaktør)", "Heather Leslie, Ocean Informatics, Australia (Nasjonal IKT redaktør)", "Jan-Arne Ludvigsen, DIPS ASA, Norway", "Ole Martin Sand, DIPS ASA, Norway", "Ian McNicoll, Ocean Informatics, United Kingdom (Nasjonal IKT redaktør)", "Bjørn Næss, DIPS ASA, Norway", "Sveinung Sørbye, UNN HF, Norway", "John Tore Valand, Helse Bergen HF, Norway", "Torleif Trydal, Fürst AS, Norway", "Johan Bjerner, Fürst AS, Norway", "Nils Petter Tveranger, Helse Vest IKT AS, Norway">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"no.nasjonalikt">
+    custodian_organisation = <"Nasjonal IKT">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from Histopathology test, Draft Archetype [Internet]. openEHR Foundation, openEHR Clinical Knowledge Manager [cited: 2016-11-29]. Available from: http://openehr.org/ckm/#showArchetype_1013.1.2195">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"EB84BAB75FD8249710880013F12690A1">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"*To record the findings observed during the histopathological or cytopathological examination of organs, tissues, cells, or body fluids. (en)">
+            keywords = <"Histopathologie, Zytologie, Pathologie, anatomische Pathologie, intraoperative Untersuchung, mikroskopische Untersuchung, makroskopische Untersuchung, Immunhistochemie", ...>
+            use = <"*Use to record the findings observed during the histopathological or cytopathological examination of organs, tissues, cells, or body fluids.
+
+This archetype is designed specifically to be used in the \"Test result\" SLOT within the OBSERVATION.laboratory_test_result archetype, but may also be used within other ENTRY class archetypes where appropriate. (en)">
+            misuse = <"*Not to be used for reporting other types of laboratory test results, for example biochemistry or haematology.
+
+Not to be used to record a complete autopsy report, although individual tests performed on specimens collected during an autopsy may be represented using this archetype. (en)">
+            copyright = <"*© openEHR Foundation (en)">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"*To record the findings observed during the histopathological or cytopathological examination of organs, tissues, cells, or body fluids. (en)">
+            keywords = <"histopatologi, anatomisk patologi, cytologi", ...>
+            use = <"*Use to record the findings observed during the histopathological or cytopathological examination of organs, tissues, cells, or body fluids.
+
+This archetype is designed specifically to be used in the \"Test result\" SLOT within the OBSERVATION.laboratory_test_result archetype, but may also be used within other ENTRY class archetypes where appropriate. (en)">
+            misuse = <"*Not to be used for reporting other types of laboratory test results, for example biochemistry or haematology.
+
+Not to be used to record a complete autopsy report, although individual tests performed on specimens collected during an autopsy may be represented using this archetype. (en)">
+            copyright = <"*© openEHR Foundation (en)">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the findings observed during the histopathological or cytopathological examination of organs, tissues, cells, or body fluids.">
+            keywords = <"histopathology, cytology, pathology", ...>
+            use = <"Use to record the findings observed during the histopathological or cytopathological examination of organs, tissues, cells, or body fluids.
+
+This archetype is designed specifically to be used in the \"Test result\" SLOT within the OBSERVATION.laboratory_test_result archetype, but may also be used within other ENTRY class archetypes where appropriate.">
+            misuse = <"Not to be used for reporting other types of laboratory test results, for example biochemistry or haematology.
+
+Not to be used to record a complete autopsy report, although individual tests performed on specimens collected during an autopsy may be represented using this archetype.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Anatomical pathology examination
+        items cardinality matches {1..*; unordered} matches {
+            allow_archetype CLUSTER[at0027] matches {    -- Specimen
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.specimen(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0025] occurrences matches {0..1} matches {    -- Microscopic description
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            allow_archetype CLUSTER[at0009] matches {    -- Examination findings
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.laboratory_test_serology\.v0\..*|openEHR-EHR-CLUSTER\.lab_microscopy_parasitology\.v0\..*|openEHR-EHR-CLUSTER\.lab_antibody\.v0\..*|openEHR-EHR-CLUSTER\.lab_antigen\.v0\..*|openEHR-EHR-CLUSTER\.lab_microscopy_culture\.v0\..*|openEHR-EHR-CLUSTER\.lab_microscopy_stain\.v0\..*|openEHR-EHR-CLUSTER\.lab_molecular_microbial\.v0\..*/}
+            }
+            allow_archetype CLUSTER[at0022] matches {    -- Multimedia representation
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.media_file(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0026] occurrences matches {0..1} matches {    -- Clinical interpretation
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            allow_archetype CLUSTER[at0028] matches {    -- Examination not done
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.exclusion_test(-[a-zA-Z0-9_]+)*\.v0\..*|openEHR-EHR-CLUSTER\.exclusion_exam(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"*Anatomical pathology examination (en)">
+                description = <"*A generic framework for findings observed during the histopathological or cytopathological examination of organs, tissues, cells, or body fluids using gross, microscopic, and ancillary testing methods. (en)">
+            >
+            ["at0009"] = <
+                text = <"*Examination findings (en)">
+                description = <"*Structured details about the anatomical pathology examination findings. (en)">
+            >
+            ["at0011"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the anatomical pathology examination findings, not captured in other fields. (en)">
+            >
+            ["at0022"] = <
+                text = <"Testrepräsentation">
+                description = <"*Digital image, video or diagram representing the anatomical pathology examination. (en)">
+                comment = <"Es sind mehrere Formatangaben erlaubt, diese müssen aber semantisch äquivalent sein.">
+            >
+            ["at0025"] = <
+                text = <"*Microscopic description (en)">
+                description = <"*Narrative summary of findings observed under the microscope. (en)">
+            >
+            ["at0026"] = <
+                text = <"*Clinical interpretation (en)">
+                description = <"*Single word, phrase or brief description that represents the clinical meaning and significance of the anatomical pathology examination for the identified specimen. (en)">
+                comment = <"*For example: 'No abnormality detected' or 'Moderate inflammation present'. Coding of the 'Clinical interpretation' with a terminology is preferred, where possible. (en)">
+            >
+            ["at0027"] = <
+                text = <"*Specimen (en)">
+                description = <"*Details about the specimen examined. (en)">
+                comment = <"*For example, the ID of the specimen or a macroscopic description of the specimen being examined. (en)">
+            >
+            ["at0028"] = <
+                text = <"*Examination not done (en)">
+                description = <"*Details to explicitly record that this examination was not performed. (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"*Anatomical pathology examination (en)">
+                description = <"*A generic framework for findings observed during the histopathological or cytopathological examination of organs, tissues, cells, or body fluids using gross, microscopic, and ancillary testing methods. (en)">
+            >
+            ["at0009"] = <
+                text = <"*Examination findings (en)">
+                description = <"*Structured details about the anatomical pathology examination findings. (en)">
+            >
+            ["at0011"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the anatomical pathology examination findings, not captured in other fields. (en)">
+            >
+            ["at0022"] = <
+                text = <"Multimediarepresentasjon">
+                description = <"*Digital image, video or diagram representing the anatomical pathology examination. (en)">
+                comment = <"Flere formater tillates, men innholdet i de forskjellige formatene må representere det samme innholdet.">
+            >
+            ["at0025"] = <
+                text = <"*Microscopic description (en)">
+                description = <"*Narrative summary of findings observed under the microscope. (en)">
+            >
+            ["at0026"] = <
+                text = <"*Clinical interpretation (en)">
+                description = <"*Single word, phrase or brief description that represents the clinical meaning and significance of the anatomical pathology examination for the identified specimen. (en)">
+                comment = <"*For example: 'No abnormality detected' or 'Moderate inflammation present'. Coding of the 'Clinical interpretation' with a terminology is preferred, where possible. (en)">
+            >
+            ["at0027"] = <
+                text = <"*Specimen (en)">
+                description = <"*Details about the specimen examined. (en)">
+                comment = <"*For example, the ID of the specimen or a macroscopic description of the specimen being examined. (en)">
+            >
+            ["at0028"] = <
+                text = <"*Examination not done (en)">
+                description = <"*Details to explicitly record that this examination was not performed. (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Anatomical pathology examination">
+                description = <"A generic framework for findings observed during the histopathological or cytopathological examination of organs, tissues, cells, or body fluids using gross, microscopic, and ancillary testing methods.">
+            >
+            ["at0009"] = <
+                text = <"Examination findings">
+                description = <"Structured details about the anatomical pathology examination findings.">
+            >
+            ["at0011"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the anatomical pathology examination findings, not captured in other fields.">
+            >
+            ["at0022"] = <
+                text = <"Multimedia representation">
+                description = <"Digital image, video or diagram representing the anatomical pathology examination.">
+                comment = <"Multiple formats are allowed but they should represent equivalent clinical content.">
+            >
+            ["at0025"] = <
+                text = <"Microscopic description">
+                description = <"Narrative summary of findings observed under the microscope.">
+            >
+            ["at0026"] = <
+                text = <"Clinical interpretation">
+                description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the anatomical pathology examination for the identified specimen.">
+                comment = <"For example: 'No abnormality detected' or 'Moderate inflammation present'. Coding of the 'Clinical interpretation' with a terminology is preferred, where possible.">
+            >
+            ["at0027"] = <
+                text = <"Specimen">
+                description = <"Details about the specimen examined.">
+                comment = <"For example, the ID of the specimen or a macroscopic description of the specimen being examined.">
+            >
+            ["at0028"] = <
+                text = <"Examination not done">
+                description = <"Details to explicitly record that this examination was not performed.">
+            >
+        >
+    >

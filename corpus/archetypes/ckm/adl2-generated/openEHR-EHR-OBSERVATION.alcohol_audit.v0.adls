@@ -1,0 +1,926 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7b61ac07-40a1-421a-8b1e-d38e3cc190d2; build_uid=9d1eeeba-18ad-4c93-a49d-5f662e2fe9e8)
+    openEHR-EHR-OBSERVATION.alcohol_audit.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Nina Schewe">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"schewe.nina@mh-hannover.de">
+            >
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            author = <
+                ["name"] = <"Julio de Sosa">
+                ["organisation"] = <"Servei Català de la Salut">
+                ["email"] = <"juliodesosa@catsalut.cat">
+            >
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            author = <
+                ["name"] = <"Julio de Sosa">
+                ["organisation"] = <"Servei Català de la Salut">
+                ["email"] = <"juliodesosa@catsalut.cat">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics, Australia">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2013-06-10">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: Derived from: Alcohol Use Disorders Identification Test (AUDIT), Draft archetype [Internet]. Australian Digital Health Agency, ADHA Clinical Knowledge Manager. Authored: 2013 Jun 10. Available at: http://dcm.nehta.org.au/ckm#showArchetype_1013.1.1320_1 (discontinued).">
+        ["2"] = <"Babor T, Higgins-Biddle J, Saunders J, Monteiro M. The Alcohol Use Disorders Identification Test: Guidelines for Use in Primary Care, Second Edition [Internet]. Geneva: Department of Mental Health and Substance Dependence, World Health Organization. 2001 (Accessed 2013 Jun 10). Available at: http://whqlibdoc.who.int/hq/2001/WHO_MSD_MSB_01.6a.pdf.">
+        ["3"] = <"Alcohol Screen (AUDIT). Australian Government, Department of Veteran's Affairs. (Accessed 2013 Jun 11). Available at: http://www.health.nt.gov.au/library/scripts/objectifyMedia.aspx?file=pdf/63/68.pdf">
+        ["4"] = <"The AUDIT Alcohol Consumption Questions (Audit – C). Northern Territory Government, Department of Health & Families. (Accessed 2013 Jun 10). Available from: http://www.health.nt.gov.au/library/scripts/objectifyMedia.aspx?file=pdf/64/44.pdf.">
+        ["5"] = <"Alcohol Use Disorders Identification Test. US Department of Venterans Affairs. (Accessed 2013 Jun 10). Available at: http://www.hepatitis.va.gov/provider/tools/audit-c.asp.">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"0A33E7ECC0A1292CBD3902442EB201EA">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Identifizierung von Personen mit gefährlichen und schädlichen Alkoholkonsum, Anzeichen für Alkoholabhängigkeit und schädlichen Folgen von Alkoholkonsum.">
+            keywords = <"AUDIT", "AUDIT-C", "Alkohol", "Rausch">
+            use = <"Zur Darstellung der Ergebnisse des AUDIT-Screening-Tests (oder des AUDIT-C-Tests) als Mittel zur Identifizierung von Personen mit gefährlichen und schädlichen Alkoholkonsum, Anzeichen für Alkoholabhängigkeit und schädlichen Folgen von Alkoholkonsum. Der Test kann im Rahmen eines mündlichen Gesprächs oder in Form eines Selbsttests durchgeführt werden.
+
+Jede Frage des AUDIT-Tests wird als separates Datenelement erfasst. Aus praktischen Gründen wird in diesem Archetyp jedes Datenelement nicht als vollständige Frage, sondern als Zusammenfassung des Themas der Frage gekennzeichnet. Die vollständige Frage, auf die sich jedes Datenelement bezieht, wird in der \"Beschreibung\" für jedes Datenelement angegeben. Zum Beispiel: \"Wie oft haben Sie im vergangenen Jahr mindestens 6 Getränke bei einer Gelegenheit getrunken?\" wird als Datenelement \"Rauschtrinken\" dargestellt.
+
+Der AUDIT-C Test ist eine verkürzte Version des AUDIT-Tests und enthält lediglich die ersten drei Fragen zum Konsumverhalten.">
+            misuse = <"Nicht zur Aufzeichnung eines Tagebuchs über den Alkoholkonsum zu verwenden - Verwenden Sie hierzu den Archetyp OBSERVATION.alcohol_use.
+
+Nicht zur Darstellung zusammenfassender Informationen über das typische Muster des Alkoholkonsums einer Person - Verwenden Sie hierzu den Archetyp EVALUATION.alcohol_consumption_summary.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To identify individuals with hazardous and harmful patterns of alcohol consumption, indicators of alcohol dependence and some consequences from harmful drinking.">
+            keywords = <"AUDIT", "AUDIT-C", "alcohol", "binge">
+            use = <"Use to record the results of the AUDIT screening test (or the AUDIT-C subset) as a means to identify individuals with hazardous and harmful patterns of alcohol consumption, indicators of alcohol dependence and some consequences from harmful drinking. The test can be administered during an oral interview or as a self-reported questionnaire.
+
+Each of the questions in the AUDIT test will be recorded as a separate data element. For pragmatic reasons, in this archetype, each data element is not labelled as the full question, but as a summary of the question topic. The full question to which each data element refers is identified in the 'Description' for each data element. For example: \"How often did you have six or more drinks on one occasion in the past year?\" is represented as the 'Bingeing' data element.
+
+The AUDIT-C test is a shortened version of the full AUDIT test, using only the first three questions related to consumption.">
+            misuse = <"Not to be used to record a diary of alcohol consumption - use OBSERVATION.alcohol_use.
+
+Not to be used to record an overview of the individual's pattern of alcohol consumption - use the EVALUATION.alcohol_consumption_summary for this purpose.">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation">
+        >
+        ["es"] = <
+            language = <[ISO_639-1::es]>
+            purpose = <"Identificar individuos con patrones peligrosos y perjudiciales de consumo de alcohol, indicadores de dependencia del alcohol y algunas consecuencias del consumo perjudicial.">
+            keywords = <"AUDIT", "AUDIT-C", "alcohol", "embriaguez">
+            use = <"Se utiliza para registrar los resultados de la prueba de cribado AUDIT (o del subconjunto AUDIT-C) como medio para identificar a las personas con patrones peligrosos y perjudiciales de consumo de alcohol, indicadores de dependencia del alcohol y algunas consecuencias del consumo perjudicial. La prueba puede llevarse a cabo durante una entrevista oral o como cuestionario autoinformado.
+
+Cada una de las preguntas de la prueba AUDIT se registrará como un elemento de datos independiente. Por razones pragmáticas, en este arquetipo, cada elemento de datos no se etiqueta como la pregunta completa, sino como un resumen del tema de la pregunta. La pregunta completa a la que se refiere cada elemento de datos se identifica en la 'Descripción' de cada elemento de datos. Por ejemplo: \"Durante el último año, ¿con qué frecuencia consumió seis o más copas en la misma ocasión?\" se representa como el elemento de datos 'Consumo excesivo'.
+
+El test AUDIT-C es una versión reducida del test AUDIT completo, en la que sólo se utilizan las tres primeras preguntas relacionadas con el consumo.">
+            misuse = <"No debe utilizarse para registrar un diario de consumo de alcohol: utilice OBSERVATION.alcohol_use.
+
+No debe utilizarse para registrar una visión general del patrón de consumo de alcohol del individuo; para ello, utilice EVALUATION.alcohol_consumption_summary.">
+        >
+        ["ca"] = <
+            language = <[ISO_639-1::ca]>
+            purpose = <"Identificar individus amb patrons perillosos i perjudicials de consum d'alcohol, indicadors de dependència de l'alcohol i algunes conseqüències del consum perjudicial.">
+            keywords = <"AUDIT", "AUDIT-C", "alcohol", "embriaguesa">
+            use = <"S'utilitza per registrar els resultats de la prova de cribratge AUDIT (o del subconjunt AUDIT-C) com a mitjà per identificar persones amb patrons perillosos i perjudicials de consum d'alcohol, indicadors de dependència de l'alcohol i algunes conseqüències del consum perjudicial. La prova es pot dur a terme durant una entrevista oral o com a qüestionari autoinformat.
+
+Cadascuna de les preguntes de la prova AUDIT es registrarà com un element de dades independent. Per raons pragmàtiques, en aquest arquetip, cada element de dades no s'etiqueta com a pregunta completa, sinó com un resum del tema de la pregunta. La pregunta completa a què es refereix cada element de dades s'identifica a la 'Descripció' de cada element de dades. Per exemple: \"Durant el darrer any, amb quina freqüència va consumir sis o més copes en la mateixa ocasió?\" es representa com a element de dades 'Consum excessiu'.
+
+El test AUDIT-C és una versió reduïda del test AUDIT complet, on només s'utilitzen les tres primeres preguntes relacionades amb el consum.">
+            misuse = <"No s'ha d'utilitzar per registrar un diari de consum d'alcohol: utilitzeu OBSERVATION.alcohol_use.
+
+No s'ha d'utilitzar per registrar una visió general del patró de consum d'alcohol de l'individu; per fer-ho, utilitzeu EVALUATION.alcohol_consumption_summary.">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Alcohol Use Disorders Identification Test (AUDIT)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Any point in time
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Frequency of consumption
+                                        value matches {
+                                            DV_ORDINAL[at9004] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- Never
+                                                    [{1}, {[at0006]}],    -- Monthly or Less
+                                                    [{2}, {[at0007]}],    -- 2 to 4 Times a Month
+                                                    [{3}, {[at0008]}],    -- 2 to 3 Times a Week
+                                                    [{4}, {[at0009]}]    -- 4 or More Times a Week
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Typical consumption
+                                        value matches {
+                                            DV_ORDINAL[at9005] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0011]}],    -- 1 or 2
+                                                    [{1}, {[at0012]}],    -- 3 or 4
+                                                    [{2}, {[at0013]}],    -- 5 or 6
+                                                    [{3}, {[at0014]}],    -- 7 to 9
+                                                    [{4}, {[at0015]}]    -- 10 or More
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Binge drinking
+                                        value matches {
+                                            DV_ORDINAL[at9006] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- Never
+                                                    [{1}, {[at0018]}],    -- Less than Monthly
+                                                    [{2}, {[at0019]}],    -- Monthly
+                                                    [{3}, {[at0020]}],    -- Weekly
+                                                    [{4}, {[at0021]}]    -- Daily or Almost Daily
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Inability to stop
+                                        value matches {
+                                            DV_ORDINAL[at9007] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- Never
+                                                    [{1}, {[at0018]}],    -- Less than Monthly
+                                                    [{2}, {[at0019]}],    -- Monthly
+                                                    [{3}, {[at0020]}],    -- Weekly
+                                                    [{4}, {[at0021]}]    -- Daily or Almost Daily
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Failed expectations
+                                        value matches {
+                                            DV_ORDINAL[at9008] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- Never
+                                                    [{1}, {[at0018]}],    -- Less than Monthly
+                                                    [{2}, {[at0019]}],    -- Monthly
+                                                    [{3}, {[at0020]}],    -- Weekly
+                                                    [{4}, {[at0021]}]    -- Daily or Almost Daily
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0025] occurrences matches {0..1} matches {    -- Morning drinking
+                                        value matches {
+                                            DV_ORDINAL[at9009] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- Never
+                                                    [{1}, {[at0018]}],    -- Less than Monthly
+                                                    [{2}, {[at0019]}],    -- Monthly
+                                                    [{3}, {[at0020]}],    -- Weekly
+                                                    [{4}, {[at0021]}]    -- Daily or Almost Daily
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0026] occurrences matches {0..1} matches {    -- Guilt/remorse
+                                        value matches {
+                                            DV_ORDINAL[at9010] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- Never
+                                                    [{1}, {[at0018]}],    -- Less than Monthly
+                                                    [{2}, {[at0019]}],    -- Monthly
+                                                    [{3}, {[at0020]}],    -- Weekly
+                                                    [{4}, {[at0021]}]    -- Daily or Almost Daily
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Loss of memory
+                                        value matches {
+                                            DV_ORDINAL[at9011] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- Never
+                                                    [{1}, {[at0018]}],    -- Less than Monthly
+                                                    [{2}, {[at0019]}],    -- Monthly
+                                                    [{3}, {[at0020]}],    -- Weekly
+                                                    [{4}, {[at0021]}]    -- Daily or Almost Daily
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Injuries
+                                        value matches {
+                                            DV_ORDINAL[at9012] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0030]}],    -- No
+                                                    [{2}, {[at0031]}],    -- Yes, but not in the last year.
+                                                    [{4}, {[at0032]}]    -- Yes, during the last year.
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- External concern
+                                        value matches {
+                                            DV_ORDINAL[at9013] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0030]}],    -- No
+                                                    [{2}, {[at0031]}],    -- Yes, but not in the last year.
+                                                    [{4}, {[at0032]}]    -- Yes, during the last year.
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- AUDIT total score
+                                        value matches {
+                                            DV_COUNT[at9014] matches {
+                                                magnitude matches {|0..40|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0033] occurrences matches {0..1} matches {    -- AUDIT-C total score
+                                        value matches {
+                                            DV_COUNT[at9015] matches {
+                                                magnitude matches {|0..12|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0034] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9016]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0035] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0036] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Alcohol Use Disorders Identification Test (AUDIT)">
+                description = <"Aus 10 Fragen bestehender Screening-Test zur Ermittlung von schädlichem Alkoholkonsum.">
+            >
+            ["at0002"] = <
+                text = <"Jedes Ereignis">
+                description = <"Standard, nicht spezifizierter Zeitpunkt oder Intervallereignis, das explizit in einer Vorlage oder zur Laufzeit definiert werden kann.">
+            >
+            ["at0004"] = <
+                text = <"Häufigkeit des Konsums">
+                description = <"Wie oft haben Sie im letzten Jahr Alkohol getrunken?">
+            >
+            ["at0005"] = <
+                text = <"Nie">
+                description = <"Kein Alkoholkonsum im letzten Jahr.">
+            >
+            ["at0006"] = <
+                text = <"1 mal im Monat oder weniger">
+                description = <"Sie haben im vergangenen Jahr monatlich oder seltener Alkohol getrunken.">
+            >
+            ["at0007"] = <
+                text = <"2-4 mal pro Monat">
+                description = <"Sie haben im vergangenen Jahr 2-4 mal pro Monat Alkohol getrunken.">
+            >
+            ["at0008"] = <
+                text = <"2-3 mal pro Woche">
+                description = <"Sie haben im vergangenen Jahr 2-3 mal pro Woche Alkohol getrunken.">
+            >
+            ["at0009"] = <
+                text = <"4 mal oder öfter pro Woche">
+                description = <"Sie haben im vergangenen Jahr mindestens 4 mal pro Woche Alkohol getrunken.">
+            >
+            ["at0010"] = <
+                text = <"Typischer Konsum">
+                description = <"Wie viel alkoholhaltige Getränke haben Sie im vergangenen Jahr an einem normalen Tag getrunken?">
+            >
+            ["at0011"] = <
+                text = <"1 oder 2">
+                description = <"1 oder 2 alkoholische Getränke an einem normalen Tag im vergangenen Jahr.">
+            >
+            ["at0012"] = <
+                text = <"3 oder 4">
+                description = <"3 oder 4 alkoholische Getränke an einem normalen Tag im vergangenen Jahr.">
+            >
+            ["at0013"] = <
+                text = <"5 oder 6">
+                description = <"5 oder 6 alkoholische Getränke an einem normalen Tag im vergangenen Jahr.">
+            >
+            ["at0014"] = <
+                text = <"7 bis 9">
+                description = <"7, 8 oder 9 alkoholische Getränke an einem normalen Tag im vergangenen Jahr.">
+            >
+            ["at0015"] = <
+                text = <"10 oder mehr">
+                description = <"Mindestens 10 alkoholische Getränke an einem normalen Tag im vergangenen Jahr.">
+            >
+            ["at0016"] = <
+                text = <"Rauschtrinken">
+                description = <"Wie oft haben Sie im letzten Jahr bei einer Gelegenheit 6 oder mehr Gläser Alkohol getrunken?">
+            >
+            ["at0017"] = <
+                text = <"Nie">
+                description = <"Nie, im letzten Jahr.">
+            >
+            ["at0018"] = <
+                text = <"Seltener als 1 mal pro Monat">
+                description = <"Während des letzten Jahres weniger als einmal im Monat.">
+            >
+            ["at0019"] = <
+                text = <"1 mal pro Monat">
+                description = <"Während des letzten Jahres 1 mal pro Monat.">
+            >
+            ["at0020"] = <
+                text = <"1 mal pro Woche">
+                description = <"Während des letzten Jahres 1 mal pro Woche.">
+            >
+            ["at0021"] = <
+                text = <"Täglich oder fast täglich">
+                description = <"Im vergangenen Jahr täglich oder fast täglich.">
+            >
+            ["at0022"] = <
+                text = <"AUDIT Gesamtpunktzahl">
+                description = <"Gesamtpunktzahl, berechnet aus den 10 AUDIT-Fragen.">
+            >
+            ["at0023"] = <
+                text = <"Unfähigkeit aufzuhören">
+                description = <"Wie oft haben Sie im letzten Jahr erlebt, dass Sie nicht mehr mit dem Trinken aufhören konnten, nachdem Sie einmal begonnen hatten?">
+            >
+            ["at0024"] = <
+                text = <"Gescheiterte Erwartungen">
+                description = <"Wie oft passierte es im letzten Jahr, dass Sie wegen des Trinkens Erwartungen, die man an Sie in der Familie, im Freundeskreis und im Berufsleben hat, nicht mehr erfüllen konnten?">
+            >
+            ["at0025"] = <
+                text = <"Morgendliches Trinken">
+                description = <"Wie oft brauchten Sie während des letzten Jahres am Morgen ein alkoholisches Getränk, um sich nach einem Abend mit viel Alkoholgenuss wieder fit zu fühlen?">
+            >
+            ["at0026"] = <
+                text = <"Schuldgefühle/Gewissensbisse">
+                description = <"Wie oft hatten Sie während des letzten Jahres wegen Ihrer Trinkgewohnheiten Schuldgefühle oder Gewissensbisse?">
+            >
+            ["at0027"] = <
+                text = <"Gedächtnisverlust">
+                description = <"Wie oft haben Sie sich während des letzten Jahres nicht mehr an den vorangegangenen Abend erinnern können, weil Sie getrunken hatten?">
+            >
+            ["at0028"] = <
+                text = <"Verletzungen">
+                description = <"Haben Sie sich oder eine andere Person unter Alkoholeinfluss schon einmal verletzt?">
+            >
+            ["at0029"] = <
+                text = <"Externe Sorge">
+                description = <"Hat ein Verwandter, Freund oder auch ein Arzt schon einmal Bedenken wegen Ihres Trinkverhaltens geäußert oder vorgeschlagen, dass Sie Ihren Alkoholkonsum einschränken?">
+            >
+            ["at0030"] = <
+                text = <"Nein">
+                description = <"Keine Vorkommnisse.">
+            >
+            ["at0031"] = <
+                text = <"Ja, aber nicht im letzten Jahr.">
+                description = <"Ja, das ist vorgekommen, aber nicht im letzten Jahr.">
+            >
+            ["at0032"] = <
+                text = <"Ja, während des letzten Jahres.">
+                description = <"Ja, das ist im letzten Jahr vorgekommen.">
+            >
+            ["at0033"] = <
+                text = <"AUDIT-C Gesamtpunktzahl">
+                description = <"Die Gesamtpunktzahl wird nur aus den ersten 3 Fragen berechnet.">
+            >
+            ["at0034"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Informationen über den Screening-Test, die nicht in anderen Feldern erfasst werden.">
+            >
+            ["at0036"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+            ["ac9016"] = <
+                text = <"Häufigkeit des Konsums (synthesised)">
+                description = <"Wie oft haben Sie im letzten Jahr Alkohol getrunken? (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Typischer Konsum (synthesised)">
+                description = <"Wie viel alkoholhaltige Getränke haben Sie im vergangenen Jahr an einem normalen Tag getrunken? (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"Rauschtrinken (synthesised)">
+                description = <"Wie oft haben Sie im letzten Jahr bei einer Gelegenheit 6 oder mehr Gläser Alkohol getrunken? (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"Verletzungen (synthesised)">
+                description = <"Haben Sie sich oder eine andere Person unter Alkoholeinfluss schon einmal verletzt? (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Alcohol Use Disorders Identification Test (AUDIT)">
+                description = <"Ten question screening test to identify harmful alcohol consumption.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time">
+                description = <"Default, unspecified point in time event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Frequency of consumption">
+                description = <"How often did you have a drink containing alcohol in the past year?">
+            >
+            ["at0005"] = <
+                text = <"Never">
+                description = <"No drinking of alcohol in the past year.">
+            >
+            ["at0006"] = <
+                text = <"Monthly or Less">
+                description = <"Drinking alcohol monthly or less frequently during the past year.">
+            >
+            ["at0007"] = <
+                text = <"2 to 4 Times a Month">
+                description = <"Drinking alcohol two to four times a month during the past year.">
+            >
+            ["at0008"] = <
+                text = <"2 to 3 Times a Week">
+                description = <"Drinking alcohol two to three times a week during the past year.">
+            >
+            ["at0009"] = <
+                text = <"4 or More Times a Week">
+                description = <"Drinking alcohol four or more times a week during the past year.">
+            >
+            ["at0010"] = <
+                text = <"Typical consumption">
+                description = <"How many drinks did you have on a typical day when you were drinking in the past year?">
+            >
+            ["at0011"] = <
+                text = <"1 or 2">
+                description = <"One or two drinks of alcohol on a typical day in the past year.">
+            >
+            ["at0012"] = <
+                text = <"3 or 4">
+                description = <"Three or four drinks of alcohol on a typical day in the past year.">
+            >
+            ["at0013"] = <
+                text = <"5 or 6">
+                description = <"Five or six drinks of alcohol on a typical day in the past year.">
+            >
+            ["at0014"] = <
+                text = <"7 to 9">
+                description = <"Seven, eight or nine drinks of alcohol on a typical day in the past year.">
+            >
+            ["at0015"] = <
+                text = <"10 or More">
+                description = <"Ten or more drinks of alcohol on a typical day in the past year.">
+            >
+            ["at0016"] = <
+                text = <"Binge drinking">
+                description = <"How often did you have six or more drinks on one occasion in the past year?">
+            >
+            ["at0017"] = <
+                text = <"Never">
+                description = <"Never, in the past year.">
+            >
+            ["at0018"] = <
+                text = <"Less than Monthly">
+                description = <"Less than monthly, during the past year.">
+            >
+            ["at0019"] = <
+                text = <"Monthly">
+                description = <"Monthly, during the past year.">
+            >
+            ["at0020"] = <
+                text = <"Weekly">
+                description = <"Weekly, during the past year.">
+            >
+            ["at0021"] = <
+                text = <"Daily or Almost Daily">
+                description = <"Daily, or almost daily, during the past year.">
+            >
+            ["at0022"] = <
+                text = <"AUDIT total score">
+                description = <"Total Score calculated from the 10 AUDIT questions.">
+            >
+            ["at0023"] = <
+                text = <"Inability to stop">
+                description = <"How often during the last year have you found that you were not able to stop drinking once you had started?">
+            >
+            ["at0024"] = <
+                text = <"Failed expectations">
+                description = <"How often during the last year have you failed to do what was normally expected of you because of drinking?">
+            >
+            ["at0025"] = <
+                text = <"Morning drinking">
+                description = <"How often during the last year have you needed a first drink in the morning to get yourself going after a heavy drinking session?">
+            >
+            ["at0026"] = <
+                text = <"Guilt/remorse">
+                description = <"How often during the last year have you had a feeling of guilt or remorse after drinking?">
+            >
+            ["at0027"] = <
+                text = <"Loss of memory">
+                description = <"How often during the last year have you been unable to remember what happened the night before because of your drinking?">
+            >
+            ["at0028"] = <
+                text = <"Injuries">
+                description = <"Have you or someone else been injured because of your drinking?">
+            >
+            ["at0029"] = <
+                text = <"External concern">
+                description = <"Has a relative, friend, doctor, or other health care worker been concerned about your drinking or suggested you cut down?">
+            >
+            ["at0030"] = <
+                text = <"No">
+                description = <"No occurrence.">
+            >
+            ["at0031"] = <
+                text = <"Yes, but not in the last year.">
+                description = <"Yes, this has occurred, but not in the last year.">
+            >
+            ["at0032"] = <
+                text = <"Yes, during the last year.">
+                description = <"Yes this has occurred during the last year.">
+            >
+            ["at0033"] = <
+                text = <"AUDIT-C total score">
+                description = <"Total Score calculated from the first 3 questions only.">
+            >
+            ["at0034"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the screening test, not captured in other fields.">
+            >
+            ["at0036"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["ac9016"] = <
+                text = <"Frequency of consumption (synthesised)">
+                description = <"How often did you have a drink containing alcohol in the past year? (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Typical consumption (synthesised)">
+                description = <"How many drinks did you have on a typical day when you were drinking in the past year? (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"Binge drinking (synthesised)">
+                description = <"How often did you have six or more drinks on one occasion in the past year? (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"Injuries (synthesised)">
+                description = <"Have you or someone else been injured because of your drinking? (synthesised)">
+            >
+        >
+        ["es"] = <
+            ["at0000"] = <
+                text = <"Cuestionario de Identificación de Trastornos relacionados con el consumo de Alcohol (AUDIT)">
+                description = <"Prueba de detección de diez preguntas para identificar el consumo perjudicial de alcohol.">
+            >
+            ["at0002"] = <
+                text = <"En cualquier momento">
+                description = <"Evento predeterminado, en un punto en el tiempo no especificado, que puede definirse de forma explícita en una plantilla o en tiempo de ejecución.">
+            >
+            ["at0004"] = <
+                text = <"Frecuencia de consumo">
+                description = <"Durante el último año, ¿con qué frecuencia ha consumido una bebida alcohólica?">
+            >
+            ["at0005"] = <
+                text = <"Nunca">
+                description = <"Sin consumo de alcohol en el último año.">
+            >
+            ["at0006"] = <
+                text = <"Mensualmente o con menor frecuencia">
+                description = <"Consumo de alcohol de forma mensual o con menor frecuencia durante el último año.">
+            >
+            ["at0007"] = <
+                text = <"De 2 a 4 veces al mes">
+                description = <"Consumo de alcohol de dos a cuatro veces al mes durante el último año.">
+            >
+            ["at0008"] = <
+                text = <"De 2 a 3 veces por semana">
+                description = <"Consumo de alcohol dos o tres veces por semana durante el último año.">
+            >
+            ["at0009"] = <
+                text = <"4 o más veces a la semana">
+                description = <"Consumo de alcohol cuatro o más veces por semana durante el último año.">
+            >
+            ["at0010"] = <
+                text = <"Consumo habitual">
+                description = <"Durante el último año, ¿cuántas copas ha consumido en un día de consumo normal?">
+            >
+            ["at0011"] = <
+                text = <"1 o 2">
+                description = <"Una o dos bebidas alcohólicas en un día normal durante el último año.">
+            >
+            ["at0012"] = <
+                text = <"3 o 4">
+                description = <"Tres o cuatro bebidas alcohólicas en un día normal durante el último año.">
+            >
+            ["at0013"] = <
+                text = <"5 o 6">
+                description = <"Cinco o seis bebidas alcohólicas en un día normal durante el último año.">
+            >
+            ["at0014"] = <
+                text = <"De 7 a 9">
+                description = <"Siete, ocho o nueve bebidas alcohólicas en un día normal durante el último año.">
+            >
+            ["at0015"] = <
+                text = <"10 o más">
+                description = <"Diez o más bebidas alcohólicas en un día normal durante el último año.">
+            >
+            ["at0016"] = <
+                text = <"Consumo excesivo">
+                description = <"Durante el último año, ¿con qué frecuencia consumió seis o más copas en la misma ocasión?">
+            >
+            ["at0017"] = <
+                text = <"Nunca">
+                description = <"En ningún momento, en el último año.">
+            >
+            ["at0018"] = <
+                text = <"Menos de una vez al mes">
+                description = <"Menos de una vez al mes, durante el último año.">
+            >
+            ["at0019"] = <
+                text = <"Mensualmente">
+                description = <"Mensualmente, durante el último año.">
+            >
+            ["at0020"] = <
+                text = <"Semanalmente">
+                description = <"Semanalmente, durante el último año.">
+            >
+            ["at0021"] = <
+                text = <"Diario o casi diariamente">
+                description = <"Diario o casi diariamente, durante el último año.">
+            >
+            ["at0022"] = <
+                text = <"Puntuación total AUDIT">
+                description = <"Puntuación total calculada a partir de las 10 preguntas del AUDIT.">
+            >
+            ["at0023"] = <
+                text = <"Incapacidad para detenerse">
+                description = <"Durante el último año, ¿con qué frecuencia ha sido incapaz de parar de beber una vez que había empezado?">
+            >
+            ["at0024"] = <
+                text = <"Expectativas fallidas">
+                description = <"Durante el último año, ¿con qué frecuencia no pudo hacer lo que se esperaba de usted porque había bebido?">
+            >
+            ["at0025"] = <
+                text = <"Consumo matutino">
+                description = <"Durante el último año, ¿con qué frecuencia ha necesitado beber a la mañana siguiente después de haber bebido en exceso el día anterior?">
+            >
+            ["at0026"] = <
+                text = <"Culpa/remordimiento">
+                description = <"Durante el último año, ¿con qué frecuencia ha tenido remordimientos o sentimientos de culpa después de haber bebido?">
+            >
+            ["at0027"] = <
+                text = <"Pérdida de memoria">
+                description = <"Durante el último año, ¿con qué frecuencia no ha podido recordar lo que sucedió la noche anterior porque había estado bebiendo?">
+            >
+            ["at0028"] = <
+                text = <"Lesiones">
+                description = <"¿Usted o alguna otra persona ha resultado herida como consecuencia de su ingesta de alcohol?">
+            >
+            ["at0029"] = <
+                text = <"Preocupación externa">
+                description = <"¿Algún familiar, amigo, médico u otro profesional sanitario ha mostrado preocupación por su consumo de alcohol o le han sugerido que deje de beber?">
+            >
+            ["at0030"] = <
+                text = <"No">
+                description = <"Ningún suceso.">
+            >
+            ["at0031"] = <
+                text = <"Sí, pero no en el último año">
+                description = <"Sí, ha ocurrido, pero no en el último año.">
+            >
+            ["at0032"] = <
+                text = <"Sí, en el último año">
+                description = <"Sí, ha ocurrido durante el último año.">
+            >
+            ["at0033"] = <
+                text = <"Puntuación total AUDIT-C">
+                description = <"Puntuación total calculada sólo a partir de las 3 primeras preguntas.">
+            >
+            ["at0034"] = <
+                text = <"Comentarios">
+                description = <"Información adicional sobre el cuestionario, no recogida en otros campos.">
+            >
+            ["at0036"] = <
+                text = <"Extensión">
+                description = <"Información adicional necesaria para ampliar el modelo con contenido local o para alinearlo con otros modelos o formalismos de referencia.">
+                comment = <"Por ejemplo: requisitos locales de información; o metadatos adicionales para alinearse con FHIR.">
+            >
+            ["ac9016"] = <
+                text = <"Frecuencia de consumo (synthesised)">
+                description = <"Durante el último año, ¿con qué frecuencia ha consumido una bebida alcohólica? (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Consumo habitual (synthesised)">
+                description = <"Durante el último año, ¿cuántas copas ha consumido en un día de consumo normal? (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"Consumo excesivo (synthesised)">
+                description = <"Durante el último año, ¿con qué frecuencia consumió seis o más copas en la misma ocasión? (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"Lesiones (synthesised)">
+                description = <"¿Usted o alguna otra persona ha resultado herida como consecuencia de su ingesta de alcohol? (synthesised)">
+            >
+        >
+        ["ca"] = <
+            ["at0000"] = <
+                text = <"Qüestionari d'identificació de trastorns relacionats amb el consum d'alcohol (AUDIT)">
+                description = <"Prova de detecció de deu preguntes per identificar el consum d'alcohol perjudicial.">
+            >
+            ["at0002"] = <
+                text = <"En qualsevol moment">
+                description = <"Esdeveniment predeterminat, en un punt en el temps no especificat, que es pot definir de manera explícita en una plantilla o en temps d'execució.">
+            >
+            ["at0004"] = <
+                text = <"Freqüència de consum">
+                description = <"Durant el darrer any, amb quina freqüència ha consumit una beguda alcohòlica?">
+            >
+            ["at0005"] = <
+                text = <"Mai">
+                description = <"Sense consum d'alcohol al darrer any.">
+            >
+            ["at0006"] = <
+                text = <"Mensualment o amb menor freqüència">
+                description = <"Consum d'alcohol de forma mensual o amb menys freqüència durant el darrer any.">
+            >
+            ["at0007"] = <
+                text = <"De 2 a 4 cops al mes">
+                description = <"Consum d'alcohol de dues a quatre vegades al mes durant el darrer any.">
+            >
+            ["at0008"] = <
+                text = <"De 2 a 3 cops per setmana">
+                description = <"Consum d'alcohol dues o tres vegades per setmana durant el darrer any.">
+            >
+            ["at0009"] = <
+                text = <"4 o més vegades a la setmana">
+                description = <"Consum d'alcohol quatre o més cops per setmana durant el darrer any.">
+            >
+            ["at0010"] = <
+                text = <"Consum habitual">
+                description = <"Durant el darrer any, quantes copes ha consumit en un dia de consum normal?">
+            >
+            ["at0011"] = <
+                text = <"1 o 2">
+                description = <"Una o dues begudes alcohòliques en un dia normal durant el darrer any.">
+            >
+            ["at0012"] = <
+                text = <"3 o 4">
+                description = <"Tres o quatre begudes alcohòliques en un dia normal durant el darrer any.">
+            >
+            ["at0013"] = <
+                text = <"5 o 6">
+                description = <"Cinc o sis begudes alcohòliques en un dia normal durant el darrer any.">
+            >
+            ["at0014"] = <
+                text = <"De 7 a 9">
+                description = <"Set, vuit o nou begudes alcohòliques en un dia normal durant el darrer any.">
+            >
+            ["at0015"] = <
+                text = <"10 o més">
+                description = <"Deu o més begudes alcohòliques en un dia normal durant el darrer any.">
+            >
+            ["at0016"] = <
+                text = <"Consum excessiu">
+                description = <"Durant el darrer any, amb quina freqüència va consumir sis o més copes en la mateixa ocasió?">
+            >
+            ["at0017"] = <
+                text = <"Mai">
+                description = <"En cap moment, el darrer any.">
+            >
+            ["at0018"] = <
+                text = <"Menys d'una vegada al mes">
+                description = <"Menys d'una vegada al mes, durant el darrer any.">
+            >
+            ["at0019"] = <
+                text = <"Mensualment">
+                description = <"Mensualment, durant el darrer any.">
+            >
+            ["at0020"] = <
+                text = <"Setmanalment">
+                description = <"Setmanalment, durant el darrer any.">
+            >
+            ["at0021"] = <
+                text = <"Diari o gairebé diàriament">
+                description = <"Diari o gairebé diàriament, durant el darrer any.">
+            >
+            ["at0022"] = <
+                text = <"Puntuació total AUDIT">
+                description = <"Puntuació total calculada a partir de les 10 preguntes de l'AUDIT.">
+            >
+            ["at0023"] = <
+                text = <"Incapacitat per aturar-se">
+                description = <"Durant el darrer any, amb quina freqüència ha estat incapaç de parar de beure una vegada que havia començat?">
+            >
+            ["at0024"] = <
+                text = <"Expectatives fallides">
+                description = <"Durant l'últim any, amb quina freqüència no podia fer el que s'esperava de vostè perquè havia begut?">
+            >
+            ["at0025"] = <
+                text = <"Consum matutí">
+                description = <"Durant l'últim any, amb quina freqüència ha necessitat beure l'endemà al matí després d'haver begut en excés el dia anterior?">
+            >
+            ["at0026"] = <
+                text = <"Culpa/remordiment">
+                description = <"Durant el darrer any, amb quina freqüència ha tingut remordiments o sentiments de culpa després d'haver begut?">
+            >
+            ["at0027"] = <
+                text = <"Pèrdua de memòria">
+                description = <"Durant l'últim any, amb quina freqüència no ha pogut recordar què va passar la nit anterior perquè havia estat bevent?">
+            >
+            ["at0028"] = <
+                text = <"Lesions">
+                description = <"Vostè o alguna altra persona ha resultat ferida com a conseqüència de la ingesta d'alcohol?">
+            >
+            ["at0029"] = <
+                text = <"Preocupació externa">
+                description = <"Algun familiar, amic, metge o altre professional sanitari ha mostrat preocupació pel consum d'alcohol o li han suggerit que deixi de beure?">
+            >
+            ["at0030"] = <
+                text = <"No">
+                description = <"Cap succés.">
+            >
+            ["at0031"] = <
+                text = <"Sí, però no a l'últim any">
+                description = <"Sí, ha passat, però no l'últim any.">
+            >
+            ["at0032"] = <
+                text = <"Sí, el darrer any">
+                description = <"Sí, ha passat durant l'últim any.">
+            >
+            ["at0033"] = <
+                text = <"Puntuació total AUDIT-C">
+                description = <"Puntuació total calculada només a partir de les 3 primeres preguntes.">
+            >
+            ["at0034"] = <
+                text = <"Comentaris">
+                description = <"Informació addicional sobre el qüestionari, no recollida a altres camps.">
+            >
+            ["at0036"] = <
+                text = <"Extensió">
+                description = <"Informació addicional necessària per ampliar el model amb contingut local o per alinear-lo amb altres models o formalismes de referència.">
+                comment = <"Per exemple: requisits d'informació locals; o metadades addicionals per alinear-se amb FHIR.">
+            >
+            ["ac9016"] = <
+                text = <"Freqüència de consum (synthesised)">
+                description = <"Durant el darrer any, amb quina freqüència ha consumit una beguda alcohòlica? (synthesised)">
+            >
+            ["ac9017"] = <
+                text = <"Consum habitual (synthesised)">
+                description = <"Durant el darrer any, quantes copes ha consumit en un dia de consum normal? (synthesised)">
+            >
+            ["ac9018"] = <
+                text = <"Consum excessiu (synthesised)">
+                description = <"Durant el darrer any, amb quina freqüència va consumir sis o més copes en la mateixa ocasió? (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"Lesions (synthesised)">
+                description = <"Vostè o alguna altra persona ha resultat ferida com a conseqüència de la ingesta d'alcohol? (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9017"] = <
+            id = <"ac9017">
+            members = <"at0011", "at0012", "at0013", "at0014", "at0015">
+        >
+        ["ac9016"] = <
+            id = <"ac9016">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009">
+        >
+        ["ac9019"] = <
+            id = <"ac9019">
+            members = <"at0030", "at0031", "at0032">
+        >
+        ["ac9018"] = <
+            id = <"ac9018">
+            members = <"at0017", "at0018", "at0019", "at0020", "at0021">
+        >
+    >

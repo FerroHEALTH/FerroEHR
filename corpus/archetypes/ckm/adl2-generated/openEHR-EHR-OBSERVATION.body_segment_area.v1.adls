@@ -1,0 +1,400 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7cf4fb7b-27c1-4e6f-9c62-2716a1dca044; build_uid=9be4e8ef-b875-44c6-b278-493a728e26ed)
+    openEHR-EHR-OBSERVATION.body_segment_area.v1.0.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"John Tore Valand, Vebjørn Arntzen">
+                ["organisation"] = <"Helse Bergen HF, Oslo universitetssykehus HF, Oslo University Hospital, Haukeland Universitetssjukehus">
+                ["email"] = <"john.tore.valand@helse-bergen.no; varntzen@ous-hf.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics, Australia">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-03-07">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Marit Alice Venheim, Helse Vest IKT, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Heidi Aursand, Oslo universitetssykehus, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Randi Brendberg, Helse Nord RHF, Norway", "Angela Crovetti, CDC/NIOSH, United States", "Arild Faxvaag, NTNU, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Lars Ivar Mehlum, Nasjonal IKT HF, Norway", "Mikkel Johan Gaup Grønmo, Forvaltningssenter EPJ, Helse Nord, Norway", "Lars Morgan Karlsen, DIPS ASA, Norway", "Heidi Koikkalainen, United Kingdom (openEHR Editor)", "Tomi Laptoš, Marand, Slovenia", "Liv Laugen, Oslo universitetssykehus, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Anne M Gromsrud, DIPS AS, Norway", "Priscila Maranhão, MEDCIDS-FMUP, Portugal", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)", "Johannes Michael Strehle, Helse-Nord, Norway", "Svenne Naumann, Finnmarkssykehuset, Norway", "Bjørn Næss, DIPS ASA, Norway", "Jayashree Panickar, Karolinska Institute, Sweden", "Line Silsand, univertsity hospital of northern norway, Norway", "Trine Strand, Oslo Universitetssykehus (OUS), Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Micaela Thierley, Helse Bergen, Norway", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"De Mits S, Coorevits P, De Clercq D, Elewaut D, Woodburn J, Roosen P. Reliability and validity of the INFOOT three-dimensional foot digitizer for patients with rheumatoid arthritis. J Am Podiatr Med Assoc. 2011 May-Jun;101(3):198-207. PubMed PMID: 21622631.">
+        ["2"] = <"Drillis R, Contini R, Bluestein M. Body Segment Parameters; a survey of measurement techniques. Artif Limbs. 1964;8:44-66. PubMed PMID: 14208177. Available from: http://www.oandplibrary.org/al/1964_01_044.asp.">
+        ["3"] = <"Gordon, Claire C. et. al. 1988 Anthropometric Survey of U.S. Personnel: Summary Statistics Interim Report [Internet]. March 1989 [cited 2019 Mar 25]. Available from: https://multisite.eos.ncsu.edu/www-ergocenter-ncsu-edu/wp-content/uploads/sites/18/2016/06/Anthropometric-Detailed-Data-Tables.pdf.">
+        ["4"] = <"Man-Systems Integration Standards,Volume 1, Section 3. [Internet]. National Aeronautics and Space Administration. Anthropometry and biomechanics; [cited 2019 Mar 25]. Available from: https://msis.jsc.nasa.gov/sections/section03.htm.">
+        ["5"] = <"National health and nutrition examination survey III: Body Measurements (Anthropometry) [Internet]. Rockville, MD: Westat, Inc; 1988 Oct [cited 2019 May 10]. Available from: https://wwwn.cdc.gov/nchs/data/nhanes3/manuals/anthro.pdf.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"B40D212F18C2BA03E94718215A57584F">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en utregning av tverrsnittsarealet til en identifisert del av kroppen.">
+            keywords = <"antropometri", "måling", "lengde", "høyde", "bredde", "areal", "tverrsnitt">
+            use = <"Brukes for å registrere utregning av tverrsnittsarealet til et definert område på kroppen. Ved behov kan den inkludere en angivelse av den relative plasseringen av målepunktet. For eksempel for å registrere et estimat av arealet av området på overarmsmuskelen ved midtpunktet mellom akromion (fremspring på skulderbladet) og olecranon (albuespiss).
+
+Tverrsnittsarealet kan registreres og følges over tid, for eksempel å følge utvikling av et barns vekst, eller for å gi innblikk i formen og proporsjonene av et individs kropp i en klinisk, antropometrisk eller ergonomisk vurdering.
+
+De vanligste parametrene som blir målt mellom to definerte punkter er lagt til DV_CODED_TEXT-datatype i elementet \"Navn på kroppsdel\". Når behovet for flere målinger blir identifisert kan disse etter hvert bli lagt til listen.">
+            misuse = <"Skal ikke brukes for å registrere måling eller beregning av en persons kroppsoverflate. Bruk OBSERVATION.body_surface_area (Kroppsoverflate) for dette formålet.
+
+Brukes ikke til å registrere allment utbredte kliniske målinger, som har sine egne spesifikke arketyper. Dette inkluderer, men er ikke begrenset til:
+
+- bruk OBSERVATION.head_circumference (Hodeomkrets) for å måle hodeomkrets.
+- bruk OBSERVATION.hip_circumference (Hofteomkrets) for å måle hofteomkrets.
+- bruk OBSERVATION.waist_circumference (Midjeomkrets) for å måle midjeomkrets.
+- bruk OBSERVATION.chest_circumference for å måle brystomkrets.
+
+Skal ikke brukes til å registrere lengde, høyde eller bredde mellom to identifiserte punkter på kroppen. Bruk OBSERVATION.body_segment_length (Kroppsmåling - lengde) for dette formålet.
+
+Skal ikke brukes for å registrere omkretsen av en kroppsdel eller del av en kroppsdel. Bruk OBSERVATION.body_segment_circumference (Kroppsmåling - omkrets) for dette formålet.
+
+Skal ikke brukes til å registrere dimensjonene på et indre organ eller en lesjon/skade.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the calculation of the cross-sectional area of an identified part of the body, usually identified in relation to points of surface anatomy.">
+            keywords = <"anthropometry", "measurement", "area">
+            use = <"Use to record the calculation of the cross-sectional area of an identified part of the body, usually identified in relation to points of surcace anatomy, including an indication of the relative location of the measurement point, if required. For example: to record the estimation of a mid upper arm area at the mid point between the acromion process of the scapula and the olecranon process of the ulna.
+
+The body segment area may be recorded and tracked over time, for example to provide insight into the shape and proportions of an individual's body for purposes of clinical, anthropometric or ergonomic assessment.
+
+Common parameters that are measured as circumferences have been added to the DV_CODED_TEXT data type in the 'Body segment name' data element. As further parameters are identified, these can be added to this list over time.">
+            misuse = <"Not to be used to record a body surface area measurement - use the OBSERVATION.body_surface_area for this purpose.
+
+Not to be used to record common body segment measurements that have been modelled as separate archetypes, including, but not limited to:
+- for Head circumference - use OBSERVATION.head_circumference;
+- for Hip circumference - use OBSERVATION.hip_circumference;
+- for Waist circumference - use OBSERVATION.waist_circumference; and
+- for Chest circumference - use OBSERVATION.chest_circumference.
+
+Not to be used to record the length, height or width measured between two identified points on the body - use OBSERVATION.body_segment_length for this purpose.
+
+Not to be used to record the circumference of a body segment - use OBSERVATION.body_segment_circumference for this purpose.
+
+Not to be used to record the area of an internal body organ or a lesion.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Body segment area
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {2..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {1} matches {    -- Body segment name
+                                        value matches {
+                                            DV_TEXT[at9004]
+                                            DV_CODED_TEXT[at9005] matches {
+                                                defining_code matches {[at0017]}    -- Upper arm muscle area
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Laterality
+                                        value matches {
+                                            DV_CODED_TEXT[at9006] matches {
+                                                defining_code matches {[ac9000]}    -- Laterality (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {1} matches {    -- Area
+                                        value matches {
+                                            DV_QUANTITY[at9007] matches {
+                                                property matches {[at9001]}    -- Area
+                                                [magnitude, units, precision] matches {
+                                                    [{|>=0.0|}, {"mm2"}, {2}],
+                                                    [{|>=0.0|}, {"cm2"}, {2}],
+                                                    [{|>=0.0|}, {"[sin_i]"}, {2}]
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9008]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0010] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9009]
+                                        }
+                                    }
+                                    ELEMENT[at0031] occurrences matches {0..1} matches {    -- Body position
+                                        value matches {
+                                            DV_CODED_TEXT[at9018] matches {
+                                                defining_code matches {[ac9019]}    -- Body position (synthesised)
+                                            }
+                                            DV_TEXT[at9019]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0014] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0015] matches {    -- Measuring device
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Measurement method
+                        value matches {
+                            DV_TEXT[at9016]
+                        }
+                    }
+                    ELEMENT[at0029] occurrences matches {0..1} matches {    -- Measurement origin/endpoint
+                        value matches {
+                            DV_TEXT[at9017]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0030] matches {    -- Structured origin/endpoint
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_relative\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0016] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Kroppsmåling - tverrsnittsareal">
+                description = <"Utregning av tverrsnittsarealet til en identifisert del av kroppen.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"Navn på kroppsdel">
+                description = <"Navn på del av kroppen som måles.">
+                comment = <"Måten man har gjort målingen av kroppsdelen på skal registreres ved hjelp av elementet \"Målemetode\" og/eller av \"Sted for omkrets\".">
+            >
+            ["at0005"] = <
+                text = <"Lateralitet">
+                description = <"Hvilken side av kroppen kroppsdelen er på.">
+                comment = <"Bare relevant ved arealmåling av et lem.">
+            >
+            ["at0006"] = <
+                text = <"Venstre">
+                description = <"Venstre side av kroppen.">
+            >
+            ["at0007"] = <
+                text = <"Høyre">
+                description = <"Høyre side av kroppen.">
+            >
+            ["at0008"] = <
+                text = <"Tverrsnittsareal">
+                description = <"Utregnet tverrsnittsareal av området på kroppen.">
+            >
+            ["at0009"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om utregning av tverrsnittsarealet som ikke er fanget i andre felt.">
+            >
+            ["at0011"] = <
+                text = <"Konfunderende faktorer">
+                description = <"Forhold eller omstendigheter som kan påvirke målingen av kroppsdelen.">
+                comment = <"For eksempel: Et barn som ikke samarbeider.">
+            >
+            ["at0015"] = <
+                text = <"Måleinstrument">
+                description = <"Detaljer om måleinstrumentet som ble brukt i måling av kroppsdelen.">
+            >
+            ["at0016"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0017"] = <
+                text = <"Areal av overarmsmuskel">
+                description = <"Utregning av tverrsnittsarealet av overarmsmuskel, vanligvis utledet fra måling av overarmsomkrets.">
+            >
+            ["at0027"] = <
+                text = <"Målemetode">
+                description = <"Fritekstbeskrivelse av metoden som ble benyttet for målingen.">
+                comment = <"Spesifiser for å sikre at en sekvens av målinger blir gjort på de samme punktene og på samme måte. For eksempel \"Sittende med kneet bøyd 90 grader\".">
+            >
+            ["at0029"] = <
+                text = <"Sted for omkrets">
+                description = <"Stedet på kroppen som identifiserer start og endepunkt for måling av omkrets.">
+                comment = <"Målingen av omkrets er ofte brukt som basis for utregning av areal. Koding av navnet på stedet på kroppen med en terminologi er fortrukket, om mulig.">
+            >
+            ["at0030"] = <
+                text = <"Strukturert sted for omkrets">
+                description = <"En strukturert anatomisk lokalisering av stedet på kroppen som er start- og endepunkt for omkretsmålingen, inkludert relativ anatomisk plassering, dersom det er nødvendig.">
+                comment = <"For eksempel å registrere at målingen av leggomkrets ble gjort 10 centimeter distalt for tuberositas tibiae.">
+            >
+            ["at0031"] = <
+                text = <"Stilling">
+                description = <"Individets posisjon ved tidspunktet for målingen.">
+            >
+            ["at0036"] = <
+                text = <"Stående">
+                description = <"Stående ved tidspunktet for målingen.">
+            >
+            ["at0037"] = <
+                text = <"Sittende">
+                description = <"Sittende (for eksempel på en stol eller på en seng med føttene på gulvet) på tidspunkt for målingen.">
+            >
+            ["at0039"] = <
+                text = <"Liggende">
+                description = <"Liggende flatt på tidspunkt for målingen.">
+            >
+            ["at9001"] = <
+                text = <"* Area (en)">
+                description = <"* Area (en)">
+            >
+            ["ac9000"] = <
+                text = <"Lateralitet (synthesised)">
+                description = <"Hvilken side av kroppen kroppsdelen er på. (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"Stilling (synthesised)">
+                description = <"Individets posisjon ved tidspunktet for målingen. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Body segment area">
+                description = <"Calculation of the cross-sectional area of an identified part of the body, usually identified in relation to points of surface anatomy.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Body segment name">
+                description = <"Name of the measured body segment.">
+                comment = <"Use the 'Measurement method' element and/or recording the 'Measurement origin/endpoint' to record how the body segment is measured.">
+            >
+            ["at0005"] = <
+                text = <"Laterality">
+                description = <"Side of the segment measured.">
+                comment = <"Only relevant for calculation of the area of a limb.">
+            >
+            ["at0006"] = <
+                text = <"Left">
+                description = <"Left side of the body.">
+            >
+            ["at0007"] = <
+                text = <"Right">
+                description = <"Right side of the body.">
+            >
+            ["at0008"] = <
+                text = <"Area">
+                description = <"Calculated area of the identified body segment.">
+            >
+            ["at0009"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the calculation of the area of the body segment, not captured in other fields.">
+            >
+            ["at0011"] = <
+                text = <"Confounding factors">
+                description = <"Record any issues or factors that may impact on the measurement of the body segment.">
+                comment = <"For example: an uncooperative child.">
+            >
+            ["at0015"] = <
+                text = <"Measuring device">
+                description = <"Details of the device used for measuring the body part.">
+            >
+            ["at0016"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0017"] = <
+                text = <"Upper arm muscle area">
+                description = <"Calculation of the area of the upper arm, usually derived from the measurement of the upper arm circumference.">
+            >
+            ["at0027"] = <
+                text = <"Measurement method">
+                description = <"Narrative description of the method used for measurement.">
+                comment = <"Specify in order to ensure that a sequence of measurements are taken at the same point and in the same way. For example: 'Sitting with knee bent at 90 degrees'.">
+            >
+            ["at0029"] = <
+                text = <"Measurement origin/endpoint">
+                description = <"Identification of a simple body site for the location of the origin/end point of the circumference measurement.">
+                comment = <"The circumference measurement is often used as a basis for the area calculation. Coding of the name of the body site with a terminology is preferred, where possible.">
+            >
+            ["at0030"] = <
+                text = <"Structured origin/endpoint">
+                description = <"A structured anatomical location for the start/end point of the circumference measurement including relative location, if required.">
+                comment = <"For example: to record that a measurement around the calf was taken 10cm distal to the tibial tuberosity.">
+            >
+            ["at0031"] = <
+                text = <"Body position">
+                description = <"The position of the individual at the time of measurement.">
+            >
+            ["at0036"] = <
+                text = <"Standing">
+                description = <"Standing at the time of measurement.">
+            >
+            ["at0037"] = <
+                text = <"Sitting">
+                description = <"Sitting (for example on bed or chair) at the time of measurement.">
+            >
+            ["at0039"] = <
+                text = <"Lying">
+                description = <"Lying flat at the time of measurement.">
+            >
+            ["at9001"] = <
+                text = <"Area">
+                description = <"Area">
+            >
+            ["ac9000"] = <
+                text = <"Laterality (synthesised)">
+                description = <"Side of the segment measured. (synthesised)">
+            >
+            ["ac9019"] = <
+                text = <"Body position (synthesised)">
+                description = <"The position of the individual at the time of measurement. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/335>
+        >
+    >
+    value_sets = <
+        ["ac9019"] = <
+            id = <"ac9019">
+            members = <"at0036", "at0037", "at0039">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0006", "at0007">
+        >
+    >

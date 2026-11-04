@@ -1,0 +1,86 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=a8219fba-6b82-43a3-a2ab-5d0b2e7fafbe; build_uid=14667f74-2771-468c-a6b2-1980e146fe0a)
+    openEHR-EHR-CLUSTER.coronary_anatomy.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["date"] = <"2020-10-11">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"C30A1860A5346E239590481AE8455586">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Coronary anatomy
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Coronary artery dominance
+                value matches {
+                    DV_CODED_TEXT[at9001] matches {
+                        defining_code matches {[ac9000]}    -- Coronary artery dominance (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Anomalies
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Coronary anatomy">
+                description = <"Coronary anatomy">
+            >
+            ["at0001"] = <
+                text = <"Coronary artery dominance">
+                description = <"">
+            >
+            ["at0003"] = <
+                text = <"Anomalies">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Balanced coronary system">
+                description = <"If the posterior descending artery is supplied by both the right coronary artery and the circumflex artery, then the coronary circulation can be classified as \"co-dominant\".">
+            >
+            ["at0005"] = <
+                text = <"Left dominant coronary system">
+                description = <"If the posterior descending artery is supplied by the circumflex artery (CX), a branch of the left artery, then the coronary circulation can be classified as \"left-dominant\".">
+            >
+            ["at0006"] = <
+                text = <"Right dominant coronary system">
+                description = <"If the posterior descending artery is supplied by the right coronary artery (RCA), then the coronary circulation can be classified as \"right-dominant\".">
+            >
+            ["ac9000"] = <
+                text = <"Coronary artery dominance (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0004", "at0005", "at0006">
+        >
+    >

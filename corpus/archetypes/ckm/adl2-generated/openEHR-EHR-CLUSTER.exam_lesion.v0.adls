@@ -1,0 +1,542 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=920347ee-9598-4227-90cf-be3b04c28a1d; build_uid=9cff9ed1-b4f0-44c7-8edf-1ce524d66662)
+    openEHR-EHR-CLUSTER.exam_lesion.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke">
+                ["organisation"] = <"Helse Vest IKT AS">
+                ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Osmeire Sanzovo">
+                ["organisation"] = <"Hospital Sírio Libanês">
+                ["email"] = <"osmeire.acsanzovo@hsl.org.br">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2015-06-25">
+    >
+    original_namespace = <"no.nasjonalikt">
+    original_publisher = <"Nasjonal IKT">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"no.nasjonalikt">
+    custodian_organisation = <"Nasjonal IKT">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Derived from: Examination of a lesion, Draft archetype [Internet]. openEHR Foundation, openEHR Clinical Knowledge Manager [cited: 2021-10-22]. Available from: https://ckm.openehr.org/ckm/archetypes/1013.1.2109">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"A3BDBE1A73307DC1822D5345C80A1160">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere funn observert under fysisk undersøkelse av en spesifikk makroskopisk lokalisert strukturell endring av eller skade på normalt vev.">
+            keywords = <"skade, sår, makel, papel, pustel, vesikkel, erytem, bulla, urtica, akne, follikulitt, nodulus, noduli, nevus, nevi, føflekk, tumor, lichen, lichenifisering, dermatitt, fissur, komedon, cyste, infiltrasjon, indurasjon, teleangiektiase, petekkie, deskvamasjon, hyperkeratose, kruste, erosjon, ulcus, ekskoriasjon, cicatrix, hypertrofisk, arr, keloid, atrofi, stria, callus, poikiloderma, alopecia, hypertrikose, follikulitt, furunkel, karbunkel, abscess, cellulitt, purpura, ekkymose, suggilasjon, hematom, milier, verruca", ...>
+            use = <"Brukes for å registrere funn observert under fysisk undersøkelse av en spesifikk makroskopisk lokalisert strukturell endring av eller skade på normalt vev.
+
+Denne arketypen er ment for å brukes til å beskrive enkeltstående lokaliserte lesjoner. For å beskrive lokaliserte samlinger av lesjoner som for eksempel grupper av føflekker, må det brukes en annen passende CLUSTER-arketype. Denne arketypen kan nøstes inni en slik arketype for å beskrive enkeltlesjoner som er del av en samling.
+
+Denne arketypen er spesifikt designet for å brukes i SLOTet \"Undersøkelsesfunn\" i arketypen OBSERVATION.exam, CLUSTER.exam-skin, eller andre CLUSTER.exam-arketyper. Den kan imidlertid også brukes i hvilken som helst annen OBSERVATION-, ACTION- eller CLUSTER-arketype der det er klinisk passende. For eksempel CLUSTER.exam-breast eller CLUSTER.exam-penis.
+
+Denne arketypen kan spesialiseres for å støtte registrering av detaljer som kun er relevante for en undergruppe av lesjoner. Et eksempel på dette kan være å spesialisere arketypen for sår, for å kunne registrere informasjon om sårkanter, sårbunn, undergraving eller sårvæske.
+
+Bruk for å registrere fritekstbeskrivelser av kliniske funn fra eksisterende eller tidligere løsninger i et arketypeformat, ved hjelp av elementet \"Klinisk beskrivelse\".">
+            misuse = <"Brukes ikke for å registrere funn om en radiologisk lesjon. Bruk arketypen CLUSTER.imaging_exam-abnormality for dette formålet.
+
+Brukes ikke for å registrere funn om utbrudd som dekker hele kroppen eller et helt organ, som for eksempel vannkopper som dekker hele hudoverflaten. Bruk arketypen CLUSTER.symptom_sign for dette formålet.
+
+Brukes ikke for å registrere en makroskopisk patologiundersøkelse av prøvemateriale fra en lesjon. Bruk en passende CLUSTER-arketype innenfor arketypen OBSERVATION.laboratory_test_result.
+
+Brukes ikke for å registrere den kliniske historikken for en lesjon. Bruk spesifikke OBSERVATION- og CLUSTER-arketyper, for eksempel OBSERVATION.story og CLUSTER.symptom_sign.">
+            copyright = <"© Nasjonal IKT HF">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"*For recording findings observed during the physical examination of an identified macroscopic localised structural change of, or damage to, normal tissue. (en)">
+            keywords = <"*injury, wound, ulcer, macule, papule, patch, plaque, vesicle, bulla, erosion, fissure, excoriation, nodule, tumor, tumour, burrow, pits, abscess, carbuncle, cyst, furuncle, pustule, vesicle, hematoma, haematoma, purpura, petechiae, telangiectasia, weal, wheal, urticaria, scale, atrophy, incision, incised, puncture, contusion, bruise, abrasion, laceration, maceration, burn, frostbite (en)", ...>
+            use = <"*Use for recording findings observed during the physical examination of an identified macroscopic localised structural change or damage to normal tissue. This archetype is intended to be used to describe both benign and malignant lesions.
+
+This archetype is intended to be used to describe single localised lesions. To describe localised clusters of lesions such as a cluster of moles, use an appropriate CLUSTER archetype. This archetype may be nested inside such an archetype to describe single lesions which are part of the cluster.
+
+This archetype has been specifically designed to be used in the 'Examination findings' SLOT within the CLUSTER.exam_skin or other OBSERVATION.exam archetypes, but can also be used within any other OBSERVATION, ACTION or CLUSTER archetypes, where clinically appropriate - for example, CLUSTER.exam_breast or CLUSTER.exam_penis.
+
+This archetype may be specialised to enable recording details only relevant to a subset of lesions. An example of this can be specialising the archetype for wounds/ulcers, to allow recording information about wound edges, wound bed, undermining, or exudate.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element. (en)">
+            misuse = <"*Not to be used to record findings about an imaging lesion. Use the CLUSTER.imaging_exam-abnormality archetype for this purpose.
+
+Not to be used to record findings about non-localised or whole-organ eruptions such as a chickenpox rash covering the entire skin surface. Use the CLUSTER.symptom_sign archetype for this purpose.
+
+Not to be used to record a macroscopic pathology examination of a specimen from a lesion. Use an appropriate CLUSTER archetype within the OBSERVATION.laboratory_test_result archetype.
+
+Not to be used for recording the clinical history of a lesion - use specific OBSERVATION and CLUSTER archetypes, for example OBSERVATION.story and CLUSTER.symptom_sign. (en)">
+            copyright = <"© Nasjonal IKT HF">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For recording findings observed during the physical examination of an identified macroscopic localised structural change or damage to normal tissue.">
+            keywords = <"injury, wound, ulcer, macule, papule, patch, plaque, vesicle, bulla, erosion, fissure, excoriation, nodule, tumor, tumour, burrow, pits, abscess, carbuncle, cyst, furuncle, pustule, vesicle, hematoma, haematoma, purpura, petechiae, telangiectasia, weal, wheal, urticaria, scale, atrophy, incision, incised, puncture, contusion, bruise, abrasion, laceration, maceration, burn, frostbite", ...>
+            use = <"Use for recording findings observed during the physical examination of an identified macroscopic localised structural change or damage to normal tissue. This archetype is intended to be used to describe both benign and malignant lesions.
+
+This archetype is intended to be used to describe single localised lesions. To describe localised clusters of lesions such as a cluster of moles, use an appropriate CLUSTER archetype. This archetype may be nested inside such an archetype to describe single lesions which are part of the cluster.
+
+This archetype has been specifically designed to be used in the 'Examination findings' SLOT within the OBSERVATION.exam, CLUSTER.exam-skin or other CLUSTER.exam-archetypes, but can also be used within any other OBSERVATION, ACTION or CLUSTER archetypes, where clinically appropriate - for example, CLUSTER.exam-breast or CLUSTER.exam-penis.
+
+This archetype may be specialised to enable recording details only relevant to a subset of lesions. An example of this can be specialising the archetype for wounds/ulcers, to allow recording information about wound edges, wound bed, undermining, or exudate.
+
+Use to incorporate the narrative descriptions of clinical findings within existing or legacy clinical systems into an archetyped format, using the 'Clinical Description' data element.">
+            misuse = <"Not to be used to record findings about an imaging lesion. Use the CLUSTER.imaging_exam-abnormality archetype for this purpose.
+
+Not to be used to record findings about non-localised or whole-organ eruptions such as a chickenpox rash covering the entire skin surface. Use the CLUSTER.symptom_sign archetype for this purpose.
+
+Not to be used to record a macroscopic pathology examination of a specimen from a lesion. Use an appropriate CLUSTER archetype within the OBSERVATION.laboratory_test_result archetype.
+
+Not to be used for recording the clinical history of a lesion - use specific OBSERVATION and CLUSTER archetypes, for example OBSERVATION.story and CLUSTER.symptom_sign.">
+            copyright = <"© Nasjonal IKT HF">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Examination of a lesion
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- Lesion type
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Shape
+                value matches {
+                    DV_TEXT[at9009]
+                }
+            }
+            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Label
+                value matches {
+                    DV_TEXT[at9001]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Clinical description
+                value matches {
+                    DV_TEXT[at9002]
+                }
+            }
+            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Length/diameter
+                value matches {
+                    DV_QUANTITY[at9007] matches {
+                        property matches {[at9006]}    -- Length
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"mm"}],
+                            [{|>=0.0|}, {"cm"}],
+                            [{|>=0.0|}, {"[in_i]"}]
+                        }
+                    }
+                }
+                name matches {
+                    DV_CODED_TEXT[at9012] matches {
+                        defining_code matches {[ac9009]}    -- Length/diameter (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0018] occurrences matches {0..1} matches {    -- Width
+                value matches {
+                    DV_QUANTITY[at9013] matches {
+                        property matches {[at9006]}    -- Length
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"mm"}],
+                            [{|>=0.0|}, {"cm"}],
+                            [{|>=0.0|}, {"[in_i]"}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0014] occurrences matches {0..1} matches {    -- Height/depth
+                value matches {
+                    DV_QUANTITY[at9008] matches {
+                        property matches {[at9006]}    -- Length
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"mm"}],
+                            [{|>=0.0|}, {"cm"}],
+                            [{|>=0.0|}, {"[in_i]"}]
+                        }
+                    }
+                }
+                name matches {
+                    DV_CODED_TEXT[at9014] matches {
+                        defining_code matches {[ac9010]}    -- Height/depth (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0024] occurrences matches {0..1} matches {    -- Area
+                value matches {
+                    DV_QUANTITY[at9015] matches {
+                        property matches {[at9011]}    -- Area
+                        [magnitude, units] matches {
+                            [{|>=0.0|}, {"mm2"}],
+                            [{|>=0.0|}, {"cm2"}],
+                            [{|>=0.0|}, {"[sin_i]"}],
+                            [{|0.0..100.0|}, {"%{Body}"}]
+                        }
+                    }
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Body site
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+            allow_archetype CLUSTER[at0011] matches {    -- Structured body site
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_relative(-[a-zA-Z0-9_]+)*\.v2\..*|openEHR-EHR-CLUSTER\.anatomical_location_circle(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            allow_archetype CLUSTER[at0004]    -- Additional details
+            allow_archetype CLUSTER[at0005] matches {    -- Multimedia representation
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.media_file(-[a-zA-Z0-9_]+)*\.v1\..*/}
+            }
+            ELEMENT[at0006] matches {    -- Clinical interpretation
+                value matches {
+                    DV_TEXT[at9004]
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9005]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Undersøkelse av en lesjon">
+                description = <"Funn observert under fysisk undersøkelse av en spesifikk makroskopisk lokalisert strukturell endring av eller skade på normalt vev.">
+            >
+            ["at0001"] = <
+                text = <"Kroppssted">
+                description = <"Spesifisering av kroppsstedet hvor den undersøkte lesjonen befinner seg.">
+                comment = <"\"Kroppssted\" bør kodes med en terminologi, der dette er mulig. For eksempel høyre kne, ganen, sakrum eller duodenum. Dersom kroppsstedet allerede er angitt i SLOTet \"Strukturert kroppssted\" eller i en annen arketype denne arketypen er nøstet inni, kan dette dataelementet være overflødig.">
+            >
+            ["at0002"] = <
+                text = <"Type lesjon">
+                description = <"Spesifisering av typen lesjon som er undersøkt.">
+                comment = <"\"Type lesjon\" bør kodes med en terminologi, der det er mulig. For eksempel føflekk, hevelse, depigmentert område, rift, hematom, kirurgisk snitt, arr, basalcellekarsinom, venøst leggsår eller slimhinnepolypp. For noen bruksområder kjent som \"primær morfologi\".">
+            >
+            ["at0003"] = <
+                text = <"Klinisk beskrivelse">
+                description = <"Fritekstbeskrivelse av funnene som ble gjort under undersøkelsen av lesjonen.">
+            >
+            ["at0004"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere strukturerte detaljer om undersøkelsesfunnene.">
+            >
+            ["at0005"] = <
+                text = <"Multimediarepresentasjon">
+                description = <"Digitalt bilde, video eller diagram som representerer undersøkelsesfunnene.">
+            >
+            ["at0006"] = <
+                text = <"Klinisk tolkning">
+                description = <"Enkeltord, frase eller kort beskrivelse som representerer den kliniske betydningen av undersøkelsesfunnene.">
+                comment = <"Den klinisk tolkningen kan kodes med en terminologi, der dette er passende.">
+            >
+            ["at0007"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om undersøkelsesfunnene, som ikke fanges opp i andre felt.">
+            >
+            ["at0011"] = <
+                text = <"Strukturert kroppssted">
+                description = <"En strukturert angivelse av kroppssted hvor den undersøkte lesjonen befinner seg.">
+                comment = <"Dersom kroppsstedet allerede er angitt i elementet \"Kroppssted\" eller i en annen arketype denne arketypen er nøstet inni, kan dette SLOTet være overflødig.">
+            >
+            ["at0012"] = <
+                text = <"Merkelapp">
+                description = <"Identifisering av lesjonen ved bruk av en merkelapp, for å skille en lesjon fra lignende lesjoner ved det samme kroppsstedet.">
+                comment = <"For eksempel \"Føflekk nr 1\" som markert på et diagram over kroppsstedet.">
+            >
+            ["at0013"] = <
+                text = <"Lengde/diameter">
+                description = <"Lesjonens lengde eller diameter.">
+            >
+            ["at0014"] = <
+                text = <"Høyde/dybde">
+                description = <"Lesjonens høyde eller dybde over eller under den omkringliggende organoverflaten.">
+            >
+            ["at0015"] = <
+                text = <"Form">
+                description = <"Spesifisering av lesjonens form.">
+                comment = <"\"Form\" bør kodes med en terminologi, der det er mulig. For eksempel \"stilket\" eller \"sirkulær\". For noen bruksområder kjent som \"sekundær morfologi\".">
+            >
+            ["at0018"] = <
+                text = <"Bredde">
+                description = <"Lesjonens bredde.">
+            >
+            ["at0020"] = <
+                text = <"Høyde">
+                description = <"Lesjonens høyde over den omkringliggende organoverflaten.">
+            >
+            ["at0021"] = <
+                text = <"Dybde">
+                description = <"Lesjonens dybde under den omkringliggende organoverflaten.">
+            >
+            ["at0022"] = <
+                text = <"Lengde">
+                description = <"Lesjonens lengde.">
+            >
+            ["at0023"] = <
+                text = <"Diameter">
+                description = <"Lesjonens diameter.">
+            >
+            ["at0024"] = <
+                text = <"Areal">
+                description = <"Lesjonens areal.">
+            >
+            ["at9006"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9011"] = <
+                text = <"* Area (en)">
+                description = <"* Area (en)">
+            >
+            ["ac9009"] = <
+                text = <"Lengde/diameter (synthesised)">
+                description = <"Lesjonens lengde eller diameter. (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Høyde/dybde (synthesised)">
+                description = <"Lesjonens høyde eller dybde over eller under den omkringliggende organoverflaten. (synthesised)">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Exame da Lesão">
+                description = <"*Findings observed during the physical examination of an identified macroscopic localised structural change of, or damage to, normal tissue. (en)">
+            >
+            ["at0001"] = <
+                text = <"Local anatômico da lesão">
+                description = <"*Identification of the body site of the examined lesion. (en)">
+                comment = <"*'Body site' should be coded with a terminology, where possible. For example: right knee, palate, sacrum or duodenum. If the body site is identified in the 'Structured body site' SLOT or in another archetype in which this archetype is nested, this data element may be redundant. (en)">
+            >
+            ["at0002"] = <
+                text = <"Tipo de Lesão">
+                description = <"*Identification of the type of lesion examined. (en)">
+                comment = <"*'Lesion type' should be coded with a terminology, where possible. For example: mole, weal, depigmented area, laceration, haematoma, surgical incision, scar, basal cell carcinoma, venous leg ulcer or mucous membrane polyp. In some use cases known as 'primary morphology'. (en)">
+            >
+            ["at0003"] = <
+                text = <"Descrição Clínica">
+                description = <"Descrição Narrativa dos resultados globais observados durante o exame físico.">
+            >
+            ["at0004"] = <
+                text = <"*Additional details (en)">
+                description = <"*Additional structured details about the examination findings. (en)">
+            >
+            ["at0005"] = <
+                text = <"Representação multimídia">
+                description = <"Imagem Digital, vídeo ou diagrama que representa os achados do exame físico">
+            >
+            ["at0006"] = <
+                text = <"Interpretação Clínica">
+                description = <"*Single word, phrase or brief description that represents the clinical meaning and significance of the examination findings. (en)">
+                comment = <"*The 'Clinical interpretation' can be coded with a terminology, where appropriate. (en)">
+            >
+            ["at0007"] = <
+                text = <"Comentários">
+                description = <"*Additional narrative about the examination findings, not captured in other fields. (en)">
+            >
+            ["at0011"] = <
+                text = <"Local anatômico (estruturado)">
+                description = <"*A structured anatomical location of the examined lesion. (en)">
+                comment = <"*If the body site is identified in the 'Body site' element or in another archetype in which this archetype is nested, this data element may be redundant. (en)">
+            >
+            ["at0012"] = <
+                text = <"*Label (en)">
+                description = <"*Identification, by using a label, of the lesion to distinguish one lesion from similar lesions at the same body site. (en)">
+                comment = <"Por exemplo, \"Papiloma #1\" foi marcado no diagrama do lado do corpo na parte superior">
+            >
+            ["at0013"] = <
+                text = <"*Length/diameter (en)">
+                description = <"*The length or diameter of the lesion. (en)">
+            >
+            ["at0014"] = <
+                text = <"*Height/depth (en)">
+                description = <"*Height or depth of the lesion above or below the surrounding organ surface. (en)">
+            >
+            ["at0015"] = <
+                text = <"*Shape (en)">
+                description = <"*Identification of the shape of the lesion. (en)">
+                comment = <"*'Shape' should be coded with a terminology, where possible. For example 'pedunculated' or 'circular'. In some use cases known as 'shape morphology' or 'secondary morphology'. (en)">
+            >
+            ["at0018"] = <
+                text = <"*Width (en)">
+                description = <"*The width of the lesion. (en)">
+            >
+            ["at0020"] = <
+                text = <"*Height (en)">
+                description = <"*Height of the lesion above the surrounding organ surface. (en)">
+            >
+            ["at0021"] = <
+                text = <"*Depth (en)">
+                description = <"*Depth of the lesion below the surrounding organ surface. (en)">
+            >
+            ["at0022"] = <
+                text = <"*Length (en)">
+                description = <"*The length of the lesion. (en)">
+            >
+            ["at0023"] = <
+                text = <"*Diameter (en)">
+                description = <"*The diameter of the lesion. (en)">
+            >
+            ["at0024"] = <
+                text = <"*Area (en)">
+                description = <"*The area of the lesion. (en)">
+            >
+            ["at9006"] = <
+                text = <"* Length (en)">
+                description = <"* Length (en)">
+            >
+            ["at9011"] = <
+                text = <"* Area (en)">
+                description = <"* Area (en)">
+            >
+            ["ac9009"] = <
+                text = <"*Length/diameter (en) (synthesised)">
+                description = <"*The length or diameter of the lesion. (en) (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"*Height/depth (en) (synthesised)">
+                description = <"*Height or depth of the lesion above or below the surrounding organ surface. (en) (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Examination of a lesion">
+                description = <"Findings observed during the physical examination of an identified macroscopic localised structural change or damage to normal tissue.">
+            >
+            ["at0001"] = <
+                text = <"Body site">
+                description = <"Identification of the body site of the examined lesion.">
+                comment = <"'Body site' should be coded with a terminology, where possible. For example: right knee, palate, sacrum or duodenum. If the body site is identified in the 'Structured body site' SLOT or in another archetype in which this archetype is nested, this data element may be redundant.">
+            >
+            ["at0002"] = <
+                text = <"Lesion type">
+                description = <"Identification of the type of lesion examined.">
+                comment = <"'Lesion type' should be coded with a terminology, where possible. For example: mole, weal, depigmented area, laceration, haematoma, surgical incision, scar, basal cell carcinoma, venous leg ulcer or mucous membrane polyp. In some use cases known as 'primary morphology'.">
+            >
+            ["at0003"] = <
+                text = <"Clinical description">
+                description = <"Narrative description of the overall findings observed during the physical examination.">
+            >
+            ["at0004"] = <
+                text = <"Additional details">
+                description = <"Additional structured details about the examination findings.">
+            >
+            ["at0005"] = <
+                text = <"Multimedia representation">
+                description = <"Digital image, video or diagram representing the physical examination findings.">
+            >
+            ["at0006"] = <
+                text = <"Clinical interpretation">
+                description = <"Single word, phrase or brief description that represents the clinical meaning and significance of the examination findings.">
+                comment = <"The 'Clinical interpretation' can be coded with a terminology, where appropriate.">
+            >
+            ["at0007"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the examination findings, not captured in other fields.">
+            >
+            ["at0011"] = <
+                text = <"Structured body site">
+                description = <"A structured anatomical location of the examined lesion.">
+                comment = <"If the body site is identified in the 'Body site' element or in another archetype in which this archetype is nested, this data element may be redundant.">
+            >
+            ["at0012"] = <
+                text = <"Label">
+                description = <"Identification, by using a label, of the lesion to distinguish one lesion from similar lesions at the same body site.">
+                comment = <"For example, 'Mole #1' as marked on a diagram of the body site.">
+            >
+            ["at0013"] = <
+                text = <"Length/diameter">
+                description = <"The length or diameter of the lesion.">
+            >
+            ["at0014"] = <
+                text = <"Height/depth">
+                description = <"Height or depth of the lesion above or below the surrounding organ surface.">
+            >
+            ["at0015"] = <
+                text = <"Shape">
+                description = <"Identification of the shape of the lesion.">
+                comment = <"'Shape' should be coded with a terminology, where possible. For example 'pedunculated' or 'circular'. In some use cases known as 'shape morphology' or 'secondary morphology'.">
+            >
+            ["at0018"] = <
+                text = <"Width">
+                description = <"The width of the lesion.">
+            >
+            ["at0020"] = <
+                text = <"Height">
+                description = <"Height of the lesion above the surrounding organ surface.">
+            >
+            ["at0021"] = <
+                text = <"Depth">
+                description = <"Depth of the lesion below the surrounding organ surface.">
+            >
+            ["at0022"] = <
+                text = <"Length">
+                description = <"The length of the lesion.">
+            >
+            ["at0023"] = <
+                text = <"Diameter">
+                description = <"The diameter of the lesion.">
+            >
+            ["at0024"] = <
+                text = <"Area">
+                description = <"The area of the lesion.">
+            >
+            ["at9006"] = <
+                text = <"Length">
+                description = <"Length">
+            >
+            ["at9011"] = <
+                text = <"Area">
+                description = <"Area">
+            >
+            ["ac9009"] = <
+                text = <"Length/diameter (synthesised)">
+                description = <"The length or diameter of the lesion. (synthesised)">
+            >
+            ["ac9010"] = <
+                text = <"Height/depth (synthesised)">
+                description = <"Height or depth of the lesion above or below the surrounding organ surface. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9006"] = <http://openehr.org/id/122>
+            ["at9011"] = <http://openehr.org/id/335>
+        >
+    >
+    value_sets = <
+        ["ac9009"] = <
+            id = <"ac9009">
+            members = <"at0022", "at0023">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0020", "at0021">
+        >
+    >

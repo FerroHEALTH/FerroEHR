@@ -1,0 +1,255 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=eb0afe76-1cc2-451b-adf1-fa5dfd2885b4; build_uid=553c3f10-2917-4487-a7dd-c7417983ed96)
+    openEHR-EHR-COMPOSITION.health_certificate.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Mikkel Johan Gaup Grønmo">
+                ["organisation"] = <"Helse Nord IKT">
+                ["email"] = <"mikkel.johan.gaup.gronmo@hnikt.no">
+            >
+            accreditation = <"Nasjonal IKT">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2021-10-05">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (Nasjonal IKT redaktør)", "Malin Berg, DIPS ASA, Norway", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Gunn Elin Blakkisrud, DIPS ASA, Norway", "Marte Rime Bø, Direktoratet for e-helse, Norway", "Richard Conings, Open Line, Netherlands", "Kåre Flø, DIPS ASA, Norway", "Rosane Gotardo, Systema Ltda., Brazil", "Heather Grain, Llewelyn Grain Informatics, Australia", "Mikkel Johan Gaup Grønmo, Helse Nord IKT, Norway (Nasjonal IKT redaktør)", "Evelyn Hovenga, EJSH Consulting, Australia", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "Paul Miller, NES Digital Service, NHS Scotland, United Kingdom", "Arunakiry Natarajan, medondo, Germany", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Terje Sagmyr, Helse Vest IKT, Norway", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Anders Thurin, VGR, Sweden", "John Tore Valand, Helse Vest IKT, Norway", "Ina Wille, Helse-Vest RHF, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"2B3CB0C5E69EAAB446A04927F70E6002">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Um eine formelle Erklärung über Aspekte des Gesundheitszustands einer Person darzustellen, die in der Regel vom behandelnden Arzt festgestellt wird und für die Weitergabe an Dritte bestimmt ist.">
+            keywords = <"Zertifikat, Bescheinigung, Aussage, Erklärung, Tod, Krankenurlaub, Fitness, Impfung, Übung, Beschäftigung, Fliegen, Fahren, Tauchen", ...>
+            use = <"Verwenden Sie diesen Archetyp, um eine formelle Beurteilung des Gesundheitszustands einer Person darzustellen. Die Beurteilung wird in der Regel vom behandelnden Arzt festgestellt und für die Weitergabe an Dritte bestimmt.
+
+Verwendungsbeispiele, die von medizinischem Fachpersonal angegeben werden, umfassen, sind jedoch nicht beschränkt auf:
+- eingeschränkte Arbeitsfähigkeit oder -stunden;
+- Sterbeurkunde - Verwendung des Inhalts des Archetyps EVALUATION.cause_of_death, um spezifische informationen zum Tod in einem Template für eine Sterbeurkunde zu erfassen;
+- funktionelle Kapazität;
+- Eignung für bestimmte Aktivitäten, einschließlich Fahren, Fliegen oder Tauchen; oder
+- Impfstatusbescheinigung.
+
+Verwendungsbeispiele, die von einem Administrator angegeben werden, umfassen, sind jedoch nicht beschränkt auf:
+- Anwesenheit in einer Gesundheitseinrichtung.">
+            misuse = <"">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere en formell vurdering av et individs helsestatus, vanligvis attestert av behandler og med det formål å dele attesten med en tredjepart.">
+            keywords = <"attest, uttalelse, død, sykemelding, skikkethet, vaksinasjon, øvelse, ansettelsesforhold, fly, føre bil, dykking", ...>
+            use = <"Brukes for å registrere en formell vurdering av et individs helsestatus, vanligvis attestert av behandler og med det formål å dele attesten med en tredjepart.
+
+Attestering utført av helsepersonell inkluderer, men samtidig ikke begrenset til:
+- sykemelding;
+- dødsattest - ved å bruke EVALUATION.cause_of_death arketypen som bærer av aktuell dødsrelatert informasjon i et templat for Dødsattest.
+- funksjonsnivå;
+- skikkethetsattest for spesifikke aktiviteter, inkludert å føre bil, fly eller dykking; eller
+- vaksinasjonsattest.
+
+Attestering utført av merkantilt personell inkluderer, men samtidig ikke begrenset til:
+- attestering/bekreftelse av oppmøte på helseinstitusjon.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a formal assessment regarding the health status of an individual, usually asserted by the treating clinician and intended for sharing with third parties.">
+            keywords = <"certificate,statement,death,sick leave,fitness,vaccination,exercise,employment,flying,driving,diving", ...>
+            use = <"Use to record a formal assessment regarding the health status of an individual, usually asserted by the treating clinician and intended for sharing with third parties.
+
+Use cases asserted by a healthcare professional include, but are not limited to:
+- reduced capacity for work duties or hours;
+- death certificate - using the content of the EVALUATION.cause_of_death archetype to carry the specific death-related information within a Death Certificate template;
+- functional capacity;
+- fitness for specific activities, including driving, flying or diving; or
+- certificate of vaccination status.
+ 
+ Use cases asserted by an administrator include, but are not limited to:
+- attendance at a health facility.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    COMPOSITION[at0000] matches {    -- Health certificate
+        category matches {
+            DV_CODED_TEXT[at0001] matches {    -- Coded text
+                defining_code matches {[at9000]}    -- event
+            }
+        }
+        context matches {
+            EVENT_CONTEXT[at0002] matches {    -- Event Context
+                other_context matches {
+                    ITEM_TREE[at0003] matches {
+                        items cardinality matches {0..*; unordered} matches {
+                            allow_archetype CLUSTER[at0004] matches {    -- Individual
+                                include
+                                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.person\.v1\..*/}
+                            }
+                            ELEMENT[at0006] matches {    -- Certificate ID
+                                value matches {
+                                    DV_IDENTIFIER[at9001]
+                                    DV_TEXT[at9002]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0009] matches {    -- Extension
+                                include
+                                    archetype_id/value matches {/.*/}
+                            }
+                            ELEMENT[at0010] matches {    -- Certificate type
+                                value matches {
+                                    DV_TEXT[at9003]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Zertifikat">
+                description = <"Formelle gesundheitsbezogene Erklärung, die von einem Kliniker über eine Person gemacht wird.">
+            >
+            ["at0001"] = <
+                text = <"Codierter Text">
+                description = <"">
+            >
+            ["at0002"] = <
+                text = <"Ereigniskontext">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Person">
+                description = <"Identifizierung des Subjekts des Zertifikats.">
+                comment = <"Dieser SLOT identifiziert das Subjekt des Zertifikats. In umfassenden openEHR-EHRs kann dies überflüssig sein, wenn der formale Demografie-Dienst oder der Master-Patientenindex (MPI) Details zum Subjekt des Zertifikats liefert. Wenn das Subjekt des Zertifikats nicht der Patient ist, müssen diese Informationen möglicherweise manuell eingegeben werden, zum Beispiel bei einem Elternteil des Kindespatienten. Darüber hinaus kann bei der Erstellung eines Bildschirmlayouts oder eines Templates für den Druck eine Teilmenge von CLUSTER.person eingeschränkt werden, um die genauen Details für den Anwendungsfall darzustellen.">
+            >
+            ["at0006"] = <
+                text = <"Zertifikats-ID">
+                description = <"Identifikationsinformationen über das Zertifikat.">
+            >
+            ["at0009"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen.">
+            >
+            ["at0010"] = <
+                text = <"Zertifikatstyp">
+                description = <"Art des Zertifikats.">
+                comment = <"Beispiel: Impfstatus, Flugtauglichkeit, Medizinisches Attest.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Helseattest">
+                description = <"Formell attestering om helsestatus eller situasjon relatert til et individ.">
+            >
+            ["at0001"] = <
+                text = <"Coded text">
+                description = <"">
+            >
+            ["at0002"] = <
+                text = <"Event Context">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Individ">
+                description = <"Identifikasjon av hvem attesten gjelder for.">
+                comment = <"Formålet med denne SLOT er å identifisere hvem attesten gjelder for. I et gjennomført openEHR pasientjournalsystem så kan dette være overflødig informasjon gitt at det finnes detaljer om individet i demografitjeneren eller pasientindexen. I de tilfeller der individet ikke er den som blir behandlet så kan denne type informasjon bli registrert manuelt, for eksempel; forelder der barnet er den som blir behandlet. I tillegg så kan deler av innholdet i CLUSTER.person bli benyttet i utforming/berikelse av blant annet en printmal.">
+            >
+            ["at0006"] = <
+                text = <"Attest ID">
+                description = <"Identifikasjonsinformasjon om attesten.">
+            >
+            ["at0009"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller eller formalismer.">
+                comment = <"For eksempel: lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0010"] = <
+                text = <"Attesttype">
+                description = <"Type attest.">
+                comment = <"For eksempel: Vaksinasjonsstatus; Skikkethet for å betjene fly; Legeerklæring.">
+            >
+            ["at9000"] = <
+                text = <"* event (en)">
+                description = <"* event (en)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Health certificate">
+                description = <"A formal statement about the health status or situation related to an individual.">
+            >
+            ["at0001"] = <
+                text = <"Coded text">
+                description = <"">
+            >
+            ["at0002"] = <
+                text = <"Event Context">
+                description = <"">
+            >
+            ["at0004"] = <
+                text = <"Individual">
+                description = <"Identification of the subject of the certificate.">
+                comment = <"This SLOT identifies the subject of the certificate. In comprehensive openEHR EHRs this may be redundant if the formal demographics service or master patient index supplies details about the subject of the certificate. If the subject of the certificate is not the subject of care, this information may need to be entered manually, for example a parent of the child patient. In addition, when creating a screen layout or template for printing, a subset of the CLUSTER.person could be constrained to represent the precise details appropriate for the use case.">
+            >
+            ["at0006"] = <
+                text = <"Certificate ID">
+                description = <"Identification information about the certificate.">
+            >
+            ["at0009"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR.">
+            >
+            ["at0010"] = <
+                text = <"Certificate type">
+                description = <"Type of certificate.">
+                comment = <"For example: Vaccination status; Fitness for flying; Medical certificate.">
+            >
+            ["at9000"] = <
+                text = <"event">
+                description = <"event">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/433>
+        >
+    >

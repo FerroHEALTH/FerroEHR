@@ -1,0 +1,369 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=585e9ea9-cfaa-495f-ab69-e3c3d845ce6d; build_uid=78b7a3b4-34a8-4f97-ad46-08050ea96115)
+    openEHR-DEMOGRAPHIC-PERSON.person.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Elham Gholami, Vebjørn Arntzen">
+                ["organisation"] = <"SLL, Oslo University Hospital">
+                ["email"] = <"elham.gholami@sll.se, varntzen@ous-hf.no">
+            >
+            accreditation = <"information">
+        >
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            author = <
+                ["name"] = <"Seung-Jong Yu">
+                ["organisation"] = <"NOUSCO Co.,Ltd.">
+            >
+            accreditation = <"Certified Board of Family Medicine in South Korea">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Sergio Miranda Freire">
+                ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+                ["email"] = <"sergio@lampada.uerj.br">
+            >
+        >
+        ["fa"] = <
+            language = <[ISO_639-1::fa]>
+            author = <
+                ["name"] = <"Saeed Samie">
+                ["organisation"] = <"Pars Hospital">
+                ["email"] = <"saeedsamie@gmail.com">
+            >
+        >
+        ["es-py"] = <
+            language = <[ISO_639-1::es-py]>
+            author = <
+                ["name"] = <"Ellen Mendez">
+                ["organisation"] = <"Facultad Politecnica - UNA">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sergio Miranda Freire & Rigoleta Dutra Mediano Dias">
+        ["organisation"] = <"Universidade do Estado do Rio de Janeiro - UERJ">
+        ["email"] = <"sergio@lampada.uerj.br">
+        ["date"] = <"2009-05-22">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Rigoleta Dutra, Ministry of Defense, Brazil (openEHR Editor)", "Sergio Freire, State University of Rio de Janeiro, Brazil (openEHR Editor)", "Sebastian Garde, Ocean Informatics, Germany (Editor)", "Omer Hotomaroglu, Turkey (Editor)", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"ISO/TS 22220:2008(E) - Identification of Subject of Care - Technical Specification - International Organization for Standardization.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"41C426A9EA4900050914FDE4DBDBC020">
+    >
+    details = <
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"Representation av en persons demografiska data.">
+            keywords = <"demografisk tjänst", "personens data">
+            use = <"Används i demografisk tjänst för att samla in en persons data.">
+            misuse = <"">
+        >
+        ["ko"] = <
+            language = <[ISO_639-1::ko]>
+            purpose = <"개인의 인적 데이터의 표현.">
+            keywords = <"*serviço demográfico(pt-br)", "*dados de uma pessoa(pt-br)">
+            use = <"개인 데이터를 수집하는 인적정보 서비스에서 사용됨.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Representação dos dados demográficos de uma pessoa.">
+            keywords = <"serviço demográfico", "dados de uma pessoa">
+            use = <"Usado em serviço demográficos para coletar os dados de uma pessoa.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Representation of a person's demographic data.">
+            keywords = <"demographic service", "person's data">
+            use = <"Used in demographic service to collect a person's data.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fa"] = <
+            language = <[ISO_639-1::fa]>
+            purpose = <"نمایش داده های هویت اجتماعی هر فرد">
+            keywords = <"سرویس هویت اجتماعی (fa)", "داده های فردی (fa)">
+            use = <"استفاده در سرویس هویت اجتماعی برای گرذآوری داده های هر فرد">
+            misuse = <"">
+        >
+        ["es-py"] = <
+            language = <[ISO_639-1::es-py]>
+            purpose = <"Representación de los datos demográficos de una persona.">
+            keywords = <"servicio demográfico", "datos de una persona">
+            use = <"Utilizado en servicios demográficos para recolectar los datos de una persona.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    PERSON[at0000] matches {    -- Person
+        details matches {
+            allow_archetype ITEM_TREE[at0001] occurrences matches {1} matches {    -- Demographic details
+                include
+                    archetype_id/value matches {/openEHR-DEMOGRAPHIC-ITEM_TREE\.person_details[a-zA-Z0-9_-]*\.v0\..*/}
+            }
+        }
+        identities matches {
+            allow_archetype PARTY_IDENTITY[at0002] occurrences matches {1} matches {    -- Name
+                include
+                    archetype_id/value matches {/openEHR-DEMOGRAPHIC-PARTY_IDENTITY\.person_name[a-zA-Z0-9_-]*\.v0\..*/}
+            }
+        }
+        contacts matches {
+            CONTACT[at0003] occurrences matches {1} matches {    -- Contacts
+                addresses matches {
+                    allow_archetype ADDRESS[at0030] occurrences matches {1} matches {    -- Addresses
+                        include
+                            archetype_id/value matches {/openEHR-DEMOGRAPHIC-ADDRESS\.address([a-zA-Z0-9_-]+)*\.v0\..*/}
+                            archetype_id/value matches {/openEHR-DEMOGRAPHIC-ADDRESS\.electronic_communication[a-zA-Z0-9_-]*\.v0\..*/}
+                    }
+                }
+            }
+        }
+        relationships matches {
+            PARTY_RELATIONSHIP[at0004] occurrences matches {1} matches {    -- Relationships
+                details matches {
+                    ITEM_TREE[at9000] matches {
+                        items matches {
+                            ELEMENT[at0040] occurrences matches {1} matches {    -- Relationship type
+                                value matches {
+                                    DV_TEXT[at9001]
+                                    DV_CODED_TEXT[at9002] matches {
+                                        defining_code matches {[ac1]}    -- Codes for type of relationship
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"Person">
+                description = <"Personliga demografiska data.">
+            >
+            ["at0001"] = <
+                text = <"Demografiska detaljer">
+                description = <"En persons demografiska detaljer.">
+            >
+            ["at0002"] = <
+                text = <"Namn">
+                description = <"Namn på en person.">
+            >
+            ["at0003"] = <
+                text = <"Kontaktuppgifter">
+                description = <"Personens kontaktuppgifter.">
+            >
+            ["at0004"] = <
+                text = <"Relationer">
+                description = <"Personens relationer, särskilt familjebanden.">
+            >
+            ["at0030"] = <
+                text = <"Adress">
+                description = <"Adresser kopplade till en enda kontakt, dvs. med samma giltighetstid.">
+            >
+            ["at0040"] = <
+                text = <"Typ av relation">
+                description = <"Definierar typen av förhållande mellan närstående personer.">
+            >
+            ["ac1"] = <
+                text = <"Koder för typ av relation">
+                description = <"Giltiga koder för typ av relation.">
+            >
+        >
+        ["ko"] = <
+            ["at0000"] = <
+                text = <"개인">
+                description = <"개인의 인적 데이터.">
+            >
+            ["at0001"] = <
+                text = <"인적정보 상세내용">
+                description = <"개인의 인정정보 상세내용.">
+            >
+            ["at0002"] = <
+                text = <"이름">
+                description = <"개인 이름">
+            >
+            ["at0003"] = <
+                text = <"연락처">
+                description = <"개인의 연락처">
+            >
+            ["at0004"] = <
+                text = <"관계">
+                description = <"개인 관계, 특히 가족 관계.">
+            >
+            ["at0030"] = <
+                text = <"주소">
+                description = <"단일한 연락처에 연결된 주소, 즉. 동시간 검증됨.">
+            >
+            ["at0040"] = <
+                text = <"관계타입">
+                description = <"관련된 사람들 간의 관계의 타입을 정의.">
+            >
+            ["ac1"] = <
+                text = <"관계타입 코드">
+                description = <"관계의 타입을 위한 유효한 코드">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Dados da pessoa">
+                description = <"Dados da pessoa.">
+            >
+            ["at0001"] = <
+                text = <"Detalhes">
+                description = <"Detalhes demográficos da pessoa.">
+            >
+            ["at0002"] = <
+                text = <"Nome">
+                description = <"Conjunto de dados que especificam o nome da pessoa.">
+            >
+            ["at0003"] = <
+                text = <"Contatos">
+                description = <"Contatos da pessoa.">
+            >
+            ["at0004"] = <
+                text = <"Relacionamentos">
+                description = <"Relacionamentos de uma pessoa, especialmente laços familiares.">
+            >
+            ["at0030"] = <
+                text = <"Endereço">
+                description = <"Endereços vinculados a um único contato, ou seja, com o mesmo período de validade.">
+            >
+            ["at0040"] = <
+                text = <"Grau de parentesco">
+                description = <"Define o grau de parentesco entre as pessoas envolvidas.">
+            >
+            ["ac1"] = <
+                text = <"Códigos para tipo de parentesco">
+                description = <"códigos válidos para tipo de parentesco.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Person">
+                description = <"Personal demographic data.">
+            >
+            ["at0001"] = <
+                text = <"Demographic details">
+                description = <"A person's demographic details.">
+            >
+            ["at0002"] = <
+                text = <"Name">
+                description = <"A person's name.">
+            >
+            ["at0003"] = <
+                text = <"Contacts">
+                description = <"A person's contacts.">
+            >
+            ["at0004"] = <
+                text = <"Relationships">
+                description = <"A person's relationships, especially family ties.">
+            >
+            ["at0030"] = <
+                text = <"Addresses">
+                description = <"Addresses linked to a single contact, i.e. with the same time validity.">
+            >
+            ["at0040"] = <
+                text = <"Relationship type">
+                description = <"Defines the type of relationship between related persons.">
+            >
+            ["ac1"] = <
+                text = <"Codes for type of relationship">
+                description = <"Valid codes for type of relationship.">
+            >
+        >
+        ["fa"] = <
+            ["at0000"] = <
+                text = <"فرد">
+                description = <"داده های هویت اجتماعی فردی">
+            >
+            ["at0001"] = <
+                text = <"جزئیات اطلاعات هویت اجتماعی">
+                description = <"چرئیات اطلاعات هویتی یک فرد">
+            >
+            ["at0002"] = <
+                text = <"نام">
+                description = <"نام فرد">
+            >
+            ["at0003"] = <
+                text = <"راه های تماس">
+                description = <"راه های تماس با فرد">
+            >
+            ["at0004"] = <
+                text = <"ارتباطات">
+                description = <"ارتباطات فرد بویژه روابط خانوادگی">
+            >
+            ["at0030"] = <
+                text = <"آدرسها">
+                description = <"آدرسهایی که به یک تماس با فرد مربوظ میشوند، یعنی دارای اعتبار زمانی مشابه هستند.">
+            >
+            ["at0040"] = <
+                text = <"نوع ارتباط">
+                description = <"تعریف نوع ارتباط بین افراد مرتبط">
+            >
+            ["ac1"] = <
+                text = <"کدهای نوع ارتباط">
+                description = <"کدهای معتبر برای نوع ارتیاط">
+            >
+        >
+        ["es-py"] = <
+            ["at0000"] = <
+                text = <"Datos de la persona">
+                description = <"Datos de la persona">
+            >
+            ["at0001"] = <
+                text = <"Detalles">
+                description = <"Detalles demográficos de la persona.">
+            >
+            ["at0002"] = <
+                text = <"Nombre">
+                description = <"Conjunto de datos que especifican el nombre de la persona.">
+            >
+            ["at0003"] = <
+                text = <"Contactos">
+                description = <"Contactos de la persona.">
+            >
+            ["at0004"] = <
+                text = <"Relacionamiento">
+                description = <"Relacionamiento de una persona, especialmente lazos familiares.">
+            >
+            ["at0030"] = <
+                text = <"Dirección">
+                description = <"Direcciones vinculadas a un único contacto, o sea, con el mismo periodo de validad.">
+            >
+            ["at0040"] = <
+                text = <"Grado de parentesco">
+                description = <"Define el grado de parentesco entre las personas involucradas.">
+            >
+            ["ac1"] = <
+                text = <"Código para tipo de parentesco">
+                description = <"Códigos válidos para tipo de parentesco.">
+            >
+        >
+    >

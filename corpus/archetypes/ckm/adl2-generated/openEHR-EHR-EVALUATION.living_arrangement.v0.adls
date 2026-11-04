@@ -1,0 +1,395 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=7badddf7-2954-4f05-9a4b-73219ee1bdf6; build_uid=fc6cc6d4-b4ce-4fee-b620-896017612ab5)
+    openEHR-EHR-EVALUATION.living_arrangement.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Tanja Zeppernick, Natalia Strauch">
+                ["organisation"] = <"Medizinische Hochschule Hannover">
+                ["email"] = <"Zeppernick.Tanja@mh-hannover.de, Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Silje Ljosland Bakke, Liv Laugen, Vebjørn Arntzen">
+                ["organisation"] = <"Helse Vest IKT AS, ​Oslo University Hospital, Norway">
+                ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no, liv.laugen@ous-hf.no, varntzen@ous-hf.no">
+            >
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2018-05-29">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"John Tore Valand, Helse Bergen, Norway", "Vebjørn Arntzen, Oslo University Hospital, Norway", "Silje Ljosland Bakke, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"National Housing and Homelessness Data Dictionary [Internet]. Canberra, Australia: Australian Institute of Health and Welfare (AIHW); 2013 [cited 2018 May 30]. Version 1. Cat. no. HOU 269. Available from: https://www.aihw.gov.au/getmedia/a47d4c86-a8aa-4f00-a889-42edea09cc2f/17841.pdf">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"ABF9FDFC61409964E8E6BAC30680936C">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung der Umstände dahingehend, wie eine Person allein oder mit anderen zusammen lebt.">
+            keywords = <"allein", "solo", "Familie", "Freunde", "andere", "Haushalt">
+            use = <"Der Archetyp wird verwendet, um die Umstände darzustellen, wie eine Person alleine oder mit anderen lebt.
+
+Dieses Archetyp wurde als einer von mehreren Archetypen entworfen, die die soziale Verbundenheit einer Person in ihrer häuslichen Umgebung beschreiben.
+
+Im Rahmen dieses Archetyps soll der Begriff \"Haushalt\" Informationen über eine oder mehrere Personen erfassen, die zusammen leben und Mahlzeiten, wirtschaftliche Ressourcen und/oder Wohnraum teilen. In diesem Kontext kann ein einzelner Haushalt verschiedene Formen annehmen, wie zum Beispiel Patchwork-Familien, eine Studenten-WG, eine Wohngruppe oder eine allein lebende Person. Eine einzelne Unterkunft kann als mehrere Haushalte betrachtet werden, wenn sie keine Mahlzeiten oder Ressourcen teilen oder getrennte Wohnräume haben.">
+            misuse = <"Nicht zur Darstellung allgemeiner Informationen über die aktuelle und vergangene Wohnsituation einer Person verwenden. Verwenden Sie dazu EVALUATION.housing_summary.
+
+Darf nicht verwendet werden, um Details der Wohnstätte, in der die Person wohnt, darzustellen – verwenden Sie CLUSTER.dwelling für diesen Zweck.
+
+Nicht zur Beschreibung der sozialen Verbindungen der Person verwenden, einschließlich der Identifizierung von Haushaltsmitgliedern - verwenden Sie dafür EVALUATION.social_network.
+
+Nicht zur Erfassung von Details zur Wohnsituation der Person oder des Wohnens für einen bestimmten Zeitraum verwenden. Verwenden Sie dafür CLUSTER.housing_record.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere om et et individ bor alene eller sammen med andre.">
+            keywords = <"bor alene", "familie", "bokollektiv", "bofellesskap", "husholdning", "kollektiv", "hushold", "husstand">
+            use = <"For å registrere om et individ bor alene eller sammen med andre.
+
+Denne arketypen er en del av en arketypefamilie som beskriver den sosiale tilknytningen til et individs hjemmemiljø.
+
+I denne arketypen er intensjonen med begrepet 'boarrangement' å fange opp informasjon om en gruppe individer (en eller flere) som bor i samme bolig, inkludert å dele måltider, økonomiske ressurser og/eller boareal. En husholdning kan inkludere varianter av blandede familier, delt husholdning, bokollektiv, og et enkeltrom. Samtidig kan en enkelt bolig anses å inneholde flere husholdninger hvis de som bor der verken deler måltider eller økonomiske ressurser, eller har separat boareal.">
+            misuse = <"Skal ikke brukes til å registrere overordnet informasjon om et individs nåværende og tidligere bolig- eller bosituasjon. Bruk EVALUATION.housing_summary (Boligsammendrag) til dette formålet.
+
+Skal ikke brukes til å registrere detaljer om selve boligen der den enkelte bor - bruk CLUSTER.dwelling (Boligegenskaper) til dette formålet.
+
+Skal ikke brukes til å beskrive individets sosiale forbindelser, inkludert identifikasjon av husstandsmedlemmer - bruk EVALUATION.social_network (Sosialt nettverk) til dette formålet.
+
+Skal ikke brukes til å registrere detaljer om et individs bolig eller boform for en bestemt tidsperiode. Bruk CLUSTER.housing_record (Bolig) til dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the circumstances about how an individual lives alone or with others.">
+            keywords = <"alone", "solo", "family", "friends", "others", "household">
+            use = <"Use to record the circumstances about how an individual lives alone or with others. 
+
+This archetype has been designed as one of a family of archetypes that describe the social connectedness of an individual in their home environment.
+
+Within this archetype, the intent of the concept of 'household' is to capture information about one or more people who reside together, including sharing meals, economic resources and/or living space. In this context, a single household might comprise varieties of blended families, a student share house, a group home, or a single person living alone. A single dwelling may be considered to contain multiple households if they don't share meals or resources, or have separate living spaces.">
+            misuse = <"Not to be used to record overall information about an individual's current and past housing or housing situation. Use EVALUATION.housing_summary for this purpose.
+
+Not to be used to record details of the dwelling where the individual resides - use CLUSTER.dwelling for this purpose.
+
+Not to be used to describe the social connections of the individual, including identification of household members - use EVALUATION.social_network for this purpose.
+
+Not to be used to record details of the individual's housing or housing for a specified period of time. Use CLUSTER.housing_record for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["it"] = <
+            language = <[ISO_639-1::it]>
+            purpose = <"Registrare le circostanze di come un individuo vive da solo o con gli altri.">
+            keywords = <"da solo", "assolo", "famiglia", "amici", "altri", "famiglia">
+            use = <"*Use to record the circumstances about how an individual lives alone or with others. 
+
+This archetype has been designed as one of a family of archetypes that describe the social connectedness of an individual in their home environment.
+
+Within this archetype, the intent of the concept of 'household' is to capture information about one or more people who reside together, including sharing meals, economic resources and/or living space. In this context, a single household might comprise varieties of blended families, a student share house, a group home, or a single person living alone. A single dwelling may be considered to contain multiple households if they don't share meals or resources, or have separate living spaces. (en)">
+            misuse = <"*Not to be used to record overall information about an individual's current and past housing or housing situation. Use EVALUATION.housing_summary for this purpose.
+
+Not to be used to record details of the dwelling where the individual resides - use CLUSTER.dwelling for this purpose.
+
+Not to be used to describe the social connections of the individual, including identification of household members - use EVALUATION.social_network for this purpose.
+
+Not to be used to record details of the individual's housing or housing for a specified period of time. Use CLUSTER.housing_record for this purpose. (en)">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Living arrangement
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9000]
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Living arrangement
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Household description
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Household type
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                    ELEMENT[at0007] occurrences matches {0..1} matches {    -- Number of household members
+                        value matches {
+                            DV_COUNT[at9004]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0013] matches {    -- Houshold members
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.person\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0008] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0002] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0012] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9007]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0011] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Wohnsituation">
+                description = <"Die Umstände über eine Person, das allein oder mit anderen zusammen lebt.">
+                comment = <"Diese Information bietet einen Einblick in die tägliche Unterstützung, zu der eine Person in ihrer häuslichen Umgebung - sowohl körperlich als auch emotional - Zugang hat.">
+            >
+            ["at0003"] = <
+                text = <"Beschreibung">
+                description = <"Beschreibung der Wohnsituation.">
+            >
+            ["at0004"] = <
+                text = <"Wohnsituation">
+                description = <"Einzelnes Word oder Satz, um zu beschreiben, ob eine Person für gewöhnlich allein oder mit anderen zusammen wohnt.">
+                comment = <"Kodierung der Wohnsituation mit einer Terminologie ist, wo möglich, zu bevorzugen. Die Wertemengen für diese Datenelement können zwischen Zusätndigkeitsbereichen variieren - es wird erwartet, dass diese üblicherweise innerhalb Use-Case spezifischer Templates platziert werden. Zum Beispiel: \"lebt allein\"; \"lebt mit der Familie\"; oder \"lebt mit Anderen\".">
+            >
+            ["at0005"] = <
+                text = <"Art des Haushaltes">
+                description = <"Einzelnes Wort oder eine Phrase, die die Zusammensetzung oder Struktur des Haushalts beschreibt.">
+                comment = <"Kodierung der Haushaltszusammensetzung mit einer Terminologie wird bevorzugt, soweit möglich. Zum Beispiel: alleinstehend; alleinerziehend mit Kindern im Alter von weniger als 16 Jahren; Paar; Paar mit Kindern im Alter von weniger als 16 Jahren; Familie; Familie mit anderen nicht verwandten Mitgliedern; oder Gruppe nicht verwandter Erwachsener.">
+            >
+            ["at0006"] = <
+                text = <"Beschreibung des Haushalts">
+                description = <"Beschreibung über Individuen, die zusammen wohnen und sich Mahlzeiten, wirtschaftliche Ressourcen und/oder Wohnraum teilen.">
+                comment = <"Zum Beispiel: eine Kernfamilie, verschiedene Formen von Patchworkfamilien, ein Studentenwohnheim, ein betreutes Wohnen oder eine alleinstehende Person, die alleine lebt.">
+            >
+            ["at0007"] = <
+                text = <"Anzahl der Haushaltsmitglieder">
+                description = <"Die Anzahl der Personen, die zum Haushalt gehören.">
+            >
+            ["at0008"] = <
+                text = <"Zusätzliche Details">
+                description = <"Weitere Details über die Wohnsituation.">
+                comment = <"Dieser SLOT kann verwendet werden, um zusätzliche Archetypen einzubetten, die zusätzliche Details über Wohnverhältnisse beschreiben können, die lokal für eine bestimmte Rechtsprechung relevant sind.">
+            >
+            ["at0010"] = <
+                text = <"Kommentar">
+                description = <"Ergänzende Informationen zur Wohnsituation, die in anderen Bereichen nicht erfasst wurden.">
+            >
+            ["at0011"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen, die zur Erfassung lokaler Inhalte oder zur Anpassung an andere Referenzmodelle/Formalismen erforderlich sind.">
+                comment = <"Zum Beispiel: Lokale Informationsanforderungen oder zusätzliche Metadaten, um Verknüpfungen mit FHIR herzustellen.">
+            >
+            ["at0012"] = <
+                text = <"Zuletzt aktualisiert">
+                description = <"Das Datum, an dem diese Zusammenfassung zuletzt aktualisiert wurde.">
+            >
+            ["at0013"] = <
+                text = <"Haushaltsmitglieder">
+                description = <"Name der Haushaltsmitglieder.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Borarrangement">
+                description = <"Under hvilke omstendigheter individet bor - sammen med andre eller alene.">
+                comment = <"Denne informasjonen kan gi opplysninger om hvilke nivå av hjelp og støtte, både fysisk og følelsesmessig, et individ har tilgang på i sin husholdning.
+">
+            >
+            ["at0003"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekst som beskriver boarrangementet.">
+            >
+            ["at0004"] = <
+                text = <"Boarrangement">
+                description = <"Et enkelt ord eller uttrykk som beskriver om et individ vanligvis bor alene eller med andre.">
+                comment = <"Koding av boarrangementet med terminologi foretrekkes der det er mulig. Verdisettene for dette dataelementet vil sannsynligvis variere mellom jurisdiksjoner og det antas at det vil bli brukt brukerspesifikke verdisett. For eksempel: 'bor alene'; \"bor med familien\"; eller 'lever med andre'.">
+            >
+            ["at0005"] = <
+                text = <"Husholdningstype">
+                description = <"Enkelt ord eller setning som beskriver sammensetningen eller strukturen til husholdningen.">
+                comment = <"Koding av husholdningssammensetningen med en terminologi er å foretrekke, der det er mulig. For eksempel: enslig; eneforsørger med barn under 18 år; par; par med barn under 18 år; kjernefamilie; familie med andre ikke-relaterte medlemmer til stede; eller gruppe av ikke-nærstående voksne (bokollektiv).">
+            >
+            ["at0006"] = <
+                text = <"Beskrivelse av husholdningen">
+                description = <"Fritekstbeskrivelse om individene som bor sammen, inkludert dele måltid, økonomiske ressurser og/eller boareal.">
+                comment = <"For eksempel: en kjernefamilie, varianter av blandede familier, et studentkollektiv, en gruppebolig eller en enslig person som bor alene.">
+            >
+            ["at0007"] = <
+                text = <"Antall medlemmer av husholdningen">
+                description = <"Antall individer som tilhører husholdningen.">
+            >
+            ["at0008"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Flere detaljer om boarrangementet.">
+                comment = <"Dette SLOTet kan bli brukt til å nøste ytterligere arketyper som beskriver flere detaljer om boarrangement, for eksempel lokale varianter.">
+            >
+            ["at0010"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om boarrangementet som ikke fanges opp i andre felt.">
+            >
+            ["at0011"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Tilleggsinformasjon som kreves for å utvide modellen med lokalt innhold eller for å samkjøre med andre referansemodeller / formaliteter.">
+                comment = <"For eksempel: lokale informasjonskrav; eller eventuelt ytterligere metadata for å samkjøre med FHIR.">
+            >
+            ["at0012"] = <
+                text = <"Sist oppdatert">
+                description = <"Datoen som denne registreringen sist ble oppdatert.">
+            >
+            ["at0013"] = <
+                text = <"Husholdningsmedlemmer">
+                description = <"Navnet til medlemmene av husholdningen.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Living arrangement">
+                description = <"The circumstances about an individual living alone or with others.">
+                comment = <"This information will provide a sense of the level of support, both physically and emotionally, to which an individual may have access.">
+            >
+            ["at0003"] = <
+                text = <"Description">
+                description = <"Narrative description about the living arrangements.">
+            >
+            ["at0004"] = <
+                text = <"Living arrangement">
+                description = <"Single word or phrase that describes if an individual usually resides alone or with others.">
+                comment = <"Coding of the living arrangement with a terminology is preferred, where possible. The value sets for this data element are likely to vary between jurisdictions - it is anticipated that they will usually be set within a use-case specific template. For example: 'lives alone'; 'lives with family'; or 'lives with others'.">
+            >
+            ["at0005"] = <
+                text = <"Household type">
+                description = <"Single word or phrase that describes the composition or structure of the household.">
+                comment = <"Coding of the household composition with a terminology is preferred, where possible. For example: single; sole parent with children aged less than 16 years; couple; couple with children aged less than 16 years; family; family with other non-related members present; or group of unrelated adults.">
+            >
+            ["at0006"] = <
+                text = <"Household description">
+                description = <"Narrative description about the individuals who reside together, including sharing meals, economic resources and/or living space.">
+                comment = <"For example: a nuclear family, varieties of blended families, a student share house, a group home, or a single person living alone.">
+            >
+            ["at0007"] = <
+                text = <"Number of household members">
+                description = <"The number of individuals who belong to the household.">
+            >
+            ["at0008"] = <
+                text = <"Additional details">
+                description = <"Further details about the living arrangement.">
+                comment = <"This SLOT may be used to nest additional archetypes describing additional details about living arrangements that may be local to a jurisdiction.">
+            >
+            ["at0010"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the living arrangement not captured in other fields.">
+            >
+            ["at0011"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0012"] = <
+                text = <"Last updated">
+                description = <"The date this summary was last updated.">
+            >
+            ["at0013"] = <
+                text = <"Houshold members">
+                description = <"Name of the members of the houshold.">
+            >
+        >
+        ["it"] = <
+            ["at0000"] = <
+                text = <"Disposizione abitativa">
+                description = <"Le circostanze di un individuo che vive da solo o con altri.">
+                comment = <"Queste informazioni forniranno un'idea del livello di supporto, sia fisico che emotivo, a cui un individuo può avere accesso. ">
+            >
+            ["at0003"] = <
+                text = <"Descrizione">
+                description = <"Descrizione narrativa della sistemazione abitativa.">
+            >
+            ["at0004"] = <
+                text = <"Disposizione abitativa">
+                description = <"Singola parola o frase che descrive se un individuo risiede solitamente da solo o con altri.">
+                comment = <"Si preferisce, ove possibile, la codifica della sistemazione abitativa con una terminologia. I set di valori per questo elemento di dati possono variare da una giurisdizione all'altra - si prevede che saranno di solito impostati all'interno di un modello specifico per il caso d'uso. Ad esempio: \"vive da solo\", \"vive con la famiglia\" o \"vive con altri\".">
+            >
+            ["at0005"] = <
+                text = <"*Household type (en)">
+                description = <"*Single word or phrase that describes the composition or structure of the household. (en)">
+                comment = <"Si preferisce, ove possibile, la codifica della composizione della famiglia con una terminologia. Ad esempio: single; genitore unico con figli di età inferiore ai 16 anni; coppia; coppia con figli di età inferiore ai 16 anni; famiglia; famiglia con altri membri non imparentati presenti; o gruppo di adulti non imparentati. ">
+            >
+            ["at0006"] = <
+                text = <"Descrizione della casa">
+                description = <"*Narrative description about the individuals who reside together, including sharing meals, economic resources and/or living space.  (en)">
+                comment = <"*For example: a nuclear family, varieties of blended families, a student share house, a group home, or a single person living alone. (en)">
+            >
+            ["at0007"] = <
+                text = <"Numero di componenti della famiglia">
+                description = <"*The number of individuals who belong to the household. (en)">
+            >
+            ["at0008"] = <
+                text = <"Dettagli aggiuntivi">
+                description = <"Altri dettagli sulla sistemazione abitativa.">
+                comment = <"Questo SLOT può essere utilizzato per annidare ulteriori archetipi che descrivono ulteriori dettagli sulla sistemazione abitativa che possono essere locali in una giurisdizione.">
+            >
+            ["at0010"] = <
+                text = <"Commento">
+                description = <"Narrativa aggiuntiva sulla sistemazione abitativa non catturata in altri campi.">
+            >
+            ["at0011"] = <
+                text = <"Extension">
+                description = <"Informazioni aggiuntive necessarie per estendere il modello con contenuti locali o per allinearlo ad altri modelli/formalismi di riferimento.">
+                comment = <"Per esempio: requisiti informativi locali; o metadati aggiuntivi per allinearsi a FHIR.">
+            >
+            ["at0012"] = <
+                text = <"Ultimo aggiornamento">
+                description = <"La data di questo riepilogo è stata aggiornata per l'ultima volta.">
+            >
+            ["at0013"] = <
+                text = <"*Houshold members (en)">
+                description = <"*Name of the members of the houshold. (en)">
+            >
+        >
+    >

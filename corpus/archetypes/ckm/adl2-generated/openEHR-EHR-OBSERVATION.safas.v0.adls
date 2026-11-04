@@ -1,0 +1,2049 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=2b81bbd4-9e0f-45d8-837a-41d87e42ffb5; build_uid=8dfb7cb8-32c1-4402-915e-0fdcbec86355)
+    openEHR-EHR-OBSERVATION.safas.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Hildegard Franke">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"hildi@freshehr.com">
+        ["date"] = <"2017-10-24">
+    >
+    original_namespace = <"uk.org.clinicalmodels">
+    original_publisher = <"UK Clinical Models">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"uk.org.clinicalmodels">
+    custodian_organisation = <"UK Clinical Models">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"57C5288F758D04929C4B4863CC2A16C6">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For the capture and reporting of details of the Sports Athlete Foot and Ankle Score (SAFAS). This is a patient reported outcomes measure (PROM).">
+            keywords = <"foot, ankle, SAFAS, injury, score", ...>
+            use = <"Use to record details of the Sports Athlete Foot and Ankle Score (SAFAS).
+
+While openEHR archetypes are all freely available under an open license, the specific content of this archetype may be copyright protected. Any use of this archetype within implementations must be in compliance with the terms established by the copyright owners where a copyright exists.">
+            misuse = <"Not to be used unless the terms of copyright have been observed (if a copyright exists).">
+            copyright = <"© openEHR Foundation, Clinical Models UK">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- SAFAS
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Point in time
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    CLUSTER[at0122] occurrences matches {0..1} matches {    -- Symptoms
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0005] occurrences matches {0..1} matches {    -- Swollen foot or ankle
+                                                value matches {
+                                                    DV_ORDINAL[at9042] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0043]}],    -- Always
+                                                            [{1}, {[at0009]}],    -- Often
+                                                            [{2}, {[at0008]}],    -- Sometimes
+                                                            [{3}, {[at0007]}],    -- Rarely
+                                                            [{4}, {[at0006]}]    -- Never
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Swollen foot or ankle after low impact activity
+                                                value matches {
+                                                    DV_ORDINAL[at9043] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0044]}],    -- Always
+                                                            [{1}, {[at0016]}],    -- Often
+                                                            [{2}, {[at0015]}],    -- Sometimes
+                                                            [{3}, {[at0014]}],    -- Rarely
+                                                            [{4}, {[at0013]}]    -- Never
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0018] occurrences matches {0..1} matches {    -- Swollen foot or ankle after heavy activity
+                                                value matches {
+                                                    DV_ORDINAL[at9044] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0045]}],    -- Always
+                                                            [{1}, {[at0022]}],    -- Often
+                                                            [{2}, {[at0021]}],    -- Sometimes
+                                                            [{3}, {[at0020]}],    -- Rarely
+                                                            [{4}, {[at0019]}]    -- Never
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0010] occurrences matches {0..1} matches {    -- Grinding or noise when moving foot or ankle
+                                                value matches {
+                                                    DV_ORDINAL[at9045] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0046]}],    -- Always
+                                                            [{1}, {[at0025]}],    -- Often
+                                                            [{2}, {[at0024]}],    -- Sometimes
+                                                            [{3}, {[at0023]}],    -- Rarely
+                                                            [{4}, {[at0017]}]    -- Never
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0026] occurrences matches {0..1} matches {    -- Difficulty pointing toes
+                                                value matches {
+                                                    DV_ORDINAL[at9046] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0047]}],    -- Extreme
+                                                            [{1}, {[at0030]}],    -- Severe
+                                                            [{2}, {[at0029]}],    -- Moderate
+                                                            [{3}, {[at0028]}],    -- Mild
+                                                            [{4}, {[at0027]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0031] occurrences matches {0..1} matches {    -- Difficulty moving ankle
+                                                value matches {
+                                                    DV_ORDINAL[at9047] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0048]}],    -- Extreme
+                                                            [{1}, {[at0035]}],    -- Severe
+                                                            [{2}, {[at0034]}],    -- Moderate
+                                                            [{3}, {[at0033]}],    -- Mild
+                                                            [{4}, {[at0032]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0038] occurrences matches {0..1} matches {    -- Ankle stiffness after wakening
+                                                value matches {
+                                                    DV_ORDINAL[at9048] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0049]}],    -- Extreme
+                                                            [{1}, {[at0042]}],    -- Severe
+                                                            [{2}, {[at0041]}],    -- Moderate
+                                                            [{3}, {[at0040]}],    -- Mild
+                                                            [{4}, {[at0039]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0050] occurrences matches {0..1} matches {    -- Ankle stiffness after sitting, lying or resting
+                                                value matches {
+                                                    DV_ORDINAL[at9049] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0051]}],    -- Extreme
+                                                            [{1}, {[at0052]}],    -- Severe
+                                                            [{2}, {[at0053]}],    -- Moderate
+                                                            [{3}, {[at0054]}],    -- Mild
+                                                            [{4}, {[at0055]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0056] occurrences matches {0..1} matches {    -- Ankle stiffness after activity
+                                                value matches {
+                                                    DV_ORDINAL[at9050] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0057]}],    -- Extreme
+                                                            [{1}, {[at0058]}],    -- Severe
+                                                            [{2}, {[at0059]}],    -- Moderate
+                                                            [{3}, {[at0060]}],    -- Mild
+                                                            [{4}, {[at0061]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0123] occurrences matches {0..1} matches {    -- Pain
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0062] occurrences matches {0..1} matches {    -- Pain in joint
+                                                value matches {
+                                                    DV_ORDINAL[at9051] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0063]}],    -- Always
+                                                            [{1}, {[at0064]}],    -- Often
+                                                            [{2}, {[at0065]}],    -- Sometimes
+                                                            [{3}, {[at0066]}],    -- Rarely
+                                                            [{4}, {[at0067]}]    -- Never
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0068] occurrences matches {0..1} matches {    -- Pain at rest (sitting)
+                                                value matches {
+                                                    DV_ORDINAL[at9052] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0069]}],    -- Extreme
+                                                            [{1}, {[at0070]}],    -- Severe
+                                                            [{2}, {[at0071]}],    -- Moderate
+                                                            [{3}, {[at0072]}],    -- Mild
+                                                            [{4}, {[at0073]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0074] occurrences matches {0..1} matches {    -- Pain during full weight bearing
+                                                value matches {
+                                                    DV_ORDINAL[at9053] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0075]}],    -- Extreme
+                                                            [{1}, {[at0076]}],    -- Severe
+                                                            [{2}, {[at0077]}],    -- Moderate
+                                                            [{3}, {[at0078]}],    -- Mild
+                                                            [{4}, {[at0079]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0080] occurrences matches {0..1} matches {    -- Pain during low impact activity
+                                                value matches {
+                                                    DV_ORDINAL[at9054] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0081]}],    -- Extreme
+                                                            [{1}, {[at0082]}],    -- Severe
+                                                            [{2}, {[at0083]}],    -- Moderate
+                                                            [{3}, {[at0084]}],    -- Mild
+                                                            [{4}, {[at0085]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0086] occurrences matches {0..1} matches {    -- Pain after low impact activity
+                                                value matches {
+                                                    DV_ORDINAL[at9055] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0087]}],    -- Extreme
+                                                            [{1}, {[at0088]}],    -- Severe
+                                                            [{2}, {[at0089]}],    -- Moderate
+                                                            [{3}, {[at0090]}],    -- Mild
+                                                            [{4}, {[at0091]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0092] occurrences matches {0..1} matches {    -- Pain during heavy activity
+                                                value matches {
+                                                    DV_ORDINAL[at9056] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0093]}],    -- Extreme
+                                                            [{1}, {[at0094]}],    -- Severe
+                                                            [{2}, {[at0095]}],    -- Moderate
+                                                            [{3}, {[at0096]}],    -- Mild
+                                                            [{4}, {[at0097]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0098] occurrences matches {0..1} matches {    -- Pain after heavy activity
+                                                value matches {
+                                                    DV_ORDINAL[at9057] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0099]}],    -- Extreme
+                                                            [{1}, {[at0100]}],    -- Severe
+                                                            [{2}, {[at0101]}],    -- Moderate
+                                                            [{3}, {[at0102]}],    -- Mild
+                                                            [{4}, {[at0103]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0104] occurrences matches {0..1} matches {    -- Pain when twisting or pivoting on ankle
+                                                value matches {
+                                                    DV_ORDINAL[at9058] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0105]}],    -- Extreme
+                                                            [{1}, {[at0106]}],    -- Severe
+                                                            [{2}, {[at0107]}],    -- Moderate
+                                                            [{3}, {[at0108]}],    -- Mild
+                                                            [{4}, {[at0109]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0110] occurrences matches {0..1} matches {    -- Pain when pointing toes to ground
+                                                value matches {
+                                                    DV_ORDINAL[at9059] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0111]}],    -- Extreme
+                                                            [{1}, {[at0112]}],    -- Severe
+                                                            [{2}, {[at0113]}],    -- Moderate
+                                                            [{3}, {[at0114]}],    -- Mild
+                                                            [{4}, {[at0115]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0116] occurrences matches {0..1} matches {    -- Pain when bending ankle
+                                                value matches {
+                                                    DV_ORDINAL[at9060] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0117]}],    -- Extreme
+                                                            [{1}, {[at0118]}],    -- Severe
+                                                            [{2}, {[at0119]}],    -- Moderate
+                                                            [{3}, {[at0120]}],    -- Mild
+                                                            [{4}, {[at0121]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0124] occurrences matches {0..1} matches {    -- Pain at night while in bed
+                                                value matches {
+                                                    DV_ORDINAL[at9061] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0125]}],    -- Extreme
+                                                            [{1}, {[at0126]}],    -- Severe
+                                                            [{2}, {[at0127]}],    -- Moderate
+                                                            [{3}, {[at0128]}],    -- Mild
+                                                            [{4}, {[at0129]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0130] occurrences matches {0..1} matches {    -- Pain going upstairs
+                                                value matches {
+                                                    DV_ORDINAL[at9062] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0131]}],    -- Extreme
+                                                            [{1}, {[at0132]}],    -- Severe
+                                                            [{2}, {[at0133]}],    -- Moderate
+                                                            [{3}, {[at0134]}],    -- Mild
+                                                            [{4}, {[at0135]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0136] occurrences matches {0..1} matches {    -- Pain going downstairs
+                                                value matches {
+                                                    DV_ORDINAL[at9063] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0137]}],    -- Extreme
+                                                            [{1}, {[at0138]}],    -- Severe
+                                                            [{2}, {[at0139]}],    -- Moderate
+                                                            [{3}, {[at0140]}],    -- Mild
+                                                            [{4}, {[at0141]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0142] occurrences matches {0..1} matches {    -- Daily living
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0143] occurrences matches {0..1} matches {    -- Rising from sitting
+                                                value matches {
+                                                    DV_ORDINAL[at9064] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0144]}],    -- Extreme
+                                                            [{1}, {[at0145]}],    -- Severe
+                                                            [{2}, {[at0146]}],    -- Moderate
+                                                            [{3}, {[at0147]}],    -- Mild
+                                                            [{4}, {[at0148]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0149] occurrences matches {0..1} matches {    -- Ascending stairs
+                                                value matches {
+                                                    DV_ORDINAL[at9065] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0150]}],    -- Extreme
+                                                            [{1}, {[at0151]}],    -- Severe
+                                                            [{2}, {[at0152]}],    -- Moderate
+                                                            [{3}, {[at0153]}],    -- Mild
+                                                            [{4}, {[at0154]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0155] occurrences matches {0..1} matches {    -- Descending stairs
+                                                value matches {
+                                                    DV_ORDINAL[at9066] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0156]}],    -- Extreme
+                                                            [{1}, {[at0157]}],    -- Severe
+                                                            [{2}, {[at0158]}],    -- Moderate
+                                                            [{3}, {[at0159]}],    -- Mild
+                                                            [{4}, {[at0160]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0161] occurrences matches {0..1} matches {    -- Putting on socks or stockings
+                                                value matches {
+                                                    DV_ORDINAL[at9067] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0162]}],    -- Extreme
+                                                            [{1}, {[at0163]}],    -- Severe
+                                                            [{2}, {[at0164]}],    -- Moderate
+                                                            [{3}, {[at0165]}],    -- Mild
+                                                            [{4}, {[at0166]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0167] occurrences matches {0..1} matches {    -- Getting in and out of bath
+                                                value matches {
+                                                    DV_ORDINAL[at9068] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0168]}],    -- Extreme
+                                                            [{1}, {[at0169]}],    -- Severe
+                                                            [{2}, {[at0170]}],    -- Moderate
+                                                            [{3}, {[at0171]}],    -- Mild
+                                                            [{4}, {[at0172]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0173] occurrences matches {0..1} matches {    -- Getting on and off toilet
+                                                value matches {
+                                                    DV_ORDINAL[at9069] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0174]}],    -- Extreme
+                                                            [{1}, {[at0175]}],    -- Severe
+                                                            [{2}, {[at0176]}],    -- Moderate
+                                                            [{3}, {[at0177]}],    -- Mild
+                                                            [{4}, {[at0178]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0179] occurrences matches {0..1} matches {    -- Bending to floor or pick up object
+                                                value matches {
+                                                    DV_ORDINAL[at9070] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0180]}],    -- Extreme
+                                                            [{1}, {[at0181]}],    -- Severe
+                                                            [{2}, {[at0182]}],    -- Moderate
+                                                            [{3}, {[at0183]}],    -- Mild
+                                                            [{4}, {[at0184]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0185] occurrences matches {0..1} matches {    -- Driving car
+                                                value matches {
+                                                    DV_ORDINAL[at9071] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0186]}],    -- Extreme
+                                                            [{1}, {[at0187]}],    -- Severe
+                                                            [{2}, {[at0188]}],    -- Moderate
+                                                            [{3}, {[at0189]}],    -- Mild
+                                                            [{4}, {[at0190]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0191] occurrences matches {0..1} matches {    -- Sports participation
+                                        items cardinality matches {1..*; unordered} matches {
+                                            ELEMENT[at0192] occurrences matches {0..1} matches {    -- Squatting without extra weight
+                                                value matches {
+                                                    DV_ORDINAL[at9072] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0193]}],    -- Unable
+                                                            [{1}, {[at0194]}],    -- Extreme
+                                                            [{2}, {[at0195]}],    -- Moderate
+                                                            [{3}, {[at0196]}],    -- Mild
+                                                            [{4}, {[at0197]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0198] occurrences matches {0..1} matches {    -- Squatting with extra weight
+                                                value matches {
+                                                    DV_ORDINAL[at9073] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0199]}],    -- Unable
+                                                            [{1}, {[at0200]}],    -- Extreme
+                                                            [{2}, {[at0201]}],    -- Moderate
+                                                            [{3}, {[at0202]}],    -- Mild
+                                                            [{4}, {[at0203]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0204] occurrences matches {0..1} matches {    -- Squatting on one leg (injured ankle)
+                                                value matches {
+                                                    DV_ORDINAL[at9074] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0205]}],    -- Unable
+                                                            [{1}, {[at0206]}],    -- Extreme
+                                                            [{2}, {[at0207]}],    -- Moderate
+                                                            [{3}, {[at0208]}],    -- Mild
+                                                            [{4}, {[at0209]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0210] occurrences matches {0..1} matches {    -- Jogging
+                                                value matches {
+                                                    DV_ORDINAL[at9075] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0211]}],    -- Unable
+                                                            [{1}, {[at0212]}],    -- Extreme
+                                                            [{2}, {[at0213]}],    -- Moderate
+                                                            [{3}, {[at0214]}],    -- Mild
+                                                            [{4}, {[at0215]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0216] occurrences matches {0..1} matches {    -- Running
+                                                value matches {
+                                                    DV_ORDINAL[at9076] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0217]}],    -- Unable
+                                                            [{1}, {[at0218]}],    -- Extreme
+                                                            [{2}, {[at0219]}],    -- Moderate
+                                                            [{3}, {[at0220]}],    -- Mild
+                                                            [{4}, {[at0221]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0222] occurrences matches {0..1} matches {    -- Sudden cutting or lateral movements
+                                                value matches {
+                                                    DV_ORDINAL[at9077] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0223]}],    -- Unable
+                                                            [{1}, {[at0224]}],    -- Extreme
+                                                            [{2}, {[at0225]}],    -- Moderate
+                                                            [{3}, {[at0226]}],    -- Mild
+                                                            [{4}, {[at0227]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0228] occurrences matches {0..1} matches {    -- Starting quickly
+                                                value matches {
+                                                    DV_ORDINAL[at9078] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0229]}],    -- Unable
+                                                            [{1}, {[at0230]}],    -- Extreme
+                                                            [{2}, {[at0231]}],    -- Moderate
+                                                            [{3}, {[at0232]}],    -- Mild
+                                                            [{4}, {[at0233]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0234] occurrences matches {0..1} matches {    -- Stopping quickly
+                                                value matches {
+                                                    DV_ORDINAL[at9079] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0235]}],    -- Unable
+                                                            [{1}, {[at0236]}],    -- Extreme
+                                                            [{2}, {[at0237]}],    -- Moderate
+                                                            [{3}, {[at0238]}],    -- Mild
+                                                            [{4}, {[at0239]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0240] occurrences matches {0..1} matches {    -- Jumping
+                                                value matches {
+                                                    DV_ORDINAL[at9080] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0241]}],    -- Unable
+                                                            [{1}, {[at0242]}],    -- Extreme
+                                                            [{2}, {[at0243]}],    -- Moderate
+                                                            [{3}, {[at0244]}],    -- Mild
+                                                            [{4}, {[at0245]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0246] occurrences matches {0..1} matches {    -- Landing
+                                                value matches {
+                                                    DV_ORDINAL[at9081] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0247]}],    -- Unable
+                                                            [{1}, {[at0248]}],    -- Extreme
+                                                            [{2}, {[at0249]}],    -- Moderate
+                                                            [{3}, {[at0250]}],    -- Mild
+                                                            [{4}, {[at0251]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0252] occurrences matches {0..1} matches {    -- Performing activities with normal technique
+                                                value matches {
+                                                    DV_ORDINAL[at9082] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0253]}],    -- Unable
+                                                            [{1}, {[at0254]}],    -- Extreme
+                                                            [{2}, {[at0255]}],    -- Moderate
+                                                            [{3}, {[at0256]}],    -- Mild
+                                                            [{4}, {[at0257]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0258] occurrences matches {0..1} matches {    -- Participating activity as long as would like
+                                                value matches {
+                                                    DV_ORDINAL[at9083] matches {
+                                                        [value, symbol] matches {
+                                                            [{0}, {[at0259]}],    -- Unable
+                                                            [{1}, {[at0260]}],    -- Extreme
+                                                            [{2}, {[at0261]}],    -- Moderate
+                                                            [{3}, {[at0262]}],    -- Mild
+                                                            [{4}, {[at0263]}]    -- None
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0264] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9084] matches {
+                                                magnitude matches {|0..168|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0004] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0036] matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9085]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0011] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0037] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"SAFAS">
+                description = <"Sports Athlete Foot and Ankle Score (SAFAS).">
+            >
+            ["at0002"] = <
+                text = <"Point in time">
+                description = <"A specific date and/or time which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0005"] = <
+                text = <"Swollen foot or ankle">
+                description = <"Patient-reported extent to which foot or ankle has been swollen during last week.">
+                comment = <"Questionnaire wording:
+To what extent has your foot/ankle been swollen during the last week?">
+            >
+            ["at0006"] = <
+                text = <"Never">
+                description = <"Foot or ankle has not been swollen in last week.">
+            >
+            ["at0007"] = <
+                text = <"Rarely">
+                description = <"Foot or ankle has rarely been swollen in last week.">
+            >
+            ["at0008"] = <
+                text = <"Sometimes">
+                description = <"Foot or ankle has sometimes been swollen in last week.">
+            >
+            ["at0009"] = <
+                text = <"Often">
+                description = <"Foot or ankle has often been swollen in last week.">
+            >
+            ["at0010"] = <
+                text = <"Grinding or noise when moving foot or ankle">
+                description = <"Patient-reported extent of feeling grinding, hearing clicking or any other type of noise when foot or ankle moved during last week.">
+                comment = <"Questionnaire wording:
+To what extent have you felt grinding, heard clicking or any other type of noise when your foot/ankle moved?">
+            >
+            ["at0012"] = <
+                text = <"Swollen foot or ankle after low impact activity">
+                description = <"Patient-report extent to which foot or ankle has been swollen after low impact activity during last week.">
+                comment = <"Questionnaire wording:
+To what extent has your foot/ankle been swollen after low impact activity?">
+            >
+            ["at0013"] = <
+                text = <"Never">
+                description = <"Foot or ankle has never been swollen after low impact activity in last week.">
+            >
+            ["at0014"] = <
+                text = <"Rarely">
+                description = <"Foot or ankle has rarely been swollen after low impact activity in last week.">
+            >
+            ["at0015"] = <
+                text = <"Sometimes">
+                description = <"Foot or ankle has sometimes been swollen after low impact activity in last week.">
+            >
+            ["at0016"] = <
+                text = <"Often">
+                description = <"Foot or ankle has often been swollen after low impact activity in last week.">
+            >
+            ["at0017"] = <
+                text = <"Never">
+                description = <"The patient never felt grinding or heard clicking or any other noise when foot or ankle moved in last week.">
+            >
+            ["at0018"] = <
+                text = <"Swollen foot or ankle after heavy activity">
+                description = <"Patient-reported extent to which foot or ankle has been swollen after heavy activity.">
+            >
+            ["at0019"] = <
+                text = <"Never">
+                description = <"Foot or ankle has never been swollen after heavy activity in last week.">
+            >
+            ["at0020"] = <
+                text = <"Rarely">
+                description = <"Foot or ankle has rarely been swollen after heavy activity in last week.">
+            >
+            ["at0021"] = <
+                text = <"Sometimes">
+                description = <"Foot or ankle has sometimes been swollen after heavy activity in last week.">
+            >
+            ["at0022"] = <
+                text = <"Often">
+                description = <"Foot or ankle has often been swollen after heavy activity in last week.">
+            >
+            ["at0023"] = <
+                text = <"Rarely">
+                description = <"The patient rarely felt grinding or heard clicking or any other noise when foot or ankle moved in last week.">
+            >
+            ["at0024"] = <
+                text = <"Sometimes">
+                description = <"The patient sometimes felt grinding or heard clicking or any other noise when foot or ankle moved in last week.">
+            >
+            ["at0025"] = <
+                text = <"Often">
+                description = <"The patient often felt grinding or heard clicking or any other noise when foot or ankle moved in last week.">
+            >
+            ["at0026"] = <
+                text = <"Difficulty pointing toes">
+                description = <"Patient-reported extent of difficulty pointing toes towards the ground fully during last week.">
+                comment = <"Questionnaire wording:
+To what extent have you had difficulty pointing your toes towards the ground fully?">
+            >
+            ["at0027"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty pointing toes towards the ground fully during last week.">
+            >
+            ["at0028"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty pointing toes towards the ground fully during last week.">
+            >
+            ["at0029"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty pointing toes towards the ground fully during last week.">
+            >
+            ["at0030"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe difficulty pointing toes towards the ground fully during last week.">
+            >
+            ["at0031"] = <
+                text = <"Difficulty moving ankle">
+                description = <"Patient-reported extent of difficulty moving ankle from side to side fully during last week.">
+                comment = <"Questionnaire wording:
+To what extent have you had difficulty moving your ankle from side to side fully?">
+            >
+            ["at0032"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty moving ankle from side to side fully in last week.">
+            >
+            ["at0033"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty moving ankle from side to side fully in last week.">
+            >
+            ["at0034"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty moving ankle from side to side fully in last week.">
+            >
+            ["at0035"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe difficulty moving ankle from side to side fully in last week.">
+            >
+            ["at0036"] = <
+                text = <"Confounding factors">
+                description = <"Record any issues or factors that may impact on the score or interpretation.">
+            >
+            ["at0037"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"e.g. Local hospital departmental infomation or additional metadata to align with HL7 or CDISC equivalents.">
+            >
+            ["at0038"] = <
+                text = <"Ankle stiffness after wakening">
+                description = <"Patient-reported extent of ankle stiffness after first wakening in the morning.">
+                comment = <"Questionnaire wording:
+To what extent have you experienced ankle stiffness after first wakening in the morning?">
+            >
+            ["at0039"] = <
+                text = <"None">
+                description = <"The patient experienced no ankle stiffness after first wakening in last week.">
+            >
+            ["at0040"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild ankle stiffness after first wakening in last week.">
+            >
+            ["at0041"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate ankle stiffness after first wakening in last week.">
+            >
+            ["at0042"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe ankle stiffness after first wakening in last week.">
+            >
+            ["at0043"] = <
+                text = <"Always">
+                description = <"Foot or ankle has always been swollen in last week.">
+            >
+            ["at0044"] = <
+                text = <"Always">
+                description = <"Foot or ankle has always been swollen after low impact activity in last week.">
+            >
+            ["at0045"] = <
+                text = <"Always">
+                description = <"Foot or ankle has always been swollen after heavy activity in last week.">
+            >
+            ["at0046"] = <
+                text = <"Always">
+                description = <"The patient always felt grinding or heard clicking or any other noise when foot or ankle moved in last week.">
+            >
+            ["at0047"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty pointing toes towards the ground fully during last week.">
+            >
+            ["at0048"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty moving ankle from side to side fully in last week.">
+            >
+            ["at0049"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme ankle stiffness after first wakening in last week.">
+            >
+            ["at0050"] = <
+                text = <"Ankle stiffness after sitting, lying or resting">
+                description = <"Patient-reported extent of ankle stiffness after sitting, lying or resting later in the day during the last week.">
+                comment = <"Questionnaire wording:
+To what extent have you experienced ankle stiffness after sitting, lying or resting later in the day?">
+            >
+            ["at0051"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme ankle stiffness after sitting, lying or resting later in the day in last week.">
+            >
+            ["at0052"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe ankle stiffness after sitting, lying or resting later in the day in last week.">
+            >
+            ["at0053"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate ankle stiffness after sitting, lying or resting later in the day in last week.">
+            >
+            ["at0054"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild ankle stiffness after sitting, lying or resting later in the day in last week.">
+            >
+            ["at0055"] = <
+                text = <"None">
+                description = <"The patient experienced no ankle stiffness after sitting, lying or resting later in the day in last week.">
+            >
+            ["at0056"] = <
+                text = <"Ankle stiffness after activity">
+                description = <"Patient-reported extent of ankle stiffness after activity during last week.">
+                comment = <"Questionnaire wording:
+To what extent have you experienced ankle stiffness after activity?">
+            >
+            ["at0057"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme ankle stiffness after activity in last week.">
+            >
+            ["at0058"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe ankle stiffness after activity in last week.">
+            >
+            ["at0059"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate ankle stiffness after activity in last week.">
+            >
+            ["at0060"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild ankle stiffness after activity in last week.">
+            >
+            ["at0061"] = <
+                text = <"None">
+                description = <"The patient experienced no ankle stiffness after activity in last week.">
+            >
+            ["at0062"] = <
+                text = <"Pain in joint">
+                description = <"Patient-reported extent of pain in joint during last week.">
+                comment = <"Questionnaire wording:
+To what extent have you experienced pain in the joint?">
+            >
+            ["at0063"] = <
+                text = <"Always">
+                description = <"The patient always experienced pain in the joint in last week.">
+            >
+            ["at0064"] = <
+                text = <"Often">
+                description = <"The patient often experienced pain in the joint in last week.">
+            >
+            ["at0065"] = <
+                text = <"Sometimes">
+                description = <"The patient sometimes experienced pain in the joint in last week.">
+            >
+            ["at0066"] = <
+                text = <"Rarely">
+                description = <"The patient rarely experienced pain in the joint in last week.">
+            >
+            ["at0067"] = <
+                text = <"Never">
+                description = <"The patient never experienced pain in the joint in last week.">
+            >
+            ["at0068"] = <
+                text = <"Pain at rest (sitting)">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle when at rest (sitting) during last week.">
+            >
+            ["at0069"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme pain in foot/ankle when at rest in last week.">
+            >
+            ["at0070"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe pain in foot/ankle when at rest in last week.">
+            >
+            ["at0071"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate pain in foot/ankle when at rest in last week.">
+            >
+            ["at0072"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild pain in foot/ankle when at rest in last week.">
+            >
+            ["at0073"] = <
+                text = <"None">
+                description = <"The patient experienced no pain in foot/ankle when at rest in last week.">
+            >
+            ["at0074"] = <
+                text = <"Pain during full weight bearing">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle during full weight bearing during last week.">
+            >
+            ["at0075"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme pain in foot/ankle during full weight bearing in last week.">
+            >
+            ["at0076"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe pain in foot/ankle during full weight bearing in last week.">
+            >
+            ["at0077"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate pain in foot/ankle during full weight bearing in last week.">
+            >
+            ["at0078"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild pain in foot/ankle during full weight bearing in last week.">
+            >
+            ["at0079"] = <
+                text = <"None">
+                description = <"The patient experienced no pain in foot/ankle during full weight bearing in last week.">
+            >
+            ["at0080"] = <
+                text = <"Pain during low impact activity">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle during low impact activity during last week.">
+            >
+            ["at0081"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme pain in foot/ankle during low impact activity in last week.">
+            >
+            ["at0082"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe pain in foot/ankle during low impact activity in last week.">
+            >
+            ["at0083"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate pain in foot/ankle during low impact activity in last week.">
+            >
+            ["at0084"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild pain in foot/ankle during low impact activity in last week.">
+            >
+            ["at0085"] = <
+                text = <"None">
+                description = <"The patient experienced no pain in foot/ankle during low impact activity in last week.">
+            >
+            ["at0086"] = <
+                text = <"Pain after low impact activity">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle after low impact activity during last week.">
+            >
+            ["at0087"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme pain in foot/ankle after low impact activity in last week.">
+            >
+            ["at0088"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe pain in foot/ankle after low impact activity in last week.">
+            >
+            ["at0089"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate pain in foot/ankle after low impact activity in last week.">
+            >
+            ["at0090"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild pain in foot/ankle after low impact activity in last week.">
+            >
+            ["at0091"] = <
+                text = <"None">
+                description = <"The patient experienced no pain in foot/ankle after low impact activity in last week.">
+            >
+            ["at0092"] = <
+                text = <"Pain during heavy activity">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle during heavy activity during last week.">
+            >
+            ["at0093"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme pain in foot/ankle during heavy activity in last week.">
+            >
+            ["at0094"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe pain in foot/ankle during heavy activity in last week.">
+            >
+            ["at0095"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate pain in foot/ankle during heavy activity in last week.">
+            >
+            ["at0096"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild pain in foot/ankle during heavy activity in last week.">
+            >
+            ["at0097"] = <
+                text = <"None">
+                description = <"The patient experienced no pain in foot/ankle during heavy activity in last week.">
+            >
+            ["at0098"] = <
+                text = <"Pain after heavy activity">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle after heavy activity during last week.">
+            >
+            ["at0099"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme pain in foot/ankle after heavy activity in last week.">
+            >
+            ["at0100"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe pain in foot/ankle after heavy activity in last week.">
+            >
+            ["at0101"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate pain in foot/ankle after heavy activity in last week.">
+            >
+            ["at0102"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild pain in foot/ankle after heavy activity in last week.">
+            >
+            ["at0103"] = <
+                text = <"None">
+                description = <"The patient experienced no pain in foot/ankle after heavy activity in last week.">
+            >
+            ["at0104"] = <
+                text = <"Pain when twisting or pivoting on ankle">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle when twisting or pivoting on ankle during last week.">
+            >
+            ["at0105"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme pain in foot/ankle when twisting or pivoting on ankle in last week.">
+            >
+            ["at0106"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe pain in foot/ankle when twisting or pivoting on ankle in last week.">
+            >
+            ["at0107"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate pain in foot/ankle when twisting or pivoting on ankle in last week.">
+            >
+            ["at0108"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild pain in foot/ankle when twisting or pivoting on ankle in last week.">
+            >
+            ["at0109"] = <
+                text = <"None">
+                description = <"The patient experienced no pain in foot/ankle when twisting or pivoting on ankle in last week.">
+            >
+            ["at0110"] = <
+                text = <"Pain when pointing toes to ground">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle when pointing toes to ground fully during last week.">
+            >
+            ["at0111"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme pain in foot/ankle when pointing toes to ground fully in last week.">
+            >
+            ["at0112"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe pain in foot/ankle when pointing toes to ground fully in last week.">
+            >
+            ["at0113"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate pain in foot/ankle when pointing toes to ground fully in last week.">
+            >
+            ["at0114"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild pain in foot/ankle when pointing toes to ground fully in last week.">
+            >
+            ["at0115"] = <
+                text = <"None">
+                description = <"The patient experienced no pain in foot/ankle when pointing toes to ground fully in last week.">
+            >
+            ["at0116"] = <
+                text = <"Pain when bending ankle">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle when bending ankle fully during last week.">
+            >
+            ["at0117"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme pain in foot/ankle when bending ankle fully in last week.">
+            >
+            ["at0118"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe pain in foot/ankle when bending ankle fully in last week.">
+            >
+            ["at0119"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate pain in foot/ankle when bending ankle fully in last week.">
+            >
+            ["at0120"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild pain in foot/ankle when bending ankle fully in last week.">
+            >
+            ["at0121"] = <
+                text = <"None">
+                description = <"The patient experienced no pain in foot/ankle when bending ankle fully in last week.">
+            >
+            ["at0122"] = <
+                text = <"Symptoms">
+                description = <"Patient-reported symptoms.">
+            >
+            ["at0123"] = <
+                text = <"Pain">
+                description = <"Patient-reported pain.">
+            >
+            ["at0124"] = <
+                text = <"Pain at night while in bed">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle at night while in bed during last week.">
+            >
+            ["at0125"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme pain in foot/ankle at night while in bed in last week.">
+            >
+            ["at0126"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe pain in foot/ankle at night while in bed in last week.">
+            >
+            ["at0127"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate pain in foot/ankle at night while in bed in last week.">
+            >
+            ["at0128"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild pain in foot/ankle at night while in bed in last week.">
+            >
+            ["at0129"] = <
+                text = <"None">
+                description = <"The patient experienced no pain in foot/ankle at night while in bed in last week.">
+            >
+            ["at0130"] = <
+                text = <"Pain going upstairs">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle going upstairs during last week.">
+            >
+            ["at0131"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme pain in foot/ankle going upstairs in last week.">
+            >
+            ["at0132"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe pain in foot/ankle going upstairs in last week.">
+            >
+            ["at0133"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate pain in foot/ankle going upstairs in last week.">
+            >
+            ["at0134"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild pain in foot/ankle going upstairs in last week.">
+            >
+            ["at0135"] = <
+                text = <"None">
+                description = <"The patient experienced no pain in foot/ankle going upstairs in last week.">
+            >
+            ["at0136"] = <
+                text = <"Pain going downstairs">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle going downstairs during last week.">
+            >
+            ["at0137"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme pain in foot/ankle going downstairs in last week.">
+            >
+            ["at0138"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe pain in foot/ankle going downstairs in last week.">
+            >
+            ["at0139"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate pain in foot/ankle going downstairs in last week.">
+            >
+            ["at0140"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild pain in foot/ankle going downstairs in last week.">
+            >
+            ["at0141"] = <
+                text = <"None">
+                description = <"The patient experienced no pain in foot/ankle going downstairs in last week.">
+            >
+            ["at0142"] = <
+                text = <"Daily living">
+                description = <"Patient-reported difficulties in daily living activities.">
+            >
+            ["at0143"] = <
+                text = <"Rising from sitting">
+                description = <"Patient-reported extent of difficulty rising from sitting due to foot / ankle during last week.">
+            >
+            ["at0144"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty rising from sitting due to ankle in last week.">
+            >
+            ["at0145"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe difficulty rising from sitting due to ankle in last week.">
+            >
+            ["at0146"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty rising from sitting due to ankle in last week.">
+            >
+            ["at0147"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty rising from sitting due to ankle in last week.">
+            >
+            ["at0148"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty rising from sitting due to ankle in last week.">
+            >
+            ["at0149"] = <
+                text = <"Ascending stairs">
+                description = <"Patient-reported extent of difficulty ascending stairs due to foot / ankle during last week.">
+            >
+            ["at0150"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty ascending stairs due to ankle in last week.">
+            >
+            ["at0151"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe difficulty ascending stairs due to ankle in last week.">
+            >
+            ["at0152"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty ascending stairs due to ankle in last week.">
+            >
+            ["at0153"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty ascending stairs due to ankle in last week.">
+            >
+            ["at0154"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty ascending stairs due to ankle in last week.">
+            >
+            ["at0155"] = <
+                text = <"Descending stairs">
+                description = <"Patient-reported extent of difficulty descending stairs due to foot / ankle during last week.">
+            >
+            ["at0156"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty descending stairs due to ankle in last week.">
+            >
+            ["at0157"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe difficulty descending stairs due to ankle in last week.">
+            >
+            ["at0158"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty descending stairs due to ankle in last week.">
+            >
+            ["at0159"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty descending stairs due to ankle in last week.">
+            >
+            ["at0160"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty descending stairs due to ankle in last week.">
+            >
+            ["at0161"] = <
+                text = <"Putting on socks or stockings">
+                description = <"Patient-reported extent of difficulty putting on socks or stockings due to foot / ankle during last week.">
+            >
+            ["at0162"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty putting on socks or stockings due to ankle in last week.">
+            >
+            ["at0163"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe difficulty putting on socks or stockings due to ankle in last week.">
+            >
+            ["at0164"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty putting on socks or stockings due to ankle in last week.">
+            >
+            ["at0165"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty putting on socks or stockings due to ankle in last week.">
+            >
+            ["at0166"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty putting on socks or stockings due to ankle in last week.">
+            >
+            ["at0167"] = <
+                text = <"Getting in and out of bath">
+                description = <"Patient-reported extent of difficulty getting in and out of bath due to foot / ankle during last week.">
+            >
+            ["at0168"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty getting in and out of bath due to ankle in last week.">
+            >
+            ["at0169"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe difficulty getting in and out of bath due to ankle in last week.">
+            >
+            ["at0170"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty getting in and out of bath due to ankle in last week.">
+            >
+            ["at0171"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty getting in and out of bath due to ankle in last week.">
+            >
+            ["at0172"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty getting in and out of bath due to ankle in last week.">
+            >
+            ["at0173"] = <
+                text = <"Getting on and off toilet">
+                description = <"Patient-reported extent of difficulty getting on and off toilet due to foot / ankle during last week.">
+            >
+            ["at0174"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty getting on and off toilet due to ankle in last week.">
+            >
+            ["at0175"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe difficulty getting on and off toilet due to ankle in last week.">
+            >
+            ["at0176"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty getting on and off toilet due to ankle in last week.">
+            >
+            ["at0177"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty getting on and off toilet due to ankle in last week.">
+            >
+            ["at0178"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty getting on and off toilet due to ankle in last week.">
+            >
+            ["at0179"] = <
+                text = <"Bending to floor or pick up object">
+                description = <"Patient-reported extent of difficulty bending to floor or picking up object due to foot / ankle during last week.">
+            >
+            ["at0180"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty bending to floor or picking up object due to ankle in last week.">
+            >
+            ["at0181"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe difficulty bending to floor or picking up object due to ankle in last week.">
+            >
+            ["at0182"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty bending to floor or picking up object due to ankle in last week.">
+            >
+            ["at0183"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty bending to floor or picking up object due to ankle in last week.">
+            >
+            ["at0184"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty bending to floor or picking up object due to ankle in last week.">
+            >
+            ["at0185"] = <
+                text = <"Driving car">
+                description = <"Patient-reported extent of difficulty driving car due to foot / ankle during last week.">
+            >
+            ["at0186"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty driving car due to ankle in last week.">
+            >
+            ["at0187"] = <
+                text = <"Severe">
+                description = <"The patient experienced severe difficulty driving car due to ankle in last week.">
+            >
+            ["at0188"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty driving car due to ankle in last week.">
+            >
+            ["at0189"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty driving car due to ankle in last week.">
+            >
+            ["at0190"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty driving car due to ankle in last week.">
+            >
+            ["at0191"] = <
+                text = <"Sports participation">
+                description = <"Patient-reported difficulties in sports participation.">
+            >
+            ["at0192"] = <
+                text = <"Squatting without extra weight">
+                description = <"Patient-reported extent of difficulty experienced when squatting without extra weight during last week.">
+            >
+            ["at0193"] = <
+                text = <"Unable">
+                description = <"The patient was unable to squat without extra weight during last week.">
+            >
+            ["at0194"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty when squatting without extra weight during last week.">
+            >
+            ["at0195"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty when squatting without extra weight during last week.">
+            >
+            ["at0196"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty when squatting without extra weight during last week.">
+            >
+            ["at0197"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty when squatting without extra weight during last week.">
+            >
+            ["at0198"] = <
+                text = <"Squatting with extra weight">
+                description = <"Patient-reported extent of difficulty experienced when squatting with extra weight during last week.">
+            >
+            ["at0199"] = <
+                text = <"Unable">
+                description = <"The patient was unable to squat with extra weight during last week.">
+            >
+            ["at0200"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty when squatting with extra weight during last week.">
+            >
+            ["at0201"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty when squatting with extra weight during last week.">
+            >
+            ["at0202"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty when squatting with extra weight during last week.">
+            >
+            ["at0203"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty when squatting with extra weight during last week.">
+            >
+            ["at0204"] = <
+                text = <"Squatting on one leg (injured ankle)">
+                description = <"Patient-reported extent of difficulty experienced when squatting on one leg (injured ankle) during last week.">
+            >
+            ["at0205"] = <
+                text = <"Unable">
+                description = <"The patient was unable to squat on one leg (injured ankle) during last week.">
+            >
+            ["at0206"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty when squatting on one leg (injured ankle) during last week.">
+            >
+            ["at0207"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty when squatting on one leg (injured ankle) during last week.">
+            >
+            ["at0208"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty when squatting on one leg (injured ankle) during last week.">
+            >
+            ["at0209"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty when squatting on one leg (injured ankle) during last week.">
+            >
+            ["at0210"] = <
+                text = <"Jogging">
+                description = <"Patient-reported extent of difficulty experienced when jogging during last week.">
+            >
+            ["at0211"] = <
+                text = <"Unable">
+                description = <"The patient was unable to jog during last week.">
+            >
+            ["at0212"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty when jogging during last week.">
+            >
+            ["at0213"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty when jogging during last week.">
+            >
+            ["at0214"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty when jogging during last week.">
+            >
+            ["at0215"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty when jogging during last week.">
+            >
+            ["at0216"] = <
+                text = <"Running">
+                description = <"Patient-reported extent of difficulty experienced when running during last week.">
+            >
+            ["at0217"] = <
+                text = <"Unable">
+                description = <"The patient was unable to run during last week.">
+            >
+            ["at0218"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty when running during last week.">
+            >
+            ["at0219"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty when running during last week.">
+            >
+            ["at0220"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty when running during last week.">
+            >
+            ["at0221"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty when running during last week.">
+            >
+            ["at0222"] = <
+                text = <"Sudden cutting or lateral movements">
+                description = <"Patient-reported extent of difficulty experienced when making sudden cutting or lateral movements during last week.">
+            >
+            ["at0223"] = <
+                text = <"Unable">
+                description = <"The patient was unable to make sudden cutting or lateral movements during last week.">
+            >
+            ["at0224"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty when making sudden cutting or lateral movements during last week.">
+            >
+            ["at0225"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty when making sudden cutting or lateral movements during last week.">
+            >
+            ["at0226"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty when making sudden cutting or lateral movements during last week.">
+            >
+            ["at0227"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty when making sudden cutting or lateral movements during last week.">
+            >
+            ["at0228"] = <
+                text = <"Starting quickly">
+                description = <"Patient-reported extent of difficulty experienced when starting quickly during last week.">
+            >
+            ["at0229"] = <
+                text = <"Unable">
+                description = <"The patient was unable to start quickly during last week.">
+            >
+            ["at0230"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty when starting quickly during last week.">
+            >
+            ["at0231"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty when starting quickly during last week.">
+            >
+            ["at0232"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty when starting quickly during last week.">
+            >
+            ["at0233"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty when starting quickly during last week.">
+            >
+            ["at0234"] = <
+                text = <"Stopping quickly">
+                description = <"Patient-reported extent of difficulty experienced when stopping quickly during last week.">
+            >
+            ["at0235"] = <
+                text = <"Unable">
+                description = <"The patient was unable to stop quickly during last week.">
+            >
+            ["at0236"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty when stopping quickly during last week.">
+            >
+            ["at0237"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty when stopping quickly during last week.">
+            >
+            ["at0238"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty when stopping quickly during last week.">
+            >
+            ["at0239"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty when stopping quickly during last week.">
+            >
+            ["at0240"] = <
+                text = <"Jumping">
+                description = <"Patient-reported extent of difficulty experienced when jumping during last week.">
+            >
+            ["at0241"] = <
+                text = <"Unable">
+                description = <"The patient was unable to jump during last week.">
+            >
+            ["at0242"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty when jumping during last week.">
+            >
+            ["at0243"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty when jumping during last week.">
+            >
+            ["at0244"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty when jumping during last week.">
+            >
+            ["at0245"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty when jumping during last week.">
+            >
+            ["at0246"] = <
+                text = <"Landing">
+                description = <"Patient-reported extent of difficulty experienced when landing during last week.">
+            >
+            ["at0247"] = <
+                text = <"Unable">
+                description = <"The patient was unable to land during last week.">
+            >
+            ["at0248"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty when landing during last week.">
+            >
+            ["at0249"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty when landing during last week.">
+            >
+            ["at0250"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty when landing during last week.">
+            >
+            ["at0251"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty when landing during last week.">
+            >
+            ["at0252"] = <
+                text = <"Performing activities with normal technique">
+                description = <"Patient-reported extent of difficulty experienced when performing activities with normal technique during last week.">
+            >
+            ["at0253"] = <
+                text = <"Unable">
+                description = <"The patient was unable to perform activity with normal technique during last week.">
+            >
+            ["at0254"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty when performing activity with normal technique during last week.">
+            >
+            ["at0255"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty when performing activity with normal technique during last week.">
+            >
+            ["at0256"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty when performing activity with normal technique during last week.">
+            >
+            ["at0257"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty when performing activity with normal technique during last week.">
+            >
+            ["at0258"] = <
+                text = <"Participating activity as long as would like">
+                description = <"Patient-reported extent of difficulty experienced when participating in activity as long as they would like during last week.">
+            >
+            ["at0259"] = <
+                text = <"Unable">
+                description = <"The patient was unable to participate in activity as long as they would like during last week.">
+            >
+            ["at0260"] = <
+                text = <"Extreme">
+                description = <"The patient experienced extreme difficulty participating in activity as long as they would like during last week.">
+            >
+            ["at0261"] = <
+                text = <"Moderate">
+                description = <"The patient experienced moderate difficulty participating in activity as long as they would like during last week.">
+            >
+            ["at0262"] = <
+                text = <"Mild">
+                description = <"The patient experienced mild difficulty participating in activity as long as they would like during last week.">
+            >
+            ["at0263"] = <
+                text = <"None">
+                description = <"The patient experienced no difficulty participating in activity as long as they would like during last week.">
+            >
+            ["at0264"] = <
+                text = <"Total score">
+                description = <"Total score from all individual items.">
+            >
+            ["ac9085"] = <
+                text = <"Swollen foot or ankle (synthesised)">
+                description = <"Patient-reported extent to which foot or ankle has been swollen during last week. (synthesised)">
+            >
+            ["ac9086"] = <
+                text = <"Swollen foot or ankle after low impact activity (synthesised)">
+                description = <"Patient-report extent to which foot or ankle has been swollen after low impact activity during last week. (synthesised)">
+            >
+            ["ac9087"] = <
+                text = <"Swollen foot or ankle after heavy activity (synthesised)">
+                description = <"Patient-reported extent to which foot or ankle has been swollen after heavy activity. (synthesised)">
+            >
+            ["ac9088"] = <
+                text = <"Grinding or noise when moving foot or ankle (synthesised)">
+                description = <"Patient-reported extent of feeling grinding, hearing clicking or any other type of noise when foot or ankle moved during last week. (synthesised)">
+            >
+            ["ac9089"] = <
+                text = <"Difficulty pointing toes (synthesised)">
+                description = <"Patient-reported extent of difficulty pointing toes towards the ground fully during last week. (synthesised)">
+            >
+            ["ac9090"] = <
+                text = <"Difficulty moving ankle (synthesised)">
+                description = <"Patient-reported extent of difficulty moving ankle from side to side fully during last week. (synthesised)">
+            >
+            ["ac9091"] = <
+                text = <"Ankle stiffness after wakening (synthesised)">
+                description = <"Patient-reported extent of ankle stiffness after first wakening in the morning. (synthesised)">
+            >
+            ["ac9092"] = <
+                text = <"Ankle stiffness after sitting, lying or resting (synthesised)">
+                description = <"Patient-reported extent of ankle stiffness after sitting, lying or resting later in the day during the last week. (synthesised)">
+            >
+            ["ac9093"] = <
+                text = <"Ankle stiffness after activity (synthesised)">
+                description = <"Patient-reported extent of ankle stiffness after activity during last week. (synthesised)">
+            >
+            ["ac9094"] = <
+                text = <"Pain in joint (synthesised)">
+                description = <"Patient-reported extent of pain in joint during last week. (synthesised)">
+            >
+            ["ac9095"] = <
+                text = <"Pain at rest (sitting) (synthesised)">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle when at rest (sitting) during last week. (synthesised)">
+            >
+            ["ac9096"] = <
+                text = <"Pain during full weight bearing (synthesised)">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle during full weight bearing during last week. (synthesised)">
+            >
+            ["ac9097"] = <
+                text = <"Pain during low impact activity (synthesised)">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle during low impact activity during last week. (synthesised)">
+            >
+            ["ac9098"] = <
+                text = <"Pain after low impact activity (synthesised)">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle after low impact activity during last week. (synthesised)">
+            >
+            ["ac9099"] = <
+                text = <"Pain during heavy activity (synthesised)">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle during heavy activity during last week. (synthesised)">
+            >
+            ["ac9100"] = <
+                text = <"Pain after heavy activity (synthesised)">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle after heavy activity during last week. (synthesised)">
+            >
+            ["ac9101"] = <
+                text = <"Pain when twisting or pivoting on ankle (synthesised)">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle when twisting or pivoting on ankle during last week. (synthesised)">
+            >
+            ["ac9102"] = <
+                text = <"Pain when pointing toes to ground (synthesised)">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle when pointing toes to ground fully during last week. (synthesised)">
+            >
+            ["ac9103"] = <
+                text = <"Pain when bending ankle (synthesised)">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle when bending ankle fully during last week. (synthesised)">
+            >
+            ["ac9104"] = <
+                text = <"Pain at night while in bed (synthesised)">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle at night while in bed during last week. (synthesised)">
+            >
+            ["ac9105"] = <
+                text = <"Pain going upstairs (synthesised)">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle going upstairs during last week. (synthesised)">
+            >
+            ["ac9106"] = <
+                text = <"Pain going downstairs (synthesised)">
+                description = <"Patient-reported estimation of amount of pain experienced in foot / ankle going downstairs during last week. (synthesised)">
+            >
+            ["ac9107"] = <
+                text = <"Rising from sitting (synthesised)">
+                description = <"Patient-reported extent of difficulty rising from sitting due to foot / ankle during last week. (synthesised)">
+            >
+            ["ac9108"] = <
+                text = <"Ascending stairs (synthesised)">
+                description = <"Patient-reported extent of difficulty ascending stairs due to foot / ankle during last week. (synthesised)">
+            >
+            ["ac9109"] = <
+                text = <"Descending stairs (synthesised)">
+                description = <"Patient-reported extent of difficulty descending stairs due to foot / ankle during last week. (synthesised)">
+            >
+            ["ac9110"] = <
+                text = <"Putting on socks or stockings (synthesised)">
+                description = <"Patient-reported extent of difficulty putting on socks or stockings due to foot / ankle during last week. (synthesised)">
+            >
+            ["ac9111"] = <
+                text = <"Getting in and out of bath (synthesised)">
+                description = <"Patient-reported extent of difficulty getting in and out of bath due to foot / ankle during last week. (synthesised)">
+            >
+            ["ac9112"] = <
+                text = <"Getting on and off toilet (synthesised)">
+                description = <"Patient-reported extent of difficulty getting on and off toilet due to foot / ankle during last week. (synthesised)">
+            >
+            ["ac9113"] = <
+                text = <"Bending to floor or pick up object (synthesised)">
+                description = <"Patient-reported extent of difficulty bending to floor or picking up object due to foot / ankle during last week. (synthesised)">
+            >
+            ["ac9114"] = <
+                text = <"Driving car (synthesised)">
+                description = <"Patient-reported extent of difficulty driving car due to foot / ankle during last week. (synthesised)">
+            >
+            ["ac9115"] = <
+                text = <"Squatting without extra weight (synthesised)">
+                description = <"Patient-reported extent of difficulty experienced when squatting without extra weight during last week. (synthesised)">
+            >
+            ["ac9116"] = <
+                text = <"Squatting with extra weight (synthesised)">
+                description = <"Patient-reported extent of difficulty experienced when squatting with extra weight during last week. (synthesised)">
+            >
+            ["ac9117"] = <
+                text = <"Squatting on one leg (injured ankle) (synthesised)">
+                description = <"Patient-reported extent of difficulty experienced when squatting on one leg (injured ankle) during last week. (synthesised)">
+            >
+            ["ac9118"] = <
+                text = <"Jogging (synthesised)">
+                description = <"Patient-reported extent of difficulty experienced when jogging during last week. (synthesised)">
+            >
+            ["ac9119"] = <
+                text = <"Running (synthesised)">
+                description = <"Patient-reported extent of difficulty experienced when running during last week. (synthesised)">
+            >
+            ["ac9120"] = <
+                text = <"Sudden cutting or lateral movements (synthesised)">
+                description = <"Patient-reported extent of difficulty experienced when making sudden cutting or lateral movements during last week. (synthesised)">
+            >
+            ["ac9121"] = <
+                text = <"Starting quickly (synthesised)">
+                description = <"Patient-reported extent of difficulty experienced when starting quickly during last week. (synthesised)">
+            >
+            ["ac9122"] = <
+                text = <"Stopping quickly (synthesised)">
+                description = <"Patient-reported extent of difficulty experienced when stopping quickly during last week. (synthesised)">
+            >
+            ["ac9123"] = <
+                text = <"Jumping (synthesised)">
+                description = <"Patient-reported extent of difficulty experienced when jumping during last week. (synthesised)">
+            >
+            ["ac9124"] = <
+                text = <"Landing (synthesised)">
+                description = <"Patient-reported extent of difficulty experienced when landing during last week. (synthesised)">
+            >
+            ["ac9125"] = <
+                text = <"Performing activities with normal technique (synthesised)">
+                description = <"Patient-reported extent of difficulty experienced when performing activities with normal technique during last week. (synthesised)">
+            >
+            ["ac9126"] = <
+                text = <"Participating activity as long as would like (synthesised)">
+                description = <"Patient-reported extent of difficulty experienced when participating in activity as long as they would like during last week. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9101"] = <
+            id = <"ac9101">
+            members = <"at0105", "at0106", "at0107", "at0108", "at0109">
+        >
+        ["ac9100"] = <
+            id = <"ac9100">
+            members = <"at0099", "at0100", "at0101", "at0102", "at0103">
+        >
+        ["ac9105"] = <
+            id = <"ac9105">
+            members = <"at0131", "at0132", "at0133", "at0134", "at0135">
+        >
+        ["ac9104"] = <
+            id = <"ac9104">
+            members = <"at0125", "at0126", "at0127", "at0128", "at0129">
+        >
+        ["ac9103"] = <
+            id = <"ac9103">
+            members = <"at0117", "at0118", "at0119", "at0120", "at0121">
+        >
+        ["ac9102"] = <
+            id = <"ac9102">
+            members = <"at0111", "at0112", "at0113", "at0114", "at0115">
+        >
+        ["ac9112"] = <
+            id = <"ac9112">
+            members = <"at0174", "at0175", "at0176", "at0177", "at0178">
+        >
+        ["ac9111"] = <
+            id = <"ac9111">
+            members = <"at0168", "at0169", "at0170", "at0171", "at0172">
+        >
+        ["ac9110"] = <
+            id = <"ac9110">
+            members = <"at0162", "at0163", "at0164", "at0165", "at0166">
+        >
+        ["ac9116"] = <
+            id = <"ac9116">
+            members = <"at0199", "at0200", "at0201", "at0202", "at0203">
+        >
+        ["ac9115"] = <
+            id = <"ac9115">
+            members = <"at0193", "at0194", "at0195", "at0196", "at0197">
+        >
+        ["ac9114"] = <
+            id = <"ac9114">
+            members = <"at0186", "at0187", "at0188", "at0189", "at0190">
+        >
+        ["ac9113"] = <
+            id = <"ac9113">
+            members = <"at0180", "at0181", "at0182", "at0183", "at0184">
+        >
+        ["ac9109"] = <
+            id = <"ac9109">
+            members = <"at0156", "at0157", "at0158", "at0159", "at0160">
+        >
+        ["ac9108"] = <
+            id = <"ac9108">
+            members = <"at0150", "at0151", "at0152", "at0153", "at0154">
+        >
+        ["ac9107"] = <
+            id = <"ac9107">
+            members = <"at0144", "at0145", "at0146", "at0147", "at0148">
+        >
+        ["ac9106"] = <
+            id = <"ac9106">
+            members = <"at0137", "at0138", "at0139", "at0140", "at0141">
+        >
+        ["ac9086"] = <
+            id = <"ac9086">
+            members = <"at0044", "at0016", "at0015", "at0014", "at0013">
+        >
+        ["ac9085"] = <
+            id = <"ac9085">
+            members = <"at0043", "at0009", "at0008", "at0007", "at0006">
+        >
+        ["ac9123"] = <
+            id = <"ac9123">
+            members = <"at0241", "at0242", "at0243", "at0244", "at0245">
+        >
+        ["ac9089"] = <
+            id = <"ac9089">
+            members = <"at0047", "at0030", "at0029", "at0028", "at0027">
+        >
+        ["ac9122"] = <
+            id = <"ac9122">
+            members = <"at0235", "at0236", "at0237", "at0238", "at0239">
+        >
+        ["ac9088"] = <
+            id = <"ac9088">
+            members = <"at0046", "at0025", "at0024", "at0023", "at0017">
+        >
+        ["ac9121"] = <
+            id = <"ac9121">
+            members = <"at0229", "at0230", "at0231", "at0232", "at0233">
+        >
+        ["ac9087"] = <
+            id = <"ac9087">
+            members = <"at0045", "at0022", "at0021", "at0020", "at0019">
+        >
+        ["ac9120"] = <
+            id = <"ac9120">
+            members = <"at0223", "at0224", "at0225", "at0226", "at0227">
+        >
+        ["ac9126"] = <
+            id = <"ac9126">
+            members = <"at0259", "at0260", "at0261", "at0262", "at0263">
+        >
+        ["ac9125"] = <
+            id = <"ac9125">
+            members = <"at0253", "at0254", "at0255", "at0256", "at0257">
+        >
+        ["ac9124"] = <
+            id = <"ac9124">
+            members = <"at0247", "at0248", "at0249", "at0250", "at0251">
+        >
+        ["ac9119"] = <
+            id = <"ac9119">
+            members = <"at0217", "at0218", "at0219", "at0220", "at0221">
+        >
+        ["ac9118"] = <
+            id = <"ac9118">
+            members = <"at0211", "at0212", "at0213", "at0214", "at0215">
+        >
+        ["ac9117"] = <
+            id = <"ac9117">
+            members = <"at0205", "at0206", "at0207", "at0208", "at0209">
+        >
+        ["ac9093"] = <
+            id = <"ac9093">
+            members = <"at0057", "at0058", "at0059", "at0060", "at0061">
+        >
+        ["ac9092"] = <
+            id = <"ac9092">
+            members = <"at0051", "at0052", "at0053", "at0054", "at0055">
+        >
+        ["ac9091"] = <
+            id = <"ac9091">
+            members = <"at0049", "at0042", "at0041", "at0040", "at0039">
+        >
+        ["ac9090"] = <
+            id = <"ac9090">
+            members = <"at0048", "at0035", "at0034", "at0033", "at0032">
+        >
+        ["ac9097"] = <
+            id = <"ac9097">
+            members = <"at0081", "at0082", "at0083", "at0084", "at0085">
+        >
+        ["ac9096"] = <
+            id = <"ac9096">
+            members = <"at0075", "at0076", "at0077", "at0078", "at0079">
+        >
+        ["ac9095"] = <
+            id = <"ac9095">
+            members = <"at0069", "at0070", "at0071", "at0072", "at0073">
+        >
+        ["ac9094"] = <
+            id = <"ac9094">
+            members = <"at0063", "at0064", "at0065", "at0066", "at0067">
+        >
+        ["ac9099"] = <
+            id = <"ac9099">
+            members = <"at0093", "at0094", "at0095", "at0096", "at0097">
+        >
+        ["ac9098"] = <
+            id = <"ac9098">
+            members = <"at0087", "at0088", "at0089", "at0090", "at0091">
+        >
+    >

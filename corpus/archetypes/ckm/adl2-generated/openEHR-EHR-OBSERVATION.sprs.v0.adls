@@ -1,0 +1,826 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=a5559514-e8ca-491f-a2a4-651f22f69327; build_uid=5a61358e-fbf7-4f8a-8b52-69479b034031)
+    openEHR-EHR-OBSERVATION.sprs.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Hildegard Franke">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"hildi@freshehr.com">
+        ["date"] = <"2016-11-14">
+    >
+    original_namespace = <"uk.org.clinicalmodels">
+    original_publisher = <"UK Clinical Models">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"uk.org.clinicalmodels">
+    custodian_organisation = <"UK Clinical Models">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"The Spastic Paraplegia Rating Scale (SPRS) Data Supplement  cited 15-Nov-2016 http://www.neurology.org/content/67/3/430/suppl/DC1">
+        ["2"] = <"Rating Scale devised for HSP cited 15-Nov-2016  http://www.hspersunite.org.au/rating-scale-devised-for-hsp/">
+    >
+    other_details = <
+        ["current_contact"] = <"Hildegard Franke, freshEHR Clinical Informatics Ltd.<hildi@freshehr.com>">
+        ["MD5-CAM-1.0.1"] = <"A9677FDB074CECBC141B1F01209AA3B2">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"For the recording of details of the Spastic Paraplegia Rating Scale to measure disease severity in spastic paraplegia.">
+            keywords = <"SPRS", "spastic", "paraplegia", "rating scale">
+            use = <"To be used to record the individual items and the total score of the Spastic Paraplegia Rating Scale to rate functional impairment occurring in pure forms of spastic paraplegia.
+
+The clinical Spastic Paraplegia Rating Scale (SPRS) measures disease severity and progression.">
+            misuse = <"">
+            copyright = <"© Clinical Models UK">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Spastic Paraplegia Rating Scale (SPRS)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Point in time
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- 1. Walking distance without pause
+                                        value matches {
+                                            DV_ORDINAL[at9014] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0005]}],    -- Normal, unlimited
+                                                    [{1}, {[at0006]}],    -- Abnormal exhaustion
+                                                    [{2}, {[at0007]}],    -- Less than 500 metres
+                                                    [{3}, {[at0008]}],    -- Less than 10 metres
+                                                    [{4}, {[at0009]}]    -- Unable to walk
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- 2. Gait quality
+                                        value matches {
+                                            DV_ORDINAL[at9015] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0011]}],    -- Normal
+                                                    [{1}, {[at0012]}],    -- Mild stiffness
+                                                    [{2}, {[at0013]}],    -- Clearly spastic gait
+                                                    [{3}, {[at0014]}],    -- Spastic gait requiring use of canes or walker
+                                                    [{4}, {[at0015]}]    -- Unable to walk
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- 3. Maximum gait speed
+                                        value matches {
+                                            DV_ORDINAL[at9016] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0017]}],    -- Normal
+                                                    [{1}, {[at0018]}],    -- Slighly reduced
+                                                    [{2}, {[at0019]}],    -- Moderately reduced
+                                                    [{3}, {[at0020]}],    -- Severely reduced
+                                                    [{4}, {[at0021]}]    -- Unable
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- 4. Climbing stairs
+                                        value matches {
+                                            DV_ORDINAL[at9017] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0023]}],    -- Normal
+                                                    [{1}, {[at0024]}],    -- Mild impairment
+                                                    [{2}, {[at0025]}],    -- Moderate impairment
+                                                    [{3}, {[at0026]}],    -- Severe impairment
+                                                    [{4}, {[at0027]}]    -- Unable
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- 5. Speed of stair climbing
+                                        value matches {
+                                            DV_ORDINAL[at9018] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0029]}],    -- Normal
+                                                    [{1}, {[at0030]}],    -- Slightly reduced
+                                                    [{2}, {[at0031]}],    -- Moderately reduced
+                                                    [{3}, {[at0032]}],    -- Severely reduced
+                                                    [{4}, {[at0033]}]    -- Unable
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0034] occurrences matches {0..1} matches {    -- 6. Arising from chair
+                                        value matches {
+                                            DV_ORDINAL[at9019] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0035]}],    -- Normal
+                                                    [{1}, {[at0036]}],    -- Slow or more than one attempt
+                                                    [{2}, {[at0037]}],    -- Pushes up from arms of chair
+                                                    [{3}, {[at0038]}],    -- Tends to fall back but able to get up
+                                                    [{4}, {[at0039]}]    -- Unable to arise
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0040] occurrences matches {0..1} matches {    -- 7. Spasticity - hip adductor muscles
+                                        value matches {
+                                            DV_ORDINAL[at9020] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0041]}],    -- No increase in muscle tone
+                                                    [{1}, {[at0042]}],    -- Slight increase in muscle tone
+                                                    [{2}, {[at0043]}],    -- More marked increase in muscle tone
+                                                    [{3}, {[at0044]}],    -- Considerable increase in muscle tone
+                                                    [{4}, {[at0045]}]    -- Limb stiff in adduction
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0046] occurrences matches {0..1} matches {    -- 8. Spasticity - knee flexion
+                                        value matches {
+                                            DV_ORDINAL[at9021] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0047]}],    -- No increase in muscle tone
+                                                    [{1}, {[at0048]}],    -- Slight increase in muscle tone
+                                                    [{2}, {[at0049]}],    -- More marked increase in muscle tone
+                                                    [{3}, {[at0050]}],    -- Considerable increase in muscle tone
+                                                    [{4}, {[at0051]}]    -- Limb stiff in flexion or extension
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0052] occurrences matches {0..1} matches {    -- 9. Weakness - hip abduction
+                                        value matches {
+                                            DV_ORDINAL[at9022] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0053]}],    -- No weakness
+                                                    [{1}, {[at0054]}],    -- Mild weakness (4/5)
+                                                    [{2}, {[at0055]}],    -- Moderate weakness (3/5)
+                                                    [{3}, {[at0056]}],    -- Severe weakness (2/5)
+                                                    [{4}, {[at0057]}]    -- Plegia (0/5)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0058] occurrences matches {0..1} matches {    -- 10. Weakness - foot dorsiflexion
+                                        value matches {
+                                            DV_ORDINAL[at9023] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0059]}],    -- No weakness
+                                                    [{1}, {[at0060]}],    -- Mild weakness (4/5)
+                                                    [{2}, {[at0061]}],    -- Moderate weakness (3/5)
+                                                    [{3}, {[at0062]}],    -- Severe weakness (2/5)
+                                                    [{4}, {[at0063]}]    -- Plegia (0/5)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0064] occurrences matches {0..1} matches {    -- 11. Contractures of lower limbs
+                                        value matches {
+                                            DV_ORDINAL[at9024] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0065]}],    -- No contractures
+                                                    [{1}, {[at0066]}],    -- Mild
+                                                    [{2}, {[at0067]}],    -- Fixed one joint
+                                                    [{3}, {[at0068]}],    -- Fixed two joints
+                                                    [{4}, {[at0069]}]    -- Fixed more than two joints
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0070] occurrences matches {0..1} matches {    -- 12. Pain due to SP related symptoms
+                                        value matches {
+                                            DV_ORDINAL[at9025] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0071]}],    -- None
+                                                    [{1}, {[at0072]}],    -- Less than or equal 50 percent of day and low intensity
+                                                    [{2}, {[at0073]}],    -- Less than or equal 50 percent of day and high intensity
+                                                    [{3}, {[at0074]}],    -- More than 50 percent of day and low intensity
+                                                    [{4}, {[at0075]}]    -- More than 50 percent of day and high intensity
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0076] occurrences matches {0..1} matches {    -- 13. Bladder and bowel function
+                                        value matches {
+                                            DV_ORDINAL[at9026] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0077]}],    -- Normal
+                                                    [{1}, {[at0078]}],    -- Urgency
+                                                    [{2}, {[at0079]}],    -- Rare and mild urge incontinence
+                                                    [{3}, {[at0080]}],    -- Moderate urge incontinence
+                                                    [{4}, {[at0081]}]    -- Permanent catheter or nappy
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0082] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9027] matches {
+                                                magnitude matches {|0..52|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0083] matches {    -- Inventory of complicating signs and symptoms
+                                        value matches {
+                                            DV_CODED_TEXT[at9028] matches {
+                                                defining_code matches {[ac9013]}    -- Inventory of complicating signs and symptoms (synthesised)
+                                            }
+                                            DV_TEXT[at9029]
+                                        }
+                                    }
+                                    ELEMENT[at0112] occurrences matches {0..1} matches {    -- Clinical interpretation
+                                        value matches {
+                                            DV_TEXT[at9030]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0108] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0109] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0111] occurrences matches {0..1} matches {    -- Assessment method
+                        value matches {
+                            DV_TEXT[at9031]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Spastic Paraplegia Rating Scale (SPRS)">
+                description = <"13-item Spastic Paraplegia Rating Scale (SPRS) to measure disease severity in spastic paraplegia.">
+            >
+            ["at0002"] = <
+                text = <"Point in time">
+                description = <"A specific date and/or time which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"1. Walking distance without pause">
+                description = <"Assessment of the subject's walking distance without pause.">
+                comment = <"Due to history, walking aids are allowed.">
+            >
+            ["at0005"] = <
+                text = <"Normal, unlimited">
+                description = <"The subject's walking distance is normal and unlimited.">
+            >
+            ["at0006"] = <
+                text = <"Abnormal exhaustion">
+                description = <"The subject experiences abnormal exhaustion due to spasticity after more than 500 metres.">
+            >
+            ["at0007"] = <
+                text = <"Less than 500 metres">
+                description = <"The subject's walking distance is less than 500 metres.">
+            >
+            ["at0008"] = <
+                text = <"Less than 10 metres">
+                description = <"The subject's walking distance is less than 10 metres.">
+            >
+            ["at0009"] = <
+                text = <"Unable to walk">
+                description = <"The subject is unable to walk.">
+            >
+            ["at0010"] = <
+                text = <"2. Gait quality">
+                description = <"Assessment of the subject's gait quality.">
+                comment = <"The subject is asked to walk as fast as possible a 10 meter distance including one turn.">
+            >
+            ["at0011"] = <
+                text = <"Normal">
+                description = <"The subject's gait quality is normal.">
+            >
+            ["at0012"] = <
+                text = <"Mild stiffness">
+                description = <"The subject experiences mild stiffness with running still possible.">
+            >
+            ["at0013"] = <
+                text = <"Clearly spastic gait">
+                description = <"The subject exhibits clearly spastic gait which is interfering with running.">
+            >
+            ["at0014"] = <
+                text = <"Spastic gait requiring use of canes or walker">
+                description = <"The subject requires the use of canes or a walker due to spastic gait.">
+            >
+            ["at0015"] = <
+                text = <"Unable to walk">
+                description = <"The subject is unable to walk for a 10 meter distance even with maximal support.">
+            >
+            ["at0016"] = <
+                text = <"3. Maximum gait speed">
+                description = <"Assessment of the subject's maximum gait speed.">
+                comment = <"Time for a 10 meter distance including one turn, taken by stop watch.">
+            >
+            ["at0017"] = <
+                text = <"Normal">
+                description = <"The subject's maximum gait speed is normal.">
+            >
+            ["at0018"] = <
+                text = <"Slighly reduced">
+                description = <"The subject's maximum gait speed is slightly reduced (more  than or equal 5 seconds for 10 metres).">
+            >
+            ["at0019"] = <
+                text = <"Moderately reduced">
+                description = <"The subject's maximum gait speed is moderately reduced (more than or equal 10 seconds for 10 metres).">
+            >
+            ["at0020"] = <
+                text = <"Severely reduced">
+                description = <"The subject's maximum gait speed is severely reduced (more than or equal 20 seconds for 10 metres).">
+            >
+            ["at0021"] = <
+                text = <"Unable">
+                description = <"The subject is unable to walk 10 metres or the time taken is more than or equal 40 seconds.">
+            >
+            ["at0022"] = <
+                text = <"4. Climbing stairs">
+                description = <"Assessment of the subject's ability to climb stairs.">
+                comment = <"5 steps upstairs - turn - 5 steps downstairs.">
+            >
+            ["at0023"] = <
+                text = <"Normal">
+                description = <"The subject is able to climb stairs in a normal manner and needs no support of the banister.">
+            >
+            ["at0024"] = <
+                text = <"Mild impairment">
+                description = <"The subject's ability to climb stairs is mildly impaired, and the subject needs intermittent support of the banister.">
+            >
+            ["at0025"] = <
+                text = <"Moderate impairment">
+                description = <"The subject's ability to climb stairs is moderately impaired, and the subject needs permanent support of the banister.">
+            >
+            ["at0026"] = <
+                text = <"Severe impairment">
+                description = <"The subject's ability to climb stairs is severely impaired, and the subject needs support of another person or additional walking aid to perform task.">
+            >
+            ["at0027"] = <
+                text = <"Unable">
+                description = <"The subject is unable to climb stairs.">
+            >
+            ["at0028"] = <
+                text = <"5. Speed of stair climbing">
+                description = <"Assessment of the subject's speed of stair climbing.">
+                comment = <"Time for 5 steps upstairs - turn - 5 steps downstairs, taken by stop-watch.">
+            >
+            ["at0029"] = <
+                text = <"Normal">
+                description = <"The subject is able to climb stairs at a normal speed.">
+            >
+            ["at0030"] = <
+                text = <"Slightly reduced">
+                description = <"The subject is able to climb stairs at a slightly reduced speed (more than or equal 5 seconds to climb 5 steps upstairs, turn and 5 steps downstairs).">
+            >
+            ["at0031"] = <
+                text = <"Moderately reduced">
+                description = <"The subject is able to climb stairs at a moderately reduced speed (more than or equal 10 seconds to climb 5 steps upstairs, turn and 5 steps downstairs).">
+            >
+            ["at0032"] = <
+                text = <"Severely reduced">
+                description = <"The subject is able to climb stairs at a severely reduced speed (more than or equal 20 seconds to climb 5 steps upstairs, turn and 5 steps downstairs).">
+            >
+            ["at0033"] = <
+                text = <"Unable">
+                description = <"The subject is unable to climb stairs.">
+            >
+            ["at0034"] = <
+                text = <"6. Arising from chair">
+                description = <"Assessment of subject's ability to arise from straight-back wood or metal chair with arms folded across chest.">
+            >
+            ["at0035"] = <
+                text = <"Normal">
+                description = <"The subject is able to arise from a chair in a normal manner.">
+            >
+            ["at0036"] = <
+                text = <"Slow or more than one attempt">
+                description = <"The subject is able to arise from a chair slowly or may need more than one attempt.">
+            >
+            ["at0037"] = <
+                text = <"Pushes up from arms of chair">
+                description = <"The subject has to push self up from arms of chair.">
+            >
+            ["at0038"] = <
+                text = <"Tends to fall back but able to get up">
+                description = <"The subject tends to fall back and may have to try more than one time but is able to get up without help.">
+            >
+            ["at0039"] = <
+                text = <"Unable to arise">
+                description = <"The subject is unable to arise from a chair without help.">
+            >
+            ["at0040"] = <
+                text = <"7. Spasticity - hip adductor muscles">
+                description = <"Assessment of the hip adductor muscle spasticity (Modified Ashford scale).">
+                comment = <"Score more severely affected side.">
+            >
+            ["at0041"] = <
+                text = <"No increase in muscle tone">
+                description = <"The subject does not exhibit any increase in muscle tone.">
+            >
+            ["at0042"] = <
+                text = <"Slight increase in muscle tone">
+                description = <"The subject exhibits a slight increase in muscle tone, manifested by a catch and release.">
+            >
+            ["at0043"] = <
+                text = <"More marked increase in muscle tone">
+                description = <"The subject exhibits a more marked increase in muscle tone through most of the range of motion.">
+            >
+            ["at0044"] = <
+                text = <"Considerable increase in muscle tone">
+                description = <"The subject exhibits considerable increase in muscle tone, making passive movement difficult.">
+            >
+            ["at0045"] = <
+                text = <"Limb stiff in adduction">
+                description = <"The subject exhibits limb stiffness in adduction.">
+            >
+            ["at0046"] = <
+                text = <"8. Spasticity - knee flexion">
+                description = <"Assessment of the knee flexion spasticity (Modified Ashford scale).">
+                comment = <"Score more severely affected side.">
+            >
+            ["at0047"] = <
+                text = <"No increase in muscle tone">
+                description = <"The subject does not exhibit any increase in muscle tone.">
+            >
+            ["at0048"] = <
+                text = <"Slight increase in muscle tone">
+                description = <"The subject exhibits a slight increase in muscle tone, manifested by a catch and release.">
+            >
+            ["at0049"] = <
+                text = <"More marked increase in muscle tone">
+                description = <"The subject exhibits a more marked increase in muscle tone through most of the range of motion.">
+            >
+            ["at0050"] = <
+                text = <"Considerable increase in muscle tone">
+                description = <"The subject exhibits considerable increase in muscle tone, making passive movement difficult.">
+            >
+            ["at0051"] = <
+                text = <"Limb stiff in flexion or extension">
+                description = <"The subject exhibits limb stiffness in flexion or extension.">
+            >
+            ["at0052"] = <
+                text = <"9. Weakness - hip abduction">
+                description = <"Assessment of weakness in hip abduction (Medical Research Council 1976).">
+            >
+            ["at0053"] = <
+                text = <"No weakness">
+                description = <"The subject exhibits no weakness in hip abduction.">
+            >
+            ["at0054"] = <
+                text = <"Mild weakness (4/5)">
+                description = <"The subject exhibits mild weakness (4/5) in hip abduction.">
+            >
+            ["at0055"] = <
+                text = <"Moderate weakness (3/5)">
+                description = <"The subject exhibits moderate weakness (3/5) in hip abduction.">
+            >
+            ["at0056"] = <
+                text = <"Severe weakness (2/5)">
+                description = <"The subject exhibits severe weakness (1-2/5) in hip abduction.">
+            >
+            ["at0057"] = <
+                text = <"Plegia (0/5)">
+                description = <"The subject exhibits plegia (0/5) in hip abduction.">
+            >
+            ["at0058"] = <
+                text = <"10. Weakness - foot dorsiflexion">
+                description = <"Assessment of weakness in foot dorsiflexion (Medical Research Council 1976).">
+            >
+            ["at0059"] = <
+                text = <"No weakness">
+                description = <"The subject exhibits no weakness in foot dorsiflexion.">
+            >
+            ["at0060"] = <
+                text = <"Mild weakness (4/5)">
+                description = <"The subject exhibits mild weakness (4/5) in foot dorsiflexion.">
+            >
+            ["at0061"] = <
+                text = <"Moderate weakness (3/5)">
+                description = <"The subject exhibits moderate weakness (3/5) in foot dorsiflexion.">
+            >
+            ["at0062"] = <
+                text = <"Severe weakness (2/5)">
+                description = <"The subject exhibits severe weakness (1-2/5) in foot dorsiflexion.">
+            >
+            ["at0063"] = <
+                text = <"Plegia (0/5)">
+                description = <"The subject exhibits plegia (0/5) in foot dorsiflexion.">
+            >
+            ["at0064"] = <
+                text = <"11. Contractures of lower limbs">
+                description = <"Assessment of the contractures of lower limbs, scored in supine position.">
+                comment = <"Hip extension: lumbar spine and thighs touch the underlay. Hip abduction: abduction up to an angle of >60° between the legs possible. Knee extension: thigh and calf touch the underlay. Ankle dorsal extension: > 10° possible. Ankle pronation: > 10° possible.">
+            >
+            ["at0065"] = <
+                text = <"No contractures">
+                description = <"The subject does not exhibit any lower limb contractures.">
+            >
+            ["at0066"] = <
+                text = <"Mild">
+                description = <"The subject exhibits mild contractures, with no fixed abonrmal position of one joint (unilaterally or bilaterally).">
+            >
+            ["at0067"] = <
+                text = <"Fixed one joint">
+                description = <"The subject exhibits fixed contracture of one joint (unilaterally or bilaterally).">
+            >
+            ["at0068"] = <
+                text = <"Fixed two joints">
+                description = <"The subject exhibits fixed contracture of two joints (unilaterally or bilaterally).">
+            >
+            ["at0069"] = <
+                text = <"Fixed more than two joints">
+                description = <"The subject exhibits fixed contracture of more than two joints (unilaterally or bilaterally).">
+            >
+            ["at0070"] = <
+                text = <"12. Pain due to SP related symptoms">
+                description = <"Assessment of pain due to spastic paraplegia related symptoms.">
+            >
+            ["at0071"] = <
+                text = <"None">
+                description = <"The subject does not experience any pain due to spastic paraplegia related symptoms.">
+            >
+            ["at0072"] = <
+                text = <"Less than or equal 50 percent of day and low intensity">
+                description = <"The subject experiences pain due to spastic paraplegia related symptoms for less than or equal 50 percent of the waking day and with an intensity of 0 to 3 on visual analogue scale.">
+            >
+            ["at0073"] = <
+                text = <"Less than or equal 50 percent of day and high intensity">
+                description = <"The subject experiences pain due to spastic paraplegia related symptoms for less than or equal 50 percent of the waking day and with an intensity of 4 to 10 on visual analogue scale.">
+            >
+            ["at0074"] = <
+                text = <"More than 50 percent of day and low intensity">
+                description = <"The subject experiences pain due to spastic paraplegia related symptoms for more than 50 percent of the waking day and with an intensity of 0 to 3 on visual analogue scale.">
+            >
+            ["at0075"] = <
+                text = <"More than 50 percent of day and high intensity">
+                description = <"The subject experiences pain due to spastic paraplegia related symptoms for more than 50 percent of the waking day and with an intensity of 4 to 10 on visual analogue scale.">
+            >
+            ["at0076"] = <
+                text = <"13. Bladder and bowel function">
+                description = <"Assessment of bladder and bowel function.">
+            >
+            ["at0077"] = <
+                text = <"Normal">
+                description = <"The subject experiences normal bladder and bowel function.">
+            >
+            ["at0078"] = <
+                text = <"Urgency">
+                description = <"The subject experiences urinary or fecal urgency with difficulties to reach toilet in time.">
+            >
+            ["at0079"] = <
+                text = <"Rare and mild urge incontinence">
+                description = <"The subject experiences rare and mild urge incontinence with no nappy required.">
+            >
+            ["at0080"] = <
+                text = <"Moderate urge incontinence">
+                description = <"The subject experiences moderate urge incontinence and requires a nappy pr catheter when out of the house.">
+            >
+            ["at0081"] = <
+                text = <"Permanent catheter or nappy">
+                description = <"The subject requires permanent catheterisation or a permanent nappy.">
+            >
+            ["at0082"] = <
+                text = <"Total score">
+                description = <"The total score from Items 1 to 13.">
+            >
+            ["at0083"] = <
+                text = <"Inventory of complicating signs and symptoms">
+                description = <"The inventory of complicating signs and symptoms.">
+            >
+            ["at0084"] = <
+                text = <"Mental retardation">
+                description = <"The subject suffers from mental retardation.">
+            >
+            ["at0085"] = <
+                text = <"Dementia">
+                description = <"The subject suffers from dementia.">
+            >
+            ["at0086"] = <
+                text = <"Psychosis">
+                description = <"The subject suffers from psychosis.">
+            >
+            ["at0087"] = <
+                text = <"Epilepsy">
+                description = <"The subject suffers from epilepsy.">
+            >
+            ["at0088"] = <
+                text = <"Visual loss (c.c. less than 0.8)">
+                description = <"The subject suffers from visual loss (c.c. less than 0.8).">
+            >
+            ["at0089"] = <
+                text = <"Cataract">
+                description = <"The subject suffers from cataract.">
+            >
+            ["at0090"] = <
+                text = <"Gaze evoked nystagmus">
+                description = <"The subject suffers from gaze evoked nystagmus.">
+            >
+            ["at0091"] = <
+                text = <"Dysarthria">
+                description = <"The subject suffers from dysarthria.">
+            >
+            ["at0092"] = <
+                text = <"Dysphagia">
+                description = <"The subject suffers from dysphagia.">
+            >
+            ["at0093"] = <
+                text = <"Limb ataxia">
+                description = <"The subject suffers from limb ataxia.">
+            >
+            ["at0094"] = <
+                text = <"Gait ataxia">
+                description = <"The subject suffers from gait ataxia.">
+            >
+            ["at0095"] = <
+                text = <"Extrapyramidal motor signs">
+                description = <"The subject suffers from extrapyramidal motor signs.">
+            >
+            ["at0096"] = <
+                text = <"Muscle wasting (upper limbs)">
+                description = <"The subject suffers from muscle wasting in upper limbs.">
+            >
+            ["at0097"] = <
+                text = <"Muscle wasting (lower limbs)">
+                description = <"The subject suffers from muscle wasting in lower limbs.">
+            >
+            ["at0098"] = <
+                text = <"Loss of muscle stretch reflexes (upper limbs)">
+                description = <"The subject suffers from loss of muscle stretch reflexes in upper limbs.">
+            >
+            ["at0099"] = <
+                text = <"Loss of muscle stretch reflexes (lower limbs)">
+                description = <"The subject suffers from loss of muscle stretch reflexes in lower limbs.">
+            >
+            ["at0100"] = <
+                text = <"Impaired touch sense">
+                description = <"The subject suffers from impaired touch sense.">
+            >
+            ["at0101"] = <
+                text = <"Impaired pinprick sensation">
+                description = <"The subject suffers from impaired pinprick sensation.">
+            >
+            ["at0102"] = <
+                text = <"Impaired vibration sense">
+                description = <"The subject suffers from impaired vibration sense.">
+            >
+            ["at0103"] = <
+                text = <"Impaired joint position sense">
+                description = <"The subject suffers from impaired joint position sense.">
+            >
+            ["at0104"] = <
+                text = <"Impaired temperature discrimination">
+                description = <"The subject suffers from impaired temperature discrimination.">
+            >
+            ["at0105"] = <
+                text = <"Facial dysmorphism">
+                description = <"The subject suffers from facial dysmorphism.">
+            >
+            ["at0106"] = <
+                text = <"Skin abnormalities">
+                description = <"The subject suffers from skin abnormalities.">
+            >
+            ["at0107"] = <
+                text = <"Skeletal abnormalities">
+                description = <"The subject suffers from skeletal abnormalities.">
+            >
+            ["at0109"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"e.g. Local hospital departmental infomation or additional metadata to align with HL7 or CDISC equivalents.">
+            >
+            ["at0111"] = <
+                text = <"Assessment method">
+                description = <"The method used to for the spastic paraplegia rating scale.">
+            >
+            ["at0112"] = <
+                text = <"Clinical interpretation">
+                description = <"Narrative interpretation of assessment.">
+            >
+            ["ac9031"] = <
+                text = <"1. Walking distance without pause (synthesised)">
+                description = <"Assessment of the subject's walking distance without pause. (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"2. Gait quality (synthesised)">
+                description = <"Assessment of the subject's gait quality. (synthesised)">
+            >
+            ["ac9033"] = <
+                text = <"3. Maximum gait speed (synthesised)">
+                description = <"Assessment of the subject's maximum gait speed. (synthesised)">
+            >
+            ["ac9034"] = <
+                text = <"4. Climbing stairs (synthesised)">
+                description = <"Assessment of the subject's ability to climb stairs. (synthesised)">
+            >
+            ["ac9035"] = <
+                text = <"5. Speed of stair climbing (synthesised)">
+                description = <"Assessment of the subject's speed of stair climbing. (synthesised)">
+            >
+            ["ac9036"] = <
+                text = <"6. Arising from chair (synthesised)">
+                description = <"Assessment of subject's ability to arise from straight-back wood or metal chair with arms folded across chest. (synthesised)">
+            >
+            ["ac9037"] = <
+                text = <"7. Spasticity - hip adductor muscles (synthesised)">
+                description = <"Assessment of the hip adductor muscle spasticity (Modified Ashford scale). (synthesised)">
+            >
+            ["ac9038"] = <
+                text = <"8. Spasticity - knee flexion (synthesised)">
+                description = <"Assessment of the knee flexion spasticity (Modified Ashford scale). (synthesised)">
+            >
+            ["ac9039"] = <
+                text = <"9. Weakness - hip abduction (synthesised)">
+                description = <"Assessment of weakness in hip abduction (Medical Research Council 1976). (synthesised)">
+            >
+            ["ac9040"] = <
+                text = <"10. Weakness - foot dorsiflexion (synthesised)">
+                description = <"Assessment of weakness in foot dorsiflexion (Medical Research Council 1976). (synthesised)">
+            >
+            ["ac9041"] = <
+                text = <"11. Contractures of lower limbs (synthesised)">
+                description = <"Assessment of the contractures of lower limbs, scored in supine position. (synthesised)">
+            >
+            ["ac9042"] = <
+                text = <"12. Pain due to SP related symptoms (synthesised)">
+                description = <"Assessment of pain due to spastic paraplegia related symptoms. (synthesised)">
+            >
+            ["ac9043"] = <
+                text = <"13. Bladder and bowel function (synthesised)">
+                description = <"Assessment of bladder and bowel function. (synthesised)">
+            >
+            ["ac9013"] = <
+                text = <"Inventory of complicating signs and symptoms (synthesised)">
+                description = <"The inventory of complicating signs and symptoms. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9031"] = <
+            id = <"ac9031">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009">
+        >
+        ["ac9013"] = <
+            id = <"ac9013">
+            members = <"at0084", "at0085", "at0086", "at0087", "at0088", "at0089", "at0090", "at0091", "at0092", "at0093", "at0094", "at0095", "at0096", "at0097", "at0098", "at0099", "at0100", "at0101", "at0102", "at0103", "at0104", "at0105", "at0106", "at0107">
+        >
+        ["ac9035"] = <
+            id = <"ac9035">
+            members = <"at0029", "at0030", "at0031", "at0032", "at0033">
+        >
+        ["ac9034"] = <
+            id = <"ac9034">
+            members = <"at0023", "at0024", "at0025", "at0026", "at0027">
+        >
+        ["ac9033"] = <
+            id = <"ac9033">
+            members = <"at0017", "at0018", "at0019", "at0020", "at0021">
+        >
+        ["ac9032"] = <
+            id = <"ac9032">
+            members = <"at0011", "at0012", "at0013", "at0014", "at0015">
+        >
+        ["ac9039"] = <
+            id = <"ac9039">
+            members = <"at0053", "at0054", "at0055", "at0056", "at0057">
+        >
+        ["ac9038"] = <
+            id = <"ac9038">
+            members = <"at0047", "at0048", "at0049", "at0050", "at0051">
+        >
+        ["ac9037"] = <
+            id = <"ac9037">
+            members = <"at0041", "at0042", "at0043", "at0044", "at0045">
+        >
+        ["ac9036"] = <
+            id = <"ac9036">
+            members = <"at0035", "at0036", "at0037", "at0038", "at0039">
+        >
+        ["ac9042"] = <
+            id = <"ac9042">
+            members = <"at0071", "at0072", "at0073", "at0074", "at0075">
+        >
+        ["ac9041"] = <
+            id = <"ac9041">
+            members = <"at0065", "at0066", "at0067", "at0068", "at0069">
+        >
+        ["ac9040"] = <
+            id = <"ac9040">
+            members = <"at0059", "at0060", "at0061", "at0062", "at0063">
+        >
+        ["ac9043"] = <
+            id = <"ac9043">
+            members = <"at0077", "at0078", "at0079", "at0080", "at0081">
+        >
+    >

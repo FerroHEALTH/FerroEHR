@@ -1,0 +1,466 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=43bd4e28-3c99-41d2-9be6-786a81e8cae3; build_uid=79dbcb67-f65b-4e32-bed1-5c611d704415)
+    openEHR-EHR-EVALUATION.food_nutrition_summary.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Simon Schumacher, Natalia Strauch">
+                ["organisation"] = <"HiGHmed, Medizinische Hochschule Hannover">
+                ["email"] = <"sschuma9@uni-koeln.de, Strauch.Natalia@mh-hannover.de">
+            >
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            author = <
+                ["name"] = <"Martijn van Eenennaam">
+                ["organisation"] = <"Nedap Healthcare">
+                ["email"] = <"martijn.vaneenennaam@nedap.com">
+            >
+            accreditation = <"Ph.D.">
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Hugh Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["date"] = <"2010-12-17">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Stephen Chu, NEHTA, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Derived from: Derived from: Nutrition summary, Draft archetype [Internet]. Australian Digital Health Agency (NEHTA), ADHA Clinical Knowledge Manager. Authored: 2010 Dec 17. Available at: http://dcm.nehta.org.au/ckm#showArchetype_1013.1.931_1 (discontinued).">
+    >
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics, Australia<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"559F25C87D73B82A23AB0EE77152B626">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Darstellung einer Übersicht der Nahrungs- und Ernährungssituation einer Person, einschließlich der Auswirkungen auf die sozialen Faktoren der Gesundheit.">
+            keywords = <"Ernährung", "Nahrung", "Fettleibigkeit", "Übergewicht", "Untergewicht", "unterernährt">
+            use = <"Zur Darstellung einer Übersicht der Nahrungs- und Ernährungssituation einer Person, einschließlich der Auswirkungen auf die sozialen Faktoren der Gesundheit.">
+            misuse = <"Nicht zur Darstellung von Messungen wie Körpergewicht, Körpergröße oder Body Mass Index verwenden. Verwenden Sie dafür bestimmte Archetypen, um diese Messungen darzustellen - OBSERVATION.weight, OBSERVATION.height und OBSERVATION.body_mass_index.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record an overview of the food and nutritional situation for an individual, including the impact on social determinants of health.">
+            keywords = <"nutrition", "obese", "overweight", "underweight", "malnourished">
+            use = <"Use to record an overview of the food and nutritional situation for an individual, including the impact on social determinants of health.">
+            misuse = <"Not to be used to record measurements such as body weight, height or Body Mass Index. Use specific archetypes to record these measurements - OBSERVATION.weight, OBSERVATION.height and OBSERVATION.body_mass_index.">
+            copyright = <"© Australian Digital Health Agency, openEHR Foundation">
+        >
+        ["nl"] = <
+            language = <[ISO_639-1::nl]>
+            purpose = <"*To record an overview of the food and nutritional situation for an individual, including the impact on social determinants of health. (en)">
+            keywords = <"*voeding", "*obesitas", "*overgewicht", "*ondergewicht", "*ondervoed">
+            use = <"*Use to record an overview of the food and nutritional situation for an individual, including the impact on social determinants of health. (en)">
+            misuse = <"*Not to be used to record measurements such as body weight, height or Body Mass Index. Use specific archetypes to record these measurements - OBSERVATION.weight, OBSERVATION.height and OBSERVATION.body_mass_index. (en)">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Food and nutrition summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                    ELEMENT[at0013] occurrences matches {0..1} matches {    -- Food security status
+                        value matches {
+                            DV_CODED_TEXT[at9007] matches {
+                                defining_code matches {[ac9010]}    -- Food security status (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0020] occurrences matches {0..1} matches {    -- Food security description
+                        value matches {
+                            DV_TEXT[at9008]
+                        }
+                    }
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Nutrition status
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0003] occurrences matches {0..1} matches {    -- Weight status
+                        value matches {
+                            DV_CODED_TEXT[at9004] matches {
+                                defining_code matches {[ac9000]}    -- Weight status (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Dietary preference
+                        value matches {
+                            DV_TEXT[at9005]
+                        }
+                    }
+                    ELEMENT[at0009] matches {    -- Dietary constraints
+                        value matches {
+                            DV_TEXT[at9006]
+                        }
+                    }
+                    ELEMENT[at0021] occurrences matches {0..1} matches {    -- Milk supply
+                        value matches {
+                            DV_CODED_TEXT[at9012] matches {
+                                defining_code matches {[ac9011]}    -- Milk supply (synthesised)
+                            }
+                        }
+                    }
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9009]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0012] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9010]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0019] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Zusammenfassung der Ernährung und Ernährungsweise">
+                description = <"Zusammenfassung der Nahrungs- und Ernährungssituation einer Person.">
+            >
+            ["at0002"] = <
+                text = <"Ernährungsstatus">
+                description = <"Eine Beschreibung des Ernährungszustandes eines Individuums, wie zum Beispiel \"unterernährt\" oder \"gut ernährt\", welche durch einen Kliniker festgehalten wurde. Wenn möglich, ist das Codieren mit einer Terminologie zu bevorzugen.">
+            >
+            ["at0003"] = <
+                text = <"Gewichtsstatus">
+                description = <"Beurteilung des Gewichtsstatus des Individuums.">
+            >
+            ["at0004"] = <
+                text = <"Untergewicht">
+                description = <"Untergewichtig in Bezug auf Alter und Geschlecht gemäß BMI oder anderen Messungen.">
+            >
+            ["at0005"] = <
+                text = <"Übergewicht">
+                description = <"Übergewichtig in Bezug auf Alter und Geschlecht gemäß BMI oder anderen Messungen.">
+            >
+            ["at0006"] = <
+                text = <"Fettleibig">
+                description = <"Fettleibig in Bezug auf Alter und Geschlecht gemäß BMI oder anderen Messungen.">
+            >
+            ["at0007"] = <
+                text = <"Normal">
+                description = <"Normalgewichtig in Bezug auf Alter und Geschlecht gemäß BMI oder anderen Messungen.">
+            >
+            ["at0008"] = <
+                text = <"Ernährungspräferenz">
+                description = <"Eine Beschreibung der Ernährungspräferenz des Individuums.">
+                comment = <"Zum Beispiel: Omnivore; vegetarisch oder vegan. Wenn möglich, ist das Codieren mit einer Terminologie zu bevorzugen.">
+            >
+            ["at0009"] = <
+                text = <"Ernährungseinschränkungen">
+                description = <"Beschreibung von speziellen Ernährungsanforderungen oder -einschränkungen.">
+                comment = <"Zum Beispiel: Laktose- oder glutenfrei; natriumarm. Wenn möglich, ist das Codieren mit einer Terminologie zu bevorzugen.">
+            >
+            ["at0010"] = <
+                text = <"Kommentar">
+                description = <"Kommentar zu der Ernährung des Individuums.">
+            >
+            ["at0011"] = <
+                text = <"Beschreibung">
+                description = <"Eine Beschreibung der Essgewohnheiten des Individuums.">
+            >
+            ["at0013"] = <
+                text = <"Status der Ernährungssicherheit">
+                description = <"Kategorie, die die Wahrnehmung des Individuums über einen sicheren und zuverlässigen Zugang zu Nahrungsmitteln beschreibt, der in Bezug auf Quantität und Ernährungsqualität angemessen, kulturell akzeptabel, sicher und auf sozial verträgliche Weise erworben ist.">
+            >
+            ["at0014"] = <
+                text = <"Sicher">
+                description = <"Die Person hat ein Gefühl von Sicherheit und Unbesorgtheit über den Zugang zu angemessener Nahrung.">
+            >
+            ["at0015"] = <
+                text = <"Wechselhaft">
+                description = <"Die Person hat ein Gefühl von Unsicherheit über den zuverlässigen und konsistenten Zugang zu angemessener Nahrung.">
+            >
+            ["at0016"] = <
+                text = <"Unsicher">
+                description = <"Die Person hat ein Gefühl von Angst und Sorge über sein Zugang zu angemessener Nahrung.">
+            >
+            ["at0018"] = <
+                text = <"Letzte Aktualisierung">
+                description = <"Das Datum, an dem diese Zusammenfassung das letzte Mal aktualisiert wurde.">
+            >
+            ["at0019"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen oder CIMI-Modelle.">
+            >
+            ["at0020"] = <
+                text = <"Beschreibung der Ernährungssicherheit">
+                description = <"Beschreibung der Fähigkeit der Person, auf geeignete Nahrung zuzugreifen.">
+            >
+            ["at0021"] = <
+                text = <"Milchversorgung">
+                description = <"Die Art von Milch, die zum Verzehr verfügbar ist.">
+            >
+            ["at0022"] = <
+                text = <"Pasteurisiert">
+                description = <"Verfügbare Milch wird pasteurisiert.">
+            >
+            ["at0023"] = <
+                text = <"Nicht pasteurisiert.">
+                description = <"Die verfügbare Milch ist nicht pasteurisiert.">
+            >
+            ["ac9010"] = <
+                text = <"Status der Ernährungssicherheit (synthesised)">
+                description = <"Kategorie, die die Wahrnehmung des Individuums über einen sicheren und zuverlässigen Zugang zu Nahrungsmitteln beschreibt, der in Bezug auf Quantität und Ernährungsqualität angemessen, kulturell akzeptabel, sicher und auf sozial verträgliche Weise erworben ist. (synthesised)">
+            >
+            ["ac9000"] = <
+                text = <"Gewichtsstatus (synthesised)">
+                description = <"Beurteilung des Gewichtsstatus des Individuums. (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Milchversorgung (synthesised)">
+                description = <"Die Art von Milch, die zum Verzehr verfügbar ist. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Food and nutrition summary">
+                description = <"Summary of the food and nutritional situation for an individual.">
+            >
+            ["at0002"] = <
+                text = <"Nutrition status">
+                description = <"Description of the individual's nutritional status as assessed by a clinician, for example, malnourished or well nourished. Coding with a terminology is desirable, where possible.">
+            >
+            ["at0003"] = <
+                text = <"Weight status">
+                description = <"Assessment of the individual's weight status.">
+            >
+            ["at0004"] = <
+                text = <"Underweight">
+                description = <"Is underweight for age and sex according to BMI or other measure.">
+            >
+            ["at0005"] = <
+                text = <"Overweight">
+                description = <"Is overweight for age and sex according to BMI or other measure.">
+            >
+            ["at0006"] = <
+                text = <"Obese">
+                description = <"Is obese for age and sex according to BMI or other measure.">
+            >
+            ["at0007"] = <
+                text = <"Normal">
+                description = <"Is normal weight for age and sex according to BMI or other measure.">
+            >
+            ["at0008"] = <
+                text = <"Dietary preference">
+                description = <"A description of an individual's dietary preference.">
+                comment = <"For example: omnivore; vegetarian or vegan. Coding with a terminology is desirable, where possible.">
+            >
+            ["at0009"] = <
+                text = <"Dietary constraints">
+                description = <"Description of a special dietary requirements or constraints.">
+                comment = <"For example: lactose or gluten free; low sodium. Coding with a terminology is desirable, where possible.">
+            >
+            ["at0010"] = <
+                text = <"Comment">
+                description = <"Comment about the individual's nutrition.">
+            >
+            ["at0011"] = <
+                text = <"Description">
+                description = <"Narrative description about the individual's diet and eating patterns.">
+            >
+            ["at0013"] = <
+                text = <"Food security status">
+                description = <"Category describing the individual's perception about about secure and reliable access to food that is adequate in quantity and nutritional quality; culturally acceptable; safe; and acquired in socially acceptable ways.">
+            >
+            ["at0014"] = <
+                text = <"Secure">
+                description = <"The individual has a sense of certainty and peace of mind about their access to appropriate food.">
+            >
+            ["at0015"] = <
+                text = <"Changeable">
+                description = <"The individual has a sense of uncertainty about reliable and consistent access to appropriate food.">
+            >
+            ["at0016"] = <
+                text = <"Insecure">
+                description = <"The individual has a sense of worry and concern about their access to appropriate food.">
+            >
+            ["at0018"] = <
+                text = <"Last updated">
+                description = <"The date this summary was last updated.">
+            >
+            ["at0019"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["at0020"] = <
+                text = <"Food security description">
+                description = <"Narrative description about the individual's ability to access appropriate food.">
+            >
+            ["at0021"] = <
+                text = <"Milk supply">
+                description = <"The type of milk available for consumption.">
+            >
+            ["at0022"] = <
+                text = <"Pasteurised">
+                description = <"Available milk is pasteurised.">
+            >
+            ["at0023"] = <
+                text = <"Non-pasteurised">
+                description = <"Available milk is non-pasteurised.">
+            >
+            ["ac9010"] = <
+                text = <"Food security status (synthesised)">
+                description = <"Category describing the individual's perception about about secure and reliable access to food that is adequate in quantity and nutritional quality; culturally acceptable; safe; and acquired in socially acceptable ways. (synthesised)">
+            >
+            ["ac9000"] = <
+                text = <"Weight status (synthesised)">
+                description = <"Assessment of the individual's weight status. (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"Milk supply (synthesised)">
+                description = <"The type of milk available for consumption. (synthesised)">
+            >
+        >
+        ["nl"] = <
+            ["at0000"] = <
+                text = <"Voedsel en voeding overzicht">
+                description = <"*Summary of the food and nutritional situation for an individual. (en)">
+            >
+            ["at0002"] = <
+                text = <"Voedingsstatus">
+                description = <"Beschrijving van het een individu's voedingsstatus zoals vastgesteld door een clinicus, bijvoorbeeld ondervoed of goed gevoed. Coderen met een terminologie is wenselijk indien mogelijk.">
+            >
+            ["at0003"] = <
+                text = <"Gewichtstatus">
+                description = <"Vaststelling van de gewichtstatus van het individu.">
+            >
+            ["at0004"] = <
+                text = <"Ondergewicht">
+                description = <"Heeft ondergewicht voor leeftijd en geslacht volgens BMI of een andere maatstaf.">
+            >
+            ["at0005"] = <
+                text = <"Overgewicht">
+                description = <"Heeft overgewicht voor leeftijd en geslacht op basis van BMI of een andere maatstaf.">
+            >
+            ["at0006"] = <
+                text = <"Obees">
+                description = <"Is obees voor leeftijd en geslacht op basis van BMI of een andere maatstaf.">
+            >
+            ["at0007"] = <
+                text = <"Normaal">
+                description = <"Is normaal op gewicht voor leeftijd en geslacht volgens BMI of een andere maatstaf.">
+            >
+            ["at0008"] = <
+                text = <"Voedingsvoorkeur">
+                description = <"Een omschrijving van de voedingsvoorkeur van het individu.">
+                comment = <"Bijvoorbeeld: omnivoor; vegetariër of veganist. Coderen met een terminologie is wenselijk indien mogelijk.">
+            >
+            ["at0009"] = <
+                text = <"Dieetbeperkingen">
+                description = <"Beschrijving van de speciale voedseleisen of beperkingen.">
+                comment = <"Bijvoorbeeld: lactose- of glutenvrij; laag zout. Coderen met een terminologie is wenselijk indien mogelijk.">
+            >
+            ["at0010"] = <
+                text = <"Opmerkingen">
+                description = <"Opmerkingen over over de voeding van het individu.">
+            >
+            ["at0011"] = <
+                text = <"Omschrijving">
+                description = <"Verhalende beschrijving over het individu's dieet en eetgewoonten.">
+            >
+            ["at0013"] = <
+                text = <"Voedselzekerheid">
+                description = <"*Category describing the individual's perception about about secure and reliable access to food that is adequate in quantity and nutritional quality; culturally acceptable; safe; and acquired in socially acceptable ways. (en)">
+            >
+            ["at0014"] = <
+                text = <"*Secure (en)">
+                description = <"*The individual has a sense of certainty and peace of mind about their access to appropriate food. (en)">
+            >
+            ["at0015"] = <
+                text = <"*Changeable (en)">
+                description = <"*The individual has a sense of uncertainty about their access to appropriate food. (en)">
+            >
+            ["at0016"] = <
+                text = <"*Insecure (en)">
+                description = <"*The individual has a sense of worry and concern about their access to appropriate food. (en)">
+            >
+            ["at0018"] = <
+                text = <"Laatst bijgewerkt">
+                description = <"De datum waarop dit overzicht het laatst is bijgewerkt.">
+            >
+            ["at0019"] = <
+                text = <"Uitbreiding">
+                description = <"Aanvullende informatie benodigd om het model uit te breiden met lokale materie of om aan te sluiten bij andere referentiemodellen/formalismen.">
+                comment = <"Bijvoorbeeld: lokale informatievereisten of aanvullende metadata om aan te sluiten bij FHIR of CIMI equivalenten.">
+            >
+            ["at0020"] = <
+                text = <"Voedselzekerheid beschrijving">
+                description = <"*Narrative description about the individual's ability to access appropriate food. (en)">
+            >
+            ["at0021"] = <
+                text = <"*Milk supply (en)">
+                description = <"*The type of milk available for consumption. (en)">
+            >
+            ["at0022"] = <
+                text = <"*Pasteurised (en)">
+                description = <"*Available milk is pasteurised. (en)">
+            >
+            ["at0023"] = <
+                text = <"*Non-pasteurised (en)">
+                description = <"*Available milk is non-pasteurised. (en)">
+            >
+            ["ac9010"] = <
+                text = <"Voedselzekerheid (synthesised)">
+                description = <"*Category describing the individual's perception about about secure and reliable access to food that is adequate in quantity and nutritional quality; culturally acceptable; safe; and acquired in socially acceptable ways. (en) (synthesised)">
+            >
+            ["ac9000"] = <
+                text = <"Gewichtstatus (synthesised)">
+                description = <"Vaststelling van de gewichtstatus van het individu. (synthesised)">
+            >
+            ["ac9011"] = <
+                text = <"*Milk supply (en) (synthesised)">
+                description = <"*The type of milk available for consumption. (en) (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0004", "at0007", "at0005", "at0006">
+        >
+        ["ac9011"] = <
+            id = <"ac9011">
+            members = <"at0022", "at0023">
+        >
+        ["ac9010"] = <
+            id = <"ac9010">
+            members = <"at0014", "at0015", "at0016">
+        >
+    >

@@ -1,0 +1,256 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=500df185-ae1c-32c0-9caa-ade2278f80c5; build_uid=db284b8a-2694-41de-a810-b8f6f3c86a3a)
+    openEHR-EHR-OBSERVATION.diabetic_wound_wagner.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"?">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Alan D. March">
+        ["organisation"] = <"Hospital Universitario Austral - Buenos Aires - Argentina">
+        ["email"] = <"alandmarch@gmail.com">
+        ["date"] = <"2014-11-11">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Atomica Informatics, Australia", ...>
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Wagner FW. The dysvascular foot: a system of diagnosis and treatment. Foot Ankle 1981; 2: 64–122.">
+        ["2"] = <"Oyibo SO, Jude EB, Tarawneh I et al. A comparison of two diabetic foot ulcer classification systems: the Wagner and the University of Texas wound classification systems. Diabetes Care 2001; 24: 84–8.">
+    >
+    other_details = <
+        ["current_contact"] = <"Alan D. March, Hospital Universitario Austral - Buenos Aires - Argentina, alandmarch@gmail.com">
+        ["MD5-CAM-1.0.1"] = <"26F4BBFB14C9634CBBB528267850BCE0">
+    >
+    details = <
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"*To record a classification of wounds present in a diabetic foot according to the Wagner classification.(en)">
+            keywords = <"*diabetic foot(en)", "*wound(en)", "*ulcer(en)", "*classification(en)">
+            use = <"*Use to record a classification of wounds present in a diabetic foot according to the Wagner classification.(en)">
+            misuse = <"*Other than recording a classification of wounds present in a diabetic foot. The Wagner classification does not include a category for an amputated foot. (en)">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record an assessment of a diabetic foot ulcer, according to the Wagner Classification.">
+            keywords = <"diabetic foot", "wound", "ulcer", "classification">
+            use = <"Use to record an assessment of a diabetic foot ulcer, according to the Wagner Classification.">
+            misuse = <"Not to be used to record assessments of other wounds.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Diabetic wound classification (Wagner)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Point in time
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Examined foot
+                                        value matches {
+                                            DV_CODED_TEXT[at9002] matches {
+                                                defining_code matches {[ac9000]}    -- Examined foot (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Classification
+                                        value matches {
+                                            DV_ORDINAL[at9003] matches {
+                                                [value, symbol] matches {
+                                                    [{0}, {[at0009]}],    -- 0
+                                                    [{1}, {[at0010]}],    -- I
+                                                    [{2}, {[at0011]}],    -- II
+                                                    [{3}, {[at0012]}],    -- III
+                                                    [{4}, {[at0013]}],    -- IV
+                                                    [{5}, {[at0014]}]    -- V
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9004]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0016] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0017] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"Clasificación de lesiones diabéticas (Wagner)">
+                description = <"Clasificación de lesiones de un pié diabético utilizando el sistema de Wagner.">
+            >
+            ["at0002"] = <
+                text = <"*Point in time(en)">
+                description = <"Una fecha y/o hora que puede ser explícitamente definida en una plantilla o en tiempo de ejecución.">
+            >
+            ["at0004"] = <
+                text = <"Pié examinado">
+                description = <"El pié examinado en busca de úlceras diabéticas.">
+            >
+            ["at0005"] = <
+                text = <"Pié izquierdo">
+                description = <"El pié izquierdo fué examinado en busca de úlceras diabéticas.">
+            >
+            ["at0006"] = <
+                text = <"Pié derecho">
+                description = <"El pié derecho fué examinado en busca de úlceras diabéticas.">
+            >
+            ["at0008"] = <
+                text = <"Clasificación">
+                description = <"Clasificación de Wagner para úlceras de pié diabético.">
+            >
+            ["at0009"] = <
+                text = <"0">
+                description = <"Piel intacta en pacientes en riesgo.">
+            >
+            ["at0010"] = <
+                text = <"I">
+                description = <"Úlceras superficiales con tejido subcutaneo expuesto.">
+            >
+            ["at0011"] = <
+                text = <"II">
+                description = <"Tendones y estructuras profundas expuestas.">
+            >
+            ["at0012"] = <
+                text = <"III">
+                description = <"Úlceras extendidas a los tejidos profundos y que se asocian a abscesos de tejidos blandos u osteomileitis.">
+            >
+            ["at0013"] = <
+                text = <"IV">
+                description = <"Úlceras que incluyen al pié con gangrena parcial.">
+            >
+            ["at0014"] = <
+                text = <"V">
+                description = <"Úlceras del pié con tejido gangrenoso mas extendido.">
+            >
+            ["at0015"] = <
+                text = <"Comentario">
+                description = <"Narrativa adicional acerca de la evalaución.">
+            >
+            ["at0017"] = <
+                text = <"*Extension (en)">
+                description = <"*">
+                comment = <"*For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents. (en)">
+            >
+            ["ac9000"] = <
+                text = <"Pié examinado (synthesised)">
+                description = <"El pié examinado en busca de úlceras diabéticas. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Clasificación (synthesised)">
+                description = <"Clasificación de Wagner para úlceras de pié diabético. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Diabetic wound classification (Wagner)">
+                description = <"Wound classification for a diabetic foot ulcer using the Wagner system.">
+            >
+            ["at0002"] = <
+                text = <"Point in time">
+                description = <"A specific date and/or time which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Examined foot">
+                description = <"The foot examined for diabetic ulcers.">
+            >
+            ["at0005"] = <
+                text = <"Left foot">
+                description = <"The left foot was examined for diabetic ulcers.">
+            >
+            ["at0006"] = <
+                text = <"Right foot">
+                description = <"The rightfoot was examined for diabetic ulcers.">
+            >
+            ["at0008"] = <
+                text = <"Classification">
+                description = <"Wagner diabetic foot ulcers classification.">
+            >
+            ["at0009"] = <
+                text = <"0">
+                description = <"Intact skin in patients who are at risk.">
+            >
+            ["at0010"] = <
+                text = <"I">
+                description = <"Superficial ulcers with exposed subcutaneous tissue.">
+            >
+            ["at0011"] = <
+                text = <"II">
+                description = <"Exposed tendon and deep structures.">
+            >
+            ["at0012"] = <
+                text = <"III">
+                description = <"Ulcers extend to the deep tissue and have either associated soft tissue abscess or osteomyelitis.">
+            >
+            ["at0013"] = <
+                text = <"IV">
+                description = <"Ulcers include feet with partial gangrene.">
+            >
+            ["at0014"] = <
+                text = <"V">
+                description = <"Feet ulcers with more extensive gangrenous tissue.">
+            >
+            ["at0015"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the assessment.">
+            >
+            ["at0017"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9000"] = <
+                text = <"Examined foot (synthesised)">
+                description = <"The foot examined for diabetic ulcers. (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Classification (synthesised)">
+                description = <"Wagner diabetic foot ulcers classification. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0005", "at0006">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0009", "at0010", "at0011", "at0012", "at0013", "at0014">
+        >
+    >

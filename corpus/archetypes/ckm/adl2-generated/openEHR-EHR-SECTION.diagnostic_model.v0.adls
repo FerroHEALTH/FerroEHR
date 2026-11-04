@@ -1,0 +1,64 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=1c1293f6-4239-410e-aef0-257b609454fa; build_uid=2788f089-a048-451f-8979-86e7deb21992)
+    openEHR-EHR-SECTION.diagnostic_model.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Aitor Eguzkitza">
+        ["organisation"] = <"Universidad Pública de Navarra - Complejo Hospitalario de Navarra">
+        ["email"] = <"aitor.eguzkiza@unavarra.es">
+        ["date"] = <"2015-10-01">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"José Andonegui, Hospital de Navarra, jose.andonegui.navarro@cfnavarra.es", "Luis Serrano, Universidad Pública de Navarra (UPNA), lserrano@unavarra.es", "Jesús D. Trigo, Universidad Pública de Navarra (UPNA), jesusdaniel.trigo@unavarra.es">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Aitor Eguzkitza, Universidad Pública de Navarra - Complejo Hospitalario de Navarra<aitor.eguzkiza@unavarra.es>">
+        ["MD5-CAM-1.0.1"] = <"4F011948082638F44C8ECE3C8755CD2C">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Registering the consultation to reach a diagnostic or a therapeutic decision, based on the evaluation of predetermined diagnostic tests.">
+            use = <"To evaluate different diagnostic models used on treating the same disease.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Diagnostic model
+        items cardinality matches {1..*; unordered} matches {
+            SECTION[at0001] occurrences matches {0..1}    -- Study setting
+            SECTION[at0002] occurrences matches {0..1}    -- Diagnostic test analysis
+            SECTION[at0003] occurrences matches {0..1}    -- Assessment and therapeutic decision
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Diagnostic model">
+                description = <"Manages any healthcare procedure that generates a diagnostic or a therapeutic decision as a result.">
+            >
+            ["at0001"] = <
+                text = <"Study setting">
+                description = <"Information of interest about the setting of the current study aimed at later statistical and epidemiologic data mining purposes.">
+            >
+            ["at0002"] = <
+                text = <"Diagnostic test analysis">
+                description = <"Information resulting from the analysis of predetermined diagnostic tests, whose outcomes are aimed at determine the diagnosis and/or treatment for a specific affection.">
+            >
+            ["at0003"] = <
+                text = <"Assessment and therapeutic decision">
+                description = <"Diagnosis and/or therapeutic decisions made as a result of the assessment of the diagnostic tests above.">
+            >
+        >
+    >

@@ -1,0 +1,506 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=e35c36ab-d159-4110-af04-66d4fb90bab9; build_uid=4afa2872-98ab-4042-bde8-e80acbd027f7)
+    openEHR-EHR-CLUSTER.eau_nmibc_2021.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Grete Hovde Bøe, Silje Ljosland Bakke">
+                ["organisation"] = <"Sykehuspartner HF, Helse Vest IKT AS">
+                ["email"] = <"grete.kristin.hovde.boe@sykehuspartner.no, silje.ljosland.bakke@helse-vest-ikt.no">
+            >
+            other_details = <
+                ["other_contributors"] = <"Elin Kristiansen, Sykehuspartner, Norway
+Aleksander Spikkerud Furnes, Helse Nord IKT, Norway
+Silje Ljosland Bakke, Helse Vest IKT AS">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Silje Ljosland Bakke">
+        ["organisation"] = <"Helse Vest IKT AS">
+        ["email"] = <"silje.ljosland.bakke@helse-vest-ikt.no">
+        ["date"] = <"2025-05-23">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Tara Bonet Chinillach, Catalan Health Service, Spain", "Grete Hovde Bøe, Sykehuspartner HF, Norway", "Aydin Dadfar, Oslo Universitetssykehus, Norway", "Aleksander Furnes, Helse Nord IKT, Norway", "Kristina Førde, Helse Bergen, Norway", "Gigja Gudbrandsdottir, Helse Bergen, Norway", "Joachim Hansen, UNN, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Elin Kristiansen, Sykehuspartner HF, Norway", "Heather Leslie, Atomica Informatics, Australia", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Martin Milde, Helse Vest IKT, Norway", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Terje Nordberg, Helse Bergen, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Ruben Rognmo, Helse Nord IKT, Norway", "Lena Schell-Majoor, University of Oldenburg, Germany", "Marte Vassli Gullesen, HNIKT, Norway", "Linn Wiker Røstengen, OUS, Norway">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Sylvester RJ, Rodríguez O, Hernández V, Turturica D, Bauerová L, Bruins HM, et al. European Association of Urology (EAU) Prognostic Factor Risk Groups for Non-muscle-invasive Bladder Cancer (NMIBC) Incorporating the WHO 2004/2016 and WHO 1973 Classification Systems for Grade: An Update from the EAU NMIBC Guidelines Panel. Eur Urol. 2021 Apr;79(4):480-488. doi: 10.1016/j.eururo.2020.12.033. Epub 2021 Jan 6. PubMed PMID: 33419683.">
+        ["2"] = <"Compérat EM, Burger M, Gontero P, Mostafid AH, Palou J, Rouprêt M, et al. Grading of Urothelial Carcinoma and The New \"World Health Organisation Classification of Tumours of the Urinary System and Male Genital Organs 2016\". Eur Urol Focus. 2019 May;5(3):457-466. doi: 10.1016/j.euf.2018.01.003. Epub 2018 Jan 20. PubMed PMID: 29366854.">
+        ["3"] = <"Humphrey PA, Moch H, Cubilla AL, Ulbright TM, Reuter VE. The 2016 WHO Classification of Tumours of the Urinary System and Male Genital Organs—Part B: Prostate and Bladder Tumours. Eur Urol. 2016 Sep;70(1):93-105. doi: 10.1016/j.eururo.2016.02.028. PubMed PMID: 26996659.">
+        ["4"] = <"Gontero P, Baard J, Birtle A, Compérat E, Domínguez Escrig J, Fiorini E, Liedberg F, Mariappan P, Masson-Lecomte A, Pradère B, Rai B, Seisen T, Shariat S, Teoh J, Van Rhijn B, Wood R, Xylinas E, D'Andrea D, Moschini M, Soria F, Soukup V, Čapoun O. EAU Guidelines on Non-muscle-invasive Bladder Cancer (TaT1 and CIS). [revised 2025]. [Internet]. Arnhem, The Netherlands: EAU Guidelines Office; 2024. Available from: https://uroweb.org/guidelines/non-muscle-invasive-bladder-cancer.">
+        ["5"] = <"EAU NMIBC Risk Calculator. In: [Internet]. Arnhem, Netherlands: European Association of Urology; 2021. Available from: https://nmibc.net.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"3BD0B1892C41D02AA829D036A75E8718">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere resultatene for hver enkelt parameter og den resulterende risikogruppen for EAU NMIBC risikovurdering (2021).">
+            keywords = <"blære", "kreft", "stratifisering", "TURBT", "ikke-muskelinvasiv", "urotelialt", "karsinom", "prognostisk", "gruppe">
+            use = <"Brukes for å registrere resultatene for hver enkelt parameter og den resulterende risikogruppen for EAU NMIBC risikovurdering (2021), basert på WHO 2004/2016- eller WHO 1973-graderingssystemene.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record each component parameter and the risk group for the EAU NMIBC risk assessment (2021).">
+            keywords = <"bladder", "cancer", "stratification", "TURBT", "non–muscle-invasive", "urothelial", "carcinoma", "prognostic", "group">
+            use = <"Use to record each component parameter and the risk group for the EAU NMIBC risk assessment (2021), based on the WHO 2004/2016 or WHO 1973 grading systems.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- EAU NMIBC risk assessment (2021)
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Age
+                value matches {
+                    DV_CODED_TEXT[at9009] matches {
+                        defining_code matches {[ac9000]}    -- Age (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0007] occurrences matches {0..1} matches {    -- Tumor status
+                value matches {
+                    DV_CODED_TEXT[at9010] matches {
+                        defining_code matches {[ac9001]}    -- Tumor status (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0028] occurrences matches {0..1} matches {    -- Number of tumors
+                value matches {
+                    DV_CODED_TEXT[at9011] matches {
+                        defining_code matches {[ac9002]}    -- Number of tumors (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0008] occurrences matches {0..1} matches {    -- Maximum tumor diameter
+                value matches {
+                    DV_CODED_TEXT[at9012] matches {
+                        defining_code matches {[ac9003]}    -- Maximum tumor diameter (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0015] occurrences matches {0..1} matches {    -- Stage
+                value matches {
+                    DV_CODED_TEXT[at9013] matches {
+                        defining_code matches {[ac9004]}    -- Stage (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0018] occurrences matches {0..1} matches {    -- Concomitant CIS
+                value matches {
+                    DV_CODED_TEXT[at9014] matches {
+                        defining_code matches {[ac9005]}    -- Concomitant CIS (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0021] occurrences matches {0..1} matches {    -- WHO grade 2004/2016
+                value matches {
+                    DV_CODED_TEXT[at9015] matches {
+                        defining_code matches {[ac9006]}    -- WHO grade 2004/2016 (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0024] occurrences matches {0..1} matches {    -- WHO grade 1973
+                value matches {
+                    DV_CODED_TEXT[at9016] matches {
+                        defining_code matches {[ac9007]}    -- WHO grade 1973 (synthesised)
+                    }
+                }
+            }
+            ELEMENT[at0001] occurrences matches {1} matches {    -- Risk group
+                value matches {
+                    DV_CODED_TEXT[at9017] matches {
+                        defining_code matches {[ac9008]}    -- Risk group (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"EAU NMIBC risikogruppering (2021)">
+                description = <"Den europeiske urologiforeningen (EAU) sin risikovurdering fra 2021 for ikke-muskelinvasiv blærekreft (NMIBC) stratifiserer pasienter basert på prognostiske faktorer som svulstkarakteristika, pasientens alder og WHO-graderingssystemer for urotheliale neoplasmer.">
+            >
+            ["at0001"] = <
+                text = <"Risikogruppe">
+                description = <"Risiko for residiv basert på parametrene.">
+                comment = <"Ytterligere kliniske risikofaktorer er: alder > 70 år; multiple papillære tumorer; og tumordiameter > 3 cm.">
+            >
+            ["at0002"] = <
+                text = <"Lav risiko">
+                description = <"En primær, solitær TaT1 LG/G1-svulst &lt; 3 cm i diameter uten CIS hos en pasient ≤ 70 år ELLER en primær Ta LG/G1-svulst uten CIS med maksimalt ÉN av de ytterligere kliniske risikofaktorene.">
+            >
+            ["at0003"] = <
+                text = <"Middels risiko">
+                description = <"Pasienter uten CIS som ikke er inkludert i verken lav-, høy- eller svært høyrisikogruppene.">
+            >
+            ["at0004"] = <
+                text = <"Høy risiko">
+                description = <"Alle T1 HG/G3 uten CIS, UNNTATT de som er inkludert i gruppen med svært høy risiko ELLER Alle CIS-pasienter, UNNTATT de som er inkludert i gruppen med svært høy risiko ELLER Ta LG/G2 eller T1G1, ingen CIS med alle 3 risikofaktorer ELLER Ta HG/G3 eller T1 LG, ingen CIS med minst 2 risikofaktorer ELLER T1G2 ingen CIS med minst 1 risikofaktor.">
+            >
+            ["at0005"] = <
+                text = <"Svært høy risiko">
+                description = <"Ta HG/G3 og CIS med alle 3 risikofaktorer ELLER T1G2 og CIS med minst 2 risikofaktorer ELLER T1 HG/G3 og CIS med minst 1 risikofaktor ELLER T1 HG/G3 ingen CIS med alle 3 risikofaktorer.">
+            >
+            ["at0006"] = <
+                text = <"Alder">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Tumorstatus">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Maksimum tumordiameter">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Primær">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Residiv">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"< 3 cm">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"≥ 3 cm">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"≤ 70 år">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"> 70 år">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Stadium">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Ta">
+                description = <"Ikke-invasiv papillær tumor begrenset til urotelet.">
+            >
+            ["at0017"] = <
+                text = <"T1">
+                description = <"Tumorinfiltrasjon av lamina propria, uten infiltrasjon i muscularis propria.">
+            >
+            ["at0018"] = <
+                text = <"Samtidig CIS">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Nei">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Ja">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"WHO-grad 2004/2016">
+                description = <"">
+                comment = <"Bare ett av de to klassifiseringssystemene (WHO 1973 eller WHO 2004/2016) skal brukes om gangen.">
+            >
+            ["at0022"] = <
+                text = <"LMP-LG">
+                description = <"Ikke-invasive papillære tumorer med minimal atypi og ordnede celler.">
+            >
+            ["at0023"] = <
+                text = <"HG">
+                description = <"Tumorer med markert arkitektur og kjerneatypi, hyppige mitoser og tap av normal cellestruktur.">
+            >
+            ["at0024"] = <
+                text = <"WHO-grad 1973">
+                description = <"">
+                comment = <"Bare ett av de to klassifiseringssystemene (WHO 1973 eller WHO 2004/2016) skal brukes om gangen.">
+            >
+            ["at0025"] = <
+                text = <"G1">
+                description = <"Veldifferensierte tumorer med minimal atypi og ordnet arkitektur.">
+            >
+            ["at0026"] = <
+                text = <"G2">
+                description = <"Moderat differensierte tumorer med intermediær atypi og arkitektoniske uregelmessigheter.">
+            >
+            ["at0027"] = <
+                text = <"G3">
+                description = <"Dårlig differensierte tumorer med markert atypi, desorganisert arkitektur og hyppige mitoser.">
+            >
+            ["at0028"] = <
+                text = <"Antall svulster">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Solitær">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Multiple">
+                description = <"">
+            >
+            ["ac9000"] = <
+                text = <"Alder (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Tumorstatus (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Antall svulster (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Maksimum tumordiameter (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Stadium (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Samtidig CIS (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"WHO-grad 2004/2016 (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"WHO-grad 1973 (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"Risikogruppe (synthesised)">
+                description = <"Risiko for residiv basert på parametrene. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"EAU NMIBC risk assessment (2021)">
+                description = <"The European Association of Urology (EAU) 2021 risk assessment for non–muscle-invasive bladder cancer (NMIBC) stratify patients based on the prognostic factors tumour characteristics, patient age, and WHO grading systems for urothelial neoplasms.">
+            >
+            ["at0001"] = <
+                text = <"Risk group">
+                description = <"Risk of recurrence based on the component parameters.">
+                comment = <"Additional clinical risk factors are: age > 70; multiple papillary tumours; and tumour diameter > 3 cm.">
+            >
+            ["at0002"] = <
+                text = <"Low Risk">
+                description = <"A primary, single, TaT1 LG/G1 tumour < 3 cm in diameter without CIS in a patient ≤ 70 years OR A primary Ta LG/G1 tumour without CIS with at most ONE of the additional clinical risk factors.">
+            >
+            ["at0003"] = <
+                text = <"Intermediate Risk">
+                description = <"Patients without CIS who are not included in either the low-, high-, or very high-risk groups.">
+            >
+            ["at0004"] = <
+                text = <"High Risk">
+                description = <"All T1 HG/G3 without CIS, EXCEPT those included in the very high-risk group OR All CIS patients, EXCEPT those included in the very high-risk group OR Ta LG/G2 or T1G1, no CIS with all 3 risk factors OR Ta HG/G3 or T1 LG, no CIS with at least 2 risk factors OR T1G2 no CIS with at least 1 risk factor.">
+            >
+            ["at0005"] = <
+                text = <"Very High Risk">
+                description = <"Ta HG/G3 and CIS with all 3 risk factors OR T1G2 and CIS with at least 2 risk factors OR T1 HG/G3 and CIS with at least 1 risk factor OR T1 HG/G3 no CIS with all 3 risk factors.">
+            >
+            ["at0006"] = <
+                text = <"Age">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Tumor status">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Maximum tumor diameter">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Primary">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"Recurrent">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"< 3 cm">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"≥ 3 cm">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"≤ 70 years">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"> 70 years">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Stage">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"Ta">
+                description = <"Non-invasive papillary tumor confined to the urothelium.">
+            >
+            ["at0017"] = <
+                text = <"T1">
+                description = <"Tumor invasion into the lamina propria, sparing the muscularis propria.">
+            >
+            ["at0018"] = <
+                text = <"Concomitant CIS">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"No">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Yes">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"WHO grade 2004/2016">
+                description = <"">
+                comment = <"Only one of the two classification systems (WHO 1973 or WHO 2004/2016) should be used at one time.">
+            >
+            ["at0022"] = <
+                text = <"LMP-LG">
+                description = <"Non-invasive papillary tumours with minimal atypia and orderly cells.">
+            >
+            ["at0023"] = <
+                text = <"HG">
+                description = <"Tumours with significant architectural and nuclear atypia, frequent mitoses, and loss of normal cell structure.">
+            >
+            ["at0024"] = <
+                text = <"WHO grade 1973">
+                description = <"">
+                comment = <"Only one of the two classification systems (WHO 1973 or WHO 2004/2016) should be used at one time.">
+            >
+            ["at0025"] = <
+                text = <"G1">
+                description = <"Well-differentiated tumours with minimal atypia and orderly architecture.">
+            >
+            ["at0026"] = <
+                text = <"G2">
+                description = <"Moderately differentiated tumours with intermediate atypia and architectural irregularities.">
+            >
+            ["at0027"] = <
+                text = <"G3">
+                description = <"Poorly differentiated tumours with marked atypia, disorganized structure, and frequent mitoses.
+
+">
+            >
+            ["at0028"] = <
+                text = <"Number of tumors">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Single">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Multiple">
+                description = <"">
+            >
+            ["ac9000"] = <
+                text = <"Age (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9001"] = <
+                text = <"Tumor status (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Number of tumors (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Maximum tumor diameter (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9004"] = <
+                text = <"Stage (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9005"] = <
+                text = <"Concomitant CIS (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9006"] = <
+                text = <"WHO grade 2004/2016 (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9007"] = <
+                text = <"WHO grade 1973 (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9008"] = <
+                text = <"Risk group (synthesised)">
+                description = <"Risk of recurrence based on the component parameters. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0029", "at0030">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0009", "at0010">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0013", "at0014">
+        >
+        ["ac9006"] = <
+            id = <"ac9006">
+            members = <"at0022", "at0023">
+        >
+        ["ac9005"] = <
+            id = <"ac9005">
+            members = <"at0019", "at0020">
+        >
+        ["ac9004"] = <
+            id = <"ac9004">
+            members = <"at0016", "at0017">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0011", "at0012">
+        >
+        ["ac9008"] = <
+            id = <"ac9008">
+            members = <"at0002", "at0003", "at0004", "at0005">
+        >
+        ["ac9007"] = <
+            id = <"ac9007">
+            members = <"at0025", "at0026", "at0027">
+        >
+    >

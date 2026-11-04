@@ -1,0 +1,274 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated)
+    openEHR-EHR-OBSERVATION.dermatology_therapy_summary.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"HANDIHealth,UK">
+        ["email"] = <"ian@handihealth.org">
+        ["date"] = <"2015-02-09">
+    >
+    lifecycle_state = <"AuthorDraft">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"132F7C383AC124B5F478DA27A9F45ADD">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record summaries of dermatology therapy for registry use.">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Dermatology therapy summary
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] occurrences matches {0..1} matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Therapy category
+                                        value matches {
+                                            DV_CODED_TEXT[at9004] matches {
+                                                defining_code matches {[ac9000]}    -- Therapy category (synthesised)
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0038] occurrences matches {0..1} matches {    -- Therapy category used?
+                                        value matches {
+                                            DV_BOOLEAN[at9005] matches {
+                                                value matches {True, False}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0039] occurrences matches {0..1} matches {    -- Current therapy?
+                                        value matches {
+                                            DV_BOOLEAN[at9006] matches {
+                                                value matches {True, False}
+                                            }
+                                        }
+                                    }
+                                    CLUSTER[at0009] matches {    -- Specific therapy
+                                        items cardinality matches {1..*; unordered} matches {
+                                            allow_archetype CLUSTER[at0046] occurrences matches {0..1} matches {    -- Therapy details
+                                                include
+                                                    archetype_id/value matches {/.*/}
+                                            }
+                                            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Start date
+                                                value matches {
+                                                    DV_DATE_TIME[at9007]
+                                                }
+                                            }
+                                            ELEMENT[at0012] occurrences matches {0..1} matches {    -- Duration of therapy
+                                                value matches {
+                                                    DV_DURATION[at9008] matches {
+                                                        value matches {PYMWDTHM/|>=P0D|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0037] occurrences matches {0..1} matches {    -- Number of treatments
+                                                value matches {
+                                                    DV_COUNT[at9009] matches {
+                                                        magnitude matches {|>=0|}
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0013] occurrences matches {0..1} matches {    -- Frequency of therapy
+                                                value matches {
+                                                    DV_QUANTITY[at9010] matches {
+                                                        property matches {[at9001]}    -- Frequency
+                                                        [magnitude, units, precision] matches {
+                                                            [{|>=0.0|}, {"/d"}, {|>=0|}],
+                                                            [{|>=0.0|}, {"/wk"}, {|>=0|}],
+                                                            [{|>=0.0|}, {"/mo"}, {|>=0|}],
+                                                            [{|>=0.0|}, {"/yr"}, {0}]
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            ELEMENT[at0016] occurrences matches {0..1} matches {    -- Effectiveness
+                                                value matches {
+                                                    DV_CODED_TEXT[at9011] matches {
+                                                        defining_code matches {[ac9002]}    -- Effectiveness (synthesised)
+                                                    }
+                                                    DV_TEXT[at9012]
+                                                }
+                                            }
+                                            ELEMENT[at0021] occurrences matches {0..1} matches {    -- Reason for stopping
+                                                value matches {
+                                                    DV_CODED_TEXT[at9013] matches {
+                                                        defining_code matches {[ac9003]}    -- Reason for stopping (synthesised)
+                                                    }
+                                                    DV_TEXT[at9014]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Dermatology therapy summary">
+                description = <"Summarised dermatology therapy for registry use.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Therapy category">
+                description = <"The general category of therapy.">
+            >
+            ["at0005"] = <
+                text = <"Phototherapy">
+                description = <"Phototherapy.">
+            >
+            ["at0006"] = <
+                text = <"Systemic therapy">
+                description = <"Systemic therapy.">
+            >
+            ["at0007"] = <
+                text = <"Hospitalisation">
+                description = <"Hospitalisation.">
+            >
+            ["at0009"] = <
+                text = <"Specific therapy">
+                description = <"Details of specific therapies within a category.">
+            >
+            ["at0011"] = <
+                text = <"Start date">
+                description = <"The start date of the therapy.">
+            >
+            ["at0012"] = <
+                text = <"Duration of therapy">
+                description = <"The duration of the therapy.">
+            >
+            ["at0013"] = <
+                text = <"Frequency of therapy">
+                description = <"The frequency of the therapy.">
+            >
+            ["at0016"] = <
+                text = <"Effectiveness">
+                description = <"An estimate of the effectivemess of the therapy.">
+            >
+            ["at0017"] = <
+                text = <"Good">
+                description = <"*">
+            >
+            ["at0018"] = <
+                text = <"Moderate">
+                description = <"*">
+            >
+            ["at0019"] = <
+                text = <"None (primary)">
+                description = <"*">
+            >
+            ["at0020"] = <
+                text = <"None (secondary)">
+                description = <"*">
+            >
+            ["at0021"] = <
+                text = <"Reason for stopping">
+                description = <"The reason for stopping the therapy.">
+            >
+            ["at0022"] = <
+                text = <"Daycare treatment">
+                description = <"Daycare treatment.">
+            >
+            ["at0023"] = <
+                text = <"Topical therapy">
+                description = <"Topical therapy.">
+            >
+            ["at0024"] = <
+                text = <"Emollients">
+                description = <"Emollients.">
+            >
+            ["at0025"] = <
+                text = <"Antihistamines">
+                description = <"Antihistamines.">
+            >
+            ["at0026"] = <
+                text = <"Antibiotics">
+                description = <"Antibiotics.">
+            >
+            ["at0034"] = <
+                text = <"Sanata">
+                description = <"Sanata.">
+            >
+            ["at0035"] = <
+                text = <"Adverse event">
+                description = <"Adverse event.">
+            >
+            ["at0036"] = <
+                text = <"Ineffective">
+                description = <"Ineffective.">
+            >
+            ["at0037"] = <
+                text = <"Number of treatments">
+                description = <"The total number of treatments.">
+            >
+            ["at0038"] = <
+                text = <"Therapy category used?">
+                description = <"Has the therapy category been used?">
+            >
+            ["at0039"] = <
+                text = <"Current therapy?">
+                description = <"Is this a currently used treatment?">
+            >
+            ["at0046"] = <
+                text = <"Therapy details">
+                description = <"To record details of specific therapies.">
+            >
+            ["at9001"] = <
+                text = <"Frequency">
+                description = <"Frequency">
+            >
+            ["ac9000"] = <
+                text = <"Therapy category (synthesised)">
+                description = <"The general category of therapy. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Effectiveness (synthesised)">
+                description = <"An estimate of the effectivemess of the therapy. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Reason for stopping (synthesised)">
+                description = <"The reason for stopping the therapy. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9001"] = <http://openehr.org/id/382>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0017", "at0018", "at0019", "at0020">
+        >
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0005", "at0006", "at0007", "at0022", "at0023", "at0024", "at0025", "at0026">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0034", "at0035", "at0036">
+        >
+    >

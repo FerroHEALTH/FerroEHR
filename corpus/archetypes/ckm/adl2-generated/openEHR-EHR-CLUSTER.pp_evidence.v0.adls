@@ -1,0 +1,65 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=61401e20-4d28-4825-b25b-3418bc32fc67; build_uid=52ad944c-2380-4dc1-bea2-46e566fea4ab)
+    openEHR-EHR-CLUSTER.pp_evidence.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2019-09-25">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"C93B231A5DE329160392FAAA5E417D13">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Phenopacket evidence
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0001] occurrences matches {1} matches {    -- evidence_code
+                value matches {
+                    DV_CODED_TEXT[at9000]
+                }
+            }
+            allow_archetype CLUSTER[at0002] matches {    -- reference
+                include
+                    archetype_id/value matches {/openEHR-EHR-CLUSTER\.pp_external_reference\.v0\..*/}
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Phenopacket evidence">
+                description = <"Phenopacket evidence">
+            >
+            ["at0001"] = <
+                text = <"evidence_code">
+                description = <"An coded value that represents the evidence type.">
+                comment = <"For example: \"ECO::0006017|author statement from published clinical study used in manual assertion|\".">
+            >
+            ["at0002"] = <
+                text = <"reference">
+                description = <"Representation of the source of the evidence.">
+            >
+        >
+    >

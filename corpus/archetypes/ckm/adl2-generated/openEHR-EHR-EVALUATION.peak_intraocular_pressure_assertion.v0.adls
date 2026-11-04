@@ -1,0 +1,235 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=e11ac4b1-63c1-426c-b4c6-0cb522764ef1; build_uid=be521a62-27b2-479b-9d95-e83b420a9a58)
+    openEHR-EHR-EVALUATION.peak_intraocular_pressure_assertion.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Lars Fuhrmann">
+        ["organisation"] = <"Deutsche Ophthalmologische Gesellschaft">
+        ["email"] = <"lars.fuhrmann@dog.org">
+        ["date"] = <"2026-07-31">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"3D48F75AFB63AC4611240EC5807F3101">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a clinician's assertion regarding the highest IOP ever measured in an eye of the individual, with or without restrictions regarding the type of clinical situations which are considered in this comparison. ">
+            keywords = <"intraocular pressure", "IOP", "peak", "highest", "maximum", "glaucoma", "ophthalmology", "eye pressure">
+            use = <"Use to record a clinician's assertions regarding the peak intraocular pressure of the eye of an individual.
+">
+            misuse = <"Do not use to record an intraocular pressure. Use OBSERVATION.intraocular_pressure instead. ">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Peak intraocular pressure assertion
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    CLUSTER[at0005] occurrences matches {0..2} matches {    -- Per eye
+                        items cardinality matches {1..*; unordered} matches {
+                            ELEMENT[at0003] occurrences matches {1} matches {    -- Peak intraocular pressure
+                                value matches {
+                                    DV_QUANTITY[at9004] matches {
+                                        property matches {[at9000]}    -- Pressure
+                                        magnitude matches {|>=0.0|}
+                                        units matches {"mm[Hg]"}
+                                    }
+                                }
+                            }
+                            ELEMENT[at0004] occurrences matches {1} matches {    -- Eye
+                                value matches {
+                                    DV_CODED_TEXT[at9005] matches {
+                                        defining_code matches {[ac9001]}    -- Eye (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0006] occurrences matches {0..1} matches {    -- Type of information source
+                                value matches {
+                                    DV_CODED_TEXT[at9006] matches {
+                                        defining_code matches {[ac9002]}    -- Type of information source (synthesised)
+                                    }
+                                }
+                            }
+                            ELEMENT[at0011] occurrences matches {0..1} matches {    -- Point in time of peak IOP
+                                value matches {
+                                    DV_DATE_TIME[at9007]
+                                }
+                            }
+                            allow_archetype CLUSTER[at0012] matches {    -- Peak IOP measurement citation
+                                include
+                                    archetype_id/value matches {/.*|openEHR-EHR-CLUSTER\.citation\.v0\..*/}
+                            }
+                            CLUSTER[at0013] occurrences matches {0..1} matches {    -- Excluded peaks
+                                items cardinality matches {1..*; unordered} matches {
+                                    ELEMENT[at0014] occurrences matches {0..1} matches {    -- Excluded peak intraocular pressure
+                                        value matches {
+                                            DV_QUANTITY[at9008] matches {
+                                                property matches {[at9000]}    -- Pressure
+                                                magnitude matches {|>=0.0|}
+                                                units matches {"mm[Hg]"}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Reason for exclusion
+                                        value matches {
+                                            DV_TEXT[at9009]
+                                            DV_CODED_TEXT[at9010] matches {
+                                                defining_code matches {[ac9003]}    -- Reason for exclusion (synthesised)
+                                            }
+                                        }
+                                    }
+                                    allow_archetype CLUSTER[at0018] occurrences matches {0..1} matches {    -- Excluded IOP measurement citation
+                                        include
+                                            archetype_id/value matches {/.*|openEHR-EHR-CLUSTER\.citation\.v0\..*/}
+                                    }
+                                    ELEMENT[at0019] occurrences matches {0..1} matches {    -- Point in time of excluded IOP measurement
+                                        value matches {
+                                            DV_DATE_TIME[at9011]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0002]
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Peak intraocular pressure assertion">
+                description = <"Peak intraocular pressure assertion">
+            >
+            ["at0003"] = <
+                text = <"Peak intraocular pressure">
+                description = <"The highest intraocular pressure ever measured or reported for this eye, as asserted by the clinician. ">
+            >
+            ["at0004"] = <
+                text = <"Eye">
+                description = <"The eye to which the peak intraocular pressure assertion applies.">
+            >
+            ["at0005"] = <
+                text = <"Per eye">
+                description = <"Grouping of the peak intraocular pressure assertion for a single eye.">
+            >
+            ["at0006"] = <
+                text = <"Type of information source">
+                description = <"The nature of the source from which this peak IOP assertion was derived.">
+            >
+            ["at0008"] = <
+                text = <"Current measurement">
+                description = <"The peak IOP was measured in the current care encounter.">
+            >
+            ["at0009"] = <
+                text = <"Past documented measurement">
+                description = <"Information on the peak IOP came from previous recordings.">
+            >
+            ["at0010"] = <
+                text = <"Patient statement">
+                description = <"Information on peak IOP came from the individual themselves.">
+            >
+            ["at0011"] = <
+                text = <"Point in time of peak IOP">
+                description = <"The date and/or time at which the peak intraocular pressure occurred or was recorded.">
+            >
+            ["at0012"] = <
+                text = <"Peak IOP measurement citation">
+                description = <"Citation of the IOP measurement which was considered the highest IOP
+">
+            >
+            ["at0013"] = <
+                text = <"Excluded peaks">
+                description = <"Grouping of intraocular pressure values that were considered as candidates for the peak but were excluded from the assertion, together with the reason for exclusion.">
+            >
+            ["at0014"] = <
+                text = <"Excluded peak intraocular pressure">
+                description = <"An intraocular pressure value excluded from being considered as peak IOP. ">
+                comment = <"Reasons may include post-operative peaks. ">
+            >
+            ["at0015"] = <
+                text = <"Reason for exclusion">
+                description = <"The reason why the intraocular pressure value was excluded">
+            >
+            ["at0016"] = <
+                text = <"Left eye">
+                description = <"The assertion applies to the individual's left eye.">
+            >
+            ["at0017"] = <
+                text = <"Right eye">
+                description = <"The assertion applies to the individual's right eye.">
+            >
+            ["at0018"] = <
+                text = <"Excluded IOP measurement citation">
+                description = <"Citation of the IOP measurement which was excluded">
+            >
+            ["at0019"] = <
+                text = <"Point in time of excluded IOP measurement">
+                description = <"The date and/or time at which the peak intraocular pressure occurred or was recorded.">
+            >
+            ["at0020"] = <
+                text = <"Post-Procedural">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Validity uncertain">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"Due to provocation test">
+                description = <"">
+            >
+            ["at9000"] = <
+                text = <"Pressure">
+                description = <"Pressure">
+            >
+            ["ac9001"] = <
+                text = <"Eye (synthesised)">
+                description = <"The eye to which the peak intraocular pressure assertion applies. (synthesised)">
+            >
+            ["ac9002"] = <
+                text = <"Type of information source (synthesised)">
+                description = <"The nature of the source from which this peak IOP assertion was derived. (synthesised)">
+            >
+            ["ac9003"] = <
+                text = <"Reason for exclusion (synthesised)">
+                description = <"The reason why the intraocular pressure value was excluded (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/125>
+        >
+    >
+    value_sets = <
+        ["ac9002"] = <
+            id = <"ac9002">
+            members = <"at0008", "at0009", "at0010">
+        >
+        ["ac9001"] = <
+            id = <"ac9001">
+            members = <"at0016", "at0017">
+        >
+        ["ac9003"] = <
+            id = <"ac9003">
+            members = <"at0020", "at0021", "at0022">
+        >
+    >

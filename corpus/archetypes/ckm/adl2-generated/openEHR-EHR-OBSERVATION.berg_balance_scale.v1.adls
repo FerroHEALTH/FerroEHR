@@ -1,0 +1,1150 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=d06900fb-4c7f-4497-a53a-124ebcfa2335; build_uid=744431f0-6d86-4ebf-9a2a-899ea985f4f6)
+    openEHR-EHR-OBSERVATION.berg_balance_scale.v1.0.0
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Karsten Øvretveit">
+        ["organisation"] = <"Helse Vest IKT">
+        ["email"] = <"karsten.ovretveit@helse-vest-ikt.no">
+        ["date"] = <"2026-05-28">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "Grete Hovde Bøe, Sykehuspartner HF, Norway (openEHR Editor)", "Aleksander Furnes, Helse Nord IKT, Norway (openEHR Editor)", "Ciprian Gerstenberger, Helse Nord IKT, Norway (openEHR Editor)", "Marte Vassli Gullesen, Helse Nord IKT, Norway (openEHR Editor)", "Martin Koch, Servei Català de la Salut, Spain", "Elin Kristiansen, Sykehuspartner HF, Norway (openEHR Editor)", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Eli Larsen, UNN, Norway (openEHR Editor)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Martin Milde, Helse Vest IKT, Norway (openEHR Editor)", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Marianne Opsahl Bredesen, Helse Nord IKT HF, Norway", "Vuk Radnić, Better, Slovenia", "Anneli Rønstad, Helse Fonna, Norway", "Terje Sagmyr, Helse Vest IKT, Norway (openEHR Editor)", "Anders Thurin, VGR, Sweden", "John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)", "Karsten Øvretveit, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    references = <
+        ["1"] = <"Berg KO, Wood-Dauphinee SL, Williams JI, Gayton D. Measuring balance in the elderly: preliminary development of an instrument. Physiother Can. 1989;41(6):304-11.">
+        ["2"] = <"Berg KO, Wood-Dauphinee SL, Williams JI, Maki B. Measuring balance in the elderly: validation of an instrument. Can J Public Health. 1992;83 Suppl 2:S7-11.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"41C4F5933AE67A3E45B3F124D1D34527">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere resultatene for hver av de 14 deloppgavene og deres samlede sum for Bergs balanseskala.">
+            keywords = <"balanse, postural kontroll, fallrisiko, funksjonell balanse, mobilitet, balansevurdering, BBS", ...>
+            use = <"Brukes for å registrere resultatene for hver av de 14 deloppgavene og deres samlede sum for Bergs balanseskala.
+
+Oversatt til norsk av Astrid Bergland, Jorunn L. Helbostad og Torunn Askim i 2004.">
+            misuse = <"Skal ikke brukes for å registrere vurdering av balanse ved hjelp av andre instrumenter eller skalaer. Bruk en spesifikk arketype for dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"Use to record the component task scores and total score for the Berg Balance Scale.">
+            keywords = <"balance, postural control, fall risk, functional balance, mobility, balance assessment, BBS", ...>
+            use = <"Use to record the results for each of the 14 component tasks and their total sum for the Berg Balance Scale.">
+            misuse = <"Not to be used to record assessment of balance using other instruments or scales. Use a specific archetype for this purpose.">
+            copyright = <"© openEHR Norway">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Berg Balance Scale (BBS)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- 1. Sitting to standing
+                                        value matches {
+                                            DV_ORDINAL[at9014] matches {
+                                                [value, symbol] matches {
+                                                    [{4}, {[at0009]}],    -- Able to stand without using hands and stabilize independently
+                                                    [{3}, {[at0008]}],    -- Able to stand independently using hands
+                                                    [{2}, {[at0007]}],    -- Able to stand using hands after several tries
+                                                    [{1}, {[at0006]}],    -- Needs minimal aid to stand or stabilize
+                                                    [{0}, {[at0005]}]    -- Needs moderate or maximal assist to stand
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- 2. Standing unsupported
+                                        value matches {
+                                            DV_ORDINAL[at9015] matches {
+                                                [value, symbol] matches {
+                                                    [{4}, {[at0015]}],    -- Able to stand safely for 2 minutes
+                                                    [{3}, {[at0014]}],    -- Able to stand 2 minutes with supervision
+                                                    [{2}, {[at0013]}],    -- Able to stand 30 seconds unsupported
+                                                    [{1}, {[at0012]}],    -- Needs several tries to stand 30 seconds unsupported
+                                                    [{0}, {[at0011]}]    -- Unable to stand 30 seconds unsupported
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- 3. Sitting with back unsupported but feet supported on floor or on a stool
+                                        value matches {
+                                            DV_ORDINAL[at9016] matches {
+                                                [value, symbol] matches {
+                                                    [{4}, {[at0021]}],    -- Able to sit safely and securely for 2 minutes
+                                                    [{3}, {[at0020]}],    -- Able to sit 2 minutes under supervision
+                                                    [{2}, {[at0019]}],    -- Able to sit 30 seconds
+                                                    [{1}, {[at0018]}],    -- Able to sit 10 seconds
+                                                    [{0}, {[at0017]}]    -- Unable to sit without support 10 seconds
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0022] occurrences matches {0..1} matches {    -- 4. Standing to sitting
+                                        value matches {
+                                            DV_ORDINAL[at9017] matches {
+                                                [value, symbol] matches {
+                                                    [{4}, {[at0027]}],    -- Sits safely with minimal use of hands
+                                                    [{3}, {[at0026]}],    -- Controls descent by using hands
+                                                    [{2}, {[at0025]}],    -- Uses back of legs against chair to control descent
+                                                    [{1}, {[at0024]}],    -- Sits independently but has uncontrolled descent
+                                                    [{0}, {[at0023]}]    -- Needs assist to sit
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- 5. Transfers
+                                        value matches {
+                                            DV_ORDINAL[at9018] matches {
+                                                [value, symbol] matches {
+                                                    [{4}, {[at0033]}],    -- Able to transfer safely with minor use of hands
+                                                    [{3}, {[at0032]}],    -- Able to transfer safely definite need of hands
+                                                    [{2}, {[at0031]}],    -- Able to transfer with verbal cuing and/or supervision
+                                                    [{1}, {[at0030]}],    -- Needs one person to assist
+                                                    [{0}, {[at0029]}]    -- Needs two people to assist or supervise to be safe
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0034] occurrences matches {0..1} matches {    -- 6. Standing unsupported with eyes closed
+                                        value matches {
+                                            DV_ORDINAL[at9019] matches {
+                                                [value, symbol] matches {
+                                                    [{4}, {[at0039]}],    -- Able to stand 10 seconds safely
+                                                    [{3}, {[at0038]}],    -- Able to stand 10 seconds with supervision
+                                                    [{2}, {[at0037]}],    -- Able to stand 3 seconds
+                                                    [{1}, {[at0036]}],    -- Unable to keep eyes closed 3 seconds but stays safely
+                                                    [{0}, {[at0035]}]    -- Needs help to keep from falling
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0040] occurrences matches {0..1} matches {    -- 7. Standing unsupported with feet together
+                                        value matches {
+                                            DV_ORDINAL[at9020] matches {
+                                                [value, symbol] matches {
+                                                    [{4}, {[at0045]}],    -- Able to place feet together independently and stand 1 minute safely
+                                                    [{3}, {[at0044]}],    -- Able to place feet together independently and stand 1 minute with supervision
+                                                    [{2}, {[at0043]}],    -- Able to place feet together independently but unable to hold for 30 seconds
+                                                    [{1}, {[at0042]}],    -- Needs help to attain position but able to stand 15 seconds feet together
+                                                    [{0}, {[at0041]}]    -- Needs help to attain position and unable to hold for 15 seconds
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0046] occurrences matches {0..1} matches {    -- 8. Reaching forward with outstretched arm while standing
+                                        value matches {
+                                            DV_ORDINAL[at9021] matches {
+                                                [value, symbol] matches {
+                                                    [{4}, {[at0051]}],    -- Can reach forward confidently 25 cm (10 inches)
+                                                    [{3}, {[at0050]}],    -- Can reach forward 12 cm (5 inches)
+                                                    [{2}, {[at0049]}],    -- Can reach forward 5 cm (2 inches)
+                                                    [{1}, {[at0048]}],    -- Reaches forward but needs supervision
+                                                    [{0}, {[at0047]}]    -- Loses balance while trying/requires external support
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0052] occurrences matches {0..1} matches {    -- 9. Pick up object from the floor from a standing position
+                                        value matches {
+                                            DV_ORDINAL[at9022] matches {
+                                                [value, symbol] matches {
+                                                    [{4}, {[at0057]}],    -- Able to pick up slipper safely and easily
+                                                    [{3}, {[at0056]}],    -- Able to pick up slipper but needs supervision
+                                                    [{2}, {[at0055]}],    -- Unable to pick up but reaches 2-5 cm (1-2 inches) from slipper and keeps balance independently
+                                                    [{1}, {[at0054]}],    -- Unable to pick up and needs supervision while trying
+                                                    [{0}, {[at0053]}]    -- Unable to try/needs assist to keep from losing balance or falling
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0058] occurrences matches {0..1} matches {    -- 10. Turning to look behind over left and right shoulders while standing
+                                        value matches {
+                                            DV_ORDINAL[at9023] matches {
+                                                [value, symbol] matches {
+                                                    [{4}, {[at0063]}],    -- Looks behind from both sides and weight shifts well
+                                                    [{3}, {[at0062]}],    -- Looks behind one side only other side shows less weight shift
+                                                    [{2}, {[at0061]}],    -- Turns sideways only but maintains balance
+                                                    [{1}, {[at0060]}],    -- Needs supervision when turning
+                                                    [{0}, {[at0059]}]    -- Needs assist to keep from losing balance or falling
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0064] occurrences matches {0..1} matches {    -- 11. Turn 360 degrees
+                                        value matches {
+                                            DV_ORDINAL[at9024] matches {
+                                                [value, symbol] matches {
+                                                    [{4}, {[at0069]}],    -- Able to turn 360 degrees safely in 4 seconds or less
+                                                    [{3}, {[at0068]}],    -- Able to turn 360 degrees safely one side only 4 seconds or less
+                                                    [{2}, {[at0067]}],    -- Able to turn 360 degrees safely but slowly
+                                                    [{1}, {[at0066]}],    -- Needs close supervision or verbal cuing
+                                                    [{0}, {[at0065]}]    -- Needs assistance while turning
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0070] occurrences matches {0..1} matches {    -- 12. Place alternate foot on step or stool while standing unsupported
+                                        value matches {
+                                            DV_ORDINAL[at9025] matches {
+                                                [value, symbol] matches {
+                                                    [{4}, {[at0075]}],    -- Able to stand independently and safely and complete 8 steps in 20 seconds
+                                                    [{3}, {[at0074]}],    -- Able to stand independently and complete 8 steps in > 20 seconds
+                                                    [{2}, {[at0073]}],    -- Able to complete 4 steps without aid with supervision
+                                                    [{1}, {[at0072]}],    -- Able to complete > 2 steps needs minimal assist
+                                                    [{0}, {[at0071]}]    -- Needs assistance to keep from falling/unable to try
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0076] occurrences matches {0..1} matches {    -- 13. Standing unsupported one foot in front
+                                        value matches {
+                                            DV_ORDINAL[at9026] matches {
+                                                [value, symbol] matches {
+                                                    [{4}, {[at0081]}],    -- Able to place foot tandem independently and hold 30 seconds
+                                                    [{3}, {[at0080]}],    -- Able to place foot ahead independently and hold 30 seconds
+                                                    [{2}, {[at0079]}],    -- Able to take small step independently and hold 30 seconds
+                                                    [{1}, {[at0078]}],    -- Needs help to step but can hold 15 seconds
+                                                    [{0}, {[at0077]}]    -- Loses balance while stepping or standing
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0082] occurrences matches {0..1} matches {    -- 14. Standing on one leg
+                                        value matches {
+                                            DV_ORDINAL[at9027] matches {
+                                                [value, symbol] matches {
+                                                    [{4}, {[at0087]}],    -- Able to lift leg independently and hold > 10 seconds
+                                                    [{3}, {[at0086]}],    -- Able to lift leg independently and hold 5-10 seconds
+                                                    [{2}, {[at0085]}],    -- Able to lift leg independently and hold ≥ 3 seconds
+                                                    [{1}, {[at0084]}],    -- Tries to lift leg unable to hold 3 seconds but remains standing independently
+                                                    [{0}, {[at0083]}]    -- Unable to try or needs assist to prevent fall
+                                                }
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0088] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9028] matches {
+                                                magnitude matches {|0..56|}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0090] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0091] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Bergs balanseskala (BBS)">
+                description = <"En prestasjonsbasert vurdering av statisk og dynamisk balanseevne, bestående av 14 oppgaver som skåres på en femdelt ordinal skala.">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i en template eller i en applikasjon.">
+            >
+            ["at0004"] = <
+                text = <"1. Sittende til stående">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Trenger middels eller maksimal hjelp av en eller flere personer for å reise seg opp">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Trenger minimal hjelp av en person for å reise seg opp eller for å finne balansen">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Kan reise seg opp med hjelp av hendene etter flere forsøk">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Kan reise seg opp på egen hånd med hjelp av hendene">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Kan reise seg opp uten å bruke hendene og finner selv balansen">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"2. Stå uten støtte">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Kan ikke stå i 30 sekunder uten støtte">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Trenger flere forsøk for å stå i 30 sekunder uten støtte">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Kan stå i 30 sekunder uten støtte">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Kan stå i 2 minutter med tilsyn">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Kan stå stødig i 2 minutter">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"3. Sitte uten ryggstøtte med føttene på golvet eller på en skammel">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Kan ikke sitte i 10 sekunder uten støtte">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Kan sitte i 10 sekunder">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Kan sitte i 30 sekunder">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Kan sitte i 2 minutter med tilsyn">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Kan sitte trygt og sikkert i 2 minutter">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"4. Stående til sittende">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Trenger hjelp av en person for å sette seg">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Setter seg selvstendig men ukontrollert">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Bruker baksiden av bena mot stolen for å kontrollere det å sette seg">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Kontrollerer det å sette seg ved hjelp av hendene">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Setter seg på en trygg måte med minimal hjelp av hendene">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"5. Fra sittende på en stol med armlene til en annen stol uten armlen og vice versa">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Trenger hjelp av to personer (for å støtte eller veilede for å være trygg)">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Trenger hjelp av en person">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Kan forflytte seg ved hjelp av muntlige ledetråder og/eller tilsyn">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Kan forflytte seg på en trygg måte med mye hjelp av hendene">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Kan forflytte seg på en trygg måte med minimal hjelp av hendene">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"6. Stå uten støtte med lukkede øyne">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Trenger hjelp for ikke å falle">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Står stille, men må åpne øynene i løpet av 3 sekunder">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Kan stå i 3 sekunder">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Kan stå i 10 sekunder med tilsyn">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Kan stå sikkert i 10 sekunder">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"7. Stå uten støtte med føttene inntil hverandre">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Trenger hjelp for å innta stillingen og kan ikke stå i stillingen i 15 sekunder">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Trenger hjelp for å innta stillingen, men kan stå i 15 sekunder med føttene inntil hverandre">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Kan selv sette føttene inntil hverandre, men kan ikke stå slik i 1 minutt">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Kan selv sette føttene inntil hverandre og stå i 1 minutt med tilsyn">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Kan selv sette føttene inntil hverandre og stå sikkert i 1 minutt">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"8. Strekker seg framover med utstrakt arm i stående">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Mister balansen ved forsøket/trenger ytre støtte">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Strekker seg fremover men trenger tilsyn">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Kan strekke seg fremover mer enn 5 centimeter på en sikker måte">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Kan strekke seg fremover mer enn 12 centimeter på en sikker måte">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Kan strekke seg fremover mer enn 25 centimeter på en sikker måte">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"9. Stå og ta opp en gjenstand fra gulvet">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Mister balansen ved forsøket/trenger ytre støtte">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Kan ikke ta opp skoen og trenger tilsyn under forsøket">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"Kan ikke ta opp skoen, men når 2,5-5 cm fra skoen og vedlikeholder balansen">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"Kan ta opp skoen men trenger tilsyn">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"Kan ta opp skoen på en enkelt og sikker måte">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"10. Vri seg og se bak over høyre og venstre skulder i stående">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Trenger støtte for ikke å miste balansen eller falle">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Trenger tilsyn under utførelsen">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Vrir seg bare til siden, men opprettholder balansen">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"Ser bak seg til den ene siden, har mindre rotasjon til den andre siden">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"Ser bak seg til begge sider og roterer i hele kroppen og det foregår \"tyngdeoverføring\"">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"11. Snu seg 360 grader">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Trenger støtte under vendingen">
+                description = <"">
+            >
+            ["at0066"] = <
+                text = <"Trenger tilsyn eller muntlige ledetråder">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"Kan snu seg sikkert 360 grader, men trenger mer enn 4 sekunder">
+                description = <"">
+            >
+            ["at0068"] = <
+                text = <"Kan snu seg sikkert 360 grader på 4 sekunder eller mindre kun en retning">
+                description = <"">
+            >
+            ["at0069"] = <
+                text = <"Kan snu seg sikkert 360 grader på 4 sekunder eller mindre">
+                description = <"">
+            >
+            ["at0070"] = <
+                text = <"12. Stå uten støtte og plasser vekselvis en og en fot på et trinn eller en skammel">
+                description = <"">
+            >
+            ["at0071"] = <
+                text = <"Trenger hjelp for ikke å falle/er ikke i stand til å prøve">
+                description = <"">
+            >
+            ["at0072"] = <
+                text = <"Kan klare mer enn 1 gang på hver fot med minimal hjelp">
+                description = <"">
+            >
+            ["at0073"] = <
+                text = <"Kan klare å sette opp hver fot 2 ganger på trinnet uten hjelp men med tilsyn">
+                description = <"">
+            >
+            ["at0074"] = <
+                text = <"Kan stå selvstendig og klarer å sette hver fot på trinnet på mer enn 20 sekunder">
+                description = <"">
+            >
+            ["at0075"] = <
+                text = <"Kan stå selvstendig og trygt og greier (eller klarer) å sette hver fot 4 ganger på trinnet i løpet av 20 sekunder">
+                description = <"">
+            >
+            ["at0076"] = <
+                text = <"13. Stå uten støtte med en fot foran den andre">
+                description = <"">
+            >
+            ["at0077"] = <
+                text = <"Mister balansen under steget eller i stillingen">
+                description = <"">
+            >
+            ["at0078"] = <
+                text = <"Trenger hjelp med å flytte en fot fram, men kan stå i stillingen i 15 sekunder">
+                description = <"">
+            >
+            ["at0079"] = <
+                text = <"Kan selv flytte en fot et lite skritt fram og stå der i 30 sekunder">
+                description = <"">
+            >
+            ["at0080"] = <
+                text = <"Kan selv sette en fot foran den andre og stå der i 30 sekunder">
+                description = <"">
+            >
+            ["at0081"] = <
+                text = <"Kan selv plassere føttene i tandemstilling og stå der i 30 sekunder">
+                description = <"">
+            >
+            ["at0082"] = <
+                text = <"14. Stå på ett ben">
+                description = <"">
+            >
+            ["at0083"] = <
+                text = <"Kan ikke eller forsøker ikke å løfte benet, eller trenger hjelp for ikke å falle">
+                description = <"">
+            >
+            ["at0084"] = <
+                text = <"Forsøker å løfte benet, men kan ikke stå på ett ben i 3 sekunder, men kan likevel stå på egen hånd">
+                description = <"">
+            >
+            ["at0085"] = <
+                text = <"Kan selv løfte benet og stå der i 3 sekunder">
+                description = <"">
+            >
+            ["at0086"] = <
+                text = <"Kan selv løfte benet og stå der i 5 sekunder">
+                description = <"">
+            >
+            ["at0087"] = <
+                text = <"Kan selv løfte benet og stå der i 10 sekunder">
+                description = <"">
+            >
+            ["at0088"] = <
+                text = <"Total skår">
+                description = <"Summen av de 14 oppgaveskårene, fra 0 til 56, der høyere skår indikerer bedre balanse.">
+            >
+            ["at0091"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+            >
+            ["ac9028"] = <
+                text = <"1. Sittende til stående (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9029"] = <
+                text = <"2. Stå uten støtte (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9030"] = <
+                text = <"3. Sitte uten ryggstøtte med føttene på golvet eller på en skammel (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"4. Stående til sittende (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"5. Fra sittende på en stol med armlene til en annen stol uten armlen og vice versa (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9033"] = <
+                text = <"6. Stå uten støtte med lukkede øyne (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9034"] = <
+                text = <"7. Stå uten støtte med føttene inntil hverandre (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9035"] = <
+                text = <"8. Strekker seg framover med utstrakt arm i stående (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9036"] = <
+                text = <"9. Stå og ta opp en gjenstand fra gulvet (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9037"] = <
+                text = <"10. Vri seg og se bak over høyre og venstre skulder i stående (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9038"] = <
+                text = <"11. Snu seg 360 grader (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9039"] = <
+                text = <"12. Stå uten støtte og plasser vekselvis en og en fot på et trinn eller en skammel (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9040"] = <
+                text = <"13. Stå uten støtte med en fot foran den andre (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9041"] = <
+                text = <"14. Stå på ett ben (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Berg Balance Scale (BBS)">
+                description = <"A performance-based assessment of static and dynamic balance ability, consisting of 14 tasks scored on a five-point ordinal scale.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"1. Sitting to standing">
+                description = <"">
+            >
+            ["at0005"] = <
+                text = <"Needs moderate or maximal assist to stand">
+                description = <"">
+            >
+            ["at0006"] = <
+                text = <"Needs minimal aid to stand or stabilize">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Able to stand using hands after several tries">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Able to stand independently using hands">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Able to stand without using hands and stabilize independently">
+                description = <"">
+            >
+            ["at0010"] = <
+                text = <"2. Standing unsupported">
+                description = <"">
+            >
+            ["at0011"] = <
+                text = <"Unable to stand 30 seconds unsupported">
+                description = <"">
+            >
+            ["at0012"] = <
+                text = <"Needs several tries to stand 30 seconds unsupported">
+                description = <"">
+            >
+            ["at0013"] = <
+                text = <"Able to stand 30 seconds unsupported">
+                description = <"">
+            >
+            ["at0014"] = <
+                text = <"Able to stand 2 minutes with supervision">
+                description = <"">
+            >
+            ["at0015"] = <
+                text = <"Able to stand safely for 2 minutes">
+                description = <"">
+            >
+            ["at0016"] = <
+                text = <"3. Sitting with back unsupported but feet supported on floor or on a stool">
+                description = <"">
+            >
+            ["at0017"] = <
+                text = <"Unable to sit without support 10 seconds">
+                description = <"">
+            >
+            ["at0018"] = <
+                text = <"Able to sit 10 seconds">
+                description = <"">
+            >
+            ["at0019"] = <
+                text = <"Able to sit 30 seconds">
+                description = <"">
+            >
+            ["at0020"] = <
+                text = <"Able to sit 2 minutes under supervision">
+                description = <"">
+            >
+            ["at0021"] = <
+                text = <"Able to sit safely and securely for 2 minutes">
+                description = <"">
+            >
+            ["at0022"] = <
+                text = <"4. Standing to sitting">
+                description = <"">
+            >
+            ["at0023"] = <
+                text = <"Needs assist to sit">
+                description = <"">
+            >
+            ["at0024"] = <
+                text = <"Sits independently but has uncontrolled descent">
+                description = <"">
+            >
+            ["at0025"] = <
+                text = <"Uses back of legs against chair to control descent">
+                description = <"">
+            >
+            ["at0026"] = <
+                text = <"Controls descent by using hands">
+                description = <"">
+            >
+            ["at0027"] = <
+                text = <"Sits safely with minimal use of hands">
+                description = <"">
+            >
+            ["at0028"] = <
+                text = <"5. Transfers">
+                description = <"">
+            >
+            ["at0029"] = <
+                text = <"Needs two people to assist or supervise to be safe">
+                description = <"">
+            >
+            ["at0030"] = <
+                text = <"Needs one person to assist">
+                description = <"">
+            >
+            ["at0031"] = <
+                text = <"Able to transfer with verbal cuing and/or supervision">
+                description = <"">
+            >
+            ["at0032"] = <
+                text = <"Able to transfer safely definite need of hands">
+                description = <"">
+            >
+            ["at0033"] = <
+                text = <"Able to transfer safely with minor use of hands">
+                description = <"">
+            >
+            ["at0034"] = <
+                text = <"6. Standing unsupported with eyes closed">
+                description = <"">
+            >
+            ["at0035"] = <
+                text = <"Needs help to keep from falling">
+                description = <"">
+            >
+            ["at0036"] = <
+                text = <"Unable to keep eyes closed 3 seconds but stays safely">
+                description = <"">
+            >
+            ["at0037"] = <
+                text = <"Able to stand 3 seconds">
+                description = <"">
+            >
+            ["at0038"] = <
+                text = <"Able to stand 10 seconds with supervision">
+                description = <"">
+            >
+            ["at0039"] = <
+                text = <"Able to stand 10 seconds safely">
+                description = <"">
+            >
+            ["at0040"] = <
+                text = <"7. Standing unsupported with feet together">
+                description = <"">
+            >
+            ["at0041"] = <
+                text = <"Needs help to attain position and unable to hold for 15 seconds">
+                description = <"">
+            >
+            ["at0042"] = <
+                text = <"Needs help to attain position but able to stand 15 seconds feet together">
+                description = <"">
+            >
+            ["at0043"] = <
+                text = <"Able to place feet together independently but unable to hold for 30 seconds">
+                description = <"">
+            >
+            ["at0044"] = <
+                text = <"Able to place feet together independently and stand 1 minute with supervision">
+                description = <"">
+            >
+            ["at0045"] = <
+                text = <"Able to place feet together independently and stand 1 minute safely">
+                description = <"">
+            >
+            ["at0046"] = <
+                text = <"8. Reaching forward with outstretched arm while standing">
+                description = <"">
+            >
+            ["at0047"] = <
+                text = <"Loses balance while trying/requires external support">
+                description = <"">
+            >
+            ["at0048"] = <
+                text = <"Reaches forward but needs supervision">
+                description = <"">
+            >
+            ["at0049"] = <
+                text = <"Can reach forward 5 cm (2 inches)">
+                description = <"">
+            >
+            ["at0050"] = <
+                text = <"Can reach forward 12 cm (5 inches)">
+                description = <"">
+            >
+            ["at0051"] = <
+                text = <"Can reach forward confidently 25 cm (10 inches)">
+                description = <"">
+            >
+            ["at0052"] = <
+                text = <"9. Pick up object from the floor from a standing position">
+                description = <"">
+            >
+            ["at0053"] = <
+                text = <"Unable to try/needs assist to keep from losing balance or falling">
+                description = <"">
+            >
+            ["at0054"] = <
+                text = <"Unable to pick up and needs supervision while trying">
+                description = <"">
+            >
+            ["at0055"] = <
+                text = <"Unable to pick up but reaches 2-5 cm (1-2 inches) from slipper and keeps balance independently">
+                description = <"">
+            >
+            ["at0056"] = <
+                text = <"Able to pick up slipper but needs supervision">
+                description = <"">
+            >
+            ["at0057"] = <
+                text = <"Able to pick up slipper safely and easily">
+                description = <"">
+            >
+            ["at0058"] = <
+                text = <"10. Turning to look behind over left and right shoulders while standing">
+                description = <"">
+            >
+            ["at0059"] = <
+                text = <"Needs assist to keep from losing balance or falling">
+                description = <"">
+            >
+            ["at0060"] = <
+                text = <"Needs supervision when turning">
+                description = <"">
+            >
+            ["at0061"] = <
+                text = <"Turns sideways only but maintains balance">
+                description = <"">
+            >
+            ["at0062"] = <
+                text = <"Looks behind one side only other side shows less weight shift">
+                description = <"">
+            >
+            ["at0063"] = <
+                text = <"Looks behind from both sides and weight shifts well">
+                description = <"">
+            >
+            ["at0064"] = <
+                text = <"11. Turn 360 degrees">
+                description = <"">
+            >
+            ["at0065"] = <
+                text = <"Needs assistance while turning">
+                description = <"">
+            >
+            ["at0066"] = <
+                text = <"Needs close supervision or verbal cuing">
+                description = <"">
+            >
+            ["at0067"] = <
+                text = <"Able to turn 360 degrees safely but slowly">
+                description = <"">
+            >
+            ["at0068"] = <
+                text = <"Able to turn 360 degrees safely one side only 4 seconds or less">
+                description = <"">
+            >
+            ["at0069"] = <
+                text = <"Able to turn 360 degrees safely in 4 seconds or less">
+                description = <"">
+            >
+            ["at0070"] = <
+                text = <"12. Place alternate foot on step or stool while standing unsupported">
+                description = <"">
+            >
+            ["at0071"] = <
+                text = <"Needs assistance to keep from falling/unable to try">
+                description = <"">
+            >
+            ["at0072"] = <
+                text = <"Able to complete > 2 steps needs minimal assist">
+                description = <"">
+            >
+            ["at0073"] = <
+                text = <"Able to complete 4 steps without aid with supervision">
+                description = <"">
+            >
+            ["at0074"] = <
+                text = <"Able to stand independently and complete 8 steps in > 20 seconds">
+                description = <"">
+            >
+            ["at0075"] = <
+                text = <"Able to stand independently and safely and complete 8 steps in 20 seconds">
+                description = <"">
+            >
+            ["at0076"] = <
+                text = <"13. Standing unsupported one foot in front">
+                description = <"">
+            >
+            ["at0077"] = <
+                text = <"Loses balance while stepping or standing">
+                description = <"">
+            >
+            ["at0078"] = <
+                text = <"Needs help to step but can hold 15 seconds">
+                description = <"">
+            >
+            ["at0079"] = <
+                text = <"Able to take small step independently and hold 30 seconds">
+                description = <"">
+            >
+            ["at0080"] = <
+                text = <"Able to place foot ahead independently and hold 30 seconds">
+                description = <"">
+            >
+            ["at0081"] = <
+                text = <"Able to place foot tandem independently and hold 30 seconds">
+                description = <"">
+            >
+            ["at0082"] = <
+                text = <"14. Standing on one leg">
+                description = <"">
+            >
+            ["at0083"] = <
+                text = <"Unable to try or needs assist to prevent fall">
+                description = <"">
+            >
+            ["at0084"] = <
+                text = <"Tries to lift leg unable to hold 3 seconds but remains standing independently">
+                description = <"">
+            >
+            ["at0085"] = <
+                text = <"Able to lift leg independently and hold ≥ 3 seconds">
+                description = <"">
+            >
+            ["at0086"] = <
+                text = <"Able to lift leg independently and hold 5-10 seconds">
+                description = <"">
+            >
+            ["at0087"] = <
+                text = <"Able to lift leg independently and hold > 10 seconds">
+                description = <"">
+            >
+            ["at0088"] = <
+                text = <"Total score">
+                description = <"The sum of the 14 item scores, from 0 to 56, where higher scores indicate better balance.">
+            >
+            ["at0091"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+            >
+            ["ac9028"] = <
+                text = <"1. Sitting to standing (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9029"] = <
+                text = <"2. Standing unsupported (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9030"] = <
+                text = <"3. Sitting with back unsupported but feet supported on floor or on a stool (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9031"] = <
+                text = <"4. Standing to sitting (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9032"] = <
+                text = <"5. Transfers (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9033"] = <
+                text = <"6. Standing unsupported with eyes closed (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9034"] = <
+                text = <"7. Standing unsupported with feet together (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9035"] = <
+                text = <"8. Reaching forward with outstretched arm while standing (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9036"] = <
+                text = <"9. Pick up object from the floor from a standing position (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9037"] = <
+                text = <"10. Turning to look behind over left and right shoulders while standing (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9038"] = <
+                text = <"11. Turn 360 degrees (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9039"] = <
+                text = <"12. Place alternate foot on step or stool while standing unsupported (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9040"] = <
+                text = <"13. Standing unsupported one foot in front (synthesised)">
+                description = <" (synthesised)">
+            >
+            ["ac9041"] = <
+                text = <"14. Standing on one leg (synthesised)">
+                description = <" (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9028"] = <
+            id = <"ac9028">
+            members = <"at0005", "at0006", "at0007", "at0008", "at0009">
+        >
+        ["ac9031"] = <
+            id = <"ac9031">
+            members = <"at0023", "at0024", "at0025", "at0026", "at0027">
+        >
+        ["ac9030"] = <
+            id = <"ac9030">
+            members = <"at0017", "at0018", "at0019", "at0020", "at0021">
+        >
+        ["ac9035"] = <
+            id = <"ac9035">
+            members = <"at0047", "at0048", "at0049", "at0050", "at0051">
+        >
+        ["ac9034"] = <
+            id = <"ac9034">
+            members = <"at0041", "at0042", "at0043", "at0044", "at0045">
+        >
+        ["ac9033"] = <
+            id = <"ac9033">
+            members = <"at0035", "at0036", "at0037", "at0038", "at0039">
+        >
+        ["ac9032"] = <
+            id = <"ac9032">
+            members = <"at0029", "at0030", "at0031", "at0032", "at0033">
+        >
+        ["ac9039"] = <
+            id = <"ac9039">
+            members = <"at0071", "at0072", "at0073", "at0074", "at0075">
+        >
+        ["ac9038"] = <
+            id = <"ac9038">
+            members = <"at0065", "at0066", "at0067", "at0068", "at0069">
+        >
+        ["ac9037"] = <
+            id = <"ac9037">
+            members = <"at0059", "at0060", "at0061", "at0062", "at0063">
+        >
+        ["ac9036"] = <
+            id = <"ac9036">
+            members = <"at0053", "at0054", "at0055", "at0056", "at0057">
+        >
+        ["ac9029"] = <
+            id = <"ac9029">
+            members = <"at0011", "at0012", "at0013", "at0014", "at0015">
+        >
+        ["ac9041"] = <
+            id = <"ac9041">
+            members = <"at0083", "at0084", "at0085", "at0086", "at0087">
+        >
+        ["ac9040"] = <
+            id = <"ac9040">
+            members = <"at0077", "at0078", "at0079", "at0080", "at0081">
+        >
+    >

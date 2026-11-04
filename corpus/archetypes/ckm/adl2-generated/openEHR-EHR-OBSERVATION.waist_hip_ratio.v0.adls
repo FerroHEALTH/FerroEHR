@@ -1,0 +1,152 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=52ac9af3-0713-4b60-8711-194e41e1ad76; build_uid=893f61aa-f1f7-4898-b852-a12704399c55)
+    openEHR-EHR-OBSERVATION.waist_hip_ratio.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Gro-Hilde Ulriksen, Marit Alice Venheim">
+                ["organisation"] = <"Norwegian center for E-health research, Helse Vest IKT">
+                ["email"] = <"Gro-Hilde.Ulriksen@ehealthresearch.no, marit.alice.venheim@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics, Australia">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2016-10-21">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Silje Ljosland Bakke, Nasjonal IKT HF, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom (openEHR Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"94B16B177D1589607254204792A7C8B9">
+    >
+    details = <
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"Brukes for å registrerer forholdet mellom omkrets av midje og hofte.
+
+Forholdstallet brukes til å vurdere en persons generelle helsestilstand, og om en person er i risikosonen for å utvikle alvorlige helseplager.">
+            keywords = <"midje", "hofte", "omkrets">
+            use = <"Brukes for å registrere forholdet mellom omkrets av midje og hofte. Forholdstallet brukes til å vurdere en persons generelle helsestilstand, og om en person er i risikosonen for å utvikle alvorlige helseplager.
+
+Brukes for å registrere midje/hofte-indeks enten manuelt (for eksempel direkte utregnet og registrert av en kliniker), eller automatisk (for eksempel automatisk kalkulert og registrert ved bruk av en software applikasjon, basert på separate omkretsmålinger av midje og hofte).
+
+Formel: Midje/hofte-indeks kalkuleres vanligvis ved å dele midjemål på hoftemål (M ÷ H).">
+            misuse = <"Må ikke brukes for å registrere faktiske midje- eller hoftemålinger. Bruk arketypene OBSERVATION.waist_circumference og OBSERVATION.hip_circumference for disse formålene.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the ratio of the circumference of the waist to the circumference of the hips
+
+The waist-hip ratio is a calculated ratio used as an indicator of general health and risk of developing serious health conditions.">
+            keywords = <"waist", "hip", "WHR", "circumference">
+            use = <"Use to record the ratio of the circumference of the waist to the circumference of the hips as an indicator of general health and risk of developing serious health conditions.
+
+Use to enter the Waist-hip ratio either manually (ie calculated and directly entered by the clinician), or automatically (ie calculation and entry is done automatically by a software application, based on separate waist and hip circumference measurements).
+
+Formulas: Waist-hip ration is usually calculated as waist measurement divided by hip measurement (W ÷ H).">
+            misuse = <"Not to be used to record the actual waist or hip circumference measurements. Use the appropriate run-time name constraints for the Circumference data element within OBSERVATION.body_segment for each measurement.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Waist-hip ratio
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any point in time event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Waist-hip ratio
+                                        value matches {
+                                            DV_PROPORTION[at9000] matches {
+                                                type matches {1}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9001]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0012] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0013] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Midje/hofte-indeks">
+                description = <"Forholdet mellom midjeomkrets og hofteomkrets.">
+            >
+            ["at0002"] = <
+                text = <"Valgfritt tidspunkt">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i en templat eller i en applikasjon.">
+            >
+            ["at0006"] = <
+                text = <"Midje/hofte-indeks">
+                description = <"Forholdet mellom midjeomkrets og hofteomkrets.">
+            >
+            ["at0011"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om indeksen som ikke er fanget opp i andre felt.">
+            >
+            ["at0013"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR eller CIMI.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Waist-hip ratio">
+                description = <"The ratio of the circumference of the waist to the circumference of the hips.">
+            >
+            ["at0002"] = <
+                text = <"Any point in time event">
+                description = <"Default, unspecified point in time which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0006"] = <
+                text = <"Waist-hip ratio">
+                description = <"Ratio with unitary denominator.">
+            >
+            ["at0011"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the ratio not captured in other fields.">
+            >
+            ["at0013"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local context or to align with other reference models/formalisms.">
+                comment = <"For example: Local hospital departmental infomation or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+        >
+    >

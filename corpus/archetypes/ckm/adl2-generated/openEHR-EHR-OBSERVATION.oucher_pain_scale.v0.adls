@@ -1,0 +1,217 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=6d96ba4c-04b3-4b69-9bfa-9cf73344d54b; build_uid=8e012e1d-7527-477f-a7f0-d99d25fa7916)
+    openEHR-EHR-OBSERVATION.oucher_pain_scale.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            author = <
+                ["name"] = <"Alan D. March">
+                ["organisation"] = <"Hospital Universitario Austral, Pilar, Buenos Aires, Argentina.">
+                ["email"] = <"alandmarch@gmail.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Alan D. March">
+        ["organisation"] = <"Hospital Universitario Austral, Pilar, Buenos Aires, Argentina.">
+        ["email"] = <"alandmarch@gmail.com">
+        ["date"] = <"2016-09-24">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    references = <
+        ["1"] = <"Beyer JE, Denyes MJ, Villarruel AM (1992). The creation, validation and continuing development of the Oucher. A measure of pain intensity in children. Journal of Pediatric Nursing, 7, 335-346.">
+        ["2"] = <"Beyer J, Villarruel A, Denyes M (2009). The Oucher: User's Manual and Technical Report. Avialable in http://www.oucher.org/downloads/2009_Users_Manual.pdf.">
+    >
+    other_details = <
+        ["current_contact"] = <"Alan D. March <alandmarch@gmail.com>">
+        ["MD5-CAM-1.0.1"] = <"DDA4CDFF3CF49B0DD527AA98BC601E77">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"A self-report pain assessment tool for children aged 3 to 12.">
+            keywords = <"pain", "scale", "Oucher", "children">
+            use = <"There are two manners of administration of the Oucher scale: numerical or photographic.
+
+If the numerical (0 - 10) scale is used , after being asked to grade his or her pain in a 0 (no pain) to 10 (maximum pain) range, the number named by the child represents his or her score.
+
+If the photographic scale is used, the child must select the one picture which best represents the pain he or her is experiencing out of a collection of six pictures representing faces exhibiting increasing degrees of pain. The picture sets, as well as the conversion rule to the 0-10 numeric scale, may be downloaded from http://www.oucher.org/the_scales.html.
+
+The criteria to use either scale may be reviewed in the Oucher User's Manual, available in http://www.oucher.org/downloads/2009_Users_Manual.pdf. In general, the numeric scale should be used if the child can count to 100 by ones or tens, or if he or she can identify which of any two numbers is larger.">
+            misuse = <"Not to be used outside the age range 3 to 12 years.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["es-ar"] = <
+            language = <[ISO_639-1::es-ar]>
+            purpose = <"Herramienta de autoevaluación del dolor para niños de edades entre 3 y 12 años.">
+            keywords = <"dolor", "escala", "Oucher", "niños">
+            use = <"Existen dos modalidades de administración de la escala de Oucher: numérica y fotográfica.
+Si se utiliza la escala numérica de 0 (sin dolor) a 10 (dolor máximo) se interroga al niño acerca de la intensidad del dolor que siente en una escala de 0 a 10, y se registra el valor informado.
+Si se utiliza la modalidad fotográfica, el niño debe seleccionar la fotografía que mejor representa el dolor que siente de una colección de 6 fotografías. La colección de fotografías puede ser obtenida en http://www.oucher.org/the_scales.html.
+El criterio a utilizar para seleccionar entre las modalidades puede ser consultado en http://www.oucher.org/downloads/instructions_spanish.pdf. En general, se debe utilizar la escala numérica cuando el niño puede contar hasta 100 de a uno o diez, o si puede identificar cual de un par de números es el mas alto.">
+            misuse = <"No utilizar en pacientes fuera del rango etario de 3 a 12 años.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Oucher pain scale
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {1..*; unordered} matches {
+                    POINT_EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Total score
+                                        value matches {
+                                            DV_COUNT[at9001] matches {
+                                                magnitude matches {|0..10|}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0006] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9002]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0007] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9003]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0005] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Administration method
+                        value matches {
+                            DV_CODED_TEXT[at9004] matches {
+                                defining_code matches {[ac9000]}    -- Administration method (synthesised)
+                            }
+                        }
+                    }
+                    allow_archetype CLUSTER[at0012] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["es-ar"] = <
+            ["at0000"] = <
+                text = <"Escala del dolor de Oucher">
+                description = <"Escala de autoevaluación del dolor para niños de 3 a 12 años de edad.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"*">
+            >
+            ["at0004"] = <
+                text = <"Puntaje total">
+                description = <"Intensidad del dolor en una escala de 0 a 10.">
+            >
+            ["at0006"] = <
+                text = <"Comentario">
+                description = <"Información adicional no adecuadamente capturada por la escala numérica pero que podría asistir en la evaluación del dolor sufrido por el paciente.">
+            >
+            ["at0008"] = <
+                text = <"Método de administración">
+                description = <"El método utilizado para obtener el puntaje total.">
+            >
+            ["at0009"] = <
+                text = <"Numérico">
+                description = <"Utiliza una escala de 0 (sin dolor) a 10 (máximo dolor).">
+            >
+            ["at0010"] = <
+                text = <"Fotográfico">
+                description = <"Utiliza una colección de 6 fotografías de las cuales el niño debe elegir la que mejor refleja su dolor.">
+            >
+            ["at0011"] = <
+                text = <"Factores de confusión">
+                description = <"Todo factor incidental relacionado al estado del sujeto y que pueda afectar la interpretación clínica de la medición. ">
+            >
+            ["at0012"] = <
+                text = <"*Cluster(en)">
+                description = <"**(en)">
+            >
+            ["ac9000"] = <
+                text = <"Método de administración (synthesised)">
+                description = <"El método utilizado para obtener el puntaje total. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Oucher pain scale">
+                description = <"A self-report pain assessment tool for children aged 3 to 12.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Specified point in time which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0004"] = <
+                text = <"Total score">
+                description = <"Pain intensity from 0 to 10.">
+            >
+            ["at0006"] = <
+                text = <"Comment">
+                description = <"Additional information not adequately captured by the numerical scale but which might assist in evaluating the pain experienced by the child.">
+            >
+            ["at0008"] = <
+                text = <"Administration method">
+                description = <"The method used to arrive at the final score value.">
+            >
+            ["at0009"] = <
+                text = <"Numeric">
+                description = <"Using a 0 (no pain) to 10 (maximum pain) scale.">
+            >
+            ["at0010"] = <
+                text = <"Photographic">
+                description = <"Using a set of six photograph out of which the child must select the one which most appropiately reflects his/her pain.">
+            >
+            ["at0011"] = <
+                text = <"Confounding factors">
+                description = <"Any incidental factors related to the state of the subject which may affect clinical interpretation of the measurement.">
+            >
+            ["at0012"] = <
+                text = <"Extension">
+                description = <"Additional information required to capture local content or to align with other reference models/formalisms.">
+                comment = <"For example: local information requirements or additional metadata to align with FHIR or CIMI equivalents.">
+            >
+            ["ac9000"] = <
+                text = <"Administration method (synthesised)">
+                description = <"The method used to arrive at the final score value. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9000"] = <
+            id = <"ac9000">
+            members = <"at0009", "at0010">
+        >
+    >

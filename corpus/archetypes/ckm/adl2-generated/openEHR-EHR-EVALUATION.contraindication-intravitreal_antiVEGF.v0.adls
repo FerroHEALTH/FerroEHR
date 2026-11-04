@@ -1,0 +1,120 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=cd1eb7ae-556f-46d5-8c43-906346c92975; build_uid=447d0098-4004-46bb-ace2-34fb784390dc)
+    openEHR-EHR-EVALUATION.contraindication-intravitreal_antiVEGF.v0.0.1-alpha
+
+specialize
+    openEHR-EHR-EVALUATION.contraindication.v1
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"heather.leslie@oceaninformatics.com">
+        ["date"] = <"14-11-2012">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Sam Heard, Ocean Informatics, Australia", "Heather Leslie, Ocean Informatics, Australia (Editor)", "Ian McNicoll, Ocean Informatics, United Kingdom (Editor)">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Ocean Informatics, heather.leslie@oceaninformatics.com">
+        ["MD5-CAM-1.0.1"] = <"B55AF23D8474964B958B772941E481AC">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record the identification of a treatment, medication or procedure which should not be administered or performed on this subject.">
+            keywords = <"contraindication", "prevent", "avoid", "adverse event">
+            use = <"Use to record the identification of a treatment, medication or procedure which should not be administered or performed on this subject. 
+
+This contraindication may be identified in a number of ways, for example: 
+- previous experience of a procedure being performed and subsequent clinical assessment that this should not be repeated; 
+- genomic testing results that indicate an adverse event may take place if a treatment or medication is administered; or
+- experience of a family member to a similar treatment, medication or procedure.
+
+Clinical decision support for prescribing should include checking of both known adverse reactions to the proposed medicine (EVALUATION.adverse_reaction) plus known contraindications using this archetype.">
+            misuse = <"Not to be used to record the occurrence of an adverse reaction to a substance or agent - use EVALUATION.adverse_reaction for this purpose.">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    EVALUATION[at0000.1] matches {    -- Contraindication of intravitreal anti-VEGF injections
+        /data[at0001]/items matches {
+            ELEMENT[at0002.1] matches {    -- Contraindication
+                value matches {
+                    DV_CODED_TEXT[at0.9001] matches {
+                        defining_code matches {[at0.13]}    -- Intravitreal anti-VEGF
+                    }
+                }
+            }
+            ELEMENT[at0003.1] matches {    -- Evidence/Rationale
+                value matches {
+                    DV_CODED_TEXT[at0.9002] matches {
+                        defining_code matches {[ac0.9000]}    -- Evidence/Rationale (synthesised)
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0.10"] = <
+                text = <"Reaction to anti-VEGF">
+                description = <"Establishment or suspicion of any reaction due to hypersensitivity to anti-VEGF agents used in intravitreal injections.">
+            >
+            ["at0.11"] = <
+                text = <"No response to treatment">
+                description = <"Visual acuity decreased for three consecutive reviews below 0.1 in decimal scale.">
+            >
+            ["at0.12"] = <
+                text = <"Morphologic deterioration">
+                description = <"Progressive deterioration of the morphology of the lesion.">
+            >
+            ["at0.13"] = <
+                text = <"Intravitreal anti-VEGF">
+                description = <"Treatment of intravitreal anti-VEGF injections contraindicated.">
+            >
+            ["at0.7"] = <
+                text = <"Very low VA">
+                description = <"Visual acuity on first clinical encounter below 0.1 in decimal scale.">
+            >
+            ["at0.8"] = <
+                text = <"Healed lesions">
+                description = <"Identified signs of previous treatments such as photodynamic therapy, laser photocoagulation scars, or any vitreoretinal operative procedure.">
+            >
+            ["at0.9"] = <
+                text = <"Multimorbidity">
+                description = <"Coexistence of additional alterations on the retina causative of visual impairment.">
+            >
+            ["at0000.1"] = <
+                text = <"Contraindication of intravitreal anti-VEGF injections">
+                description = <"Identification of the criteria considered for exclude patients from treatment using intravitreal anti-VEGF injections.">
+            >
+            ["at0002.1"] = <
+                text = <"Contraindication">
+                description = <"Identified contraindication to a treatment, medicine, vaccine or procedure.">
+            >
+            ["at0003.1"] = <
+                text = <"Evidence/Rationale">
+                description = <"Evidence or rationale for the contraindication.">
+            >
+            ["ac0.9000"] = <
+                text = <"Evidence/Rationale (synthesised)">
+                description = <"Evidence or rationale for the contraindication. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac0.9000"] = <
+            id = <"ac0.9000">
+            members = <"at0.7", "at0.8", "at0.9", "at0.10", "at0.11", "at0.12">
+        >
+    >

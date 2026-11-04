@@ -1,0 +1,485 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=14f30fd1-9cc6-40b9-a5cb-15e2e62e05d9; build_uid=fe31f88e-f3cd-4b66-8652-144aa095362f)
+    openEHR-EHR-OBSERVATION.capillary_refill.v1.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Jonas Bucher">
+                ["organisation"] = <"Cistec AG">
+                ["email"] = <"jonas.bucher@cistec.com">
+            >
+            other_details = <
+                ["other_contributors"] = <"Emmanuel Eschmann, Cistec AG">
+            >
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            author = <
+                ["name"] = <"Viktor Bäckman">
+                ["organisation"] = <"Linköpings Universitet">
+                ["email"] = <"vikba308@student.liu.se">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen, John Tore Valand">
+                ["organisation"] = <"Oslo University Hospital, Helse Bergen">
+                ["email"] = <"varntzen@ous-hf.no, john.tore.valand@helse-bergen.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Ian McNicoll">
+        ["organisation"] = <"freshEHR Clinical Informatics Ltd.">
+        ["email"] = <"ian@freshehr.com">
+        ["date"] = <"2020-04-26">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "SB Bhattacharyya, Sudisa Consultancy Services, India", "Mikkel Gaup Grønmo, Helse-Nord, FSE, Norway (openEHR Editor)", "Anca Heyd, DIPS ASA, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia", "Robert Madeley, Cambio Healthcare systems, Sweden", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Svenne Naumann, Finnmarkssykehuset, Norway", "Anoop Shah, University College London, United Kingdom", "Trine Strand, Oslo Universitetssykehus (OUS), Norway", "Roy Støle, OUS, Norway", "Norwegian Review Summary, Nasjonal IKT HF, Norway", "Nyree Taylor, Ocean Informatics, Australia", "Jeremy Tong, NHS, United Kingdom", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact http://www.snomed.org/snomed-ct/get-snomedct or info@snomed.org.">
+    >
+    references = <
+        ["1"] = <"King D, Morton R, Bevan C. How to use capillary refill time. Arch Dis Child Educ Pract Ed. 2014 Jun;99(3):111-6. doi: 10.1136/archdischild-2013-305198. Epub 2013 Nov 13. Review. PubMed PMID: 24227793.">
+        ["2"] = <"E. Kviesis-Kipge, E. Curkste, J. Spigulis, L. Eihvalde, “Real-time analysis of skin capillary-refill processes using blue LED,” Proc. SPIE 7715, Biophotonics: Photonic Solutions for Better Health Care II, 771523 (18 May 2010); https://doi.org/10.1117/12.854263">
+        ["3"] = <"Kawaguchi R, Nakada TA, Oshima T, Shinozaki M, Nakaguchi T, Haneishi H, Oda S. Optimal pressing strength and time for capillary refilling time. Crit Care. 2019 Jan 8;23(1):4. doi: 10.1186/s13054-018-2295-3. PubMed PMID: 30621748; PubMed Central PMCID: PMC6323707.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"7B735BC6C51322555BD6E3E288135F25">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Aufzeichnung der Befunde im Zusammenhang mit der Rekapillarisierungszeit.">
+            keywords = <"Kapilläre Rückfüllzeit", ...>
+            use = <"Zur Aufzeichnung der beobachteten Befunde im Zusammenhang mit der Rekapillarisierungszeit.">
+            misuse = <"">
+        >
+        ["sv"] = <
+            language = <[ISO_639-1::sv]>
+            purpose = <"*To record findings related to the capillary refill time. (en)">
+            keywords = <"*return (en)", ...>
+            use = <"*Use to record findings related to the capillary refill time. (en)">
+            misuse = <"">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere funn knyttet til den kapillære fylningstiden (CRT).">
+            keywords = <"refyldningstid, CRT, Capillary refill time, kapillær refill", ...>
+            use = <"Bruk for å registrere funn knyttet til den kapillære fylningstiden (CRT).">
+            misuse = <"">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record findings related to the capillary refill time.">
+            keywords = <"return", ...>
+            use = <"Use to record findings related to the capillary refill time.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    OBSERVATION[at0000] matches {    -- Capillary refill time (CRT)
+        data matches {
+            HISTORY[at0001] matches {
+                events cardinality matches {0..*; unordered} matches {
+                    EVENT[at0002] matches {    -- Any event
+                        data matches {
+                            ITEM_TREE[at0003] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0009] occurrences matches {0..1} matches {    -- Refill time
+                                        value matches {
+                                            DV_QUANTITY[at9002] matches {
+                                                property matches {[at9000]}    -- Time
+                                                magnitude matches {|0.0..20.0|}
+                                                units matches {"s"}
+                                                precision matches {1}
+                                            }
+                                        }
+                                    }
+                                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Clinical interpretation
+                                        value matches {
+                                            DV_CODED_TEXT[at9003] matches {
+                                                defining_code matches {[ac9006]}    -- Clinical interpretation (synthesised)
+                                            }
+                                            DV_TEXT[at9007]
+                                        }
+                                    }
+                                    ELEMENT[at0040] occurrences matches {0..1} matches {    -- Comment
+                                        value matches {
+                                            DV_TEXT[at9006]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        state matches {
+                            ITEM_TREE[at0021] matches {
+                                items cardinality matches {0..*; unordered} matches {
+                                    ELEMENT[at0023] occurrences matches {0..1} matches {    -- Confounding factors
+                                        value matches {
+                                            DV_TEXT[at9004]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0019] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0024] occurrences matches {0..1} matches {    -- Location of measurement
+                        value matches {
+                            DV_TEXT[at9005]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0039] occurrences matches {0..1} matches {    -- Structured measurement location
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.anatomical_location(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.anatomical_location_relative\.v2\..*/}
+                    }
+                    ELEMENT[at0041] occurrences matches {0..1} matches {    -- Measurement method
+                        value matches {
+                            DV_TEXT[at9008]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0037] occurrences matches {0..1} matches {    -- Device
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.device(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0020] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Rekapillarisierungszeit (RKZ)">
+                description = <"Messung der Zeit, in der sich ein Kapillarbett nach Einwirkung von äußerem Druck wieder mit Blut füllt.">
+                comment = <"Manchmal auch als \"kapilläre Rückfüllzeit\" bezeichnet.">
+            >
+            ["at0002"] = <
+                text = <"Beliebiges Ereignis">
+                description = <"Ein Standardwert, ein spezifizierter Zeitpunkt oder ein Intervallereignis, welches explizit in einem Template oder während der Laufzeit definiert werden kann.">
+            >
+            ["at0005"] = <
+                text = <"Klinische Interpretation">
+                description = <"Klinische Interpretation der Rekapillarisierungszeit.
+">
+                comment = <"Der Normalbereich kann altersabhängig variieren.">
+            >
+            ["at0006"] = <
+                text = <"Normale Rekapillarisierungszeit">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Verlängerte Rekapillarisierungszeit">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Verkürzte Rekapillarisierungszeit">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Rückfüllzeit">
+                description = <"Die gemessene Zeit bis zur Farbänderung durch Rückfluss des Blutes nach Druckentlastung.">
+            >
+            ["at0020"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder zur Anpassung an andere Referenzmodelle oder Formalismen.">
+                comment = <"Zum Beispiel: Informationen bzgl. der lokalen Krankenhausabteilung oder zusätzliche Metadata zur Anpassung an entsprechende FHIR oder CIMI Gegenstücke.">
+            >
+            ["at0023"] = <
+                text = <"Einflussfaktoren">
+                description = <"Probleme oder Faktoren, die die Messung der Rekapillarisierungszeit beeinflussen können und in anderen Feldern nicht erfasst sind.">
+                comment = <"Zum Beispiel: Schmerzen, Fieber, Umgebungstemperatur und Licht, Einnahme vasoaktiver Medikamente oder periphere Gefäßverstopfung.">
+            >
+            ["at0024"] = <
+                text = <"Stelle der Messung">
+                description = <"Einfache Beschreibung der Körperstelle, an der die Rekapillarisierungszeit gemessen wurde.">
+                comment = <"Zum Beispiel: 'Nagelbett rechter Zeigefinger', 'Stirn' oder 'Sternum'">
+            >
+            ["at0037"] = <
+                text = <"Gerät">
+                description = <"Details über das Gerät, das zur Messung der Rekapillarisierungszeit verwendet wurde.">
+            >
+            ["at0039"] = <
+                text = <"Strukturierte Stelle der Messung">
+                description = <"Strukturierte Körperstelle, an der die Rekapillarisierungszeit gemessen wurde.">
+            >
+            ["at0040"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Beschreibung zur Rekapillarisierungszeit, die in anderen Feldern nicht erfasst wurde.">
+            >
+            ["at0041"] = <
+                text = <"Methode">
+                description = <"Beschreibung der zur Messung der Rekapillarisierungszeit verwendeten Methode.">
+                comment = <"Angeben, um sicherzustellen, dass eine Reihe von Messungen auf dieselbe Weise durchgeführt werden.">
+            >
+            ["at9000"] = <
+                text = <"* Time (en)">
+                description = <"* Time (en)">
+            >
+            ["ac9006"] = <
+                text = <"Klinische Interpretation (synthesised)">
+                description = <"Klinische Interpretation der Rekapillarisierungszeit.
+ (synthesised)">
+            >
+        >
+        ["sv"] = <
+            ["at0000"] = <
+                text = <"*Capillary refill time (CRT) (en)">
+                description = <"*Measurement of the time taken for color to return to an external capillary bed after pressure is applied to cause blanching. (en)">
+                comment = <"* Sometimes expressed as 'capillary return'. (en)">
+            >
+            ["at0002"] = <
+                text = <"ospecificerad händelse">
+                description = <"Standard, ospecificerad tidpunkt eller intervallhändelse som kan uttryckligen definieras i en mall eller vid körning.">
+            >
+            ["at0005"] = <
+                text = <"Klinisk tolkning">
+                description = <"En klinisk tolkning av normalitet vid kapillärfyllnad.">
+                comment = <"*Normal range may vary based on age. (en)">
+            >
+            ["at0006"] = <
+                text = <"Normal kapillärfyllnad">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Ökad kapillärfyllnad">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Minskad kapillärfyllnad">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"*Refill time (en)">
+                description = <"*The measured time taken for color to return after blanching. (en)">
+            >
+            ["at0020"] = <
+                text = <"Förlängning">
+                description = <"Ytterligare information som krävs för att utöka modellen med lokalt innehåll eller för att anpassa sig till andra referensmodeller eller formaliteter.">
+                comment = <"Tillexempel, lokal informationskrav eller ytterligare metadata för att anpassa till FHIR.">
+            >
+            ["at0023"] = <
+                text = <"Tillfredsställande faktorer">
+                description = <"*Issues or factors that may impact on measurement of the capillary refill time, not captured in other fields. (en)">
+                comment = <"*For example: pain; fever; ambient temperature and light; use of vasoactive medication or peripheral vascular occlusion. (en)">
+            >
+            ["at0024"] = <
+                text = <"Mätplats">
+                description = <"Enkel lokalisation av var kapillärfyllnad mätes.">
+                comment = <"*For example: 'nail bed right index finger', 'forehead', 'sternum' and 'skin patch left breast'. (en)">
+            >
+            ["at0037"] = <
+                text = <"Utrustning">
+                description = <"Detaljer om utrustning som användes vid mätningen av kapillärfyllnad.">
+            >
+            ["at0039"] = <
+                text = <"Strukturerad mätplats">
+                description = <"Strukturerad anatomisk lokalisation av var mätningarna togs.">
+            >
+            ["at0040"] = <
+                text = <"Kommentar">
+                description = <"Ytterligare redogörelse om kapillärfyllnad som inte beskriven i andra fält.">
+            >
+            ["at0041"] = <
+                text = <"*Measurement method(en)">
+                description = <"*Narrative description of the method used for measuring the capillary refill time.(en)">
+                comment = <"*Specify in order to ensure that a sequence of measurements are taken in the same way. (en)">
+            >
+            ["at9000"] = <
+                text = <"* Time (en)">
+                description = <"* Time (en)">
+            >
+            ["ac9006"] = <
+                text = <"Klinisk tolkning (synthesised)">
+                description = <"En klinisk tolkning av normalitet vid kapillärfyllnad. (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Kapillær fylningstid (CRT)">
+                description = <"Måling av tiden det tar før fargen vender tilbake i en ekstern kapillærseng etter å ha blitt utsatt for ytre press.">
+                comment = <"Noen ganger benevnt som \"kapillær refill\".">
+            >
+            ["at0002"] = <
+                text = <"Uspesifisert hendelse">
+                description = <"Standard, uspesifisert tidspunkt eller tidsintervall som kan defineres mer eksplisitt i et templat eller i en applikasjon.">
+            >
+            ["at0005"] = <
+                text = <"Klinisk tolkning">
+                description = <"En klinisk tolkning av tiden for kapillær refylning.">
+                comment = <"Normalområdet kan variere med alder.">
+            >
+            ["at0006"] = <
+                text = <"Normal kapillær fylningstid">
+                description = <"*(en)">
+            >
+            ["at0007"] = <
+                text = <"Økt kapillær fylningstid">
+                description = <"*(en)">
+            >
+            ["at0008"] = <
+                text = <"Redusert kapillær fylningstid">
+                description = <"*(en)">
+            >
+            ["at0009"] = <
+                text = <"Fylningstid">
+                description = <"Den målte tiden det tar før fargen vender tilbake etter å ha blitt utsatt for ytre press.">
+            >
+            ["at0020"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0023"] = <
+                text = <"Konfunderende faktorer">
+                description = <"Fritekstbeskrivelse av problemer eller faktorer som kan ha påvirkning på målingen av kapillær fylningstid.">
+                comment = <"For eksempel smerter, feber, temperatur eller lys i omgivelsene, bruk av vasoaktive medikamenter eller tilstoppet eller hindret perifer sirkulasjon.">
+            >
+            ["at0024"] = <
+                text = <"Målested">
+                description = <"Anatomisk sted hvor den kapillære fylningstiden var målt.">
+                comment = <"For eksempel \"negleseng 2. høyre finger\", \"panne\", \"sternum\" eller \"fri hudlapp venstre bryst\".">
+            >
+            ["at0037"] = <
+                text = <"Måleapparat">
+                description = <"Detaljer om eventuelt måleapparat som er brukt til å måle kapillær fylningstid.">
+            >
+            ["at0039"] = <
+                text = <"Strukturert målested">
+                description = <"Strukturert anatomisk lokalisering av stedet målingen ble gjort.">
+            >
+            ["at0040"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om kapillær fylningstid, som ikke er fanget i andre felt.">
+            >
+            ["at0041"] = <
+                text = <"Målemetode">
+                description = <"Fritekstbeskrivelse av metoden som ble benyttet for måling av kapillær fylningstid.">
+                comment = <"Spesifiser for å sikre at en sekvens av målinger blir gjort på samme måte.">
+            >
+            ["at9000"] = <
+                text = <"* Time (en)">
+                description = <"* Time (en)">
+            >
+            ["ac9006"] = <
+                text = <"Klinisk tolkning (synthesised)">
+                description = <"En klinisk tolkning av tiden for kapillær refylning. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Capillary refill time (CRT)">
+                description = <"Measurement of the time taken for color to return to an external capillary bed after pressure is applied to cause blanching.">
+                comment = <" Sometimes expressed as 'capillary return'.">
+            >
+            ["at0002"] = <
+                text = <"Any event">
+                description = <"Default, unspecified point in time or interval event which may be explicitly defined in a template or at run-time.">
+            >
+            ["at0005"] = <
+                text = <"Clinical interpretation">
+                description = <"A clinical interpretation of the capillary refill time.">
+                comment = <"Normal range may vary based on age.">
+            >
+            ["at0006"] = <
+                text = <"Normal capillary filling time">
+                description = <"">
+            >
+            ["at0007"] = <
+                text = <"Increased capillary filling time">
+                description = <"">
+            >
+            ["at0008"] = <
+                text = <"Decreased capillary filing time">
+                description = <"">
+            >
+            ["at0009"] = <
+                text = <"Refill time">
+                description = <"The measured time taken for color to return after blanching.">
+            >
+            ["at0020"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0023"] = <
+                text = <"Confounding factors">
+                description = <"Issues or factors that may impact on measurement of the capillary refill time, not captured in other fields.">
+                comment = <"For example: pain; fever; ambient temperature and light; use of vasoactive medication or peripheral vascular occlusion.">
+            >
+            ["at0024"] = <
+                text = <"Location of measurement">
+                description = <"Simple body site where the capillary filling time was measured.">
+                comment = <"For example: 'nail bed right index finger', 'forehead', 'sternum' and 'skin patch left breast'.">
+            >
+            ["at0037"] = <
+                text = <"Device">
+                description = <"Details about any device used to measure capillary refill time.">
+            >
+            ["at0039"] = <
+                text = <"Structured measurement location">
+                description = <"Structured anatomical location of where the measurement was taken.">
+            >
+            ["at0040"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the capillary refill time not captured in other fields.">
+            >
+            ["at0041"] = <
+                text = <"Measurement method">
+                description = <"Narrative description of the method used for measuring the capillary refill time.">
+                comment = <"Specify in order to ensure that a sequence of measurements are taken in the same way.">
+            >
+            ["at9000"] = <
+                text = <"Time">
+                description = <"Time">
+            >
+            ["ac9006"] = <
+                text = <"Clinical interpretation (synthesised)">
+                description = <"A clinical interpretation of the capillary refill time. (synthesised)">
+            >
+        >
+    >
+    term_bindings = <
+        ["openehr"] = <
+            ["at9000"] = <http://openehr.org/id/128>
+        >
+        ["LOINC"] = <
+            ["at0009"] = <http://loinc.org/id/44971-0>
+        >
+        ["SNOMED-CT"] = <
+            ["at0009"] = <http://snomed.info/id/15527001>
+            ["at0006"] = <http://snomed.info/id/45332005>
+            ["at0007"] = <http://snomed.info/id/50427001>
+            ["at0008"] = <http://snomed.info/id/27157002>
+        >
+    >
+    value_sets = <
+        ["ac9006"] = <
+            id = <"ac9006">
+            members = <"at0006", "at0007", "at0008">
+        >
+    >

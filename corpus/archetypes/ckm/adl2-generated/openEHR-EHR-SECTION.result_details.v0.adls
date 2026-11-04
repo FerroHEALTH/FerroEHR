@@ -1,0 +1,68 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=14c00b5e-0b2a-483d-8c78-84262aa7f25d; build_uid=59743293-8b6d-4c1e-b913-3b4d5af8d69d)
+    openEHR-EHR-SECTION.result_details.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+
+description
+    original_author = <
+        ["name"] = <"">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"5F046998E9BD3174F2499443BF7BB7E7">
+    >
+    details = <
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"">
+            use = <"">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    SECTION[at0000] matches {    -- Lab result details
+        items cardinality matches {0..*; unordered} matches {
+            SECTION[at0002] occurrences matches {0..1} matches {    -- Result group
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype OBSERVATION[at0003] matches {    -- Lab test
+                        include
+                            archetype_id/value matches {/openEHR-EHR-OBSERVATION\.lab_test(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype ENTRY[at0004] matches {    -- Other
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Lab result details">
+                description = <"Standard layout for groups of lab tests and associated entries">
+            >
+            ["at0002"] = <
+                text = <"Result group">
+                description = <"A group of associated lab tests.">
+            >
+            ["at0003"] = <
+                text = <"Lab test">
+                description = <"Individual lab tests">
+            >
+            ["at0004"] = <
+                text = <"Other">
+                description = <"Other associated entries">
+            >
+        >
+    >

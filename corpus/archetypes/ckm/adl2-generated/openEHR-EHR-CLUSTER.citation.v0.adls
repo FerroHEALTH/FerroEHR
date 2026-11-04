@@ -1,0 +1,283 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=99717f0b-2adc-42b1-bfd1-a1fd58b9d32e; build_uid=a90753d4-595a-46e7-9c96-fcbe8611865e)
+    openEHR-EHR-CLUSTER.citation.v0.0.1-alpha
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Aurelie Tomczak">
+                ["organisation"] = <"Institute of Pathology, University Hospital Heidelberg, Germany">
+                ["email"] = <"au.tomczak@yahoo.com">
+            >
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Anca Heyd, Liv Laugen, Vebjørn Arntzen">
+                ["organisation"] = <"Dips ASA, ​Oslo University Hospital, Norway">
+                ["email"] = <"liv.laugen@ous-hf.no, varntzen@ous-hf.no">
+                ["ahe@dips.no"] = <"ahe@dips.no">
+            >
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            author = <
+                ["name"] = <"Gabriela Alves">
+                ["organisation"] = <"Core Consulting">
+                ["email"] = <"contato@coreconsulting.com.br">
+            >
+            accreditation = <"Hospital Alemão Oswaldo Cruz (HAOC)">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            author = <
+                ["name"] = <"Mona Saleh">
+            >
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Sam Heard">
+        ["organisation"] = <"Ocean Informatics">
+        ["email"] = <"sam.heard@oceaninformatics.com">
+        ["date"] = <"2010-06-18">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Heather Leslie, Ocean Informatics, Australia", "Ian McNicoll, Ocean Informatics, Australia">
+    lifecycle_state = <"in_development">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"DA2C4FA1BBEBDDA9C9E13EE31D97C437">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Damit wird ermöglicht bestimmte Abschnitte der Gesundheitsinformationen, die an anderer Stelle gespeichert sind, in die aktuelle Krankenakte aufzunehmen.">
+            keywords = <"Zitat", "Referenz">
+            use = <"Verwenden Sie diese Option, um auf Informationen zu verweisen, die an einer anderen Stelle im selben EHR oder außerhalb des aktiven EHR gespeichert sind, damit sie in das aktuelle Dokument oder die aktuelle Nachricht aufgenommen werden können, die gerade erstellt wird. Beispielsweise kann eine Entlassungszusammenfassung den zusammenfassenden Bericht eines Labortests unter Verwendung dieses Zitierarchetyps enthalten, anstatt den gesamten Laborbericht zu duplizieren.
+Dieser Archetyp ist bewusst als Archetyp der Klasse CLUSTER konzipiert, sodass das Zitieren durch Einfügen in einen Slot im Kontext anderer Archetypen oder als eigenständige Instanz innerhalb des spezifischen Archetyps EVALUATION.citation erfolgen kann.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å gjøre det mulig å inkludere i den gjeldende pasientjournalen spesifikk helseinformasjon som er lagret andre steder.">
+            keywords = <"henvisning", "refereanse">
+            use = <"Brukes for å henvise til informasjon, som enten er lagret et annet sted i den elektroniske pasientjournalen (EPJ) enn det aktuelle dokumentet, eller lagret eksternt, men som det ønskes å refereres til. For eksempel kan en epikrise inkludere en referanse til et laboratoriesvar heller enn å duplisere hele laboratoriesvaret. 
+
+Denne arketypen er bevist designet som en CLUSTER arketype, slik at referansen kan gjøres via en innsettingsspor (SLOT) i andre arketyper, eller som en selvstendig instans innenfor den spesifikke EVALUATION.citation arketypen.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["pt-br"] = <
+            language = <[ISO_639-1::pt-br]>
+            purpose = <"Possibilitar que seções específicas de informações de saúde armazenadas em outros lugares sejam incluídas no registro clínico atual.">
+            keywords = <"citação", "referência">
+            use = <"Usado para referenciar informações que estão armazenadas em outro local do RES ou externas ao RES ativo, então essas informações podem ser incluídas no documento atual ou na mensagem que está sendo criada. Por exemplo, um sumário de alta pode incluir um relatório resumido de um teste laboratorial com o uso deste arquétipo de citação, em vez de duplicar todo o relatório laboratorial.
+Este arquétipo está deliberadamente projetado como uma classe de arquétipo CLUSTER de forma que a citação possa ser feita por meio de inserção em um slot dentro do contexto de outros arquétipos ou como uma instancia independente dentro do arquétipo específico EVALUATION.citation.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To enable specific sections of health information that are stored elsewhere to be included within the current clinical record.">
+            keywords = <"citation", "reference">
+            use = <"Use to reference information that is stored elsewhere in the same EHR or external to the active EHR, so that it can be included in the current document or message that is being created.  For example, a discharge summary may include the summary report of a laboratory test through the use of this citation archetype, rather than duplicating the whole laboratory report.
+This archetype is deliberately designed as a CLUSTER class archetype so that the citation can be made via insertion into a slot within the context of other archetypes, or as a standalone instance within the specific EVALUATION.citation archetype.">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["ar-sy"] = <
+            language = <[ISO_639-1::ar-sy]>
+            purpose = <"ليتمكن من تضمين المقاطع المحددة للمعلومات الطبية في داخل السجل السريري الحالي, و التي كان يتم تخزينها في مكان آخر">
+            keywords = <"الاقتباس", "المرجع">
+            use = <"يستخدم كمرجع للمعلومات التي يتم تخزينها في مكان آخر في داخل ذات السجل الطبي الإلكتروني, أو في خارج السجل الطبي الإلكتروني النشط, بحيث يمكن تضمينه في الوثيقة الحالية أو الرسالة التي يتم تكوينها.
+مثلا: قد يتضمن ملخص الخروج تقريرا موجزا لاختبار معملي عن طريق استخدام هذا النموذج الخاص بالمرجعية, بدلا من تكرار إدراج نفس التقرير المعملي.
+و قد تم تعمد تصميم هذا النموذج على هيئة فئة نماذج (عنقود) حتى يتم إدراج المرجعية في شرفة في سياق النماذج الأخرى, أو كمعلومة مستقلة في النموذج المخصص (تقييم. اقتباس).">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+        ["zh-cn"] = <
+            language = <[ISO_639-1::zh-cn]>
+            purpose = <"*To enable specific sections of health information that are stored elsewhere to be included within the current clinical record.(en)">
+            keywords = <"*citation(en)", "*reference(en)">
+            use = <"*Use to reference information that is stored elsewhere in the same EHR or external to the active EHR, so that it can be included in the current document or message that is being created.  For example, a discharge summary may include the summary report of a laboratory test through the use of this citation archetype, rather than duplicating the whole laboratory report.
+This archetype is deliberately designed as a CLUSTER class archetype so that the citation can be made via insertion into a slot within the context of other archetypes, or as a standalone instance within the specific EVALUATION.citation archetype.(en)">
+            misuse = <"">
+            copyright = <"© openEHR Foundation">
+        >
+    >
+
+definition
+    CLUSTER[at0000] matches {    -- Citation
+        items cardinality matches {1..*; unordered} matches {
+            ELEMENT[at0004] occurrences matches {0..1} matches {    -- Description
+                value matches {
+                    DV_TEXT[at9000]
+                }
+            }
+            ELEMENT[at0001] occurrences matches {0..1} matches {    -- Citation
+                value matches {
+                    DV_PARSABLE[at9001]
+                    DV_MULTIMEDIA[at9004]
+                }
+            }
+            ELEMENT[at0002] occurrences matches {0..1} matches {    -- URI to original data
+                value matches {
+                    DV_URI[at9002]
+                }
+            }
+            ELEMENT[at0003] occurrences matches {0..1} matches {    -- Comment
+                value matches {
+                    DV_TEXT[at9003]
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Zitat">
+                description = <"Verweis auf Informationen, die an anderer Stelle im selben oder außerhalb des EHR aufbewahrt werden.
+
+">
+            >
+            ["at0001"] = <
+                text = <"Zitat">
+                description = <"Repräsentation des Zitats/Verweises.">
+            >
+            ["at0002"] = <
+                text = <"URI zu Originaldaten">
+                description = <"Link zu den Originaldaten.">
+            >
+            ["at0003"] = <
+                text = <"Kommentar">
+                description = <"Kommentar zum Zitat.">
+            >
+            ["at0004"] = <
+                text = <"Beschreibung">
+                description = <"Beschreibung des Zitats/Verweises.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Referanse">
+                description = <"Referanse til informasjon som er lagret et annen sted, enten i samme elektronisk pasient journal (EPJ/EHR) eller utenfor den elektroniske pasientjournalen.">
+            >
+            ["at0001"] = <
+                text = <"Sitering">
+                description = <"Representasjon av siteringen.">
+            >
+            ["at0002"] = <
+                text = <"URL til original data">
+                description = <"Lenke til original data.">
+            >
+            ["at0003"] = <
+                text = <"Kommentar">
+                description = <"Kommentar til siteringen.">
+            >
+            ["at0004"] = <
+                text = <"Beskrivelse">
+                description = <"Beskrivelse av siteringen.">
+            >
+        >
+        ["pt-br"] = <
+            ["at0000"] = <
+                text = <"Citação">
+                description = <"Referência para informações mantidas em outro lugar do mesmo RES ou de um RES externo.">
+            >
+            ["at0001"] = <
+                text = <"Citação">
+                description = <"Representação da citação.">
+            >
+            ["at0002"] = <
+                text = <"URI dos dados originais">
+                description = <"Link para os dados originais.">
+            >
+            ["at0003"] = <
+                text = <"Comentários">
+                description = <"Comentários sobre a citação.">
+            >
+            ["at0004"] = <
+                text = <"Descrição">
+                description = <"Descrição sobre a citação.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Citation">
+                description = <"Reference to information held elsewhere, in the same EHR or external to the EHR.">
+            >
+            ["at0001"] = <
+                text = <"Citation">
+                description = <"Representation of the citation.">
+            >
+            ["at0002"] = <
+                text = <"URI to original data">
+                description = <"Link to the original data.">
+            >
+            ["at0003"] = <
+                text = <"Comment">
+                description = <"Comment about the citation.">
+            >
+            ["at0004"] = <
+                text = <"Description">
+                description = <"Description about the citation.">
+            >
+        >
+        ["ar-sy"] = <
+            ["at0000"] = <
+                text = <"اقتباس">
+                description = <"المرجع للمعلومات الموجودة في مكان آخر, إما في ذات السجل الطبي الإلكتروني أو في خارج السجل الطبي الإلكتروني">
+            >
+            ["at0001"] = <
+                text = <"الاقتباس">
+                description = <"عرض الاقتباس">
+            >
+            ["at0002"] = <
+                text = <"رابط البيانات الأصلية">
+                description = <"رابط للمعلومات الأصلية">
+            >
+            ["at0003"] = <
+                text = <"تعليق">
+                description = <"تعليق حول الاقتباس">
+            >
+            ["at0004"] = <
+                text = <"الوصف">
+                description = <"وصف حول الاقتباس">
+            >
+        >
+        ["zh-cn"] = <
+            ["at0000"] = <
+                text = <"引用">
+                description = <"*Reference to information held elsewhere, in the same EHR or external to the EHR.(en)">
+            >
+            ["at0001"] = <
+                text = <"引用">
+                description = <"*Representation of the citation.(en)">
+            >
+            ["at0002"] = <
+                text = <"原始数据URI链接">
+                description = <"*Link to the original data.(en)">
+            >
+            ["at0003"] = <
+                text = <"评论">
+                description = <"*Comment about the citation.(en)">
+            >
+            ["at0004"] = <
+                text = <"描述">
+                description = <"*Description about the citation.(en)">
+            >
+        >
+    >

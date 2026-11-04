@@ -1,0 +1,716 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=5fa25043-1568-433a-9251-f1afed6ae381; build_uid=43915af0-25d8-4dd2-b3e9-daa81650999d)
+    openEHR-EHR-EVALUATION.intervention_summary.v1.0.2
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Thomas Weikert">
+                ["organisation"] = <"USB">
+                ["email"] = <"t.weikert@usb.ch">
+            >
+            accreditation = <"USB">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Liv Laugen, Vebjørn Arntzen, John Tore Valand">
+                ["organisation"] = <"​Oslo University Hospital, Norway, Helse Vest IKT">
+                ["email"] = <"liv.laugen@ous-hf.no, varntzen@ous-hf.no, john.tore.valand@helse-vest-ikt.no">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2022-10-28">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Koray Atalag, GALATA-Digital, New Zealand", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway (openEHR Editor)", "Ivar Berge, Oslo University Hospital, Norway (openEHR Editor)", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Randi Brendberg, Helse Nord RHF, Norway", "Hugo Claudio Briceño García, Catsalut, Spain", "Hanne Marte Bårholm, Helse Vest IKT, Norway (openEHR Editor)", "Christian Chevalley, ADOC, Thailand", "Mona Didriksen, Helse Vest IKT, Norway", "Gunn Elin Blakkisrud, DIPS ASA, Norway", "Ciprian Gerstenberger, Helse Nord IKT, Norway (openEHR Editor)", "Rosane Gotardo, Systema Ltda., Brazil", "Heather Grain, Llewelyn Grain Informatics, Australia", "Marianne Gårderhagen, OUS, Norway", "Atle Hansen, Universitetssykehuset Nord-Norge, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Anji Kingman, openOutcomes, Northumbria Healthcare NHS Foundation Trust, United Kingdom", "June Marie Nepstad Knappskog, Helse Nord IKT AS, Norway (openEHR Editor), Norway (openEHR Editor)", "Kanika Kuwelker, Helse Vest IKT, Norway (openEHR Editor)", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Eli Larsen, UNN, Norway (openEHR Editor)", "Liv Laugen, ​Oslo University Hospital, Norway, Norway (openEHR Editor)", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Colin Macfarlane, Elsevier, United Kingdom", "June Marie Knappskog, Helse Nord IKT AS, Norway (openEHR Norway redaktør), Norway (openEHR Norway redaktør)", "Ian McNicoll, freshEHR Clinical Informatics, United Kingdom", "Xabier Michelena, CatSalut, Spain", "Christine Mikalsen, Helse Nord IKT, Norway", "Olha Nikolaieva, University Hospital Basel, Switzerland", "Terje Nordberg, Helse Bergen, Norway", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Jayashree Panickar, India", "Ana Pascual Segura, Catsalut, Spain", "Jannis Pesch, Universitätsspital Basel, Switzerland", "Marlene Pérez Colman, Digital Health and Care Wales, United Kingdom", "Vuk Radnić, Better, Slovenia", "Bipinkumar Rathod, NHS, United Kingdom", "Terje Sagmyr, Helse Vest IKT, Norway (openEHR Editor)", "Videha Sharma, University of Manchester, United Kingdom", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "John Tore Valand, Helse Vest IKT, Norway (openEHR Editor)", "Joana Vicente, Cambio Healthcare Systems, Sweden", "Olga Zaikova, OUS, Radiumhospitalet, Norway", "Karsten Øvretveit, Helse Vest IKT, Norway (openEHR Editor)">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    ip_acknowledgements = <
+        ["1"] = <"This artefact includes content from SNOMED Clinical Terms® (SNOMED CT®) which is copyrighted material of the International Health Terminology Standards Development Organisation (IHTSDO). Where an implementation of this artefact makes use of SNOMED CT content, the implementer must have the appropriate SNOMED CT Affiliate license - for more information contact https://www.snomed.org/snomed-ct/get-snomed or info@snomed.org.">
+    >
+    other_details = <
+        ["MD5-CAM-1.0.1"] = <"270EBCB181F679204E663B1AB32F52BE">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Dokumentation einer begonnenen oder abgeschlossenen therapeutischen Intervention.">
+            keywords = <"Behandlung", "Behandlungsverlauf", "Protokoll", "Therapie", "therapeutisch", "Chirurgie", "Management", "Pflege", "Verfahren", "präventiv", "diagnostisch">
+            use = <"Zur Erfassung einer Zusammenfassung einer begonnenen oder abgeschlossenen therapeutischen Intervention.
+
+Beispiele für die Verwendung umfassen unter anderem:
+
+Eine im Rahmen eines Krebsbehandlungsprotokolls durchgeführte Strahlentherapie.
+
+Eine verabreichte medikamentöse Behandlung.
+
+Ein durchgeführter chirurgischer Eingriff.
+
+Sitzungen der kognitiven Verhaltenstherapie zur Behandlung von Depressionen.
+
+Eine Reihe von pflegerischen Interventionen zur Unterstützung des psychischen und körperlichen Wohlbefindens, z. B. die Bereitstellung emotionaler Unterstützung für Patientinnen und Patienten während einer Krebsbehandlung.
+
+Gemeindeorientierte Unterstützungsprogramme zur Minderung sozialer Faktoren wie Wohnungsinstabilität und sozialer Isolation.
+
+Lebensstil-Beratungsangebote mit dem Ziel, gesundheitsfördernde Verhaltensweisen zu fördern und das allgemeine Wohlbefinden zu verbessern.
+
+Häusliche Pflegedienstleistungen, die einer älteren Person angeboten werden, um Selbstständigkeit und Lebensqualität zu unterstützen.
+
+Das Element „Interventionskategorie“ kann verwendet werden, um eine übergeordnete Gruppierung des „Interventionsnamens“ zu erfassen. Entsprechend kann der „Interventionstyp“ genutzt werden, um die Methode oder den Prozess der Durchführung der Intervention weiter zu spezifizieren. Zum Beispiel:
+
+Kategorie: „Krebsbehandlung“, Name: „Strahlentherapie“ und Typ: „Brachytherapie“
+
+Kategorie: „Chirurgisch“, Name: „Appendektomie“ und Typ: „laparoskopisch“
+
+Kategorie: „Psychosozial“, Name: „Kurzintervention zur Raucherentwöhnung“ und Typ: „Motivational-Interviewing-Technik“">
+            misuse = <"Nicht zur Erfassung aller Details einzelner Interventionsereignisse oder -aktivitäten zu verwenden. Verwenden Sie hierfür ein geeignetes ACTION-Archetyp, zum Beispiel ACTION.procedure.
+
+Nicht zur Zusammenfassung geplanter oder vorgeschlagener Interventionen zu verwenden, die noch nicht begonnen wurden. Verwenden Sie hierfür andere geeignete Archetypen, zum Beispiel EVALUATION.recommendation, ein beliebiges INSTRUCTION-Archetyp oder ein ACTION-Archetyp im Status „geplant“ oder „terminiert“.
+
+Nicht zur Erfassung des Immunisierungs- oder Impfstatus einer Person für einen bestimmten Impfstoff oder eine bestimmte Krankheit bzw. einen Erreger zu verwenden. Verwenden Sie hierfür das Archetyp EVALUATION.vaccination_summary.
+
+Nicht in Fällen zu verwenden, in denen für die betreffende Intervention spezifischere Zusammenfassungs-Archetypen verfügbar sind, zum Beispiel „Impfzusammenfassung“, „Transfusionszusammenfassung“ oder „Medikationszusammenfassung“. Verwenden Sie für solche Zwecke die jeweils verfügbaren spezifischen Archetypen.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere et sammendrag av en terapeutisk intervensjon som har startet eller blitt utført.">
+            keywords = <"behandling, forløp, protokoll, terapi, terapeutisk, kirurgi, omsorg, prosedyre, forebyggende, diagnostisk", ...>
+            use = <"Bruk for å registrere et sammendrag av en terapeutisk intervensjon som har startet eller blitt utført.
+
+Eksempler på bruk inkluderer, men er ikke begrenset til:
+- Et stråleterapiforløp som en del av en kreftbehandling.
+- En medisinsk behandlingsserie som har blitt gitt.
+- Et kirurgisk inngrep som har blitt utført.
+- Kognitiv atferdsterapi brukt i behandling av depresjon.
+- En rekke omsorgsintervensjoner for å støtte psykisk og fysisk velvære, for eksempel emosjonell støtte til pasienter som gjennomgår kreftbehandling.
+- Støttetiltak i kommunale eller andre offentlige tjenester for å bedre sosiale faktorer, som ustabil boligsituasjon og sosial isolasjon.
+- Livsstilsveiledning med mål om å fremme sunne vaner og forbedre generell livskvalitet.
+- Hjemmebaserte tjenester til eldre for å støtte selvstendighet og livskvalitet.
+
+Elementet \"Intervensjonskategori\" kan brukes til å dokumentere en overordnet gruppering av \"Intervensjonsnavn\". Tilsvarende kan \"Intervensjonstype\" brukes til å spesifisere metoden eller prosessen som ble benyttet for å gjennomføre intervensjonen. For eksempel:
+- Kategori: \"Kreftbehandling\", Navn: \"Stråleterapi\", og Type: \"Brakyterapi\"
+- Kategori: \"Kirurgisk\", Navn: \"Appendektomi\", og Type: \"Laparoskopisk\"
+- Kategori: \"Psykososial\", Navn: \"Kort intervensjon for røykeslutt\", og Type: \"Motiverende intervju (MI)\".">
+            misuse = <"Skal ikke brukes til å registrere alle detaljer om hver enkelt intervensjonshendelse eller aktivitet. Bruk en passende ACTION-arketype til dette formålet.
+
+Skal ikke brukes til et sammendrag av planlagte eller foreslåtte intervensjoner som ikke er påbegynt. Bruk andre passende arketyper for dette formålet, for eksempel EVALUATION.recommendation (Anbefaling) , hvilken som helst INSTRUCTION, eller en ACTION i tilstand \"Planned\" or \"Scheduled\".
+
+Skal ikke brukes til å registrere individets vaksinasjonsstatus eller status for immunisering mot en spesifikk sykdom eller agens. Bruk EVALUATION.vaccination_summary arketypen til dette formålet.
+
+Skal ikke brukes i tilfeller der det finnes mer spesifikke sammendragsarketyper for den aktuelle intervensjonen, for eksempel 'Vaccination summary' (Vaksinasjonssammendrag), 'Transfusion summary' eller 'Medication summary' (Legemiddelsammendrag). Bruk de tilgjengelige spesifikke arketypene til slike formål.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record a summary of a commenced or completed therapeutic intervention.">
+            keywords = <"treatment", "course", "protocol", "therapy", "therapeutic", "surgery", "management", "care", "procedure", "preventive", "diagnostic">
+            use = <"Use to record a summary of a commenced or completed therapeutic intervention.
+
+Examples of use include, but are not limited to:
+- A course of radiotherapy carried out as part of a cancer protocol.
+- A course of medical treatment that has been administered.
+- A surgical procedure that has been performed.
+- Cognitive behavioural therapy sessions used in the treatment of depression.
+- A series of caregiving interventions used to support mental and physical well-being, such as providing emotional support to patients undergoing cancer treatment.
+- Community support programs designed to mitigate social factors like housing instability and social isolation.
+- Lifestyle counseling sessions aimed at promoting healthy behaviors and improving overall well-being.
+- Home care services offered to an elderly individual to support independence and quality of life.
+
+The 'Intervention category' element can be used to record an overarching grouping of the 'Intervention name'. Similarly, the 'Intervention type' can be used to further specify the method or process used to deliver the intervention. For example:
+- Category: \"Cancer treatment\", Name: \"Radiotherapy, and Type: \"Brachytherapy\"
+- Category: \"Surgical\", Name: \"Appendectomy\", and Type: \"Laparoscopic\"
+- Category: \"Psychosocial\", Name: \"Smoking cessation brief intervention\", and Type: \"Motivational interviewing technique\".">
+            misuse = <"Not to be used to record all details of each intervention event or activity. Use an appropriate ACTION archetype for this purpose, for example ACTION.procedure.
+
+Not to be used for summarising planned or proposed interventions which have not been started. Use other appropriate archetypes for this purpose, for example EVALUATION.recommendation, any INSTRUCTION, or an ACTION in a ‘planned’ or ‘scheduled’ state.
+
+Not to be used to record the individual's immunisation or vaccination status for a specific vaccine or disease/agent. Use the EVALUATION.vaccination_summary archetype for this purpose.
+
+Not to be used in cases where there are more specific summary archetypes available for the intervention in question, for example 'Vaccination summary', 'Transfusion summary' or 'Medication summary'. Use the available specific archetypes for such purposes.">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Intervention summary
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0003] occurrences matches {1} matches {    -- Intervention name
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    ELEMENT[at0059] matches {    -- Intervention category
+                        value matches {
+                            DV_TEXT[at9019]
+                        }
+                    }
+                    ELEMENT[at0058] occurrences matches {0..1} matches {    -- Intervention type
+                        value matches {
+                            DV_TEXT[at9020]
+                        }
+                    }
+                    ELEMENT[at0028] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9002]
+                        }
+                    }
+                    ELEMENT[at0054] occurrences matches {0..1} matches {    -- Clinical protocol
+                        value matches {
+                            DV_TEXT[at9003]
+                        }
+                    }
+                    ELEMENT[at0033] matches {    -- Clinical indication
+                        value matches {
+                            DV_TEXT[at9004]
+                        }
+                    }
+                    ELEMENT[at0034] matches {    -- Intent
+                        value matches {
+                            DV_TEXT[at9005]
+                        }
+                    }
+                    ELEMENT[at0062] occurrences matches {0..1} matches {    -- Impact
+                        value matches {
+                            DV_TEXT[at9024]
+                        }
+                    }
+                    ELEMENT[at0055] matches {    -- Therapeutic role
+                        value matches {
+                            DV_TEXT[at9007]
+                        }
+                    }
+                    ELEMENT[at0051] occurrences matches {0..1} matches {    -- Therapeutic sequence
+                        value matches {
+                            DV_COUNT[at9006]
+                            DV_TEXT[at9021]
+                        }
+                    }
+                    ELEMENT[at0032] occurrences matches {0..1} matches {    -- Start date
+                        value matches {
+                            DV_DATE_TIME[at9009]
+                        }
+                    }
+                    ELEMENT[at0004] occurrences matches {0..1} matches {    -- Stop date
+                        value matches {
+                            DV_DATE_TIME[at9010]
+                        }
+                    }
+                    ELEMENT[at0005] occurrences matches {0..1} matches {    -- Delivery outcome
+                        value matches {
+                            DV_CODED_TEXT[at9011] matches {
+                                defining_code matches {[ac9023]}    -- Delivery outcome (synthesised)
+                            }
+                            DV_TEXT[at9012]
+                        }
+                    }
+                    ELEMENT[at0007] matches {    -- Reason for delivery outcome
+                        value matches {
+                            DV_TEXT[at9013]
+                        }
+                    }
+                    ELEMENT[at0008] occurrences matches {0..1} matches {    -- Therapeutic outcome
+                        value matches {
+                            DV_TEXT[at9014]
+                        }
+                    }
+                    ELEMENT[at0027] occurrences matches {0..1} matches {    -- Reason for therapeutic outcome
+                        value matches {
+                            DV_TEXT[at9015]
+                        }
+                    }
+                    ELEMENT[at0010] occurrences matches {0..1} matches {    -- Date of last interaction
+                        value matches {
+                            DV_DATE_TIME[at9016]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0019] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0016] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9017]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0002] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    allow_archetype CLUSTER[at0017] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9018]
+                        }
+                    }
+                    ELEMENT[at0057] occurrences matches {0..1} matches {    -- Intervention ID
+                        value matches {
+                            DV_IDENTIFIER[at9022]
+                            DV_TEXT[at9023]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Interventionszusammenfassung">
+                description = <"Eine Zusammenfassung einer therapeutischen Maßnahme, die der Prävention, Diagnose, Behandlung oder dem Management von Gesundheitszuständen dient, das psychische oder körperliche Wohlbefinden unterstützt oder soziale und umweltbedingte Faktoren adressiert, die die Gesundheitsergebnisse beeinflussen.
+">
+            >
+            ["at0003"] = <
+                text = <"Name der Intervention">
+                description = <"Der Name der Intervention">
+                comment = <"Zum Beispiel: „Strahlentherapie“, „Kurzintervention zur Raucherentwöhnung“ oder „Appendektomie“. Eine Kodierung mit einer externen Terminologie wird, sofern möglich, bevorzugt.
+">
+            >
+            ["at0004"] = <
+                text = <"Enddatum">
+                description = <"Das Datum/der Zeitpunkt, an dem die identifizierte Intervention abgeschlossen wurde oder vorzeitig beendet wurde.">
+                comment = <"Zum Beispiel das Datum, an dem die letzte Infusion einer Chemotherapie-Serie verabreicht wurde.">
+            >
+            ["at0005"] = <
+                text = <"Ergebnis der Durchführung">
+                description = <"Das Ergebnis der Intervention basierend darauf, ob sie wie ursprünglich vorgesehen durchgeführt wurde.
+">
+                comment = <"Dieses Element sollte nur verwendet werden, wenn die Intervention abgeschlossen ist. „Wie ursprünglich vorgesehen“, wie in der Beschreibung dieses Elements erwähnt, kann von der unausgesprochenen Absicht eines einzelnen Klinikers, der auf eine akute Situation reagiert, bis hin zu einem formalen, evidenzbasierten klinischen Protokoll oder Behandlungspfad reichen.
+">
+            >
+            ["at0007"] = <
+                text = <"Grund für das Durchführungsergebnis">
+                description = <"Beschreibung des Grundes für das Durchführungsergebnis.">
+                comment = <"Eine Kodierung mit einer externen Terminologie wird, sofern möglich, bevorzugt.">
+            >
+            ["at0008"] = <
+                text = <"Therapeutisches Ergebnis">
+                description = <"Das Ergebnis der Intervention basierend auf ihrer therapeutischen Wirksamkeit.
+">
+                comment = <"Zum Beispiel: erfolgreich, fehlgeschlagen, nicht eindeutig.
+Eine Kodierung mit einer externen Terminologie wird, sofern möglich, bevorzugt.
+">
+            >
+            ["at0010"] = <
+                text = <"Datum der letzten Interaktion">
+                description = <"Datum des zuletzt erfolgten Kontakts zwischen der Person und einem Gesundheitsdienstleister oder einer Einrichtung, klinischer oder nicht-klinischer Art, einschließlich formeller Begegnungen, Beratungen, Außeneinsätze oder anderer Kommunikationsformen.
+">
+            >
+            ["at0016"] = <
+                text = <"Kommentar">
+                description = <"Narrative Beschreibung der Intervention, die in anderen Feldern nicht erfasst ist.
+">
+            >
+            ["at0017"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen, die erforderlich sind, um das Modell mit lokalem Inhalt zu erweitern oder es mit anderen Referenzmodellen oder Formalismen in Einklang zu bringen.
+">
+                comment = <"Zum Beispiel: lokale Informationsanforderungen oder zusätzliche Metadaten zur Angleichung an FHIR.
+">
+            >
+            ["at0018"] = <
+                text = <"Zuletzt aktualisiert">
+                description = <"Das Datum, an dem diese Interventionszusammenfassung zuletzt aktualisiert wurde.
+">
+            >
+            ["at0019"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Zusätzliche strukturierte Angaben zur Intervention.
+">
+                comment = <"Zum Beispiel: Wirkstoffresistenzprofil; klinische Befunde.
+">
+            >
+            ["at0021"] = <
+                text = <"Wie vorgesehen durchgeführt">
+                description = <"Die Intervention wurde vollständig und wie ursprünglich vorgesehen durchgeführt.
+">
+            >
+            ["at0022"] = <
+                text = <"Mit Abweichungen durchgeführt">
+                description = <"Die Intervention wurde vollständig durchgeführt, jedoch nicht wie ursprünglich vorgesehen.
+">
+            >
+            ["at0027"] = <
+                text = <"Grund für das therapeutische Ergebnis">
+                description = <"Beschreibung des Grundes für das therapeutische Ergebnis.
+">
+                comment = <"Zum Beispiel: „Medikamentenresistenz“, „Tumor sprach auf die Behandlung an“ und „Tumor sprach nicht auf die Behandlung an“.
+">
+            >
+            ["at0028"] = <
+                text = <"Beschreibung">
+                description = <"Narrative Beschreibung der Intervention.">
+            >
+            ["at0032"] = <
+                text = <"Startdatum">
+                description = <"Das Datum/der Zeitpunkt, an dem die identifizierte Intervention erstmals begonnen wurde.">
+                comment = <"Zum Beispiel das Datum, an dem die erste Infusion einer Chemotherapie-Serie begonnen wurde.">
+            >
+            ["at0033"] = <
+                text = <"Klinische Indikation">
+                description = <"Das Symptom, das Anzeichen, das Problem oder die Diagnose, das/die die Intervention erforderlich macht.">
+                comment = <"Eine Kodierung der „klinischen Indikation“ mit einer externen Terminologie wird, sofern verfügbar, empfohlen. Dieses Datenelement kann mehrfach erfasst werden, um die Dokumentation von mehr als einer klinischen Indikation pro Intervention zu ermöglichen.">
+            >
+            ["at0034"] = <
+                text = <"Absicht">
+                description = <"Beschreibung der Absicht der Intervention.">
+                comment = <"Zum Beispiel präventiv, diagnostisch, kurativ oder palliativ. Eine Kodierung der „Absicht“ mit einer externen Terminologie wird, sofern verfügbar, empfohlen. Dieses Datenelement kann mehrfach erfasst werden, um die Dokumentation von mehr als einer Absicht zu ermöglichen.
+">
+            >
+            ["at0051"] = <
+                text = <"Therapeutische Abfolge">
+                description = <"Die Position dieser „Intervention“ innerhalb einer Abfolge, die durch ein übergeordnetes Behandlungsprotokoll definiert ist.">
+                comment = <"Zum Beispiel: Erstlinien-, Zweitlinien- oder Rettungs-/Salvage-Behandlungen.
+">
+            >
+            ["at0054"] = <
+                text = <"Klinisches Protokoll">
+                description = <"Identifizierung des klinischen Protokolls, der Leitlinie oder der maßgeblichen Referenz, die die Intervention unterstützt oder rechtfertigt.">
+            >
+            ["at0055"] = <
+                text = <"Therapeutische Rolle">
+                description = <"Der klinische Zweck einer Intervention im Rahmen eines umfassenderen Behandlungsprotokolls, der den beabsichtigten Zeitpunkt oder die Funktion in Bezug auf die übergeordnete therapeutische Strategie angibt.
+">
+                comment = <"Zum Beispiel Hauptbehandlung, neoadjuvant, gleichzeitig, adjuvant, präoperativ oder postoperativ, akut, fortlaufend, Erhaltungsbehandlung.
+">
+            >
+            ["at0057"] = <
+                text = <"Interventions ID">
+                description = <"Identifizierung der Intervention
+">
+                comment = <"Der vom klinischen System, das die Intervention anfordert oder durchführt, vergebene Bezeichner der Intervention. Dieser kann aus dem lokalen EHR in einem INSTRUCTION- oder ACTION-Archetyp stammen oder von einem externen Anforderer bzw. Gesundheitsdienstleister vergeben werden.
+">
+            >
+            ["at0058"] = <
+                text = <"Interventions Typ">
+                description = <"Eine spezifischere Methode oder ein Verfahren zur Durchführung der unter „Name der Intervention“ identifizierten Intervention.
+">
+                comment = <"Zum Beispiel: „Brachytherapie“, „Motivational-Interviewing-Technik“ oder „Laparoskopisch“.">
+            >
+            ["at0059"] = <
+                text = <"Interventions Kategorie">
+                description = <"Eine übergeordnete Gruppierung für die unter „Name der Intervention“ identifizierte Intervention.">
+                comment = <"Zum Beispiel: „Krebsbehandlung“, „Psychosozial“ oder „Chirurgisch“.">
+            >
+            ["at0060"] = <
+                text = <"Unbekannt">
+                description = <"Es ist unbekannt, ob die Intervention wie ursprünglich vorgesehen durchgeführt wurde.
+">
+            >
+            ["at0061"] = <
+                text = <"Teilweise durchgeführt">
+                description = <"Die Intervention wurde begonnen, jedoch wurden nicht alle Teile wie ursprünglich vorgesehen durchgeführt.
+">
+            >
+            ["at0062"] = <
+                text = <"*DV_TEXT (en)">
+                description = <"">
+            >
+            ["ac9023"] = <
+                text = <"Ergebnis der Durchführung (synthesised)">
+                description = <"Das Ergebnis der Intervention basierend darauf, ob sie wie ursprünglich vorgesehen durchgeführt wurde.
+ (synthesised)">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Intervensjonssammendrag">
+                description = <"Et sammendrag av en terapeutisk aktivitet som har til hensikt å forebygge, diagnostisere, behandle eller håndtere helsetilstander, støtte mental eller fysisk velvære, eller adressere sosiale og miljømessige faktorer som påvirker helseutfall.">
+            >
+            ["at0003"] = <
+                text = <"Intervensjonsnavn">
+                description = <"Navnet på intervensjonen.">
+                comment = <"For eksempel: «Stråleterapi», «Kort intervensjon for røykeslutt» eller «Appendektomi». Koding med en ekstern terminologi er foretrukket der det er mulig.">
+            >
+            ["at0004"] = <
+                text = <"Sluttdato">
+                description = <"Dato/tidspunkt da den identifiserte intervensjonen ble fullført, eller avsluttet før den ble fullført.">
+                comment = <"For eksempel datoen da den siste i en serie med cellegiftinfusjoner ble gitt.">
+            >
+            ["at0005"] = <
+                text = <"Gjennomføringsresultat">
+                description = <"Resultatet av intervensjonen, basert på om den var gjennomført som opprinnelig tiltenkt.">
+                comment = <"Dette dataelementet bør bare bli brukt etter at intervensjonen har blitt fullført. \"Som opprinnelig tiltenkt\", som er omtalt i beskrivelsen av dette dataelementet kan bety alt fra en uuttalt hensikt hos en enkelt kliniker som respons til en akuttsituasjon, til en formell og evidensbasert klinisk protokoll eller behandlingslinje.">
+            >
+            ["at0007"] = <
+                text = <"Begrunnelse for gjennomføringsresultat">
+                description = <"Beskrivelse av årsaken til gjennomføringsresultatet.">
+                comment = <"Koding med en terminologi er foretrukket, dersom det er mulig.">
+            >
+            ["at0008"] = <
+                text = <"Terapeutisk resultat">
+                description = <"Resultatet av intervensjonen basert på terapeutisk effekt.">
+                comment = <"For eksempel: vellykket, ikke vellykket, usikker.
+Koding med en terminologi er foretrukket, dersom det er mulig.">
+            >
+            ["at0010"] = <
+                text = <"Dato for siste kontakt">
+                description = <"Dato for den siste kontakten mellom individet og helsepersonell eller helsetjenesten, enten klinisk eller ikke-klinisk, inkludert innleggelse/poliklinisk kontakt, konsultasjoner, oppsøkende virksomhet eller andre former for kommunikasjon.">
+            >
+            ["at0016"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om intervensjonen som ikke er fanget i andre felt.">
+            >
+            ["at0017"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0018"] = <
+                text = <"Sist oppdatert">
+                description = <"Datoen da dette intervensjonssammendraget sist ble oppdatert.">
+            >
+            ["at0019"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere strukturerte detaljer relatert til intervensjonen.">
+                comment = <"For eksempel om legemiddelresistens eller klinisk grunnlag.">
+            >
+            ["at0021"] = <
+                text = <"Gjennomført som tiltenkt">
+                description = <"Intervensjonen ble gjennomført i sin helhet og som opprinnelig tiltenkt.">
+            >
+            ["at0022"] = <
+                text = <"Gjennomført med avvik">
+                description = <"Intervensjonen ble gjennomført i sin helhet, men ikke som opprinnelig tiltenkt.">
+            >
+            ["at0027"] = <
+                text = <"Begrunnelse for terapeutisk resultat">
+                description = <"Beskrivelse av årsaken til terapeutisk resultat.">
+                comment = <"For eksempel: «Legemiddelresistens», «Tumor responderte på behandling» og «Tumor responderte ikke på behandling».">
+            >
+            ["at0028"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstlig beskrivelse om intervensjonen.">
+            >
+            ["at0032"] = <
+                text = <"Startdato">
+                description = <"Dato/tidspunkt da den identifiserte intervensjonen først startet.">
+                comment = <"For eksempel datoen da den første i en serie med cellegiftinfusjoner startet.">
+            >
+            ["at0033"] = <
+                text = <"Klinisk indikasjon">
+                description = <"Symptomet, sykdomstegnet, problemet eller diagnosen som gjør intervensjonen nødvendig.">
+                comment = <"Koding av \"Klinisk indikasjon\" med en terminologi er foretrukket, dersom det er mulig. Dette dataelementet tillater flere forekomster, slik at det kan registrere flere kliniske indikasjoner per intervensjon.">
+            >
+            ["at0034"] = <
+                text = <"Intensjon">
+                description = <"Beskrivelse av intensjonen for intervensjonen.">
+                comment = <"For eksempel forebyggende, diagnostisk, kurativ eller ikke-kurativ hensikt. Koding av «Intensjon» med en ekstern terminologi anbefales, hvis tilgjengelig. Dette dataelementet tillater flere forekomster, slik at det er mulig å registrere flere behandlingshensikter.">
+            >
+            ["at0051"] = <
+                text = <"Terapeutisk sekvens">
+                description = <"Posisjonen til denne intervensjonen innenfor en sekvens definert av en bredere behandlingsprotokoll.">
+                comment = <"For eksempel: Førstelinje-, andrelinje- eller rednings-/salvage-behandlinger.">
+            >
+            ["at0054"] = <
+                text = <"Klinisk protokoll">
+                description = <"Identifikasjon av den kliniske protokollen, retningslinjen eller den autoritative referansen som støtter eller begrunner intervensjonen.">
+            >
+            ["at0055"] = <
+                text = <"Terapeutisk rolle">
+                description = <"Den kliniske hensikten med en intervensjon innenfor rammen av en bredere behandlingsprotokoll, som spesifiserer dens tiltenkte tidspunkt eller funksjon i forhold til den overordnede terapeutiske strategien.">
+                comment = <"For eksempel hovedbehandling, neoadjuvant, samtidig (concomitant), adjuvant, preoperativ eller postoperativ, akutt, videreføring/oppfølging eller vedlikehold.">
+            >
+            ["at0057"] = <
+                text = <"Intervensjons ID">
+                description = <"Identifiksjons-ID til intervensjonen.">
+                comment = <"Identifikatoren som er tildelt intervensjonen av det kliniske systemet som bestiller eller utfører intervensjonen. Dette kan komme fra den lokale elektroniske pasientjournalen (EPJ) i en INSTRUCTION- eller ACTION-arketype, eller fra en ekstern rekvirent eller helsetjenesteleverandør.">
+            >
+            ["at0058"] = <
+                text = <"Intervensjonstype">
+                description = <"En mer spesifikk metode eller prosess for å gjennomføre intervensjonen identifisert i «Intervensjonsnavn».">
+                comment = <"For eksempel «Brakyterapi», «Motiverende intervju-teknikk» eller «Laparoskopisk».">
+            >
+            ["at0059"] = <
+                text = <"Intervensjonskategori">
+                description = <"En overordnet gruppering for intervensjonen identifisert i «Intervensjonsnavn».">
+                comment = <"For eksempel «Kreftbehandling», «Psykososial» eller «Kirurgi».">
+            >
+            ["at0060"] = <
+                text = <"Ukjent">
+                description = <"Det er ikke kjent om intervensjonen ble gjennomført som opprinnelig tiltenkt.">
+            >
+            ["at0061"] = <
+                text = <"Delvis gjennomført">
+                description = <"Intervensjonen var gjennomført, men ikke alle delene ble gjennomført som opprinnelig tiltenkt.">
+            >
+            ["at0062"] = <
+                text = <"Innvirkning">
+                description = <"Vurdering av innvirkningen av en prosedyre eller dens utfall for en spesifikk pasient.
+">
+                comment = <"Den samme prosedyren, med samme alvorlighetsgrad eller utfall, kan ha ulik innvirkning på ulike pasienter. Denne relevanskvalifikatoren innebærer å justere den totale påvirkningen av prosedyren basert på pasientens individuelle medisinske og funksjonelle forutsetninger. 
+To pasienter har gjennomgått samme prosedyre med samme utfall: osteosyntese av lillefingeren på den ikke-dominante hånden. 
+Den ene er gartner eller bygningsarbeider; den andre er pianist. Påvirkningen av prosedyren er STØRRE for pianisten (lengre sykefravær, behov for full funksjonell rehabilitering for å tilpasse seg de høye kravene til finmotorikk i arbeidet).
+
+Dette elementet er ment å åpne for flere typer innvirkning, inkludert, men ikke begrenset til: klinisk behandling, funksjon i hjemmet eller arbeidssituasjon.">
+            >
+            ["ac9023"] = <
+                text = <"Gjennomføringsresultat (synthesised)">
+                description = <"Resultatet av intervensjonen, basert på om den var gjennomført som opprinnelig tiltenkt. (synthesised)">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Intervention summary">
+                description = <"A summary about a therapeutic activity intended to prevent, diagnose, treat, or manage health conditions, support mental or physical well-being, or address social and environmental factors that influence health outcomes.">
+            >
+            ["at0003"] = <
+                text = <"Intervention name">
+                description = <"The name of the intervention.">
+                comment = <"For example: 'Radiotherapy', 'Smoking cessation brief intervention' or 'Appendectomy'. Coding with an external terminology is preferred, where possible.">
+            >
+            ["at0004"] = <
+                text = <"Stop date">
+                description = <"The date/time when the identified intervention was completed, or stopped prior to the completion.">
+                comment = <"For example the date when the last in a series of chemotherapy infusions was administered.">
+            >
+            ["at0005"] = <
+                text = <"Delivery outcome">
+                description = <"The outcome of the intervention based on whether it was delivered as originally intended.">
+                comment = <"This element should only be used when the intervention has ended. \"As originally intended\" as mentioned in the description of this element may range from the unstated intent of a single clinician responding to an acute situation, to a formal and evidence-based clinical protocol or pathway.">
+            >
+            ["at0007"] = <
+                text = <"Reason for delivery outcome">
+                description = <"Description of the reason for the delivery outcome.">
+                comment = <"Coding with an external terminology is preferred, where possible.">
+            >
+            ["at0008"] = <
+                text = <"Therapeutic outcome">
+                description = <"The outcome of the intervention based on its therapeutic effectiveness.">
+                comment = <"For example: successful, failed, indeterminate. 
+Coding with an external terminology is preferred, where possible.">
+            >
+            ["at0010"] = <
+                text = <"Date of last interaction">
+                description = <"Date of the most recent contact between the individual and a healthcare provider or service, whether clinical or non-clinical, including formal encounters, consultations, outreach, or other forms of communication.">
+            >
+            ["at0016"] = <
+                text = <"Comment">
+                description = <"Narrative description about the intervention, not captured in other fields.">
+            >
+            ["at0017"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0018"] = <
+                text = <"Last updated">
+                description = <"The date this intervention summary was last updated.">
+            >
+            ["at0019"] = <
+                text = <"Additional details">
+                description = <"Additional structured details about the intervention.">
+                comment = <"For example: drug resistance profile; clinical evidence.">
+            >
+            ["at0021"] = <
+                text = <"Delivered as intended">
+                description = <"The intervention was delivered in full and as originally intended.">
+            >
+            ["at0022"] = <
+                text = <"Delivered with deviations">
+                description = <"The intervention was delivered in full, but not as originally intended.">
+            >
+            ["at0027"] = <
+                text = <"Reason for therapeutic outcome">
+                description = <"Description of the reason for the therapeutic outcome.">
+                comment = <"For example: 'Drug resistance', 'Tumour responded to treatment' and 'Tumour did not respond to treatment'.">
+            >
+            ["at0028"] = <
+                text = <"Description">
+                description = <"Narrative description about the intervention.">
+            >
+            ["at0032"] = <
+                text = <"Start date">
+                description = <"The date/time when the identified intervention first commenced.">
+                comment = <"For example the date when the first in a series of chemotherapy infusions started.">
+            >
+            ["at0033"] = <
+                text = <"Clinical indication">
+                description = <"The symptom, sign, problem or diagnosis that necessitates the intervention.">
+                comment = <"Coding of the 'Clinical indication' with an external terminology is recommended, if available. This data element has multiple occurrences to allow the recording of more than one clinical indication per intervention.">
+            >
+            ["at0034"] = <
+                text = <"Intent">
+                description = <"Description of the intent for the intervention.">
+                comment = <"For example preventive, diagnostic, curative or palliative intent. Coding of the 'Intent\" with an external terminology is recommended, if available. This data element has multiple occurrences to allow the recording of more than one intent.">
+            >
+            ["at0051"] = <
+                text = <"Therapeutic sequence">
+                description = <"The position of this 'Intervention' within a sequence defined by a broader treatment protocol.">
+                comment = <"For example: First-line, second-line, or rescue/salvage treatments.">
+            >
+            ["at0054"] = <
+                text = <"Clinical protocol">
+                description = <"Identification of the clinical protocol, guideline, or authoritative reference that supports or justifies the intervention.">
+            >
+            ["at0055"] = <
+                text = <"Therapeutic role">
+                description = <"The clinical purpose of an intervention within the context of a broader treatment protocol, specifying its intended timing or function in relation to the overall therapeutic strategy.">
+                comment = <"For example main treatment, neoadjuvant, concomitant, adjuvant, preoperative or postoperative, acute, continuation, maintenance.">
+            >
+            ["at0057"] = <
+                text = <"Intervention ID">
+                description = <"Identification of the intervention.">
+                comment = <"The identifier assigned to the intervention by the clinical system requesting or performing the intervention. This can be from the local EHR in a INSTRUCTION or ACTION archetype, or from an external requester or health service provider.">
+            >
+            ["at0058"] = <
+                text = <"Intervention type">
+                description = <"A more specific method or process for delivering the intervention identified in ‘Intervention name’.">
+                comment = <"For example ‘Brachytherapy’, ‘Motivational interviewing technique’ or ‘Laparoscopic’.">
+            >
+            ["at0059"] = <
+                text = <"Intervention category">
+                description = <"An overarching grouping for the intervention identified in 'Intervention name'.">
+                comment = <"For example 'Cancer treatment', 'Psychosocial' or ‘Surgical'.">
+            >
+            ["at0060"] = <
+                text = <"Unknown">
+                description = <"It is unknown whether the intervention was delivered as originally intended.">
+            >
+            ["at0061"] = <
+                text = <"Partially delivered">
+                description = <"The intervention was commenced, but not all parts were delivered as originally intended.">
+            >
+            ["at0062"] = <
+                text = <"Impact">
+                description = <"Assessment of the impact of a procedure or its outcome for a specific patient.">
+                comment = <"The same procedure, with the same severity or outcome, can have a different impact on each patient. This relevance factor involves adjusting the overall impact of that procedure or outcome according to the patient's characteristics.
+
+For example: Two patients have undergone the same procedure with the same outcome: osteosynthesis repair of the fifth finger of their non-dominant hand.
+
+One is a gardener or construction worker; the other, a pianist.
+
+The impact of that procedure on the pianist is GREATER (longer sick leave, need for full functional rehabilitation to adapt to the high fine motor demands of work).
+
+This element is intended to allow for multiple types of impact, including but not limited to: clinical treatment, home functioning, or work life.">
+            >
+            ["ac9023"] = <
+                text = <"Delivery outcome (synthesised)">
+                description = <"The outcome of the intervention based on whether it was delivered as originally intended. (synthesised)">
+            >
+        >
+    >
+    value_sets = <
+        ["ac9023"] = <
+            id = <"ac9023">
+            members = <"at0021", "at0022", "at0061", "at0060">
+        >
+    >

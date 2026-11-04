@@ -1,0 +1,340 @@
+archetype (adl_version=2.4.0; rm_release=1.1.0; generated; uid=ac7fd6bc-9d60-4401-8f75-ed2d6819b54d; build_uid=3c8f2ace-cc4d-4429-aaef-b98662e8d218)
+    openEHR-EHR-EVALUATION.social_network.v1.0.1
+
+language
+    original_language = <[ISO_639-1::en]>
+    translations = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            author = <
+                ["name"] = <"Darin Leonhardt">
+                ["organisation"] = <"PLRI">
+                ["email"] = <"leonhardt.darin@mh-hannover.de">
+            >
+            accreditation = <"-">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            author = <
+                ["name"] = <"Vebjørn Arntzen, John Tore Valand, Liv Laugen">
+                ["organisation"] = <"Oslo University Hospital, Helse Vest IKT AS, Helse Bergen, ​Oslo University Hospital, Norway">
+                ["email"] = <"varntzen@ous-hf.no, john.tore.valand@helse-vest-ikt.no, liv.laugen@ous-hf.no">
+            >
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            author = <
+                ["name"] = <"Vanessa Pereira">
+                ["organisation"] = <"Better - Pathfinder">
+                ["email"] = <"vanessapereira@protonmail.com">
+            >
+        >
+    >
+
+description
+    original_author = <
+        ["name"] = <"Heather Leslie">
+        ["organisation"] = <"Atomica Informatics">
+        ["email"] = <"heather.leslie@atomicainformatics.com">
+        ["date"] = <"2018-05-29">
+    >
+    original_namespace = <"org.openehr">
+    original_publisher = <"openEHR Foundation">
+    other_contributors = <"Vebjørn Arntzen, Oslo University Hospital, Norway (openEHR Editor)", "Silje Ljosland Bakke, Helse Vest IKT AS, Norway", "SB Bhattacharyya, Bhattacharyyas Clinical Records Research & Informatics LLP, India", "Samanta Dallagnese, Prontmed, Brazil", "Stefan Dubois, Dep't of Pathology and Genetics, University Hospitals of Lund and Malmö, Sweden", "Heather Grain, Llewelyn Grain Informatics, Australia", "Mikkel Johan Gaup Grønmo, Regional forvaltning EPJ, Helse Nord, Norway", "Evelyn Hovenga, EJSH Consulting, Australia", "Akriti Jamwal, DCHIKITSA Pvt Ltd, India", "Jörgen Kuylenstierna, eWeave AB, Sweden", "Liv Laugen, ​Oslo University Hospital, Norway, Norway", "Heather Leslie, Atomica Informatics, Australia (openEHR Editor)", "Rikard Lovstrom, Swedish Medical Association, Sweden", "Michael Lutz, BITsoft, Germany", "Anna Navarro Serra, IN2, Spain", "Mikael Nyström, Cambio Healthcare Systems AB, Sweden", "Albert Reyes Morente, IN2, Spain", "Bjoern Schreiweis, UKSH, Germany", "Natalia Strauch, Medizinische Hochschule Hannover, Germany", "Norwegian Review Summary, Norwegian Public Hospitals, Norway", "Nyree Taylor, Ocean Informatics, Australia", "Anders Thurin, VGR, Sweden", "John Tore Valand, Helse Bergen, Norway (openEHR Editor)", "Marit Alice Venheim, Helse Vest IKT, Norway (openEHR Editor)", "Michael Zampaglione, Australia">
+    lifecycle_state = <"published">
+    custodian_namespace = <"org.openehr">
+    custodian_organisation = <"openEHR Foundation">
+    licence = <"This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/4.0/.">
+    other_details = <
+        ["current_contact"] = <"Heather Leslie, Atomica Informatics<heather.leslie@atomicainformatics.com>">
+        ["MD5-CAM-1.0.1"] = <"DB7D4B698449B0D99CB352CDB935B693">
+    >
+    details = <
+        ["de"] = <
+            language = <[ISO_639-1::de]>
+            purpose = <"Zur Erfassung von Informationen über die Schlüsselpersonen, die mit der Person durch soziale Interaktionen und persönliche Beziehungen vernetzt sind.">
+            keywords = <"Partner, Partnerschaft, Beziehung, Familie, Unterstützung, ehelich, verheiratet, defacto, Ehe, ledig, verwitwet, Witwe, Witwer, geschieden, unverheiratet, Freund, Nachbar", ...>
+            use = <"Der Archetyp wird verwendet, um Informationen über die Schlüsselpersonen aufzuzeichnen, die mit der Person durch soziale Interaktionen und persönliche Beziehungen vernetzt sind, indem sie persönliche Unterstützung oder Pflege leisten.
+
+Dieser Archetyp wurde so konzipiert, dass er als Teil einer einzigen, dauerhaften Vorlage in der Gesundheitsakte aufgezeichnet wird, so dass alle Netzwerkänderungen als neue oder aktualisierte Version der Vorlage aufgezeichnet werden.
+
+Der Anwendungsbereich dieses Archetyps umfasst alle Arten von Interaktionen, z. B. von Angesicht zu Angesicht oder über soziale Medien, mit einem breiten Spektrum von Personen, darunter Familienmitglieder, Freunde, Mitglieder der Gemeinschaft oder Organisationen. Das soziale Netzwerk kann selbst identifiziert oder von einer Pflegeperson oder einem Gesundheitsdienstleister dokumentiert werden.
+
+Einzelheiten zu jeder Person oder Organisation innerhalb des sozialen Netzwerks der Person werden unter Verwendung der Archetypen CLUSTER.person oder CLUSTER.organisation aufgezeichnet, die im SLOT \"Netzwerk\" verschachtelt sind, einschließlich ihrer Rolle oder Beziehung.
+
+In den meisten Rechtsordnungen gibt es Beschränkungen für die legale Erfassung von Daten über andere Personen in der Gesundheitsakte. Alle Implementierungen müssen die für die Verwendung dieses Archetyps relevanten rechtlichen Beschränkungen berücksichtigen.">
+            misuse = <"Nicht zur Aufzeichnung von Details über Gesundheitsdienstleister oder Pflegeteams zu verwenden.
+
+Nicht zur Aufzeichnung von Einzelheiten über rechtliche Beschränkungen oder Anordnungen wie Sorgerechtsregelungen oder Vormundschaft - verwenden Sie zu diesem Zweck EVALUATION.legal_directive.
+
+Nicht zur Darstellung eines formalen Identifikationsmanagements oder zum Ersetzen oder um ein offizielles demografisches Register oder einen Index zu führen. Verwenden Sie zu diesem Zweck einen formalen demografischen Index oder Archetypen, die auf dem openEHR Demographic Information Model basieren.
+
+Nicht zur Darstellung des Behandlungsgegenstandes, der Teilnehmer oder des Autors des Datensatzes und ähnlicher Datenelemente, die formal in der Gesundheitsakte unter Verwendung der Attribute des Referenzmodells dargestellt werden sollten.">
+        >
+        ["nb"] = <
+            language = <[ISO_639-1::nb]>
+            purpose = <"For å registrere informasjon om nøkkelpersoner som hører sammen med individet gjennom sosial interaksjon og personlige forbindelser.">
+            keywords = <"slektning", "pårørende", "venn", "venninne", "nabo", "barn", "familie", "søsken", "forelder", "ektefelle", "gift", "ugift", "enslig", "enke", "enkemann", "ekteskap", "singel", "skilt", "samboer", "kjæreste", "partner", "særbo", "forhold">
+            use = <"Brukes for å registrere informasjon om nøkkelpersoner som hører sammen med individet gjennom sosial interaksjon og personlige forbindelser, både som sosial støtte eller omsorg (ikke helsetjenester) for individet.
+
+Denne arketypen er designet slik at den brukes som en del av et enkelt persistent templat/dokument i pasientjournalen slik at endringer eller oppdateringer av individets nettverk blir registrert som en ny eller oppdatert versjon av templatet/dokumentet. 
+
+Arketypen inkluderer alle typer interaksjoner, som kontakt ansikt til ansikt eller via sosiale media, og med et bredt spekter av individer, inkludert familiemedlemmer, venner, personer i lokalsamfunnet eller organisasjoner. Det sosiale nettverket kan være identifisert av individet selv, eller dokumentert av en omsorgsperson eller helsepersonell.
+
+Detaljer om hver enkelt person eller organisasjon i et individs sosiale nettverk, registreres ved å benytte arketypen CLUSTER.person (Person) eller CLUSTER.organisation (Organisasjon) nøstet i SLOTet \"Nettverk\".
+
+I de fleste jurisdiksjoner vil det være begrensinger på hva som er tillatt å registrere om andre personer i en pasientjournal. Alle implementasjoner av denne arketypen må vurdere eventuelle juridiske begrensninger rundt dette.">
+            misuse = <"Brukes ikke brukes for å registrere detaljer om helsepersonell eller omsorgsteam.
+
+Brukes ikke for å registrere detaljer om juridiske begrensninger eller direktiver, som for eksempel foreldrerett eller vergemål. Bruk arketypen EVALUATION.legal_directive for dette formålet.
+
+Brukes ikke til å representere eller erstatte demografiske opplysninger i en formelle identitetsforvaltning eller for å opprette eller forvalte et demografisk register eller indeks. Bruk et formelt pasientregister, helsepersonellregister eller arketyper basert på openEHR demografisk informasjonsmodell til dette formålet.
+
+Brukes ikke for å registrere pasienten, deltakende helsepersonell, forfatter av journaldokumenter eller lignende dataelementer som skal representeres formelt i pasientjournalen. Bruk attributter fra Referansemodellen til dette formålet.">
+        >
+        ["en"] = <
+            language = <[ISO_639-1::en]>
+            purpose = <"To record information about the key people who are connected to the individual through social interactions and personal relationships.">
+            keywords = <"partner, partnership, relationship, family, support, marital, married, defacto, marriage, single, widowed, widow, widower, divorced, unmarried, friend, neighbour", ...>
+            use = <"Use to record information about the key people who are connected to the individual through social interactions and personal relationships, by the provision of personal support or care.
+
+This archetype has been designed to be recorded as part of a single, persistent template within the health record, such that any network changes are recorded as a new or updated version of the template.
+
+The scope of this archetype includes all types of interactions, such as face-to-face or using social media, with a broad range of people including family members, friends, community members or organisations. The social network can be self-identified or documented by a carer or healthcare provider.
+
+Details about each person or organisation within the individual's social network is recorded using the CLUSTER.person or CLUSTER.organisation archetypes nested within the 'Network' SLOT, including their role or relationship.
+
+In most jurisdictions, there will be limitations on what is legal to record about other people within the health record. All implementations will need to consider the legal constraints relevant to using this archetype.">
+            misuse = <"Not to be used to record details about healthcare providers or care teams.
+
+Not to be used to record details about legal constraints or directives such as custody arrangements or guardianship - use EVALUATION.legal_directive for this purpose.
+
+Not to be used to represent or replace formal identification management or for the purposes of maintaining an official demographic register or index. Use a formal Demographic index for this purpose, or archetypes based on the openEHR Demographic Information Model.
+
+Not to be used to represent the subject of care, participants or author of the record and similar data elements that should be represented formally in the health record using the Reference Model attributes.">
+            copyright = <"© openEHR Foundation">
+        >
+        ["fr"] = <
+            language = <[ISO_639-1::fr]>
+            purpose = <"*To record information about the key people who are connected to the individual through social interactions and personal relationships. (en)">
+            keywords = <"*partner, partnership, relationship, family, support, marital, married, defacto, marriage, single, widowed, widow, widower, divorced, unmarried, friend, neighbour (en)", ...>
+            use = <"*Use to record information about the key people who are connected to the individual through social interactions and personal relationships, by the provision of personal support or delivery of health care.
+
+This archetype has been designed to be recorded as part of a single, persistent template within the health record, such that any network changes are recorded as a new or updated version of the template.
+
+The scope of this archetype includes all types of interactions, such as face-to-face or using social media, with a broad range of people including family members, friends, community members or organisations. The social network can be self-identified or documented by a carer or healthcare provider.
+
+Details about each person or organisation within the individual's social network is recorded using the CLUSTER.person or CLUSTER.organisation archetypes nested within the 'Network' SLOT, including their role or relationship.
+
+In most jurisdictions, there will be limitations on what is legal to record about other people within the health record. All implementations will need to consider the legal constraints relevant to using this archetype. (en)">
+            misuse = <"*Not to be used to record details about healthcare providers or care teams.
+
+Not to be used to record details about legal constraints or directives such as custody arrangements or guardianship - use EVALUATION.legal_directive for this purpose.
+
+Not to be used to represent or replace formal identification management or for the purposes of maintaining an official demographic register or index. Use a formal Demographic index for this purpose, or archetypes based on the openEHR Demographic Information Model.
+
+Not to be used to represent the subject of care, participants or author of the record and similar data elements that should be represented formally in the health record using the Reference Model attributes. (en)">
+        >
+    >
+
+definition
+    EVALUATION[at0000] matches {    -- Social network
+        data matches {
+            ITEM_TREE[at0001] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0015] occurrences matches {0..1} matches {    -- Description
+                        value matches {
+                            DV_TEXT[at9010]
+                        }
+                    }
+                    ELEMENT[at0002] occurrences matches {0..1} matches {    -- Partnership status
+                        value matches {
+                            DV_TEXT[at9001]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0016] matches {    -- Network
+                        include
+                            archetype_id/value matches {/openEHR-EHR-CLUSTER\.person(-[a-zA-Z0-9_]+)*\.v1\..*|openEHR-EHR-CLUSTER\.organisation(-[a-zA-Z0-9_]+)*\.v1\..*/}
+                    }
+                    allow_archetype CLUSTER[at0017] matches {    -- Additional details
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                    ELEMENT[at0018] occurrences matches {0..1} matches {    -- Comment
+                        value matches {
+                            DV_TEXT[at9011]
+                        }
+                    }
+                }
+            }
+        }
+        protocol matches {
+            ITEM_TREE[at0010] matches {
+                items cardinality matches {0..*; unordered} matches {
+                    ELEMENT[at0011] occurrences matches {0..1} matches {    -- Last updated
+                        value matches {
+                            DV_DATE_TIME[at9007]
+                        }
+                    }
+                    allow_archetype CLUSTER[at0012] matches {    -- Extension
+                        include
+                            archetype_id/value matches {/.*/}
+                    }
+                }
+            }
+        }
+    }
+
+terminology
+    term_definitions = <
+        ["de"] = <
+            ["at0000"] = <
+                text = <"Soziales Netzwerk">
+                description = <"Gruppe von Personen, die durch soziale Interaktionen und persönliche Beziehungen miteinander vernetzt sind.">
+            >
+            ["at0002"] = <
+                text = <"Status der Partnerschaft">
+                description = <"Einzelnes Wort oder Satz, der die aktuelle Beziehung einer Person zu einem Lebenspartner beschreibt.">
+                comment = <"Eine Kodierung des Partnerschaftsstatus mit einer Terminologie wird nach Möglichkeit bevorzugt. Es gibt eine große Variation in den verwendeten Wertesätzen in den verschiedenen Rechtsordnungen. Viele haben lokale, staatlich vorgeschriebene Wertesätze, statt der Verwendung von SNOMED CT oder ähnliches. Zum Beispiel: ein „Familienstand“-Wertesatz einschließlich „nie verheiratet“ oder „ledig“; 'verheiratet'; 'geschieden'; oder „verwitwet“. Auch als „Zivilstand“, „Partnerschaftsstatus“ oder „Beziehungsstatus“ bekannt.">
+            >
+            ["at0011"] = <
+                text = <"Letzte Aktualisierung">
+                description = <"Datum, an dem das soziale Netzwerk aktualisiert wurde.">
+                comment = <"Bei der Implementierung wird davon ausgegangen, dass dieses Datum ebenfalls aktualisiert wird, wenn ein zugehöriger Personen- oder Organisationsarchetyp hinzugefügt oder aktualisiert wird.">
+            >
+            ["at0012"] = <
+                text = <"Erweiterung">
+                description = <"Zusätzliche Informationen zur Erfassung lokaler Inhalte oder Anpassung an andere Referenzmodelle/Formalismen.">
+                comment = <"Comment: Zum Beispiel: Lokaler Informationsbedarf oder zusätzliche Metadaten zur Anpassung an FHIR-Ressourcen.">
+            >
+            ["at0015"] = <
+                text = <"Beschreibung">
+                description = <"Narrative Beschreibung über das soziale Netzwerk und die Vernetzungen des Individuums.">
+            >
+            ["at0016"] = <
+                text = <"Netzwerk">
+                description = <"Strukturierte Angaben zu Personen oder Gemeinschaftsorganisationen, die mit der betreffenden Person in Verbindung stehen.">
+            >
+            ["at0017"] = <
+                text = <"Zusätzliche Angaben">
+                description = <"Zusätzliche strukturierte Angaben über das soziale Netzwerk.">
+            >
+            ["at0018"] = <
+                text = <"Kommentar">
+                description = <"Zusätzliche Informationen über das soziale Netzwerk, die in anderen Feldern nicht erfasst werden.">
+            >
+        >
+        ["nb"] = <
+            ["at0000"] = <
+                text = <"Sosialt nettverk">
+                description = <"Gruppe av individer som er knyttet sammen ved sosial interaksjon og personlige forbindelser.">
+            >
+            ["at0002"] = <
+                text = <"Sivilstand">
+                description = <"Enkeltord eller frase som beskriver et individs nåværende forhold til en livspartner.">
+                comment = <"Det anbefales å kode sivilstatus med en terminologi dersom mulig. Det er stor variasjon i verdisett som benyttes på tvers av jurisdiksjoner. Det finnes lokale, myndighetspålagte verdisett eller terminologier som for eksempel SNOMED CT eller lignende. For eksempel Ugift, Gift, Registrert partner, Samboer, Skilt, Enke, Enkemann, Enslig.">
+            >
+            ["at0011"] = <
+                text = <"Sist oppdatert">
+                description = <"Datoen da det sosiale nettverket siste ble oppdatert.">
+                comment = <"Det antas at det ved implementasjon legges til rette for at denne datoen bli oppdatert dersom en tilknyttet \"Person\"- eller \"Organisasjons\"- arketype legges til eller oppdateres.">
+            >
+            ["at0012"] = <
+                text = <"Tilleggsinformasjon">
+                description = <"Ytterligere informasjon som trengs for å kunne registrere lokalt definert innhold eller for å tilpasse til andre referansemodeller/formalismer.">
+                comment = <"For eksempel lokale informasjonsbehov eller ytterligere metadata for å kunne tilpasse til tilsvarende konsepter i FHIR.">
+            >
+            ["at0015"] = <
+                text = <"Beskrivelse">
+                description = <"Fritekstbeskrivelse om det sosiale nettverket og tilknytninger for individet.">
+            >
+            ["at0016"] = <
+                text = <"Nettverk">
+                description = <"Strukturerte detaljer om mennesker eller organisasjoner som har en forbindelse med individet.">
+            >
+            ["at0017"] = <
+                text = <"Ytterligere detaljer">
+                description = <"Ytterligere strukturerte detaljer om det sosiale nettverket.">
+            >
+            ["at0018"] = <
+                text = <"Kommentar">
+                description = <"Ytterligere fritekst om det sosiale nettverket som ikke er registrert i andre felt.">
+            >
+        >
+        ["en"] = <
+            ["at0000"] = <
+                text = <"Social network">
+                description = <"Group of individuals connected by social interactions and personal relationships.">
+            >
+            ["at0002"] = <
+                text = <"Partnership status">
+                description = <"Single word or phrase that describes an individual's current relationship with a life partner.">
+                comment = <"Coding of the partnership status with a terminology is preferred, where possible. There is a huge variation in the value sets used across jurisdictions. Many have local, government-mandated value sets rather than using SNOMED CT or similar. For example: a 'marital status' value set including 'never married' or 'single'; 'married'; 'divorced'; or 'widowed'. Also known as 'civil status', 'union status', or 'relationship status'.">
+            >
+            ["at0011"] = <
+                text = <"Last updated">
+                description = <"Date when the social network was updated.">
+                comment = <"At implementation, it is assumed that if an associated person or organisation archetype is added or updated then this date will also be updated.
+">
+            >
+            ["at0012"] = <
+                text = <"Extension">
+                description = <"Additional information required to extend the model with local content or to align with other reference models or formalisms.">
+                comment = <"For example: local information requirements; or additional metadata to align with FHIR.">
+            >
+            ["at0015"] = <
+                text = <"Description">
+                description = <"Narrative description about the social network and connections for the individual.">
+            >
+            ["at0016"] = <
+                text = <"Network">
+                description = <"Structured details about people or community organisations who are connected to the individual.">
+            >
+            ["at0017"] = <
+                text = <"Additional details">
+                description = <"Additional structured details about the social network.">
+            >
+            ["at0018"] = <
+                text = <"Comment">
+                description = <"Additional narrative about the social network, not captured in other fields.">
+            >
+        >
+        ["fr"] = <
+            ["at0000"] = <
+                text = <"*Social network (en)">
+                description = <"*Group of individuals connected by social interactions and personal relationships. (en)">
+            >
+            ["at0002"] = <
+                text = <"*Partnership status (en)">
+                description = <"*Single word or phrase that describes an individual's current relationship with a life partner. (en)">
+                comment = <"*Coding of the partnership status with a terminology is preferred, where possible. There is a huge variation in the value sets used across jurisdictions. Many have local, government-mandated value sets rather than using SNOMED CT or similar. For example: a 'marital status' value set including 'never married' or 'single'; 'married'; 'divorced'; or 'widowed'. Also known as 'civil status', 'union status', or 'relationship status'. (en)">
+            >
+            ["at0011"] = <
+                text = <"Dernière mise à jour">
+                description = <"*Date when the social network was updated. (en)">
+                comment = <"*At implementation, it is assumed that if an associated person or organisation archetype is added or updated then this date will also be updated.
+ (en)">
+            >
+            ["at0012"] = <
+                text = <"Extension">
+                description = <"*Additional information required to extend the model with local content or to align with other reference models or formalisms. (en)">
+                comment = <"*For example: local information requirements; or additional metadata to align with FHIR. (en)">
+            >
+            ["at0015"] = <
+                text = <"*Description (en)">
+                description = <"*Narrative description about the social network and connections for the individual. (en)">
+            >
+            ["at0016"] = <
+                text = <"*Network (en)">
+                description = <"*Structured details about people or community organisations who are connected to the individual. (en)">
+            >
+            ["at0017"] = <
+                text = <"*Additional details (en)">
+                description = <"*Additional structured details about the social network. (en)">
+            >
+            ["at0018"] = <
+                text = <"*Comment (en)">
+                description = <"*Additional narrative about the social network, not captured in other fields. (en)">
+            >
+        >
+    >
