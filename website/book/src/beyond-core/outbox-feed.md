@@ -6,12 +6,12 @@ FerroEHR records a small event for every commit in a transactional outbox and
 serves those events to the readers you name over a cursor feed. The events
 carry identifiers and metadata, never the record content.
 
-FerroEHR publishes to no message broker. Delivery to an AMQP broker such as
-RabbitMQ moves to FerroBRIDGE, the family's export and import server, which is
-to read the feed and publish the events with its own exchange, routing keys and
-queues. That work is [in progress](https://github.com/FerroHEALTH/FerroBRIDGE/issues/1367): until a FerroBRIDGE release carries
-it, a deployment that needs broker events keeps a FerroEHR release with its
-own publisher, 5.5.0 or 5.6.0-rc7.
+FerroEHR publishes to no message broker. FerroBRIDGE, the family's export and
+import server, delivers the events to an AMQP broker such as RabbitMQ from 0.0.15
+on: its `[events]` lane reads this feed and publishes each event with its own
+exchange, routing keys and queues, and moves its cursor only after the broker
+confirmed the event
+([FerroBRIDGE#1367](https://github.com/FerroHEALTH/FerroBRIDGE/issues/1367)).
 
 <!-- toc -->
 
@@ -167,8 +167,8 @@ cursor has not passed it.
 
 Earlier releases of FerroEHR published to RabbitMQ themselves, under
 `[events]`, with subscription rows under `/admin/event_subscription`. Both are
-gone. Once a FerroBRIDGE release carries broker delivery, to keep the events
-flowing to the same broker:
+gone. To keep the events flowing to the same broker through FerroBRIDGE 0.0.15
+or later:
 
 1. Name FerroBRIDGE's reader in `[outbox] readers` and give its client the
    `__ferroehr.outbox` scope.

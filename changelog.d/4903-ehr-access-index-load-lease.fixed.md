@@ -1,1 +1,0 @@
-- An AQL request abandoned while the EHR_ACCESS settings index loads, for example behind a table lock, no longer keeps its pool connection until the statement ends: each waiting request started the load again, so ten abandoned queries held nine of ten connections.

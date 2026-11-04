@@ -1,1 +1,0 @@
-- An archetype root converted from an ADL 1.4 operational template defines each slot that replaced an embedded root in every language of its terminology, with the embedded root's concept term, and drops a term keyed by no `at` or `ac` code (such as a tool's `°C` unit label) with a `conversion_details` entry. Before, such roots failed ADL 2 validation with VATID and VATCV.

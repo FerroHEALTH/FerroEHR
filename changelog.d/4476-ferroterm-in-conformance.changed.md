@@ -1,1 +1,0 @@
-- The conformance deployment runs FerroTERM beside FerroEHR, pinned by digest, with `[terminology.server]` pointed at it, locally in `scripts/conformance.sh` and in the Conformance workflow, so the `aql-terminology-supported` arm of the party statement runs against a real terminology server.

@@ -1,1 +1,0 @@
-- `ext.storage_generation()` reports `generation-5`, the storage generation with the node compact markers, and the storage benchmark records for it are committed under `docs/benchmarks/storage/generation-5/`. Migration `ext/0011` changes only the label; nothing in the serving path reads it.
