@@ -27,8 +27,8 @@
 //!    qualified/listed terminology constraints, the pipe-ordinal shorthand,
 //!    and the inline dADL `C_DV_QUANTITY`/`C_DV_ORDINAL`/`C_CODE_PHRASE`
 //!    domain blocks. They are the WRITE side of the converter-internal
-//!    encoding that step 2 reads back
-//!    ([`convert::convert_constraint`](convert)).
+//!    encoding that step 2 reads back (`term_constraint`, which
+//!    [`crate::opt::create_opt`] also runs over an unconverted 1.4 constituent).
 //! 1. **Front end** — [`crate::assemble::parse_artefact`] in
 //!    [`crate::parse::Dialect::Adl14`] parses a 1.4 `.adl` into a 1.4-SHAPED
 //!    `openehr_am::v2_4` [`Archetype`](openehr_am::v2_4::aom2::archetype::archetype::Archetype):
@@ -63,4 +63,5 @@ pub mod lower;
 mod metadata;
 mod multiplicity;
 pub mod opt;
+pub(crate) mod term_constraint;
 mod walk;

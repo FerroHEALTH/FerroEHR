@@ -515,7 +515,7 @@ jobs:
 
       - name: Install cargo-fuzz
         if: steps.discover.outputs.bump == '1'
-        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+        uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-fuzz@0.13.2
 

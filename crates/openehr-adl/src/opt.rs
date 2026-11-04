@@ -64,6 +64,7 @@ use openehr_base::prelude::{
     MultiplicityInterval, ResourceAnnotations, TerminologyCode, TranslationDetails,
 };
 
+use crate::adl14::term_constraint::rewrite_as_authored;
 use crate::aom::access::{
     child_occurrences, common_mut, complex_attributes, object_node_id, strip_sibling_order,
 };
@@ -135,9 +136,12 @@ pub const OVERLAY_PARENTS_KEY: &str = "template_overlay_parents";
 /// resolve (master10 — overlays are local specialised archetypes used as slot
 /// fillers).
 ///
-/// Every constituent in `repo` is an ADL2 artefact, an ADL 1.4 one converted
-/// with [`crate::adl14::convert::convert`] first: the OPT inlines each as it
-/// stands, and [`crate::print::print`] refuses a 1.4 term constraint.
+/// A constituent in `repo` may be an ADL2 artefact or an unconverted ADL 1.4
+/// one, whose node codes the OPT keeps as authored so 1.4 paths such as
+/// `/activities[at0001]/description[at0002]` still resolve. Each 1.4 term
+/// constraint is rewritten to the ADL2 form the printer accepts
+/// (`ADL2/master04.5` §Formal Terminology Constraint): an external code to a
+/// minted at-code bound to its URI, a code list to a minted ac-code value set.
 ///
 /// # Errors
 /// [`OptError::Flatten`] if the lineage cannot be flattened,
@@ -162,7 +166,8 @@ pub fn create_opt(
     // standard flattening).
     let flat_root = flat_form(root, &work)?;
     let root_id = view(&flat_root).archetype_id.to_string();
-    let parts = RootParts::of(&flat_root);
+    let mut parts = RootParts::of(&flat_root);
+    rewrite_as_authored(&mut parts.definition, &mut parts.terminology);
 
     // Apply the OPT-specific transform to the flat definition, gathering the
     // constituent terminologies as fillers are inlined.
@@ -455,6 +460,9 @@ impl Transform<'_> {
         }
         let flat = flat_form(constituent, self.work)?;
         let flat_view = view(&flat);
+        let mut definition = flat_view.definition.clone();
+        let mut terminology = flat_view.terminology.clone();
+        rewrite_as_authored(&mut definition, &mut terminology);
 
         // Gather the constituent's flat terminology (master03 §Terminology: the flat
         // terminology of every constituent except the root template). The
@@ -462,18 +470,16 @@ impl Transform<'_> {
         // maps keyed by archetype id (master10), not the within-archetype
         // `concept_code`, so it is normalised away for serialisation fidelity.
         if full_id != self.root_id {
-            self.components.entry(full_id.clone()).or_insert_with(|| {
-                let mut term = flat_view.terminology.clone();
-                term.concept_code = String::new();
-                term
-            });
+            let mut component = terminology;
+            component.concept_code = String::new();
+            self.components.entry(full_id.clone()).or_insert(component);
         }
 
         // The filler's structure (recursively OPT-transformed, so nested fillers /
         // proxies / deletions inside the constituent are handled too), at the
         // level of the slot it fills.
         self.inlining.push(full_id.clone());
-        let opt_def = self.complex(flat_view.definition.clone(), level);
+        let opt_def = self.complex(definition, level);
         self.inlining.pop();
         let (rm_type, attributes, attribute_tuples) = match opt_def? {
             CComplexObject::CComplexObject(d) => (d.rm_type_name, d.attributes, d.attribute_tuples),

@@ -298,7 +298,7 @@ ehds-logging = { version = "=0.3.3", default-features = false }
 # identity source of the EHR index is asked through (`[ehr_index]`); `smart` is
 # its ferrohealth-smart token authorizer. Verified on crates.io 2026-10-27
 # (0.0.65).
-ihe-iti = { version = "=0.0.65", default-features = false }
+ihe-iti = { version = "=0.0.66", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
 secrecy = "0.10"                   # wrap secrets, avoid logging
@@ -375,7 +375,7 @@ serde_jcs = "0.2.0"                  # verify; otherwise implement ~150 LoC
 logos = "0.16.1"                      # DFA lexer
 chumsky = "0.13.0"                    # 0.10 usable stable (1.0 still alpha; repo now on Codeberg)
 regex = "1"
-fancy-regex = "0.19.0"               # backreferences for cADL where needed (verify)
+fancy-regex = "0.20.0"               # backreferences for cADL where needed (verify)
 # parser diagnostics (great for ADL/AQL error reporting):
 
 # ── Identifiers, time, validation ────────────────────────────────────────────

@@ -2206,6 +2206,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "fancy-regex"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20ed7f62ce0ae0da1a8b93c3c7104ab7e0760a74491e097c701fff966e945390"
+dependencies = [
+ "bit-set",
+ "regex-automata",
+ "regex-syntax",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3603,9 +3614,9 @@ dependencies = [
 
 [[package]]
 name = "ihe-iti"
-version = "0.0.65"
+version = "0.0.66"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ec3f7ab3b1be84537efc7a752e1b413c0b198295ae20f65ff34c01fdc59099c"
+checksum = "fa97ab6c1b07c8cfaa6ba7b507abb10791d54cba54c9c6fa7bc20eddf33c1238"
 dependencies = [
  "ferrohealth-smart",
  "fhir-types",
@@ -3905,7 +3916,7 @@ dependencies = [
  "bytecount",
  "data-encoding",
  "email_address",
- "fancy-regex",
+ "fancy-regex 0.19.2",
  "fraction",
  "getrandom 0.3.4",
  "idna",
@@ -4775,7 +4786,7 @@ dependencies = [
 name = "openehr-sdt"
 version = "0.0.128"
 dependencies = [
- "fancy-regex",
+ "fancy-regex 0.20.0",
  "http",
  "indexmap 2.14.2",
  "insta",

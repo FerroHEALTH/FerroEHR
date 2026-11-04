@@ -29,11 +29,8 @@ use openehr_am::v2_4::aom2::archetype::archetype::Archetype;
 use openehr_am::v2_4::aom2::archetype::authored_archetype::{
     AuthoredArchetype, AuthoredArchetypeData,
 };
-use openehr_am::v2_4::aom2::constraint_model::c_attribute_tuple::CAttributeTuple;
 use openehr_am::v2_4::aom2::constraint_model::c_complex_object::CComplexObject;
 use openehr_am::v2_4::aom2::constraint_model::c_object::CObject;
-use openehr_am::v2_4::aom2::constraint_model::c_primitive_object::CPrimitiveObject;
-use openehr_am::v2_4::aom2::constraint_model::primitive::c_terminology_code::CTerminologyCode;
 use openehr_am::v2_4::aom2::definitions::adl_code_definitions::AdlCodeDefinitionsData;
 use openehr_am::v2_4::aom2::terminology::archetype_term::ArchetypeTerm;
 use openehr_am::v2_4::aom2::terminology::archetype_terminology::ArchetypeTerminology;
@@ -43,6 +40,7 @@ use crate::adl14::code_shift::{first_num, highest_ac_number, shift_code};
 use crate::adl14::log::ConversionLog;
 use crate::adl14::metadata::{set_release_version, transform_description};
 use crate::adl14::multiplicity::{elide_multiplicity, materialise_adl14_occurrences};
+use crate::adl14::term_constraint::{CodeSpace, TermMinter, rewrite_definition};
 use crate::adl14::walk::{cco_data_mut, collect_local_value_codes, collect_node_codes};
 use crate::aom::access::{common_mut, tuple_primitive_node_ids_mut};
 use crate::codes::NodeCoding;
@@ -157,30 +155,18 @@ pub fn convert(
     )))
 }
 
-/// A synthesised terminology entry the converter minted.
-struct Synth {
-    code: String,
-    text: String,
-    description: String,
-    binding: Option<(String, String)>, // (terminology, uri)
-    value_set_members: Option<Vec<String>>,
-}
-
 struct Converter<'a> {
     cfg: &'a ConvertConfig,
-    log: &'a mut ConversionLog,
+    /// The terminology-constraint minting state, which owns the log.
+    minter: TermMinter<'a>,
+    /// The ADL2 code space of the 1.4 value and value-set codes.
+    codes: CollapseMaps,
     /// old node at-code → new node id-code.
     node_map: BTreeMap<String, String>,
     /// Source at-codes referenced as a `local` *value* (they get an at-code
     /// term entry even when the same code is also a node id — a 1.4 at-code
     /// used as both an id and a value splits into an id-code + an at-code).
     value_at_codes: std::collections::BTreeSet<String>,
-    /// Collapsed-value remapping (dotted `local` value at-codes → fresh flat
-    /// at-codes) — populated only under `collapse_specialised_codes`.
-    value_map: BTreeMap<String, String>,
-    /// Collapsed-constraint remapping (dotted ac-codes → fresh flat
-    /// ac-codes) — populated only under `collapse_specialised_codes`.
-    ac_map: BTreeMap<String, String>,
     /// New node ids already claimed by an occurrence — the VCOSU ground:
     /// ADL2 node ids are unique archetype-wide (`AOM2/master04.5` §Validity
     /// Rules: `C_OBJECT`), while 1.4 at-codes are only sibling-unique, so a
@@ -192,12 +178,6 @@ struct Converter<'a> {
     dup_mints: Vec<(String, String)>,
     /// Next free id-number for synthesised object nodes (top-level id space).
     next_id: i64,
-    /// Next free at-number for synthesised external at-codes.
-    next_at: i64,
-    /// Next free ac-number for synthesised value sets.
-    next_ac: i64,
-    /// Synthesised terminology entries, in mint order.
-    synth: Vec<Synth>,
     /// The converted root node id (the terminology `concept_code`).
     root_id: String,
 }
@@ -206,29 +186,29 @@ impl<'a> Converter<'a> {
     fn new(cfg: &'a ConvertConfig, log: &'a mut ConversionLog) -> Self {
         Self {
             cfg,
-            log,
+            minter: TermMinter::new(&cfg.binding_uri_templates, log),
+            codes: CollapseMaps {
+                collapse: cfg.collapse_specialised_codes,
+                value_map: BTreeMap::new(),
+                ac_map: BTreeMap::new(),
+            },
             node_map: BTreeMap::new(),
             value_at_codes: std::collections::BTreeSet::new(),
-            value_map: BTreeMap::new(),
-            ac_map: BTreeMap::new(),
             assigned_node_ids: std::collections::BTreeSet::new(),
             dup_mints: Vec::new(),
             next_id: 1,
-            next_at: 1,
-            next_ac: 1,
-            synth: Vec::new(),
             root_id: "id1".to_owned(),
         }
     }
 
     fn run(&mut self, mut data: AuthoredArchetypeData) -> AuthoredArchetypeData {
         // 1. Build the node-id map + synthesis counters from the definition.
-        crate::adl14::walk::drop_quantity_properties(&mut data.definition, "", self.log);
+        crate::adl14::walk::drop_quantity_properties(&mut data.definition, "", self.minter.log);
         self.plan_codes(&data);
         // 2. Renumber node ids in document order: existing mapped, empty minted.
         self.renumber_nodes(&mut data.definition);
         // 3. Convert every terminology-code constraint (local/external/list).
-        convert_constraints_cco(&mut data.definition, self, "");
+        rewrite_definition(&mut data.definition, &mut self.minter, &mut self.codes, "");
         // 4. Write out the ADL 1.4 default occurrences where ADL 2 would infer a
         //    different one, then elide the RM-default cardinality/occurrences.
         //    Order matters: the materialisation reads the 1.4 cardinality, which
@@ -249,21 +229,23 @@ impl<'a> Converter<'a> {
         let (max_id, deferred_nodes) = self.plan_node_codes(data);
         let (max_at, deferred_values) = self.plan_value_codes(data);
         self.next_id = max_id + 1;
-        self.next_at = max_at + 1;
-        self.next_ac = highest_ac_number(data) + 1;
+        self.minter.allocate_above(
+            max_at,
+            highest_ac_number(&data.definition, &data.terminology),
+        );
         for code in deferred_nodes {
             let fresh = self.alloc_id();
-            self.log.note(format!(
+            self.minter.log.note(format!(
                 "specialised node code {code} collapsed to {fresh} (standalone depth-0 emission)"
             ));
             self.node_map.insert(code, fresh);
         }
         for code in deferred_values {
-            let fresh = self.alloc_at();
-            self.log.note(format!(
+            let fresh = self.minter.alloc_at();
+            self.minter.log.note(format!(
                 "specialised value code {code} collapsed to {fresh} (standalone depth-0 emission)"
             ));
-            self.value_map.insert(code, fresh);
+            self.codes.value_map.insert(code, fresh);
         }
     }
 
@@ -334,18 +316,6 @@ impl<'a> Converter<'a> {
         c
     }
 
-    fn alloc_at(&mut self) -> String {
-        let c = format!("at{}", self.next_at);
-        self.next_at += 1;
-        c
-    }
-
-    fn alloc_ac(&mut self) -> String {
-        let c = format!("ac{}", self.next_ac);
-        self.next_ac += 1;
-        c
-    }
-
     // ── node-id renumbering ──────────────────────────────────────────────────
 
     fn renumber_nodes(&mut self, def: &mut CComplexObject) {
@@ -375,163 +345,11 @@ impl<'a> Converter<'a> {
         // clone the first id's terminology in the rebuild.
         let fresh = self.alloc_id();
         self.assigned_node_ids.insert(fresh.clone());
-        self.log.note(format!(
+        self.minter.log.note(format!(
             "reused 1.4 node code {old} re-minted as {fresh} (archetype-wide id uniqueness)"
         ));
         self.dup_mints.push((mapped, fresh.clone()));
         fresh
-    }
-
-    /// The ADL2 at-code of a `local` value code: the collapse remap when one
-    /// exists, else the ordinary shift.
-    fn value_at(&self, code: &str) -> String {
-        self.value_map
-            .get(code)
-            .cloned()
-            .unwrap_or_else(|| shift_code(code, "at"))
-    }
-
-    /// The at-code for a terminology entry under the collapse: a dotted code
-    /// with no planned remap yet (an UNUSED flattened-ontology entry — VTSD
-    /// covers defined codes, not only used ones) mints a fresh flat at-code
-    /// on first sight; everything else follows [`Self::value_at`].
-    fn collapsed_value_at(&mut self, code: &str) -> String {
-        if self.cfg.collapse_specialised_codes
-            && code.contains('.')
-            && !self.value_map.contains_key(code)
-        {
-            let fresh = self.alloc_at();
-            self.log.note(format!(
-                "specialised terminology code {code} collapsed to {fresh} (standalone depth-0 emission)"
-            ));
-            self.value_map.insert(code.to_owned(), fresh);
-        }
-        self.value_at(code)
-    }
-
-    /// The ac-code under the collapse: a dotted ac (specialised constraint
-    /// definition) mints a fresh flat ac on first sight; else the ordinary
-    /// shift.
-    fn collapsed_ac(&mut self, code: &str) -> String {
-        if self.cfg.collapse_specialised_codes && code.contains('.') {
-            if let Some(existing) = self.ac_map.get(code) {
-                return existing.clone();
-            }
-            let fresh = self.alloc_ac();
-            self.log.note(format!(
-                "specialised constraint code {code} collapsed to {fresh} (standalone depth-0 emission)"
-            ));
-            self.ac_map.insert(code.to_owned(), fresh.clone());
-            return fresh;
-        }
-        shift_code(code, "ac")
-    }
-
-    // ── terminology-constraint conversion ────────────────────────────────────
-
-    /// Convert one 1.4 `C_TERMINOLOGY_CODE.constraint` encoding
-    /// (`terminology::code[,code…][;assumed]`, or an already-ADL2 `at/ac` code)
-    /// into an ADL2 constraint, minting synthesised codes as needed.
-    /// `owner_text` is the enclosing element's rubric (for the `(synthesised)`
-    /// value-set label). Returns `(constraint, assumed)`.
-    fn convert_constraint(&mut self, raw: &str, owner_text: &str) -> (String, Option<String>) {
-        // Split off an assumed value (`…;code`).
-        let (body, assumed_raw) = match raw.split_once(';') {
-            Some((b, a)) => (b, Some(a)),
-            None => (raw, None),
-        };
-        // Not a qualified 1.4 code: a bare ac-code (a 1.4 `CONSTRAINT_REF`
-        // reference or a reference-set ac minted by the OPT front end) is
-        // shifted like every other code so it stays aligned with its shifted
-        // terminology entry (`ac0001`→`ac2`; the `ac0.K` specialisation form
-        // keeps its number — see `shift_code`). Anything else (`at5`) is
-        // already ADL2; pass through.
-        let Some((terminology, codes_str)) = body.split_once("::") else {
-            if AdlCodeDefinitionsData::is_value_set_code(body) {
-                let ac = self.collapsed_ac(body);
-                let assumed = assumed_raw.map(|a| self.collapsed_value_at(a));
-                return (ac, assumed);
-            }
-            return (body.to_owned(), assumed_raw.map(str::to_owned));
-        };
-        let codes: Vec<&str> = codes_str
-            .split(',')
-            .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .collect();
-        let is_local = terminology == "local";
-
-        // Map each source code to its ADL2 at-code (shift a local at-code; mint
-        // for an external code).
-        let mut at_codes: Vec<String> = Vec::new();
-        for code in &codes {
-            let at = if is_local {
-                self.collapsed_value_at(code)
-            } else {
-                self.external_at_code(terminology, code)
-            };
-            at_codes.push(at);
-        }
-
-        let assumed = assumed_raw.map(|a| {
-            if is_local {
-                self.collapsed_value_at(a)
-            } else {
-                self.external_at_code(terminology, a)
-            }
-        });
-
-        if at_codes.len() == 1 {
-            return (at_codes.into_iter().next().unwrap_or_default(), assumed);
-        }
-        (self.value_set_ac(&at_codes, owner_text), assumed)
-    }
-
-    /// The synthesised ac-code value set for a code LIST, minted on first sight
-    /// and reused for an identical member signature (idempotent via the log).
-    fn value_set_ac(&mut self, at_codes: &[String], owner_text: &str) -> String {
-        let signature = at_codes.join(",");
-        if let Some(existing) = self.log.value_set(&signature) {
-            return existing.to_owned();
-        }
-        let ac = self.alloc_ac();
-        self.log.record_value_set(&signature, &ac);
-        let (text, description) = synth_value_set_rubric(owner_text);
-        self.synth.push(Synth {
-            code: ac.clone(),
-            text,
-            description,
-            binding: None,
-            value_set_members: Some(at_codes.to_vec()),
-        });
-        ac
-    }
-
-    /// The synthesised at-code for an external `terminology::code`, minting +
-    /// recording a binding on first sight (idempotent via the log).
-    fn external_at_code(&mut self, terminology: &str, code: &str) -> String {
-        let key = format!("{terminology}::{code}");
-        if let Some(existing) = self.log.external_at_code(&key) {
-            return existing.to_owned();
-        }
-        let at = self.alloc_at();
-        self.log.record_external_at_code(&key, &at);
-        let uri = match self.cfg.binding_uri_templates.get(terminology) {
-            Some(tmpl) => tmpl.replace("{code}", code),
-            // Fabricated fallback URI (flagged) where no template is configured.
-            None => format!("urn:adl14:{terminology}:{code}"),
-        };
-        self.synth.push(Synth {
-            code: at.clone(),
-            // NOTE: no openEHR spec governs 1.4→2 conversion — our own
-            // design/extension; the synthesised rubric reuses the external code
-            // as its text, this converter resolving no external terminology.
-            text: code.to_owned(),
-            description: code.to_owned(),
-            binding: Some((terminology.to_owned(), uri)),
-            value_set_members: None,
-        });
-        at
     }
 
     // ── terminology rebuild ──────────────────────────────────────────────────
@@ -595,22 +413,7 @@ impl<'a> Converter<'a> {
                     out.insert(fresh.clone(), term_with_code(term, fresh.clone()));
                 }
             }
-            // Add synthesised terms to every language.
-            //
-            // NOTE: no openEHR spec governs 1.4→2 conversion — our own
-            // design/extension; one rubric text is minted for all languages, a
-            // converter having no translator for per-language rubrics.
-            for s in &self.synth {
-                out.insert(
-                    s.code.clone(),
-                    ArchetypeTerm {
-                        code: s.code.clone(),
-                        text: s.text.clone(),
-                        description: s.description.clone(),
-                        other_items: None,
-                    },
-                );
-            }
+            self.minter.add_terms(&mut out);
             term_definitions.insert(lang.clone(), out);
         }
         term_definitions
@@ -634,13 +437,13 @@ impl<'a> Converter<'a> {
         out: &mut BTreeMap<String, ArchetypeTerm>,
     ) {
         if AdlCodeDefinitionsData::is_value_set_code(code) {
-            let ac = self.collapsed_ac(code);
+            let ac = self.codes.value_set_code(&mut self.minter, code);
             out.insert(ac.clone(), term_with_code(term, ac));
             return;
         }
         let is_node = self.node_map.contains_key(code);
         if self.value_at_codes.contains(code) || !is_node {
-            let at = self.collapsed_value_at(code);
+            let at = self.codes.value_code(&mut self.minter, code);
             out.insert(at.clone(), term_with_code(term, at));
         }
         if !is_node || internal_nodes.contains(code) {
@@ -676,14 +479,7 @@ impl<'a> Converter<'a> {
                 (t, m2)
             })
             .collect();
-        for s in &self.synth {
-            if let Some((terminology, uri)) = &s.binding {
-                term_bindings
-                    .entry(terminology.clone())
-                    .or_default()
-                    .insert(s.code.clone(), uri.clone());
-            }
-        }
+        self.minter.add_bindings(&mut term_bindings);
         for bindings in term_bindings.values_mut() {
             for (first, fresh) in &self.dup_mints {
                 if let Some(uri) = bindings.get(first).cloned() {
@@ -698,19 +494,7 @@ impl<'a> Converter<'a> {
     /// that carries members.
     fn rebuild_value_sets(&self, old: &ArchetypeTerminology) -> BTreeMap<String, ValueSet> {
         let mut value_sets: BTreeMap<String, ValueSet> = old.value_sets.clone().unwrap_or_default();
-        for s in &self.synth {
-            if let Some(members) = &s.value_set_members
-                && let Ok(members) = openehr_base::containers::NonEmptyVec::new(members.clone())
-            {
-                value_sets.insert(
-                    s.code.clone(),
-                    ValueSet {
-                        id: s.code.clone(),
-                        members,
-                    },
-                );
-            }
-        }
+        self.minter.add_value_sets(&mut value_sets);
         value_sets
     }
 
@@ -719,13 +503,14 @@ impl<'a> Converter<'a> {
         if let Some(id) = self.node_map.get(key) {
             id.clone()
         } else if AdlCodeDefinitionsData::is_at_code(key) {
-            self.value_at(key)
+            self.codes.value_at(key)
         } else if AdlCodeDefinitionsData::is_value_set_code(key) {
             // A merged 1.4 `constraint_bindings` key (ADL2 folds that section
             // into `term_bindings`, `master07.13` §Terminology section)
             // follows its definitions-rebuild remap (collapse map first,
             // else the ordinary ac shift), matching VTCBK.
-            self.ac_map
+            self.codes
+                .ac_map
                 .get(key)
                 .cloned()
                 .unwrap_or_else(|| shift_code(key, "ac"))
@@ -776,9 +561,9 @@ impl<'a> Converter<'a> {
             // Surface the conversion's non-mechanical decisions (collapse
             // remaps, VCOSU re-mints) as conversion provenance — the AOM2
             // home for it (`RESOURCE_DESCRIPTION.conversion_details`).
-            if !self.log.notes.is_empty() {
+            if !self.minter.log.notes.is_empty() {
                 let details = desc.conversion_details.get_or_insert_with(BTreeMap::new);
-                for (index, note) in self.log.notes.iter().enumerate() {
+                for (index, note) in self.minter.log.notes.iter().enumerate() {
                     details.insert(format!("code_remap_{index:03}"), note.clone());
                 }
             }
@@ -819,65 +604,6 @@ fn renumber_obj(obj: &mut CObject, cx: &mut Converter<'_>) {
             assertions.for_each(|a| crate::rules::recode_slot_matcher(a, NodeCoding::Id));
         }
         primitive => NodeCoding::Id.recode_primitive_node_id(common_mut(primitive).1),
-    }
-}
-
-fn convert_constraints_cco(cco: &mut CComplexObject, cx: &mut Converter<'_>, owner_text: &str) {
-    let Some(d) = cco_data_mut(cco) else { return };
-    let node_text = owner_text.to_owned();
-    for attr in d.attributes.iter_mut().flatten() {
-        for child in attr.children.iter_mut().flatten() {
-            convert_constraints_obj(child, cx, &node_text);
-        }
-    }
-    for tuple in d.attribute_tuples.iter_mut().flatten() {
-        convert_constraints_tuple(tuple, cx, &node_text);
-    }
-}
-
-/// Converts the terminology codes inside one `C_ATTRIBUTE_TUPLE` in place.
-///
-/// Both halves of the tuple carry constraints: the tuple MEMBERS' child
-/// objects, and the tuple ROWS, whose primitive members hold the actual
-/// terminology codes (ordinal symbols and the like).
-fn convert_constraints_tuple(
-    tuple: &mut CAttributeTuple,
-    cx: &mut Converter<'_>,
-    owner_text: &str,
-) {
-    for member in tuple.members.iter_mut().flatten() {
-        for child in member.children.iter_mut().flatten() {
-            convert_constraints_obj(child, cx, owner_text);
-        }
-    }
-    for row in tuple.tuples.iter_mut().flatten() {
-        for m in &mut row.members {
-            if let CPrimitiveObject::CTerminologyCode(tc) = m {
-                convert_terminology_code(tc, cx, owner_text);
-            }
-        }
-    }
-}
-
-/// Converts one `C_TERMINOLOGY_CODE`'s constraint and assumed value in place.
-fn convert_terminology_code(tc: &mut CTerminologyCode, cx: &mut Converter<'_>, owner_text: &str) {
-    let (constraint, assumed) = cx.convert_constraint(&tc.constraint, owner_text);
-    tc.constraint = constraint;
-    if let Some(a) = assumed {
-        tc.assumed_value = Some(openehr_base::prelude::TerminologyCode {
-            terminology_id: "local".to_owned(),
-            terminology_version: None,
-            code_string: a,
-            uri: None,
-        });
-    }
-}
-
-fn convert_constraints_obj(obj: &mut CObject, cx: &mut Converter<'_>, owner_text: &str) {
-    match obj {
-        CObject::CTerminologyCode(tc) => convert_terminology_code(tc, cx, owner_text),
-        CObject::CComplexObject(cco) => convert_constraints_cco(cco, cx, owner_text),
-        _ => {}
     }
 }
 
@@ -930,16 +656,62 @@ fn term_with_code(term: &ArchetypeTerm, code: String) -> ArchetypeTerm {
     }
 }
 
-fn synth_value_set_rubric(owner_text: &str) -> (String, String) {
-    // The fixtures label a synthesised value set with the owning element's
-    // rubric + " (synthesised)".
-    let base = if owner_text.is_empty() {
-        "Value set".to_owned()
-    } else {
-        owner_text.to_owned()
-    };
-    (
-        format!("{base} (synthesised)"),
-        format!("{base} (synthesised)"),
-    )
+/// The converter's code space: every 1.4 value and value-set code shifted
+/// into the ADL2 numbering, and under `collapse_specialised_codes` each
+/// dotted one remapped to a fresh flat code.
+struct CollapseMaps {
+    collapse: bool,
+    /// Collapsed-value remapping (dotted `local` value at-codes → fresh flat
+    /// at-codes) — populated only under `collapse_specialised_codes`.
+    value_map: BTreeMap<String, String>,
+    /// Collapsed-constraint remapping (dotted ac-codes → fresh flat
+    /// ac-codes) — populated only under `collapse_specialised_codes`.
+    ac_map: BTreeMap<String, String>,
+}
+
+impl CollapseMaps {
+    /// The ADL2 at-code of a `local` value code: the collapse remap when one
+    /// exists, else the ordinary shift.
+    fn value_at(&self, code: &str) -> String {
+        self.value_map
+            .get(code)
+            .cloned()
+            .unwrap_or_else(|| shift_code(code, "at"))
+    }
+}
+
+impl CodeSpace for CollapseMaps {
+    /// The at-code for a value or terminology entry under the collapse: a
+    /// dotted code with no planned remap yet (an UNUSED flattened-ontology
+    /// entry — VTSD covers defined codes, not only used ones) mints a fresh
+    /// flat at-code on first sight; everything else follows
+    /// [`CollapseMaps::value_at`].
+    fn value_code(&mut self, minter: &mut TermMinter<'_>, code: &str) -> String {
+        if self.collapse && code.contains('.') && !self.value_map.contains_key(code) {
+            let fresh = minter.alloc_at();
+            minter.log.note(format!(
+                "specialised terminology code {code} collapsed to {fresh} (standalone depth-0 emission)"
+            ));
+            self.value_map.insert(code.to_owned(), fresh);
+        }
+        self.value_at(code)
+    }
+
+    /// The ac-code under the collapse: a dotted ac (specialised constraint
+    /// definition) mints a fresh flat ac on first sight; else the ordinary
+    /// shift.
+    fn value_set_code(&mut self, minter: &mut TermMinter<'_>, code: &str) -> String {
+        if self.collapse && code.contains('.') {
+            if let Some(existing) = self.ac_map.get(code) {
+                return existing.clone();
+            }
+            let fresh = minter.alloc_ac();
+            minter.log.note(format!(
+                "specialised constraint code {code} collapsed to {fresh} (standalone depth-0 emission)"
+            ));
+            self.ac_map.insert(code.to_owned(), fresh.clone());
+            return fresh;
+        }
+        shift_code(code, "ac")
+    }
 }

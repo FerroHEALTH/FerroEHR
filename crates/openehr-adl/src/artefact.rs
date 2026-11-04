@@ -79,9 +79,10 @@ impl ArchetypeRepository {
     /// Register a parsed archetype under its namespace, family and major
     /// version, replacing an artefact of the same full version.
     ///
-    /// The repository holds ADL2 artefacts: an ADL 1.4 source enters through
-    /// [`crate::adl14::convert::convert`] first, since the 1.4-shaped parse
-    /// keeps constraints such as `[openehr::433]` that ADL2 has no syntax for.
+    /// An ADL 1.4 source may enter as parsed in
+    /// [`crate::parse::Dialect::Adl14`]: [`crate::opt::create_opt`] keeps its
+    /// node codes and rewrites its term constraints, such as `[openehr::433]`,
+    /// to the ADL2 form.
     pub fn insert(&mut self, archetype: Archetype) {
         let hrid = view(&archetype).archetype_id;
         let held = self.by_key.entry(ArtefactKey::of(hrid)).or_default();
