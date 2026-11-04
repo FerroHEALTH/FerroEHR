@@ -208,7 +208,7 @@ impl<'a> Converter<'a> {
         // 2. Renumber node ids in document order: existing mapped, empty minted.
         self.renumber_nodes(&mut data.definition);
         // 3. Convert every terminology-code constraint (local/external/list).
-        rewrite_definition(&mut data.definition, &mut self.minter, &mut self.codes);
+        rewrite_definition(&mut data.definition, &mut self.minter, &mut self.codes, "");
         // 4. Write out the ADL 1.4 default occurrences where ADL 2 would infer a
         //    different one, then elide the RM-default cardinality/occurrences.
         //    Order matters: the materialisation reads the 1.4 cardinality, which

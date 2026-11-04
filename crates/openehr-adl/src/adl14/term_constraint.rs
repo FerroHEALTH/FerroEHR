@@ -283,7 +283,7 @@ pub(crate) fn rewrite_as_authored(
         highest_at_number(definition, terminology),
         highest_ac_number(definition, terminology),
     );
-    rewrite_definition(definition, &mut minter, &mut AsAuthored);
+    rewrite_definition(definition, &mut minter, &mut AsAuthored, "");
     if minter.minted.is_empty() {
         return;
     }
@@ -329,16 +329,9 @@ fn highest_at_number(definition: &CComplexObject, terminology: &ArchetypeTermino
     highest
 }
 
-/// Rewrites every terminology constraint of `def` in place.
+/// Rewrites every terminology constraint of `cco` in place; `owner_text`
+/// labels a minted value set.
 pub(super) fn rewrite_definition(
-    def: &mut CComplexObject,
-    minter: &mut TermMinter<'_>,
-    codes: &mut impl CodeSpace,
-) {
-    rewrite_cco(def, minter, codes, "");
-}
-
-fn rewrite_cco(
     cco: &mut CComplexObject,
     minter: &mut TermMinter<'_>,
     codes: &mut impl CodeSpace,
@@ -407,7 +400,7 @@ fn rewrite_obj(
 ) {
     match obj {
         CObject::CTerminologyCode(tc) => rewrite_terminology_code(tc, minter, codes, owner_text),
-        CObject::CComplexObject(cco) => rewrite_cco(cco, minter, codes, owner_text),
+        CObject::CComplexObject(cco) => rewrite_definition(cco, minter, codes, owner_text),
         _ => {}
     }
 }
