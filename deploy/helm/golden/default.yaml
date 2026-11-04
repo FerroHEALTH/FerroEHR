@@ -7,9 +7,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.14"
+    app.kubernetes.io/version: "0.0.15"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.6
+    helm.sh/chart: ferropix-0.3.7
 spec:
   podSelector:
     matchLabels:
@@ -46,7 +46,7 @@ metadata:
     kubernetes.io/description: >-
       Ingress for the CDR: only the API port (and the management port when enabled), but from EVERY source — this policy narrows ports, NOT sources (networkPolicy.ingressAllowAll=true). Set networkPolicy.ingressFrom for a PHI workload.
   labels:
-    helm.sh/chart: ferroehr-21.0.0-rc12
+    helm.sh/chart: ferroehr-21.0.0-rc13
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.0-rc10"
@@ -73,9 +73,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.14"
+    app.kubernetes.io/version: "0.0.15"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.6
+    helm.sh/chart: ferropix-0.3.7
 spec:
   maxUnavailable: 1
   unhealthyPodEvictionPolicy: AlwaysAllow
@@ -95,7 +95,7 @@ metadata:
     kubernetes.io/description: >-
       Keeps the CDR available during voluntary disruption (node drains, cluster upgrades). AlwaysAllow lets a drain evict already-unhealthy pods rather than waiting for them to recover.
   labels:
-    helm.sh/chart: ferroehr-21.0.0-rc12
+    helm.sh/chart: ferroehr-21.0.0-rc13
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.0-rc10"
@@ -118,9 +118,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.14"
+    app.kubernetes.io/version: "0.0.15"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.6
+    helm.sh/chart: ferropix-0.3.7
 automountServiceAccountToken: false
 
 ---
@@ -130,7 +130,7 @@ kind: ServiceAccount
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-21.0.0-rc12
+    helm.sh/chart: ferroehr-21.0.0-rc13
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.0-rc10"
@@ -159,7 +159,7 @@ kind: Secret
 metadata:
   name: ferroehr-env
   labels:
-    helm.sh/chart: ferroehr-21.0.0-rc12
+    helm.sh/chart: ferroehr-21.0.0-rc13
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.0-rc10"
@@ -178,9 +178,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.14"
+    app.kubernetes.io/version: "0.0.15"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.6
+    helm.sh/chart: ferropix-0.3.7
 data:
   ferropix.toml: |
     profile = "production"
@@ -234,7 +234,7 @@ kind: ConfigMap
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-21.0.0-rc12
+    helm.sh/chart: ferroehr-21.0.0-rc13
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.0-rc10"
@@ -352,9 +352,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.14"
+    app.kubernetes.io/version: "0.0.15"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.6
+    helm.sh/chart: ferropix-0.3.7
     app.kubernetes.io/component: server
 spec:
   type: ClusterIP
@@ -374,7 +374,7 @@ kind: Service
 metadata:
   name: ferroehr
   labels:
-    helm.sh/chart: ferroehr-21.0.0-rc12
+    helm.sh/chart: ferroehr-21.0.0-rc13
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.0-rc10"
@@ -403,9 +403,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.14"
+    app.kubernetes.io/version: "0.0.15"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.6
+    helm.sh/chart: ferropix-0.3.7
     app.kubernetes.io/component: server
 spec:
   replicas: 1
@@ -419,9 +419,9 @@ spec:
       labels:
         app.kubernetes.io/name: ferropix
         app.kubernetes.io/instance: ferroehr
-        app.kubernetes.io/version: "0.0.14"
+        app.kubernetes.io/version: "0.0.15"
         app.kubernetes.io/managed-by: Helm
-        helm.sh/chart: ferropix-0.3.6
+        helm.sh/chart: ferropix-0.3.7
         app.kubernetes.io/component: server
       annotations:
         checksum/config: 7b6bf5aaab794d1bad427f629d127e4dfe5ebaef6732b1c617acfc91f90e777f
@@ -440,7 +440,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: ferropix
-          image: "ghcr.io/ferrohealth/ferropix@sha256:389f40d144fe2ef3d79c1c1628e9a662a058961b1650c5541e601addc27112d8"
+          image: "ghcr.io/ferrohealth/ferropix@sha256:5572f80a3a17fe83228a2a6fcf40f1dcaf8cacc48275136927286ba6ded5c74b"
           imagePullPolicy: IfNotPresent
           args: ["serve"]
           env:
@@ -527,7 +527,7 @@ metadata:
     kubernetes.io/description: >-
       The FerroEHR CDR itself: a stateless openEHR ITS-REST API server against an EXTERNAL PostgreSQL 18. It stores nothing locally, so a pod is disposable; readiness reports the database and its schema, liveness does not.
   labels:
-    helm.sh/chart: ferroehr-21.0.0-rc12
+    helm.sh/chart: ferroehr-21.0.0-rc13
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
     app.kubernetes.io/version: "5.6.0-rc10"

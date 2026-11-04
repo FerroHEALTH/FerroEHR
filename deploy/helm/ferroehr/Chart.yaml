@@ -22,7 +22,7 @@ type: application
 # A published OCI version is immutable by refusal rather than by the registry —
 # `helm push` over an existing tag replaces it silently — so a correction always
 # ships as a NEW version and the published one stands as it was.
-version: 21.0.0-rc12
+version: 21.0.0-rc13
 # The DEFAULT container image tag (overridable via image.tag). Equals the
 # workspace version in Cargo.toml, bumped in the release PR beside the
 # docker-compose.yml image tags — one version sweep, the compose treatment
@@ -50,7 +50,7 @@ appVersion: "5.6.0-rc10"
 # fetches it into charts/ before any render (deploy/helm/validate.sh does).
 dependencies:
   - name: ferropix
-    version: 0.3.6
+    version: 0.3.7
     repository: oci://ghcr.io/ferrohealth/charts
     condition: ferropix.enabled
 
@@ -213,7 +213,7 @@ annotations:
     # the digest to `terminology.image.digest` in values.yaml. Bumping FerroTERM
     # is those two edits; this line is then checked, not maintained.
     - name: ferroterm
-      image: ghcr.io/ferrohealth/ferroterm:0.4.0@sha256:efaa80152721c3738e0d0c0695cadbfefe89c1cf6df3567b9d3bc1788767e047  # party: third
+      image: ghcr.io/ferrohealth/ferroterm:0.4.1@sha256:b7f10609992377a7b8bca666254bceca79fe4366e2e54fc5fbce079eb9abf619  # party: third
       platforms:
         - linux/amd64
         - linux/arm64
@@ -224,7 +224,7 @@ annotations:
     # to `ferroehr.bridgePinnedVersion` in _helpers.tpl and
     # `bridge.image.digest` in values.yaml.
     - name: ferrobridge
-      image: ghcr.io/ferrohealth/ferrobridge:0.0.17@sha256:4cdf8d4b4c4d626b99a3929a363198067f87ac70875f4ce6db1d0614884f12af  # party: third
+      image: ghcr.io/ferrohealth/ferrobridge:0.0.19@sha256:bdf4bd416f772ac36e4b3a940eb67841989552c0a0950d680049d959bd54dcba  # party: third
       platforms:
         - linux/amd64
         - linux/arm64
@@ -233,7 +233,7 @@ annotations:
     # release line, so third party on the FerroTERM reasoning; tag and digest
     # are the ones `ferropix.image.digest` in values.yaml pins.
     - name: ferropix
-      image: ghcr.io/ferrohealth/ferropix:0.0.14@sha256:389f40d144fe2ef3d79c1c1628e9a662a058961b1650c5541e601addc27112d8  # party: third
+      image: ghcr.io/ferrohealth/ferropix:0.0.15@sha256:5572f80a3a17fe83228a2a6fcf40f1dcaf8cacc48275136927286ba6ded5c74b  # party: third
       platforms:
         - linux/amd64
         - linux/arm64

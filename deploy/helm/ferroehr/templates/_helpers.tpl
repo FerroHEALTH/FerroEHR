@@ -742,7 +742,7 @@ FerroTERM is this line plus `terminology.image.digest` in values.yaml; the
 annotation is then checked against both rather than maintained a third time.
 */}}
 {{- define "ferroehr.terminologyPinnedVersion" -}}
-0.4.0
+0.4.1
 {{- end }}
 
 {{/*
@@ -850,7 +850,7 @@ entry in Chart.yaml to it. Bumping FerroBRIDGE is this line plus
 `bridge.image.digest` in values.yaml.
 */}}
 {{- define "ferroehr.bridgePinnedVersion" -}}
-0.0.17
+0.0.19
 {{- end }}
 
 {{/*
