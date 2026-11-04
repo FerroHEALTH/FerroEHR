@@ -79,5 +79,7 @@ crate::locale::messages! {
         RoleChecksOffSoEverySigned = "role-checks-off-so-every-signed",
         /// `` `$version` is not a version to store at: a stored-query version is `major.minor.patch`... ``
         NotVersionStoreStoredQueryVersion = "not-version-store-stored-query-version",
+        /// `the request addresses a CDR path outside the configured CDR base`
+        CdrUrlOutsideBase = "cdr-url-outside-base",
     }
 }

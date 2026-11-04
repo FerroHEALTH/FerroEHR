@@ -156,12 +156,16 @@ async fn an_unknown_address_without_a_session_meets_the_sign_in_through_the_stac
 
 /// A CDR behind a private CA answers the client that names the CA in
 /// `[cdr.tls] trust_roots_file`, and refuses the handshake of one that does
-/// not.
+/// not. The stub serves `status` at the product root of the default base
+/// path, where the client addresses it.
 #[tokio::test]
 async fn the_cdr_client_trusts_the_ca_its_tls_table_names() {
     let dir = scratch("cdr");
     private_pki(&dir);
-    let status = axum::Router::new().route("/status", axum::routing::get(|| async { "{}" }));
+    let status = axum::Router::new().route(
+        "/ferroehr/rest/status",
+        axum::routing::get(|| async { "{}" }),
+    );
     let address = serve(
         status,
         Some(TlsSection::new(
@@ -171,7 +175,6 @@ async fn the_cdr_client_trusts_the_ca_its_tls_table_names() {
         Lifecycle::default(),
     )
     .await;
-    let url = format!("https://localhost:{}/status", address.port());
     let config = |tls: TlsClientSection| ferroehr_viewer::config::CdrConfig {
         base_url: format!("https://localhost:{}", address.port()),
         tls,
@@ -183,6 +186,7 @@ async fn the_cdr_client_trusts_the_ca_its_tls_table_names() {
         ..TlsClientSection::default()
     }))
     .expect("the client builds over the CA file");
+    let url = trusting.rest_root_url("status");
     let answered = trusting
         .public(http::Method::GET, &url)
         .send()
@@ -193,11 +197,10 @@ async fn the_cdr_client_trusts_the_ca_its_tls_table_names() {
     let platform_only = ferroehr_viewer::cdr::CdrClient::new(&config(TlsClientSection::default()))
         .expect("the client builds over the platform roots");
     assert!(
-        platform_only
-            .public(http::Method::GET, &url)
-            .send()
-            .await
-            .is_err(),
+        matches!(
+            platform_only.public(http::Method::GET, &url).send().await,
+            Err(ferroehr_viewer::error::ViewerError::CdrUnreachable(_))
+        ),
         "a private CA is not among the platform's roots"
     );
 }

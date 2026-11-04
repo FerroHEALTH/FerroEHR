@@ -6,11 +6,14 @@
 //! One `reqwest` client, the ITS-REST base path, credential injection, strict
 //! `Accept`/`Content-Type` negotiation (`crate::format`), and error
 //! normalization into [`crate::error::ViewerError`]. The viewer reaches the
-//! CDR ONLY here.
+//! CDR ONLY here, and every request stays under the configured roots
+//! (`confined`).
 
+mod confined;
 mod diagnostic;
 
 use crate::error::ViewerError;
+use confined::{RootError, Roots};
 use diagnostic::{diagnostic_of, without_lead};
 use ferrohealth_session::record::Credential;
 
@@ -24,6 +27,10 @@ use ferrohealth_session::record::Credential;
 /// NOTE: no openEHR spec governs the viewer's request pacing — our own
 /// design/extension.
 pub const FANOUT_CONCURRENCY: usize = 8;
+
+/// The first segment of the CDR's always-on health family, the one root a
+/// request may address directly under the CDR origin.
+const HEALTH_FAMILY: &str = "health";
 
 /// A normalized CDR response: status, the named response headers the ITS-REST
 /// wire contract defines, and the raw body.
@@ -158,6 +165,9 @@ pub enum CdrClientError {
     /// The HTTP client refused its settings.
     #[error("the CDR HTTP client could not be built")]
     Build(#[from] reqwest::Error),
+    /// A configured CDR URL does not parse.
+    #[error(transparent)]
+    Root(#[from] RootError),
 }
 
 /// The one outbound HTTP client to the CDR.
@@ -178,6 +188,9 @@ pub struct CdrClient {
     /// ([`CdrConfig::management_base`](crate::config::CdrConfig::management_base)),
     /// so it may point at a different host/port than [`Self::origin`].
     management_base: String,
+    /// What a request may address: the product root, the management base
+    /// and the origin's health family.
+    roots: Roots,
 }
 
 impl CdrClient {
@@ -186,20 +199,30 @@ impl CdrClient {
     ///
     /// # Errors
     /// [`CdrClientError::Tls`] when a `[cdr.tls]` file does not read or holds
-    /// no PEM of its kind, and [`CdrClientError::Build`] when the HTTP client
-    /// refuses its settings.
+    /// no PEM of its kind, [`CdrClientError::Build`] when the HTTP client
+    /// refuses its settings, and [`CdrClientError::Root`] when `base_url`,
+    /// `base_path` or `management_base_url` makes no absolute URL.
     pub fn new(cfg: &crate::config::CdrConfig) -> Result<Self, CdrClientError> {
         let tls = ferrohealth_server::tls_client::TlsClient::read("cdr.tls", &cfg.tls)?;
         let builder = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(cfg.request_timeout_secs))
             .redirect(reqwest::redirect::Policy::none());
         let http = tls.apply(builder)?.build()?;
+        let origin = cfg.base_url.trim_end_matches('/').to_owned();
+        let rest_root = cfg.rest_root().to_owned();
+        let management_base = cfg.management_base();
+        let roots = Roots::new(&[
+            ("cdr.base_path", format!("{origin}{rest_root}")),
+            ("cdr.management_base_url", management_base.clone()),
+            ("cdr.base_url", format!("{origin}/{HEALTH_FAMILY}")),
+        ])?;
         Ok(Self {
             http,
-            origin: cfg.base_url.trim_end_matches('/').to_owned(),
+            origin,
             base_path: cfg.rest_base_path().to_owned(),
-            rest_root: cfg.rest_root().to_owned(),
-            management_base: cfg.management_base(),
+            rest_root,
+            management_base,
+            roots,
         })
     }
 
@@ -255,8 +278,9 @@ impl CdrClient {
         )
     }
 
-    /// A URL directly under the CDR origin (the always-on health family, and
-    /// anything else the server mounts at the process root).
+    /// A URL in the CDR's always-on health family, which the server mounts
+    /// at the process root (`health/readiness`); `path` names it from the
+    /// family's own segment.
     #[must_use]
     pub fn origin_url(&self, path: &str) -> String {
         format!("{}/{}", self.origin, path.trim_start_matches('/'))
@@ -276,8 +300,16 @@ impl CdrClient {
 
     /// One request to `url` as `credential`, asking for `application/json`
     /// until [`CdrCall::accept`] says otherwise.
+    ///
+    /// A `url` outside the configured roots is refused when the call is sent,
+    /// before any request leaves.
     pub fn call(&self, method: http::Method, url: &str, credential: &Credential) -> CdrCall {
-        CdrCall::new(self.http.clone(), method, url, Some(credential.clone()))
+        CdrCall::new(
+            self.http.clone(),
+            method,
+            self.roots.admit(url),
+            Some(credential.clone()),
+        )
     }
 
     /// One request to `url` with no credential, for the surfaces the CDR
@@ -285,7 +317,7 @@ impl CdrClient {
     /// document and the System API's conformance manifest (ITS-REST System
     /// API, `security: []`).
     pub fn public(&self, method: http::Method, url: &str) -> CdrCall {
-        CdrCall::new(self.http.clone(), method, url, None)
+        CdrCall::new(self.http.clone(), method, self.roots.admit(url), None)
     }
 
     /// The auth schemes the CDR advertises, as `(basic, bearer)`.
@@ -330,7 +362,7 @@ impl CdrClient {
 pub struct CdrCall {
     http: reqwest::Client,
     method: http::Method,
-    url: String,
+    url: Result<url::Url, ViewerError>,
     credential: Option<Credential>,
     accept: String,
     headers: Vec<(String, String)>,
@@ -341,13 +373,13 @@ impl CdrCall {
     fn new(
         http: reqwest::Client,
         method: http::Method,
-        url: &str,
+        url: Result<url::Url, ViewerError>,
         credential: Option<Credential>,
     ) -> Self {
         Self {
             http,
             method,
-            url: url.to_owned(),
+            url,
             credential,
             accept: "application/json".to_owned(),
             headers: Vec::new(),
@@ -381,12 +413,13 @@ impl CdrCall {
     /// Sends the request and returns the CDR's answer, whatever its status.
     ///
     /// # Errors
+    /// [`ViewerError::Invalid`] when the URL leaves the configured roots, and
     /// [`ViewerError::CdrUnreachable`] when the CDR does not answer or its
     /// body does not read.
     pub async fn send(self) -> Result<CdrResponse, ViewerError> {
         let mut request = self
             .http
-            .request(self.method, &self.url)
+            .request(self.method, self.url?)
             .header(http::header::ACCEPT, self.accept);
         for (name, value) in &self.headers {
             request = request.header(name, value);
@@ -505,6 +538,39 @@ mod tests {
         assert_eq!(
             split.rest_v1("query/aql"),
             "http://cdr:8080/ferroehr/rest/openehr/v1/query/aql"
+        );
+    }
+
+    /// A stored-query name and version of `..` each would climb out of the
+    /// ITS-REST base once the client resolves the URL (RFC 3986 §5.2.4); the
+    /// call is refused before a request leaves, so a CDR that is not even
+    /// listening answers nothing.
+    #[tokio::test]
+    async fn a_url_that_climbs_out_of_the_base_is_refused_before_it_is_sent() {
+        let client = CdrClient::new(&crate::config::CdrConfig {
+            base_url: "http://127.0.0.1:9".to_owned(),
+            ..crate::config::CdrConfig::default()
+        })
+        .expect("client");
+        let name = urlencoding::encode("..");
+        for url in [
+            client.rest_v1(&format!("query/{name}/{name}")),
+            client.extensions_v1("terminology/%2e%2e/%2E%2E/%2e%2e"),
+            client.management_url("../env"),
+            client.origin_url("health/../ferroehr/rest/openehr/v1/ehr"),
+            "http://cdr.example.org/ferroehr/rest/openehr/v1/ehr".to_owned(),
+        ] {
+            let answer = client.public(http::Method::GET, &url).send().await;
+            assert!(matches!(answer, Err(ViewerError::Invalid(_))), "{url}");
+        }
+        // The same client still reaches a URL its builders write.
+        let answer = client
+            .public(http::Method::GET, &client.rest_root_url("status"))
+            .send()
+            .await;
+        assert!(
+            matches!(answer, Err(ViewerError::CdrUnreachable(_))),
+            "{answer:?}"
         );
     }
 
