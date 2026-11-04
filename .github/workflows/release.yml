@@ -265,7 +265,7 @@ jobs:
       # supplier, component name, version, other unique identifiers (purl),
       # dependency relationships, SBOM author and timestamp
       # (https://www.cisa.gov/sbom).
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: syft@1.50.0
       - name: Generate the repository SPDX SBOM
@@ -420,7 +420,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           cache: false
-      - uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+      - uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-cyclonedx@0.5.9
       - name: The archive the SBOM describes, and the SBOM
@@ -687,7 +687,7 @@ jobs:
       # docker/Dockerfile and release-build.yml; the action fetches the
       # prebuilt binary and installs curl and jq into the slim container itself.
       - name: Install cargo-auditable
-        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+        uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-auditable@0.7.5
 
@@ -820,7 +820,7 @@ jobs:
       # The viewer binary carries its dependency list too (#3675): the same
       # pinned `cargo auditable` as the app binary job above.
       - name: Install cargo-auditable
-        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+        uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-auditable@0.7.5
 

@@ -97,7 +97,7 @@ jobs:
       # page's SBOM never travelled with it
       # (https://github.com/rust-secure-code/cargo-auditable).
       - name: Install cargo-auditable
-        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+        uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-auditable@0.7.5
       # The manifests on main hold a floor below the published line, so the
@@ -161,7 +161,7 @@ jobs:
       # Generated from the release commit's own `Cargo.lock` with `--locked`, so
       # it describes the graph that was actually built, not one resolved later.
       - name: Install cargo-cyclonedx
-        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+        uses: taiki-e/install-action@1919c4a95903d2c33e4a221102edca87309fc14b # v2.89.0
         with:
           tool: cargo-cyclonedx@0.5.9
       - name: Generate the dependency SBOM
