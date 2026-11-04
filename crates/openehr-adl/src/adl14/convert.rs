@@ -223,9 +223,9 @@ impl<'a> Converter<'a> {
 
     fn run(&mut self, mut data: AuthoredArchetypeData) -> AuthoredArchetypeData {
         // 1. Build the node-id map + synthesis counters from the definition.
+        crate::adl14::walk::drop_quantity_properties(&mut data.definition, "", self.log);
         self.plan_codes(&data);
-        // 2. Renumber node ids in document order (existing → mapped, empty →
-        //    synthesised).
+        // 2. Renumber node ids in document order: existing mapped, empty minted.
         self.renumber_nodes(&mut data.definition);
         // 3. Convert every terminology-code constraint (local/external/list).
         convert_constraints_cco(&mut data.definition, self, "");

@@ -241,12 +241,13 @@ fn extra_languages_are_recorded_in_conversion_details() {
     );
 }
 
-/// No root converted from the Better template raises VATID or VATCV: each
-/// slot that replaced an embedded root is defined in every language of its
-/// parent's terminology, and a term keyed by no local code (the `°C` and `°F`
-/// unit labels) is dropped with a `conversion_details` entry.
+/// Every root converted from the Better template validates without an error:
+/// each slot that replaced an embedded root is defined in every language of
+/// its parent's terminology, a term keyed by no local code (the `°C` and `°F`
+/// unit labels) is dropped with a `conversion_details` entry, and so is the
+/// `C_DV_QUANTITY` property, which no RM `DV_QUANTITY` attribute holds (VCARM).
 #[test]
-fn converted_roots_define_their_slots_and_carry_only_local_codes() {
+fn converted_roots_validate_without_errors() {
     let path = format!("{}/{DEMO_VITALS}", env!("CARGO_MANIFEST_DIR"));
     let xml = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path}: {e}"));
     let opt = opt14::from_xml(&xml).unwrap_or_else(|e| panic!("parse OPT {path}: {e:?}"));
@@ -260,13 +261,7 @@ fn converted_roots_define_their_slots_and_carry_only_local_codes() {
         )
         .unwrap_or_else(|e| panic!("{}: validate: {e:?}", root.archetype_id))
         .into_iter()
-        .filter(|issue| {
-            matches!(
-                issue.code,
-                openehr_adl::validate::catalogue::ValidationCode::Vatid
-                    | openehr_adl::validate::catalogue::ValidationCode::Vatcv
-            )
-        })
+        .filter(|issue| issue.severity == openehr_adl::validate::catalogue::Severity::Error)
         .collect();
         assert!(errors.is_empty(), "{}: {errors:?}", root.archetype_id);
     }
@@ -282,5 +277,18 @@ fn converted_roots_define_their_slots_and_carry_only_local_codes() {
             .any(|key| key == "dropped_term.en.°C"),
         "the unit label is reported: {:?}",
         temperature.conversion_details
+    );
+    assert!(
+        temperature
+            .conversion_details
+            .values()
+            .any(|note| note.contains("DV_QUANTITY property constraint")),
+        "the dropped property is reported: {:?}",
+        temperature.conversion_details
+    );
+    assert!(
+        !temperature.adl2.contains("property matches"),
+        "no property attribute is printed:\n{}",
+        temperature.adl2
     );
 }
