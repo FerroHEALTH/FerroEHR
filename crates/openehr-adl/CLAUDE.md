@@ -71,7 +71,8 @@ else; each helper has exactly ONE home.
 |---|---|
 | `adl14/lower` | the 1.4-only cADL productions (qualified/listed term constraints, inline dADL domain blocks) |
 | `adl14/domain` | the inline dADL domain-block lowering to `DV_QUANTITY`/`DV_ORDINAL`/… |
-| `adl14/convert` | the 1.4→2 conversion core: code planning, node-id renumbering, terminology-constraint conversion, terminology rebuild |
+| `adl14/convert` | the 1.4→2 conversion core: code planning, node-id renumbering, terminology rebuild |
+| `adl14/term_constraint` | the ONE 1.4 terminology-constraint rewrite (external code → bound at-code, code list → ac value set), behind the `CodeSpace` seam: the converter shifts codes into the ADL2 numbering, `opt::create_opt` keeps an unconverted constituent's 1.4 codes as authored |
 | `adl14/walk` | the read-only definition traversals the code planning consumes + the shared `cco_data_mut` |
 | `adl14/multiplicity` | the 1.4 default-occurrences materialisation + RM-default cardinality/occurrences elision |
 | `adl14/metadata` | the description / standardised meta-data / HRID-version transform |
