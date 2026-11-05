@@ -311,14 +311,13 @@ impl FerroEhrService {
                 self.privacy.enforce(kind.as_str(), data)?;
                 validate_folder(data, incomplete)
             }
-            // The demographic kinds reach here from the raw-body CONTRIBUTION
-            // lane only, so they take the full check including the decode; the
-            // direct routes enter at `party_invariants`, already decoded.
-            Kind::Agent | Kind::Group | Kind::Organisation | Kind::Person | Kind::Role => {
-                crate::service::demographic::validate::party_check(kind.as_str(), data, incomplete)
-            }
-            Kind::PartyRelationship => {
-                crate::service::demographic::validate::relationship_check(data, incomplete)
+            Kind::Agent
+            | Kind::Group
+            | Kind::Organisation
+            | Kind::Person
+            | Kind::Role
+            | Kind::PartyRelationship => {
+                self.demographic_commit_check(kind, data, incomplete).await
             }
         }
     }

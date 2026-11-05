@@ -53,7 +53,7 @@ fn pack() -> Vec<PathBuf> {
 
 /// Every CKM archetype the XML codec reads; its refusals are adjudicated by
 /// `openehr-its`'s own CKM archetype gate.
-fn library() -> ArchetypeLibrary {
+pub(crate) fn library() -> ArchetypeLibrary {
     let library: ArchetypeLibrary = pack()
         .iter()
         .filter_map(|p| {
@@ -65,7 +65,7 @@ fn library() -> ArchetypeLibrary {
     library
 }
 
-fn definition(
+pub(crate) fn definition(
     template_id: &str,
     root: ArchetypeUse,
     library: &ArchetypeLibrary,
@@ -87,7 +87,7 @@ fn definition(
     }
 }
 
-fn archetype_use(id: &str) -> ArchetypeUse {
+pub(crate) fn archetype_use(id: &str) -> ArchetypeUse {
     ArchetypeUse::new(ArchetypeId {
         value: id.to_owned(),
     })

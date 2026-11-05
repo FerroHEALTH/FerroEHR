@@ -1410,6 +1410,30 @@ fn slot_occurrences_min_and_max() {
     );
 }
 
+/// RM common master06 §Incomplete Content sets "all existence and cardinality
+/// lower limits" to zero, a slot's occurrences included; its upper limit
+/// stays.
+#[test]
+fn incomplete_suppresses_an_unfilled_mandatory_slot_but_keeps_too_many() {
+    let root = obs_slot(&[r"openEHR-EHR-OBSERVATION\..*"], &[], 1, 1);
+    let empty = json!({"_type": "COMPOSITION", "archetype_node_id": "x", "content": []});
+    assert!(
+        walk_incomplete(&empty, &root).is_empty(),
+        "an incomplete commit tolerates an unfilled mandatory slot"
+    );
+    let two = json!({"_type": "COMPOSITION", "archetype_node_id": "x", "content": [
+        {"_type": "OBSERVATION", "archetype_node_id": "openEHR-EHR-OBSERVATION.a.v1",
+         "name": {"_type": "DV_TEXT", "value": "a"}},
+        {"_type": "OBSERVATION", "archetype_node_id": "openEHR-EHR-OBSERVATION.b.v1",
+         "name": {"_type": "DV_TEXT", "value": "b"}}]});
+    assert!(
+        walk_incomplete(&two, &root)
+            .iter()
+            .any(|m| m.kind == ValidationKind::Occurrences),
+        "too many slot fillers stays wrong in an incomplete commit"
+    );
+}
+
 // ── DV_ORDINAL / DV_SCALE (symbol, value) pairing ──────────────────
 
 fn ordinal_node(rm: &str, scale: bool) -> WebTemplateNode {

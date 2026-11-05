@@ -186,12 +186,16 @@ impl FerroEhrService {
         // the default VERSION and `VERSION.audit_details` attributes on commit
         // runtime").
         let Resolved {
-            audit, envelope, ..
+            audit,
+            envelope,
+            incomplete,
         } = self.resolve_write(
             &request,
             change_type::CREATION,
             "PARTY_RELATIONSHIP creation",
         )?;
+        self.mapped_template_gate(Kind::PartyRelationship.as_str(), &request.data, incomplete)
+            .await?;
         let body = request.data;
         let canonical = (!support::commit_rewrites_body(self)).then(|| body.clone());
         let committed = self
@@ -255,6 +259,17 @@ impl FerroEhrService {
                 "PARTY_RELATIONSHIP update",
             )
         })();
+        let checked = match checked {
+            Ok(resolved) => self
+                .mapped_template_gate(
+                    Kind::PartyRelationship.as_str(),
+                    &request.data,
+                    resolved.incomplete,
+                )
+                .await
+                .map(|()| resolved),
+            Err(e) => Err(e),
+        };
         let body = request.data;
         let canonical = (!support::commit_rewrites_body(self)).then(|| body.clone());
         let committed = self

@@ -181,7 +181,7 @@ impl Flattener<'_> {
                 Some(at) if clones.iter().any(|set| set.steps == at) => {
                     replaced.insert(path::render(&at));
                 }
-                _ => remove(attributes, archetype_id, narrowing)?,
+                _ => remove(attributes, archetype_id, narrowing, &placed)?,
             }
         }
         // A deeper set first, so a node is placed before its ancestor gains copies.
@@ -881,22 +881,22 @@ fn remove(
     attributes: &mut Vec<CAttribute>,
     archetype_id: &str,
     narrowing: &Narrowing,
+    placed: &BTreeMap<String, usize>,
 ) -> Result<(), WriteError> {
     match narrowing {
         Narrowing::Exclude { path } => {
             let steps = steps(archetype_id, path)?;
             let (siblings, index) = resolve_object(attributes, archetype_id, path, &steps)?;
-            if let Some(object) = siblings.get_mut(index) {
-                let current = path::occurrences_mut(object);
-                if interval::is_mandatory(current) {
-                    return Err(WriteError::Widening {
-                        archetype_id: archetype_id.to_owned(),
-                        path: path.clone(),
-                        what: "occurrences",
-                        given: "{0..0}".to_owned(),
-                        archetype: interval::display(current),
-                    });
-                }
+            if let Some(object) = siblings.get(index)
+                && !slot::closes_within(siblings, index, placed.get(&path::render(&steps)))
+            {
+                return Err(WriteError::Widening {
+                    archetype_id: archetype_id.to_owned(),
+                    path: path.clone(),
+                    what: "occurrences",
+                    given: "{0..0}".to_owned(),
+                    archetype: interval::display(path::occurrences(object)),
+                });
             }
             siblings.remove(index);
         }

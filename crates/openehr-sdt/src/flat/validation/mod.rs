@@ -933,7 +933,7 @@ impl Validator {
         for (i, slot) in ca.slots.iter().enumerate() {
             let count = i32::try_from(counts[i]).unwrap_or(i32::MAX);
             if counts[i] == 0 {
-                if slot.min >= 1 {
+                if slot.min >= 1 && !self.relax_lower_bounds {
                     self.push(
                         &ca.path,
                         format!(
