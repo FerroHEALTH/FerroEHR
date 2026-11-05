@@ -29,6 +29,11 @@ commit the result.
 | FerroPULSE report v1 JSON Schemas + examples (the usage report contract) | `scripts/vendor/ferropulse-schemas.sh` | `corpus/ferropulse/` |
 | IHE PIXm 3.1.0 package excerpt (the $ihe-pix OperationDefinition, the Manager CapabilityStatement, the example ITI-83 answers) | `scripts/vendor/ihe-pixm.sh` | `corpus/ihe-pixm/` |
 | Veredictum catalogue ADL 2 content cases (the ADL 2 operational templates and the compositions committed against them) | `scripts/vendor/veredictum-adl2-content.sh` | `corpus/veredictum/adl2-content/` |
+| IETF RFCs the party binding and SCIM provisioning cite (SCIM 2.0, OAuth 2.0, URNs, usernames, HTTP status codes), each pinned by sha256 | `scripts/vendor/rfcs.sh` | `docs/specs/rfc/` |
+| OpenID Connect Core 1.0, errata set 2 | `scripts/vendor/openid-connect-core.sh` | `docs/specs/openid-connect-core/` |
+| Microsoft Entra ID provisioning articles (develop a SCIM endpoint, customize attribute mappings), at a pinned `MicrosoftDocs/entra-docs` commit | `scripts/vendor/entra-scim-docs.sh` | `docs/specs/microsoft-entra/` |
+| Workload Identity Federation for SCIM Provisioning, at a pinned `AzureAD/SCIMReferenceCode` commit | `scripts/vendor/scim-reference-code.sh` | `docs/specs/scim-reference-code/` |
+| Keycloak 26.8.2 documentation sections (token exchange, SCIM, brokering, user profile, registration, audience) | `scripts/vendor/keycloak-docs.sh` | `docs/specs/keycloak/` |
 
 ## The openEHR CKM REST API — facts, verified 2026-08-01
 

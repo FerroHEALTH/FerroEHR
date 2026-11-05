@@ -1,0 +1,35 @@
+OpenID Foundation specification notice
+======================================
+
+This identifier covers OpenID Connect Core 1.0 vendored at
+`docs/specs/openid-connect-core/`, fetched by
+`scripts/vendor/openid-connect-core.sh`. It is not an SPDX-listed licence. It
+is the grant the specification states in its Appendix C, Notices, recorded in
+machine-readable form so that a glob elsewhere in REUSE.toml cannot assert the
+wrong terms over it.
+
+What the specification states
+-----------------------------
+
+Quoted verbatim from Appendix C of OpenID Connect Core 1.0 incorporating
+errata set 2, https://openid.net/specs/openid-connect-core-1_0-errata2.html,
+read 2026-11-05:
+
+  Copyright (c) 2023 The OpenID Foundation.
+
+  The OpenID Foundation (OIDF) grants to any Contributor, developer,
+  implementer, or other interested party a non-exclusive, royalty free,
+  worldwide copyright license to reproduce, prepare derivative works from,
+  distribute, perform and display, this Implementers Draft or Final
+  Specification solely for the purposes of (i) developing specifications,
+  and (ii) implementing Implementers Drafts and Final Specifications based on
+  such documents, provided that attribution be made to the OIDF as the source
+  of the material, but that such attribution does not indicate an
+  endorsement by the OIDF.
+
+How this repository uses it
+---------------------------
+
+The copy is distributed to implement the specification. The attribution is
+the tree's PROVENANCE.md: the material is the OpenID Foundation's, and its
+presence here indicates no endorsement by the OIDF.

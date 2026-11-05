@@ -1,0 +1,42 @@
+IETF Trust Legal Provisions
+===========================
+
+This identifier covers the IETF RFCs vendored at `docs/specs/rfc/`, fetched
+by `scripts/vendor/rfcs.sh`. It is not an SPDX-listed licence. It is the
+grant the IETF Trust makes over every IETF Document, recorded in
+machine-readable form so that a glob elsewhere in REUSE.toml cannot assert the
+wrong terms over them.
+
+What each document states
+-------------------------
+
+Each RFC carries this Copyright Notice, with its own year:
+
+  Copyright (c) <year> IETF Trust and the persons identified as the document
+  authors. All rights reserved.
+
+  This document is subject to BCP 78 and the IETF Trust's Legal Provisions
+  Relating to IETF Documents (https://trustee.ietf.org/license-info) in
+  effect on the date of publication of this document.
+
+What the Trust Legal Provisions grant
+-------------------------------------
+
+Quoted verbatim from section 3.c of the Trust Legal Provisions 5.0, effective
+2015-03-25, https://trustee.ietf.org/documents/trust-legal-provisions/tlp-5/,
+read 2026-11-05. Section 3.c of TLP 4.0, effective 2009-12-28, which governs
+the RFCs published before 2015-03-25, grants the same in the same words
+(https://trustee.ietf.org/license-info/IETF-TLP-4.htm):
+
+  c. Licenses For Use Outside the IETF Standards Process. In addition to the
+  rights granted with respect to Code Components described in Section 4
+  below, the IETF Trust hereby grants to each person who wishes to exercise
+  such rights, to the greatest extent that it is permitted to do so, a
+  non-exclusive, royalty-free, worldwide right and license under all
+  copyrights and rights of authors:
+
+    i. to copy, publish, display and distribute IETF Contributions and IETF
+    Documents in full and without modification,
+
+Every file under `docs/specs/rfc/` is the whole document, unmodified, with
+every legend and notice it carries, which is what that grant covers.
