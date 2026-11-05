@@ -303,8 +303,11 @@ fn version_latest_explicit() {
     assert_eq!(*rm_scope(&ir, 2), VersionScope::Latest);
 }
 
+/// QUERY master03 §Standard predicate: a standard predicate is a left-hand
+/// operand, an operator and a right-hand operand, so a `time_committed`
+/// predicate keeps its operator and scopes the contained versioned object.
 #[test]
-fn version_at_time_standard_predicate() {
+fn version_time_committed_standard_predicate_keeps_its_operator() {
     let ir = plan_ok(
         "SELECT c/uid/value FROM EHR e CONTAINS \
          VERSION v[commit_audit/time_committed >= '2021-01-01T00:00:00'] \
@@ -320,12 +323,74 @@ fn version_at_time_standard_predicate() {
         }
         other => panic!("expected a version predicate scope, got {other:?}"),
     }
-    assert!(
-        matches!(&v.scope, VersionScope::Predicate(p) if p.field == VersionField::TimeCommitted),
-        "time_committed comparison is at-time"
-    );
     // and it propagates to the contained COMPOSITION.
     assert!(matches!(rm_scope(&ir, 2), VersionScope::Predicate(_)));
+}
+
+/// Each comparison operator QUERY master03 §Standard predicate admits
+/// (`>, >=, =, <, <=, !=`, the `COMPARISON_OPERATOR` of `AqlLexer.g4`) is
+/// applied to the commit time itself: the statement compares the commit
+/// audit's `time_committed` with that operator and carries no "version in
+/// force at the instant" sub-select.
+#[test]
+fn version_time_committed_predicate_applies_each_comparison_operator() {
+    for (op, sql_op) in [
+        (">", " > "),
+        (">=", " >= "),
+        ("=", " = "),
+        ("<", " < "),
+        ("<=", " <= "),
+        ("!=", " <> "),
+    ] {
+        let sql = build_sql(&format!(
+            "SELECT c/uid/value FROM EHR e CONTAINS \
+             VERSION v[commit_audit/time_committed/value {op} '2021-01-01T00:00:00Z'] \
+             CONTAINS COMPOSITION c"
+        ));
+        let compare = format!(r#"."time_committed"{sql_op}"#);
+        assert!(sql.contains(&compare), "{op}: no `{compare}` in {sql}");
+        assert!(
+            !sql.contains(r#"_at"."committed_at""#),
+            "{op}: an at-instant sub-select in {sql}"
+        );
+    }
+}
+
+/// A `time_committed` standard predicate compares a date/time (QUERY master03
+/// §Built-in Types, Dates and Times), so a right-hand operand with no
+/// date/time reading is refused at planning.
+#[test]
+fn version_time_committed_predicate_refuses_a_non_temporal_operand() {
+    for operand in ["5", "1.5", "true", "NULL"] {
+        let err = plan_err(&format!(
+            "SELECT c/uid/value FROM EHR e CONTAINS \
+             VERSION v[commit_audit/time_committed/value > {operand}] \
+             CONTAINS COMPOSITION c"
+        ));
+        assert!(
+            matches!(err, AqlError::Analysis(AnalysisError::TypeMismatch(_))),
+            "{operand}: {err:?}"
+        );
+    }
+}
+
+/// `time_committed` is a `DV_DATE_TIME` (RM common
+/// `org.openehr.rm.common.audit_details.adoc`), so a predicate reads the whole
+/// value or its `value`; any other suffix names nothing the comparison reads.
+#[test]
+fn version_time_committed_predicate_refuses_an_unknown_suffix() {
+    let err = plan_err(
+        "SELECT c/uid/value FROM EHR e CONTAINS \
+         VERSION v[commit_audit/time_committed/magnitude_status > '2021-01-01'] \
+         CONTAINS COMPOSITION c",
+    );
+    assert!(
+        matches!(
+            err,
+            AqlError::Feature(AqlFeatureError::UnsupportedVersionPredicate(_))
+        ),
+        "{err:?}"
+    );
 }
 
 #[test]
