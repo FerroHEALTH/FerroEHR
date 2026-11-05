@@ -1,0 +1,34 @@
+eHDSI document reuse statement
+==============================
+
+This identifier covers the eHDSI documents vendored at
+`docs/specs/ehdsi-specifications/`, copied from the owner's retrieval by
+`scripts/vendor/ehdsi-specifications.sh`. It is not an SPDX-listed licence. It
+is the statement each document's cover and control page makes, recorded in
+machine-readable form so that a glob elsewhere in REUSE.toml cannot assert the
+wrong terms over them.
+
+What the documents state
+------------------------
+
+Quoted verbatim from the cover and control page of each of the eHDSI
+Interoperability Specifications 8.0.1, the SAML Profile 10.0.0, the Audit
+Trail Profile 10.1.0, Section I Security Policies 10.0.0, Section II Security
+Services 10.0.0 and the XCA Profile 8.0.1, read 2026-11-05:
+
+  Reuse is authorised, provided the source is acknowledged.
+
+  Distribution level*: PU
+
+  * Distribution level: PU = Public, ...
+
+How this repository uses it
+---------------------------
+
+The documents are copied verbatim, as the owner supplied them. The
+acknowledgement is the tree's PROVENANCE.md: the documents are DG SANTE's,
+the Directorate-General for Health and Food Safety of the European
+Commission, published for MyHealth@EU, and each cover's source line names it.
+
+The MyHealth@EU Requirements Catalogue 10.0.0 makes no such statement and is
+not covered: no copy of it is in the repository.

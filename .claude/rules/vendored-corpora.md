@@ -31,9 +31,22 @@ commit the result.
 | Veredictum catalogue ADL 2 content cases (the ADL 2 operational templates and the compositions committed against them) | `scripts/vendor/veredictum-adl2-content.sh` | `corpus/veredictum/adl2-content/` |
 | IETF RFCs the party binding and SCIM provisioning cite (SCIM 2.0, OAuth 2.0, URNs, usernames, HTTP status codes), each pinned by sha256 | `scripts/vendor/rfcs.sh` | `docs/specs/rfc/` |
 | OpenID Connect Core 1.0, errata set 2 | `scripts/vendor/openid-connect-core.sh` | `docs/specs/openid-connect-core/` |
-| Microsoft Entra ID provisioning articles (develop a SCIM endpoint, customize attribute mappings), at a pinned `MicrosoftDocs/entra-docs` commit | `scripts/vendor/entra-scim-docs.sh` | `docs/specs/microsoft-entra/` |
+| Microsoft Entra ID provisioning articles (develop a SCIM endpoint, customize attribute mappings) and the identity platform claims references and app manifest reference (access token claims, optional claims, `requestedAccessTokenVersion`), at a pinned `MicrosoftDocs/entra-docs` commit | `scripts/vendor/entra-scim-docs.sh` | `docs/specs/microsoft-entra/` |
 | Workload Identity Federation for SCIM Provisioning, at a pinned `AzureAD/SCIMReferenceCode` commit | `scripts/vendor/scim-reference-code.sh` | `docs/specs/scim-reference-code/` |
 | Keycloak 26.8.2 documentation sections (token exchange, SCIM, brokering, user profile, registration, audience) | `scripts/vendor/keycloak-docs.sh` | `docs/specs/keycloak/` |
+| eHDSI Interoperability Specifications 8.0.1 and the SAML, Audit Trail, Section I, Section II and XCA profiles, copied by sha256 from the owner's retrieval (`DIR` argument; the wiki is behind EU Login); the Requirements Catalogue 10.0.0 checked and recorded, never copied | `scripts/vendor/ehdsi-specifications.sh` | `docs/specs/ehdsi-specifications/` |
+| Okta OAuth 2.0 and management OpenAPI documents (`okta/okta-management-openapi-spec`, newest `dist/` release); the OAuth 2.0 API overview page cache only | `scripts/vendor/okta.sh` | `docs/specs/okta/`, cache `.vendor-cache/okta/` |
+| OASIS SAML V2.0 Profiles (OASIS Standard, 15 March 2005) | `scripts/vendor/oasis-saml.sh` | `docs/specs/oasis-saml/` |
+| IHE IUA supplement, Revision 2.5, at the `IHE/ITI.IUA` tag | `scripts/vendor/ihe-iua.sh` | `docs/specs/ihe-iua/` |
+| Nuts RFC021, VP Token Grant Type, at a pinned `nuts-foundation/nuts-specification` commit | `scripts/vendor/nuts-rfc.sh` | `docs/specs/nuts-rfc/` |
+| Mitz Implementatiehandleiding Open en Gesloten Vraag 3.8.2, cache only (no licence stated) | `scripts/vendor/mitz.sh` | record `docs/specs/mitz/`, cache `.vendor-cache/mitz/` |
+
+**A document whose terms permit no copy is cache only.** Its script fetches it
+into the git-ignored `.vendor-cache/<corpus>/` (`pinned_cache` in
+`scripts/vendor/lib/pinned.sh`) and writes a `PROVENANCE.md` row of the form
+``| `file` | `sha256` | cache only |``; a document the owner read under a
+reading grant and may not redistribute is `not redistributed` and copied
+nowhere. `scripts/checks/pinned-docs.sh` refuses either one in the tree.
 
 ## The openEHR CKM REST API — facts, verified 2026-08-01
 

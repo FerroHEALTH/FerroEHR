@@ -132,13 +132,25 @@ used as test corpora. Each family keeps its upstream license:
 | Swiss federal law (DSG/FADP, DSV/DPO, EPDG, EPDV, EPDV-EDI; German, plus the non-binding English where Fedlex publishes it), under `docs/law/ch/` | Fedlex (the Federal Chancellery) | [`LicenseRef-URG-Art5-Nicht-Geschuetzte-Werke`](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/LicenseRef-URG-Art5-Nicht-Geschuetzte-Werke.txt): Swiss legislation and its official translations are not protected by copyright (Art. 5 URG)
 | The IETF RFCs the party binding and SCIM provisioning cite (SCIM 2.0, OAuth 2.0, URNs, usernames, HTTP status codes), under `docs/specs/rfc/` | the RFC Editor | [`LicenseRef-IETF-Trust-Legal-Provisions`](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/LicenseRef-IETF-Trust-Legal-Provisions.txt): the IETF Trust's grant to copy and distribute a document in full and without modification |
 | OpenID Connect Core 1.0 incorporating errata set 2, under `docs/specs/openid-connect-core/` | the OpenID Foundation | [`LicenseRef-OpenID-Foundation-Specification`](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/LicenseRef-OpenID-Foundation-Specification.txt): the specification's own notice, for implementing it with attribution |
-| Two Microsoft Entra ID provisioning articles, under `docs/specs/microsoft-entra/` | `MicrosoftDocs/entra-docs` | [CC-BY 4.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-4.0.txt) or [MIT](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/MIT.txt): the README grants the first, the `LICENSE` file it points at reads the second |
+| The Microsoft Entra ID provisioning articles and the identity platform claims and app manifest references, under `docs/specs/microsoft-entra/` | `MicrosoftDocs/entra-docs` | [CC-BY 4.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-4.0.txt) or [MIT](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/MIT.txt): the README grants the first, the `LICENSE` file it points at reads the second |
 | Microsoft's Workload Identity Federation for SCIM Provisioning guide, under `docs/specs/scim-reference-code/` | `AzureAD/SCIMReferenceCode` | [MIT](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/MIT.txt) |
 | The Keycloak 26.8.2 documentation sections the identity-provider examples cite, under `docs/specs/keycloak/` | `keycloak/keycloak` | [Apache-2.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/Apache-2.0.txt) |
+| The eHDSI Interoperability Specifications 8.0.1 and the SAML, Audit Trail, Section I, Section II and XCA profiles the party binding cites, under `docs/specs/ehdsi-specifications/` | DG SANTE (MyHealth@EU), supplied by the owner from the eHDSI wiki | [`LicenseRef-eHDSI-Reuse`](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/LicenseRef-eHDSI-Reuse.txt): each cover authorises reuse provided the source is acknowledged |
+| The Okta OAuth 2.0 and management OpenAPI documents, release 2026.44.0, under `docs/specs/okta/` | `okta/okta-management-openapi-spec` | [Apache-2.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/Apache-2.0.txt), as each document's `info.license` states |
+| The OASIS SAML V2.0 Profiles, under `docs/specs/oasis-saml/` | OASIS Open | [`LicenseRef-OASIS-Copyright`](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/LicenseRef-OASIS-Copyright.txt): the document's own notice, a grant to copy and distribute it unmodified |
+| The IHE IUA supplement, Revision 2.5, under `docs/specs/ihe-iua/` | `IHE/ITI.IUA` | [CC-BY 4.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-4.0.txt) |
+| Nuts RFC021, VP Token Grant Type, under `docs/specs/nuts-rfc/` | `nuts-foundation/nuts-specification` | [CC-BY-SA 4.0](https://github.com/FerroHEALTH/FerroEHR/blob/main/LICENSES/CC-BY-SA-4.0.txt) |
 
 The NEN 7510, 7512 and 7513 standards the compliance pages cite are sold under
 copyright and are not in the tree; `docs/law/nl/nen-75xx/` holds a record of the
 clauses cited and why the text is absent.
+
+Three documents the party binding cites are not in the tree either, because
+their terms permit no copy: the MyHealth@EU Requirements Catalogue 10.0.0
+states no reuse terms, the Okta "OpenID Connect & OAuth 2.0" API overview is
+"All rights reserved", and the Mitz Implementatiehandleiding 3.8.2 states no
+licence. Each is recorded by URL or version and sha256, in
+`docs/specs/ehdsi-specifications/`, `docs/specs/okta/` and `docs/specs/mitz/`.
 
 Every vendored tree in the repository carries a provenance note naming its exact
 upstream source and pinned revision, with the upstream `LICENSE` file vendored

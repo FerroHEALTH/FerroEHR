@@ -1,0 +1,48 @@
+OASIS copyright notice
+======================
+
+This identifier covers the OASIS SAML V2.0 Profiles vendored at
+`docs/specs/oasis-saml/`, fetched by `scripts/vendor/oasis-saml.sh`. It is not
+an SPDX-listed licence. It is the grant the document states in its Appendix
+B, Notices, recorded in machine-readable form so that a glob elsewhere in
+REUSE.toml cannot assert the wrong terms over it.
+
+What the document states
+------------------------
+
+Quoted verbatim from Appendix B of "Profiles for the OASIS Security Assertion
+Markup Language (SAML) V2.0", OASIS Standard, 15 March 2005,
+https://docs.oasis-open.org/security/saml/v2.0/saml-profiles-2.0-os.pdf, read
+2026-11-05:
+
+  Copyright © OASIS Open 2005. All Rights Reserved.
+
+  This document and translations of it may be copied and furnished to others,
+  and derivative works that comment on or otherwise explain it or assist in
+  its implementation may be prepared, copied, published and distributed, in
+  whole or in part, without restriction of any kind, provided that the above
+  copyright notice and this paragraph are included on all such copies and
+  derivative works. However, this document itself may not be modified in any
+  way, such as by removing the copyright notice or references to OASIS,
+  except as needed for the purpose of developing OASIS specifications, in
+  which case the procedures for copyrights defined in the OASIS Intellectual
+  Property Rights document must be followed, or as required to translate it
+  into languages other than English.
+
+  The limited permissions granted above are perpetual and will not be revoked
+  by OASIS or its successors or assigns.
+
+  This document and the information contained herein is provided on an "AS
+  IS" basis and OASIS DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING
+  BUT NOT LIMITED TO ANY WARRANTY THAT THE USE OF THE INFORMATION HEREIN WILL
+  NOT INFRINGE ANY RIGHTS OR ANY IMPLIED WARRANTIES OF MERCHANTABILITY OR
+  FITNESS FOR A PARTICULAR PURPOSE.
+
+The OASIS IPR Policy, https://www.oasis-open.org/policies-guidelines/ipr/,
+read 2026-11-05, states the same grant for OASIS documents.
+
+How this repository uses it
+---------------------------
+
+The PDF is copied unmodified, with its copyright notice and this paragraph
+in it, which is the condition of the grant.
