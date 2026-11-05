@@ -591,27 +591,22 @@ guarded_handler! {
                                             unique state identifiers\").",
                 content((serde_json::Value = "application/json"), (serde_json::Value = "application/xml"), (serde_json::Value = "application/openehr.wt.flat+json"), (serde_json::Value = "application/openehr.wt.structured+json"))
             ),
-            (status = 400, description = "`type` or `detail_level` is outside its \
-                                          enumerated set. The released operation \
-                                          leaves the handling open — when the server \
-                                          \"does not support the requested `type` or \
-                                          `detail_level`, it will fall back to the \
-                                          closest supported level, or it may return \
-                                          an error (typically `400 Bad Request`)\" — \
-                                          and this server takes the error arm for an \
-                                          out-of-enum value (an out-of-enum value is \
-                                          also \"syntactically invalid … parameter\" \
-                                          under `responses/400.yaml`). Which arm of \
-                                          that either/or applies is OURS. The same \
-                                          `400` answers a template whose root is \
-                                          neither a COMPOSITION nor a party class \
-                                          (an ENTRY or a SECTION): the `200` body is \
-                                          one of the versioned-object classes, none \
-                                          of which such a template admits. It also \
-                                          answers a party template that constrains \
-                                          no `PARTY_IDENTITY`, since RM demographic \
-                                          §PARTY `Identities_valid` admits no party \
-                                          without one.",
+            (status = 400, description = "`type` or `detail_level` is outside its enumerated set. \
+                                          The released operation leaves the handling open — when \
+                                          the server \"does not support the requested `type` or \
+                                          `detail_level`, it will fall back to the closest \
+                                          supported level, or it may return an error (typically \
+                                          `400 Bad Request`)\" — and this server takes the error \
+                                          arm for an out-of-enum value (an out-of-enum value is \
+                                          also \"syntactically invalid … parameter\" under \
+                                          `responses/400.yaml`). Which arm of that either/or \
+                                          applies is OURS. The same `400` answers a template whose \
+                                          root is neither a COMPOSITION nor a party class (an \
+                                          ENTRY or a SECTION): the `200` body is one of the \
+                                          versioned-object classes, none of which such a template \
+                                          admits, and a party template that constrains no \
+                                          `PARTY_IDENTITY` (RM demographic §PARTY \
+                                          `Identities_valid`).",
              body = serde_json::Value),
             (status = 404, description = "The released trigger, verbatim: `404 Not \
                                           Found` \"is returned when a template with \
@@ -1108,20 +1103,16 @@ guarded_handler! {
                                             resource with an identifier.",
                 content((serde_json::Value = "application/json"), (serde_json::Value = "application/xml"), (serde_json::Value = "application/openehr.wt.flat+json"), (serde_json::Value = "application/openehr.wt.structured+json"))
             ),
-            (status = 400, description = "`type` or `detail_level` is outside its \
-                                          enumerated set — the error arm of the \
-                                          released either/or (\"fall back to the \
-                                          closest supported level, or it may return \
-                                          an error (typically `400 Bad Request`)\", \
-                                          stated on the ADL 1.4 sibling and applied \
-                                          uniformly here), and \"syntactically \
-                                          invalid … parameter\" under \
-                                          `responses/400.yaml`. It also answers a \
-                                          template whose root is neither a \
-                                          COMPOSITION nor a party class, and a party \
-                                          template that constrains no \
-                                          `PARTY_IDENTITY` (RM demographic §PARTY \
-                                          `Identities_valid`).",
+            (status = 400, description = "`type` or `detail_level` is outside its enumerated set \
+                                          — the error arm of the released either/or (\"fall back \
+                                          to the closest supported level, or it may return an \
+                                          error (typically `400 Bad Request`)\", stated on the ADL \
+                                          1.4 sibling and applied uniformly here), and \
+                                          \"syntactically invalid … parameter\" under \
+                                          `responses/400.yaml`. It also answers a template whose \
+                                          root is neither a COMPOSITION nor a party class, and a \
+                                          party template that constrains no `PARTY_IDENTITY` (RM \
+                                          demographic §PARTY `Identities_valid`).",
              body = serde_json::Value),
             (status = 404, description = "The released trigger, verbatim: `404 Not \
                                           Found` \"is returned when a template with \
