@@ -304,7 +304,10 @@ impl FerroEhrService {
     /// - [`ServiceError::Unprocessable`] (`422`) — the OPT cannot be compiled
     ///   otherwise or built into a `WebTemplate`.
     /// - [`ServiceError::BadRequest`] (`400`) — the template's root is neither a
-    ///   COMPOSITION nor a party class, so no example exists for it.
+    ///   COMPOSITION nor a party class, or a party template constrains no
+    ///   identity, so no example exists for it.
+    /// - [`ServiceError::Internal`] (`500`) — the generated document does not
+    ///   build.
     pub(super) async fn adl2_example(
         &self,
         template_id: &str,

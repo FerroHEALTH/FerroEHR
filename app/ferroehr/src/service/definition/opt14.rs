@@ -246,8 +246,8 @@ impl FerroEhrService {
     /// - [`ServiceError::Unprocessable`] (→ `422`) — the template is stored but
     ///   cannot be built into a [`WebTemplate`].
     /// - [`ServiceError::BadRequest`] (→ `400`) — the template's root is neither
-    ///   a COMPOSITION nor a party class, so no example exists for it (see
-    ///   [`example_or_refusal`]).
+    ///   a COMPOSITION nor a party class, or a party template constrains no
+    ///   identity, so no example exists for it (see [`example_or_refusal`]).
     /// - [`ServiceError::Internal`] (→ `500`) — the generated document did not
     ///   build, a server fault.
     /// - [`ServiceError::Storage`] — the store read failed.

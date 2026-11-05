@@ -607,7 +607,11 @@ guarded_handler! {
                                           neither a COMPOSITION nor a party class \
                                           (an ENTRY or a SECTION): the `200` body is \
                                           one of the versioned-object classes, none \
-                                          of which such a template admits.",
+                                          of which such a template admits. It also \
+                                          answers a party template that constrains \
+                                          no `PARTY_IDENTITY`, since RM demographic \
+                                          §PARTY `Identities_valid` admits no party \
+                                          without one.",
              body = serde_json::Value),
             (status = 404, description = "The released trigger, verbatim: `404 Not \
                                           Found` \"is returned when a template with \
@@ -1114,7 +1118,10 @@ guarded_handler! {
                                           invalid … parameter\" under \
                                           `responses/400.yaml`. It also answers a \
                                           template whose root is neither a \
-                                          COMPOSITION nor a party class.",
+                                          COMPOSITION nor a party class, and a party \
+                                          template that constrains no \
+                                          `PARTY_IDENTITY` (RM demographic §PARTY \
+                                          `Identities_valid`).",
              body = serde_json::Value),
             (status = 404, description = "The released trigger, verbatim: `404 Not \
                                           Found` \"is returned when a template with \

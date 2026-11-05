@@ -97,9 +97,16 @@ impl FerroEhrService {
     ///
     /// - An out-of-enum `detail_level` or `kind` value →
     ///   `precondition_violation` (`400`).
+    /// - A template rooted at neither a COMPOSITION nor a party class
+    ///   (`NoExampleForRoot`) → `BadRequest` (`400`).
+    /// - A party template that constrains no `PARTY_IDENTITY`
+    ///   (`NoExampleIdentity`) → `BadRequest` (`400`).
     /// - No template with that `template_id` → `template_does_not_exist`
     ///   (`404`).
-    /// - A database failure (`exception` → `500`).
+    /// - The stored template does not build into a `WebTemplate` →
+    ///   `Unprocessable` (`422`).
+    /// - The generated document does not build, or a database failure
+    ///   (`exception` → `500`).
     pub async fn template_adl14_example(
         &self,
         template_id: String,
@@ -120,9 +127,15 @@ impl FerroEhrService {
     /// # Errors
     ///
     /// - An out-of-enum `detail_level` or `kind` value → `BadRequest` (`400`).
+    /// - A template rooted at neither a COMPOSITION nor a party class
+    ///   (`NoExampleForRoot`) → `BadRequest` (`400`).
+    /// - A party template that constrains no `PARTY_IDENTITY`
+    ///   (`NoExampleIdentity`) → `BadRequest` (`400`).
     /// - No template with that `template_id` → `NotFound` (`404`).
+    /// - A constituent archetype is not stored → `ValidationFailed` (`422`).
     /// - The stored template cannot be compiled/built → `Unprocessable` (`422`).
-    /// - A database failure (`500`).
+    /// - The stored source no longer parses, the generated document does not
+    ///   build, or a database failure (`500`).
     pub async fn template_adl2_example(
         &self,
         template_id: String,

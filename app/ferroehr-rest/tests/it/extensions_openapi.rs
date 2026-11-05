@@ -430,6 +430,34 @@ fn every_operation_id_is_unique_in_the_served_document() {
     );
 }
 
+/// Both template example operations document the `400` for each refusal the
+/// service answers: a root that is neither a COMPOSITION nor a party class,
+/// and a party template that constrains no `PARTY_IDENTITY` (#5066).
+#[test]
+fn the_example_operations_document_every_example_refusal() {
+    let doc = serde_json::to_value(extensions_document(&app_config())).expect("serialise doc");
+    for suffix in [
+        "/definition/template/adl1.4/{template_id}/example",
+        "/definition/template/adl2/{template_id}/example",
+    ] {
+        let (path, item) = doc["paths"]
+            .as_object()
+            .expect("paths object")
+            .iter()
+            .find(|(path, _)| path.ends_with(suffix))
+            .unwrap_or_else(|| panic!("no documented path ends with {suffix}"));
+        let description = item["get"]["responses"]["400"]["description"]
+            .as_str()
+            .unwrap_or_else(|| panic!("GET {path} documents no 400"));
+        for refusal in ["neither a COMPOSITION nor a party class", "PARTY_IDENTITY"] {
+            assert!(
+                description.contains(refusal),
+                "GET {path} 400 omits {refusal:?}: {description}"
+            );
+        }
+    }
+}
+
 // ── Test 4: the once-built served document equals a fresh extensions_document ─
 
 /// the `OpenAPI` document is built once at router assembly and served as
