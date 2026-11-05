@@ -57,6 +57,7 @@ use crate::db::iden::{Node, VersionRow};
 use super::expr::{binoper, call, col, hot};
 use super::from::{BoundTable, attribute_child, binding_rows};
 use super::predicate::raw_numeric_wanted;
+use super::select::bindable_leaf;
 use super::value::ItemWalk;
 use super::{Builder, StepBinding, ValueMode};
 
@@ -330,13 +331,7 @@ impl Builder<'_> {
         bindings: &mut SelectStatement,
     ) -> Result<bool, AqlError> {
         let mut leaves: Vec<(bool, LeafPath)> = Vec::new();
-        bound_paths(filter, &mut |t| match t {
-            PathTarget::Data(leaf) => leaves.push((false, (**leaf).clone())),
-            PathTarget::EhrStatus(leaf) => leaves.push((true, (**leaf).clone())),
-            PathTarget::Version { .. }
-            | PathTarget::Ehr { .. }
-            | PathTarget::Attestations { .. } => {}
-        });
+        bound_paths(filter, &mut |t| leaves.extend(bindable_leaf(t)));
         let mut bound = false;
         for (ehr_status, leaf) in leaves {
             if self.has_column_read(&leaf, ValueMode::Value(leaf.coercion)) {

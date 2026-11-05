@@ -257,13 +257,7 @@ impl Builder<'_> {
     /// [`AqlError`] from resolving a path's source node or a step predicate.
     pub(super) fn bind_select_paths(&mut self) -> Result<(), AqlError> {
         let mut leaves: Vec<(bool, LeafPath)> = Vec::new();
-        let mut collect = |t: &PathTarget| match t {
-            PathTarget::Data(leaf) => leaves.push((false, (**leaf).clone())),
-            PathTarget::EhrStatus(leaf) => leaves.push((true, (**leaf).clone())),
-            PathTarget::Version { .. }
-            | PathTarget::Ehr { .. }
-            | PathTarget::Attestations { .. } => {}
-        };
+        let mut collect = |t: &PathTarget| leaves.extend(bindable_leaf(t));
         // Aggregate arguments add no binding: an aggregate reads every data
         // item of its own path per row (`aggregate_over_items`).
         for column in &self.ir.select {
@@ -423,6 +417,19 @@ fn aggregate_expr(func: AggFunc, inner: Option<Expr>, distinct: bool) -> Expr {
 
 /// A best-effort AQL path string for a `RESULT_SET` column's `path`
 /// (ITS-REST 1.1.0 `RESULT_SET_COLUMN.path`).
+/// The node-store leaf a path reads through bound structure steps, with
+/// whether it is rooted at `EHR_STATUS`; version, EHR and attestation paths
+/// bind no step.
+pub(super) fn bindable_leaf(target: &PathTarget) -> Option<(bool, LeafPath)> {
+    match target {
+        PathTarget::Data(leaf) => Some((false, (**leaf).clone())),
+        PathTarget::EhrStatus(leaf) => Some((true, (**leaf).clone())),
+        PathTarget::Version { .. } | PathTarget::Ehr { .. } | PathTarget::Attestations { .. } => {
+            None
+        }
+    }
+}
+
 fn target_path_string(target: &PathTarget) -> Option<String> {
     match target {
         PathTarget::Data(leaf) => Some(leaf_path_string(leaf)),
