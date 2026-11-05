@@ -878,16 +878,17 @@ pub(super) fn coerce_value(base: Expr, mode: ValueMode, leaf: &LeafPath) -> Expr
 /// never a driver error surfacing as a 500.
 ///
 /// # Errors
-/// [`SqlError::UncoercibleTemporal`] when a temporal bound is not an ISO-8601
-/// date, time, or date-time (reduced precision is accepted).
+/// [`SqlError::UncoercibleTemporal`] when a temporal bound is not a string
+/// holding an ISO-8601 date, time, or date-time (reduced precision is
+/// accepted): a number, boolean or NULL bound is refused the same way.
 pub(super) fn coerce_rhs(value: sea_query::Value, coercion: Coercion) -> Result<Expr, AqlError> {
     Ok(match coercion {
         Coercion::Magnitude => cast(Expr::val(value), "numeric"),
         Coercion::Boolean => cast(Expr::val(value), "boolean"),
         Coercion::Temporal => {
-            if let sea_query::Value::String(Some(s)) = &value
-                && !is_iso_temporal(s)
-            {
+            // NOTE: QUERY master03 §Built-in Types, Dates and Times treats a date/time as a
+            // string literal, so a number, boolean or NULL bound has no date/time reading.
+            if !matches!(&value, sea_query::Value::String(Some(s)) if is_iso_temporal(s)) {
                 return Err(SqlError::UncoercibleTemporal.into());
             }
             call("openehr_timestamp", vec![cast(Expr::val(value), "text")])

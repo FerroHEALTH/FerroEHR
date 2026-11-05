@@ -97,6 +97,7 @@ mod service_admin;
 mod service_aql;
 mod service_aql_attestation;
 mod service_aql_demographic;
+mod service_aql_temporal_binding;
 mod service_aql_terminology;
 mod service_aql_version_predicate;
 mod service_branching;
