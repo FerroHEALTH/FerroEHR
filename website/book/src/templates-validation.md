@@ -640,6 +640,44 @@ A version committed as `553|incomplete|` relaxes what must be *present* while
 still checking everything that is; see the lifecycle notes in
 [Resource walkthroughs](using-the-api/resources.md#composition).
 
+### Demographic parties
+
+A party is validated against a template only when the shared party mapping
+names that template. SCIM provisioning, just-in-time creation and the login
+binding write their parties through this mapping, and it names three kinds of
+definition:
+
+- the templates a professional's `PERSON` may use;
+- the template of a provisioned `GROUP`;
+- the archetype of a group membership `PARTY_RELATIONSHIP`.
+
+Each one is resolved in the definition store, so it is an OPT 1.4 template you
+uploaded, or an ADL 2 template or archetype, which the store compiles to its
+OPT2. A `PERSON` or `GROUP` is validated when its
+`archetype_details.template_id` names a mapped template, and a
+`PARTY_RELATIONSHIP` when its `archetype_details.archetype_id` is the mapped
+membership archetype. This holds on every demographic write: the party and
+relationship routes, and a demographic CONTRIBUTION.
+
+Every other party keeps the reference-model checks alone. A party you create
+through the Demographic API under any other template, or under none, is
+accepted exactly as before, and its template id is never looked up.
+
+A validated party is judged the way a composition is, under the version's
+lifecycle state (RM common, Change Control, Incomplete Content):
+
+| The body | `532\|complete\|` | `553\|incomplete\|` |
+|---|---|---|
+| meets every template constraint | committed | committed |
+| misses a mandatory node, slot filler or list member | `422` naming each missing path | committed |
+| breaks any other constraint (a type, a value, an upper limit) | `422` naming the path | `422` naming the path |
+| is a different class from the template's root | `422` at `/` | `422` at `/` |
+
+To complete an incomplete party, commit a new version as `532|complete|` with
+the missing nodes filled in. A logical delete carries no data, so it is never
+template-checked. A demographic write answers one `422` whose detail lists
+each `path: message` pair, separated by `; `.
+
 ## Next
 
 - [Using the API → Resource walkthroughs](using-the-api/resources.md) — the full

@@ -1245,6 +1245,70 @@ fn excluding_a_filled_slot_closes_it() {
     );
 }
 
+/// The CKM `PERSON` archetype's `identities` slot occurs `{1..1}`.
+const PERSON: &str = "openEHR-DEMOGRAPHIC-PERSON.person.v0";
+const PERSON_IDENTITY_SLOT: &str = "/identities[at0002]";
+
+/// A person template that closes the identity slot after `fills` fillers of
+/// the given occurrences.
+fn person_closing_identities(fills: &[Option<Intervalofinteger>]) -> TemplateDefinition {
+    let mut root = archetype_use(PERSON);
+    for occurrences in fills {
+        root.fills.push(SlotFill {
+            path: PERSON_IDENTITY_SLOT.to_owned(),
+            occurrences: occurrences.clone(),
+            filler: archetype_use("openEHR-DEMOGRAPHIC-PARTY_IDENTITY.person_name.v0"),
+        });
+    }
+    root.narrowings.push(Narrowing::Exclude {
+        path: PERSON_IDENTITY_SLOT.to_owned(),
+    });
+    template("Person", root)
+}
+
+/// ADL 2 `master09.05-spec_object_redef.adoc` §Slot Filling and Redefinition:
+/// "If fillers are specified, closing the slot as well is typical", so a
+/// mandatory slot closes once its fillers carry its lower bound, and stays
+/// open to refusal while they do not.
+#[test]
+fn excluding_a_mandatory_slot_closes_it_only_when_its_fillers_carry_its_lower_bound() {
+    let library = library();
+    let built = openehr_its::opt14_writer::build(&person_closing_identities(&[None]), &library)
+        .expect("a filled mandatory slot closes");
+    let identities = built
+        .definition
+        .attributes
+        .iter()
+        .find(|a| attribute_parts(a).0 == "identities")
+        .expect("identities");
+    let children = attribute_parts(identities).2;
+    assert!(
+        !children
+            .iter()
+            .any(|c| matches!(c, CObject::ArchetypeSlot(_))),
+        "the slot is closed"
+    );
+    assert!(
+        children.iter().any(
+            |c| matches!(c, CObject::CArchetypeRoot(r) if head(c).1.lower == Some(1)
+                && r.archetype_id.value.contains("person_name"))
+        ),
+        "the filler stays with the slot's occurrences"
+    );
+    for fills in [vec![], vec![Some(closed(0, 1))]] {
+        assert!(
+            matches!(
+                openehr_its::opt14_writer::build(&person_closing_identities(&fills), &library),
+                Err(WriteError::Widening {
+                    what: "occurrences",
+                    ..
+                })
+            ),
+            "fillers {fills:?} leave the slot's lower bound unmet"
+        );
+    }
+}
+
 #[test]
 fn a_lone_include_admits_any_filler_of_the_slot_type() {
     let library = library();

@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-FileCopyrightText: openEHR Foundation
 // SPDX-License-Identifier: Apache-2.0
-//! Whether an archetype slot admits a filler.
+//! Whether an archetype slot admits a filler, and whether a template may
+//! close it.
 //!
 //! A 1.4 slot constrains its fillers with `include` and `exclude` assertions
 //! on `archetype_id/value` (`AM/docs/ADL1.4/master05-cadl.adoc` §Archetype
@@ -14,7 +15,8 @@
 
 use regex::Regex;
 
-use crate::opt14::types::{ArchetypeSlot, Assertion, ExprItem, OperatorKind};
+use super::{interval, path};
+use crate::opt14::types::{ArchetypeSlot, Assertion, CObject, ExprItem, OperatorKind};
 use crate::xml::runtime::XmlAny;
 
 /// What one assertion matches: a regular expression or a list of ids.
@@ -120,6 +122,35 @@ pub(super) fn admits(slot: &ArchetypeSlot, archetype_id: &str) -> Result<bool, S
         (true, false) => !any_exclude,
         (false, false) => any_include && !any_exclude,
     })
+}
+
+/// Returns whether removing the node at `index` of `siblings` keeps its
+/// occurrences lower bound: an optional node, or a slot whose `fillers`
+/// (none when absent), placed right after it, carry that bound together.
+///
+/// ADL 2 `master09.05-spec_object_redef.adoc` §Slot Filling and Redefinition:
+/// a template may redefine a slot "to close it to filling", and "If fillers
+/// are specified, closing the slot as well is typical".
+pub(super) fn closes_within(siblings: &[CObject], index: usize, fillers: Option<&usize>) -> bool {
+    let Some(node) = siblings.get(index) else {
+        return true;
+    };
+    let lower = interval::inclusive_bounds(path::occurrences(node))
+        .0
+        .unwrap_or(0);
+    if lower < 1 {
+        return true;
+    }
+    if !matches!(node, CObject::ArchetypeSlot(_)) {
+        return false;
+    }
+    let carried = siblings
+        .iter()
+        .skip(index.saturating_add(1))
+        .take(fillers.copied().unwrap_or(0))
+        .filter_map(|filler| interval::inclusive_bounds(path::occurrences(filler)).0)
+        .fold(0_i64, i64::saturating_add);
+    carried >= lower
 }
 
 #[cfg(test)]
