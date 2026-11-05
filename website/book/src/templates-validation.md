@@ -366,7 +366,10 @@ only an archetype slot admits cannot be filled by any example.
 A demographic template (one rooted at `PERSON`, `ORGANISATION`, `GROUP`,
 `AGENT` or `ROLE`) gets an example party of that class instead, in canonical
 JSON or XML. An example `ROLE` carries a placeholder `performer`, which the
-reference model makes mandatory. The Simplified Formats map no party class,
+reference model makes mandatory. Every example party carries one identity,
+even at `required` when the template marks its identity optional, because the
+reference model admits no party without one; a party template that
+constrains no identity at all answers `400 Bad Request`. The Simplified Formats map no party class,
 so `Accept: application/openehr.wt.flat+json` or `…structured+json` on a party
 example answers `406 Not Acceptable`.
 

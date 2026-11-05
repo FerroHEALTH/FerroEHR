@@ -340,3 +340,174 @@ async fn opt_converts_to_adl2_sources() {
         "got {missing:?}"
     );
 }
+
+// ── the example of a party template that marks no node mandatory (#5057) ────
+
+/// An ADL 2 `GROUP` archetype `hrid` with the given `definition` body and term
+/// definitions `id1` to `id5`.
+fn group_archetype(hrid: &str, definition: &str) -> String {
+    let terms = ["Care team", "Identity", "Identity details", "Name", "Value"]
+        .iter()
+        .enumerate()
+        .map(|(i, text)| {
+            format!(
+                "            [\"id{}\"] = <text = <\"{text}\"> description = <\"{text}.\">>\n",
+                i + 1
+            )
+        })
+        .collect::<Vec<_>>()
+        .concat();
+    format!(
+        "archetype (adl_version=2.0.6; rm_release=1.1.0)\n    {hrid}\n\n\
+         language\n    original_language = <[ISO_639-1::en]>\n\n\
+         description\n    original_author = <[\"name\"] = <\"FerroEHR tests\">>\n    \
+         lifecycle_state = <\"published\">\n    details = <\n        \
+         [\"en\"] = <\n            language = <[ISO_639-1::en]>\n        >\n    >\n\n\
+         definition\n    {definition}\n\n\
+         terminology\n    term_definitions = <\n        [\"en\"] = <\n{terms}        >\n    >\n"
+    )
+}
+
+/// The `GROUP` whose only `PARTY_IDENTITY` carries the AOM2 default
+/// occurrences, so its Web Template marks `/identities[id2]` optional.
+const OPTIONAL_IDENTITY_GROUP: &str = "GROUP[id1] matches { identities matches { \
+     PARTY_IDENTITY[id2] matches { details matches { ITEM_TREE[id3] matches { \
+     items matches { ELEMENT[id4] occurrences matches {1} matches { \
+     value matches { DV_TEXT[id5] } } } } } } } }";
+
+/// The OPT 1.4 twin of [`OPTIONAL_IDENTITY_GROUP`]: `identities` at the RM
+/// existence `1..1` with cardinality `0..*`, its `PARTY_IDENTITY` occurring
+/// `0..*`.
+fn optional_identity_group_opt(template_id: &str) -> String {
+    let iv = |lower: u32, upper: Option<u32>| {
+        let upper_part = upper.map_or_else(
+            || "<upper_unbounded>true</upper_unbounded>".to_owned(),
+            |u| format!("<upper_unbounded>false</upper_unbounded><upper>{u}</upper>"),
+        );
+        format!(
+            "<lower_included>true</lower_included><upper_included>{}</upper_included>\
+             <lower_unbounded>false</lower_unbounded>{upper_part}<lower>{lower}</lower>",
+            upper.is_some()
+        )
+    };
+    let term = |code: &str, text: &str| {
+        format!(
+            "<term_definitions code=\"{code}\"><items id=\"text\">{text}</items>\
+             <items id=\"description\">{text}</items></term_definitions>"
+        )
+    };
+    format!(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\
+         <template xmlns=\"http://schemas.openehr.org/v1\" \
+         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\
+         <language><terminology_id><value>ISO_639-1</value></terminology_id>\
+         <code_string>en</code_string></language>\
+         <template_id><value>{template_id}</value></template_id><concept>Care team</concept>\
+         <definition xsi:type=\"C_ARCHETYPE_ROOT\"><rm_type_name>GROUP</rm_type_name>\
+         <occurrences>{one}</occurrences><node_id>at0000</node_id>\
+         <attributes xsi:type=\"C_MULTIPLE_ATTRIBUTE\"><rm_attribute_name>identities</rm_attribute_name>\
+         <existence>{one}</existence>\
+         <children xsi:type=\"C_COMPLEX_OBJECT\"><rm_type_name>PARTY_IDENTITY</rm_type_name>\
+         <occurrences>{many}</occurrences><node_id>at0001</node_id>\
+         <attributes xsi:type=\"C_SINGLE_ATTRIBUTE\"><rm_attribute_name>details</rm_attribute_name>\
+         <existence>{one}</existence>\
+         <children xsi:type=\"C_COMPLEX_OBJECT\"><rm_type_name>ITEM_TREE</rm_type_name>\
+         <occurrences>{one}</occurrences><node_id>at0002</node_id>\
+         <attributes xsi:type=\"C_MULTIPLE_ATTRIBUTE\"><rm_attribute_name>items</rm_attribute_name>\
+         <existence>{opt}</existence>\
+         <children xsi:type=\"C_COMPLEX_OBJECT\"><rm_type_name>ELEMENT</rm_type_name>\
+         <occurrences>{one}</occurrences><node_id>at0003</node_id>\
+         <attributes xsi:type=\"C_SINGLE_ATTRIBUTE\"><rm_attribute_name>value</rm_attribute_name>\
+         <existence>{one}</existence>\
+         <children xsi:type=\"C_COMPLEX_OBJECT\"><rm_type_name>DV_TEXT</rm_type_name>\
+         <occurrences>{one}</occurrences><node_id></node_id></children></attributes>\
+         </children><cardinality><is_ordered>false</is_ordered><is_unique>false</is_unique>\
+         <interval>{many}</interval></cardinality></attributes></children></attributes>\
+         </children><cardinality><is_ordered>false</is_ordered><is_unique>false</is_unique>\
+         <interval>{many}</interval></cardinality></attributes>\
+         <archetype_id><value>openEHR-DEMOGRAPHIC-GROUP.care_team.v1</value></archetype_id>\
+         <template_id><value>{template_id}</value></template_id>\
+         {t0}{t1}{t2}{t3}</definition></template>",
+        one = iv(1, Some(1)),
+        opt = iv(0, Some(1)),
+        many = iv(0, None),
+        t0 = term("at0000", "Care team"),
+        t1 = term("at0001", "Identity"),
+        t2 = term("at0002", "Identity details"),
+        t3 = term("at0003", "Name"),
+    )
+}
+
+/// What every example of the care-team `GROUP` must be: a `GROUP` that the
+/// strict reader decodes, carrying the identity RM demographic §PARTY
+/// `Identities_valid` requires (`org.openehr.rm.demographic.party.adoc`).
+fn assert_example_group(party: &Value, what: &str) {
+    assert_eq!(
+        party.get("_type").and_then(Value::as_str),
+        Some("GROUP"),
+        "{what}: {party}"
+    );
+    let identity = party
+        .pointer("/identities/0")
+        .unwrap_or_else(|| panic!("{what}: no identity: {party}"));
+    assert_eq!(
+        identity.get("_type").and_then(Value::as_str),
+        Some("PARTY_IDENTITY"),
+        "{what}: {party}"
+    );
+    openehr_its::json::from_canonical_value::<openehr_rm::v1_2::demographic::group::Group>(party)
+        .unwrap_or_else(|e| panic!("{what}: decodes as GROUP: {e}"));
+}
+
+/// A `required` example of a party template whose Web Template marks no node
+/// mandatory is still a party of its class with one identity, through the
+/// ADL 2 and the OPT 1.4 example routes, at every detail level.
+#[tokio::test]
+async fn a_party_template_with_no_mandatory_node_has_an_example_party() {
+    let (_db, svc) = crate::fixtures::service().await;
+    let adl2 = svc
+        .template_adl2_upload(&group_archetype(
+            "openEHR-DEMOGRAPHIC-GROUP.care_team.v1.0.0",
+            OPTIONAL_IDENTITY_GROUP,
+        ))
+        .await
+        .expect("upload the ADL 2 GROUP");
+    let opt = svc
+        .template_adl14_upload(&optional_identity_group_opt("care_team.optional.v1"))
+        .await
+        .expect("upload the OPT 1.4 GROUP");
+    let opt = opt["template_id"].as_str().expect("template_id").to_owned();
+    for level in ["required", "medium", "complete"] {
+        let party = svc
+            .template_adl2_example(adl2.clone(), Some(level.to_owned()), None)
+            .await
+            .unwrap_or_else(|e| panic!("ADL 2 {level}: {e:?}"));
+        assert_example_group(&party, &format!("ADL 2 {level}"));
+        let party = svc
+            .template_adl14_example(opt.clone(), Some(level.to_owned()), None)
+            .await
+            .unwrap_or_else(|e| panic!("OPT 1.4 {level}: {e:?}"));
+        assert_example_group(&party, &format!("OPT 1.4 {level}"));
+    }
+}
+
+/// A party template that constrains no `PARTY_IDENTITY` names no node to make
+/// the identity RM demographic §PARTY requires from, so its example is a `400`
+/// refusal naming the class.
+#[tokio::test]
+async fn a_party_template_with_no_identity_has_no_example() {
+    let (_db, svc) = crate::fixtures::service().await;
+    let id = svc
+        .template_adl2_upload(&group_archetype(
+            "openEHR-DEMOGRAPHIC-GROUP.open_team.v1.0.0",
+            "GROUP[id1] matches { * }",
+        ))
+        .await
+        .expect("upload the open GROUP");
+    match svc.template_adl2_example(id, None, None).await {
+        Err(e @ ServiceError::BadRequest(_)) => {
+            assert!(e.to_string().contains("GROUP"), "{e}");
+        }
+        other => panic!("expected a 400 refusal, got {other:?}"),
+    }
+}

@@ -60,6 +60,8 @@ use crate::flat::webtemplate::model::{
     WebTemplateStructuralStub,
 };
 
+mod party;
+
 /// Fixed example instants used for the RM temporal leaves (deterministic).
 ///
 /// [`EXAMPLE_DATE_TIME`] doubles as the `now` supplied to
@@ -226,14 +228,18 @@ pub fn example_root_instance(wt: &WebTemplate, level: DetailLevel) -> Result<Val
 /// # Errors
 ///
 /// [`FlatError::NotAPartyTemplate`] for a template whose root is not a party
-/// class, the build's own [`FlatError`], and [`FlatError::PartyDecode`] should
-/// the generated party not decode as its class.
+/// class, [`FlatError::NoExampleIdentity`] for a party template that
+/// constrains no identity, the build's own [`FlatError`], and
+/// [`FlatError::PartyDecode`] should the generated party not decode as its
+/// class.
 pub fn example_party(wt: &WebTemplate, level: DetailLevel) -> Result<Value, FlatError> {
-    let class = party_class(&wt.tree.rm_type).ok_or_else(|| FlatError::NotAPartyTemplate {
-        root: wt.tree.rm_type.clone(),
-    })?;
+    let class =
+        party::party_class(&wt.tree.rm_type).ok_or_else(|| FlatError::NotAPartyTemplate {
+            root: wt.tree.rm_type.clone(),
+        })?;
     let mut flat: Map<String, Value> = Map::new();
     walk(&wt.tree, &wt.tree.id, 0, level, false, &mut flat);
+    party::satisfy_party_identities(&wt.tree, class, level, &mut flat)?;
     if class == "ROLE" {
         let root = &wt.tree.id;
         flat.insert(
@@ -261,18 +267,11 @@ pub fn example_party(wt: &WebTemplate, level: DetailLevel) -> Result<Value, Flat
 /// [`FlatError::NoExampleForRoot`] for a template rooted at any other class
 /// (an ENTRY or a SECTION, for example), and the generators' own errors.
 pub fn example_instance(wt: &WebTemplate, level: DetailLevel) -> Result<Value, FlatError> {
-    if party_class(&wt.tree.rm_type).is_some() {
+    if party::party_class(&wt.tree.rm_type).is_some() {
         example_party(wt, level)
     } else {
         example_composition(wt, level)
     }
-}
-
-/// The party class `rm_type` names, if it names one.
-fn party_class(rm_type: &str) -> Option<&'static str> {
-    crate::flat::build::PARTY_CLASSES
-        .into_iter()
-        .find(|class| *class == rm_type)
 }
 
 /// Populate a deterministic `uid` (an `OBJECT_VERSION_ID`) on an example
@@ -582,11 +581,7 @@ fn value_emitted(groups: &[&WebTemplateNode], prefix: &str, out: &Map<String, Va
         if tail_attribute(&c.aql_path) != "value" {
             return false;
         }
-        let base = format!("{prefix}/{}", seg_for(c));
-        out.keys().any(|k| {
-            k.strip_prefix(base.as_str())
-                .is_some_and(|rest| rest.is_empty() || rest.starts_with(['|', '/', ':']))
-        })
+        party::emitted_under(&format!("{prefix}/{}", seg_for(c)), out)
     })
 }
 
