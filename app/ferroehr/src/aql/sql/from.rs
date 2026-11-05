@@ -233,7 +233,7 @@ fn referenced_sources(ir: &QueryIr) -> std::collections::BTreeSet<usize> {
         out.insert(match t {
             PathTarget::Data(leaf)
             | PathTarget::EhrStatus(leaf)
-            | PathTarget::Attestations(leaf) => leaf.source.0,
+            | PathTarget::Attestations { leaf, .. } => leaf.source.0,
             PathTarget::Version { source, .. } | PathTarget::Ehr { source, .. } => source.0,
         });
     });

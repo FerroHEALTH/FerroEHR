@@ -105,7 +105,10 @@ pub(crate) fn analyze_path(
         BindingKind::Ehr => analyze_ehr_path(source, path, bindings.profile),
         BindingKind::Version => {
             match super::version_path::analyze_attestation_path(source, path, bindings.profile)? {
-                Some(leaf) => Ok(PathTarget::Attestations(Box::new(leaf))),
+                Some(leaf) => Ok(PathTarget::Attestations {
+                    leaf: Box::new(leaf),
+                    last: false,
+                }),
                 None => Ok(PathTarget::Version {
                     source,
                     field: super::version_path::resolve_version_field(path.path.as_ref())?,

@@ -11,7 +11,9 @@
 //! (`master04-generic_package.adoc` §Attestation). `ATTESTATION` is no
 //! `LOCATABLE`, so QUERY master03 §Identified Paths reaches it by path from
 //! the `VERSION` variable. A comparison below `attestations` holding when any
-//! attestation matches is FerroEHR's own decision: AQL 1.1.0 is silent.
+//! attestation matches, and the `LAST(...)` function reading the most recent
+//! one, are FerroEHR's own decisions: AQL 1.1.0 is silent (QUERY master03
+//! §Functions admits implementation functions).
 
 use serde_json::{Value, json};
 
@@ -27,9 +29,16 @@ use crate::fixtures::{
     attestation_by, change_type, commit_audit, composition, first_version_uid, plan_ok, uv, vo_of,
 };
 
-/// The review worklist of the #4989 reply: versions with a pending
-/// attestation and no completed one.
+/// The review worklist (#4989): the latest version of each composition whose
+/// MOST RECENT attestation is pending. A pending attestation may follow a
+/// completed one (RM common master04 §Attestation), so presence of a pending
+/// one and absence of a completed one does not decide it.
 const WORKLIST: &str = "SELECT c/uid/value \
+     FROM EHR e CONTAINS VERSION v[LATEST_VERSION] CONTAINS COMPOSITION c \
+     WHERE LAST(v/attestations/is_pending) = true";
+
+/// The portable pair: some pending attestation and no completed one.
+const PENDING_NEVER_SIGNED: &str = "SELECT c/uid/value \
      FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c \
      WHERE EXISTS v/attestations[is_pending=true] \
        AND NOT EXISTS v/attestations[is_pending=false]";
@@ -71,7 +80,7 @@ fn an_attestation_path_resolves_against_attestation() {
         "SELECT v/attestations[is_pending=true]/reason/value \
          FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c",
     );
-    let Some(SelectValue::Path(PathTarget::Attestations(leaf))) =
+    let Some(SelectValue::Path(PathTarget::Attestations { leaf, .. })) =
         ir.select.first().map(|c| &c.value)
     else {
         panic!("expected an attestation path, got {:?}", ir.select);
@@ -151,18 +160,32 @@ fn attributes_attestation_lacks_are_typed_refusals() {
 /// version row, with every compared value bound and none in the SQL text.
 #[test]
 fn the_attestation_read_is_hot_correlated_and_bound() {
-    let prepared = build_sql(WORKLIST);
-    let sql = &prepared.sql;
-    assert!(sql.contains(r#""vo_attestation""#), "{sql}");
-    assert_eq!(
-        sql.matches(r#""tier" = "#).count(),
-        sql.matches(r#""tier" = ('hot')"#).count(),
-        "every tier predicate is the literal 'hot': {sql}"
-    );
-    assert!(sql.contains("jsonb_path_exists"), "{sql}");
+    for query in [WORKLIST, PENDING_NEVER_SIGNED] {
+        let sql = build_sql(query).sql;
+        assert!(sql.contains(r#""vo_attestation""#), "{sql}");
+        assert_eq!(
+            sql.matches(r#""tier" = "#).count(),
+            sql.matches(r#""tier" = ('hot')"#).count(),
+            "every tier predicate is the literal 'hot': {sql}"
+        );
+        assert!(
+            sql.contains(r#""x0"."sys_version" = "v2"."sys_version""#),
+            "the read is keyed on the version row: {sql}"
+        );
+    }
+    let pair = build_sql(PENDING_NEVER_SIGNED).sql;
+    assert!(pair.contains("jsonb_path_exists"), "{pair}");
     assert!(
-        !sql.contains("is_pending == true"),
-        "values are bound: {sql}"
+        !pair.contains("is_pending == true"),
+        "values are bound: {pair}"
+    );
+    // `LAST` reads the most recent attestation: the reverse of the list order.
+    let latest = build_sql(WORKLIST).sql;
+    assert!(
+        latest.contains(
+            r#"ORDER BY "x0"."at_committal" ASC, "x0"."time_committed" DESC, "x0"."id" DESC LIMIT"#
+        ),
+        "{latest}"
     );
 }
 
@@ -213,25 +236,25 @@ async fn commit_with(svc: &FerroEhrService, ehr: EhrId, name: &str, attestations
     first_version_uid(&created.body)
 }
 
-/// Sign `ovid` after committal: a `666|attestation|` CONTRIBUTION that adds
-/// a completed ATTESTATION to the existing version.
-async fn sign(svc: &FerroEhrService, ehr: EhrId, ovid: &str) {
+/// Attest `ovid` after committal: a `666|attestation|` CONTRIBUTION that adds
+/// an ATTESTATION to the existing version, completed or pending.
+async fn attest(svc: &FerroEhrService, ehr: EhrId, ovid: &str, reason: &str, is_pending: bool) {
     let contribution = json!({
         "versions": [{
             "preceding_version_uid": { "value": ovid },
             "lifecycle_state": change_type("532", "complete"),
             "commit_audit": commit_audit("666", "attestation", "senior clinician"),
-            "attestations": [attestation_by("senior clinician", "signed", false)]
+            "attestations": [attestation_by("senior clinician", reason, is_pending)]
         }],
         "audit": commit_audit("666", "attestation", "senior clinician")
     });
     svc.create_ehr_contribution(ehr, contribution)
         .await
-        .expect("a 666 contribution signs the version");
+        .expect("a 666 contribution attests the version");
 }
 
-/// The reply's worklist query returns a version while its attestation is
-/// pending and not once a completed one is added, over both arrival routes;
+/// Pending at committal, then signed after it: the worklist and the portable
+/// pair return the version while it is pending and not once it is signed, and
 /// a bare comparison below `attestations` is any-element and stays true.
 #[tokio::test]
 async fn the_worklist_returns_a_pending_version_until_it_is_signed() {
@@ -250,10 +273,13 @@ async fn the_worklist_returns_a_pending_version_until_it_is_signed() {
         .expect("a plain composition")
         .version_uid();
 
-    assert_eq!(
-        first_cells(&run(&svc, WORKLIST, ehr).await),
-        std::slice::from_ref(&pending)
-    );
+    for query in [WORKLIST, PENDING_NEVER_SIGNED] {
+        assert_eq!(
+            first_cells(&run(&svc, query, ehr).await),
+            std::slice::from_ref(&pending),
+            "{query}"
+        );
+    }
     let any_pending = "SELECT c/uid/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c \
          WHERE v/attestations/is_pending = true";
     assert_eq!(
@@ -261,12 +287,14 @@ async fn the_worklist_returns_a_pending_version_until_it_is_signed() {
         std::slice::from_ref(&pending)
     );
 
-    sign(&svc, ehr, &pending).await;
+    attest(&svc, ehr, &pending, "signed", false).await;
 
-    assert!(
-        run(&svc, WORKLIST, ehr).await.is_empty(),
-        "signed, so off the worklist"
-    );
+    for query in [WORKLIST, PENDING_NEVER_SIGNED] {
+        assert!(
+            run(&svc, query, ehr).await.is_empty(),
+            "signed, so off the worklist: {query}"
+        );
+    }
     // The pending attestation stays in place beside the completed one.
     assert_eq!(
         first_cells(&run(&svc, any_pending, ehr).await),
@@ -464,4 +492,104 @@ async fn commit_audit_attestation_attributes_read_the_stored_audit() {
     )
     .await;
     assert_eq!(first_cells(&scoped), [marked]);
+}
+
+/// Sam Heard's case on #4989: a version signed and later marked pending again
+/// because further action is needed is back on the worklist, since only the
+/// latest attestation confers the responsibility. The portable pair misses it.
+#[tokio::test]
+async fn a_pending_attestation_after_signing_puts_the_version_back_on_the_worklist() {
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr = crate::fixtures::create_ehr(&svc).await;
+    let signed = commit_with(
+        &svc,
+        ehr,
+        "signed result",
+        json!([attestation_by("clinician a", "signed", false)]),
+    )
+    .await;
+    assert!(
+        run(&svc, WORKLIST, ehr).await.is_empty(),
+        "signed at committal"
+    );
+
+    attest(&svc, ehr, &signed, "further action required", true).await;
+
+    assert_eq!(
+        first_cells(&run(&svc, WORKLIST, ehr).await),
+        std::slice::from_ref(&signed)
+    );
+    assert!(
+        run(&svc, PENDING_NEVER_SIGNED, ehr).await.is_empty(),
+        "the pair cannot see a pending attestation after a completed one"
+    );
+    let latest = run(
+        &svc,
+        "SELECT LAST(v/attestations), LAST(v/attestations/reason/value) \
+         FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c",
+        ehr,
+    )
+    .await;
+    assert_eq!(latest[0][0]["_type"], "ATTESTATION");
+    assert_eq!(latest[0][0]["is_pending"], json!(true));
+    assert_eq!(latest[0][1], json!("further action required"));
+
+    attest(&svc, ehr, &signed, "signed", false).await;
+    assert!(run(&svc, WORKLIST, ehr).await.is_empty(), "signed again");
+}
+
+/// The worklist counts the latest version of each composition only: a
+/// pending first version superseded by a second raises no responsibility,
+/// and `ALL_VERSIONS` still finds it.
+#[tokio::test]
+async fn the_worklist_reads_the_latest_version_only() {
+    let (_db, svc) = crate::fixtures::service().await;
+    let ehr = crate::fixtures::create_ehr(&svc).await;
+    let v1 = commit_with(
+        &svc,
+        ehr,
+        "result",
+        json!([attestation_by("transcriptionist", "authorisation", true)]),
+    )
+    .await;
+    assert_eq!(
+        first_cells(&run(&svc, WORKLIST, ehr).await),
+        std::slice::from_ref(&v1)
+    );
+    let vo: VoId = vo_of(&v1).parse().expect("vo id");
+    svc.update_composition(ehr, vo, uv(&composition("result"), "251", Some(&v1)))
+        .await
+        .expect("a second version");
+
+    assert!(
+        run(&svc, WORKLIST, ehr).await.is_empty(),
+        "the new version carries none"
+    );
+    let history = "SELECT v/uid/value \
+         FROM EHR e CONTAINS VERSION v[ALL_VERSIONS] CONTAINS COMPOSITION c \
+         WHERE LAST(v/attestations/is_pending) = true";
+    assert_eq!(
+        first_cells(&run(&svc, history, ehr).await),
+        std::slice::from_ref(&v1)
+    );
+}
+
+/// `LAST` takes exactly one path below `attestations`; anything else is a
+/// typed refusal rather than an answer.
+#[test]
+fn last_over_anything_but_one_attestation_path_is_refused() {
+    plan_ok(WORKLIST);
+    for q in [
+        "SELECT LAST(c/name/value) FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c",
+        "SELECT LAST(v/commit_audit/is_pending) FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c",
+        "SELECT LAST() FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c",
+        "SELECT LAST(v/attestations, v/attestations) FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c",
+        "SELECT LAST('x') FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c",
+    ] {
+        let error = plan_err(q);
+        assert!(
+            matches!(error, AqlError::Feature(AqlFeatureError::LastArgument(_))),
+            "{q}: got {error:?}"
+        );
+    }
 }

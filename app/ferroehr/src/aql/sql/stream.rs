@@ -182,7 +182,7 @@ fn path_needs_root_node(target: &PathTarget, root: usize) -> bool {
         PathTarget::Version { .. }
         | PathTarget::Ehr { .. }
         | PathTarget::EhrStatus(_)
-        | PathTarget::Attestations(_) => false,
+        | PathTarget::Attestations { .. } => false,
     }
 }
 

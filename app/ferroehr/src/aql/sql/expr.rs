@@ -346,9 +346,9 @@ pub(super) fn type_cond(node: &str, types: &TypeSet) -> Option<Expr> {
 /// compare by ordered-magnitude; mirrors the analyzer's leaf typing).
 pub(super) fn order_coercion(target: &PathTarget) -> Coercion {
     match target {
-        PathTarget::Data(leaf) | PathTarget::EhrStatus(leaf) | PathTarget::Attestations(leaf) => {
-            leaf.coercion
-        }
+        PathTarget::Data(leaf)
+        | PathTarget::EhrStatus(leaf)
+        | PathTarget::Attestations { leaf, .. } => leaf.coercion,
         PathTarget::Version { field, .. } => field.coercion(),
         PathTarget::Ehr { field, .. } => {
             if *field == EhrField::TimeCreated {

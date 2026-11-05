@@ -87,28 +87,41 @@ impl Builder<'_> {
         Ok((walk, alias))
     }
 
-    /// The value an attestation path reads in one row: in a projection every
-    /// matching attestation as ONE jsonb array cell, `NULL` when there is none
-    /// (`ORIGINAL_VERSION.Attestations_valid` admits no empty list); in a
-    /// scalar context (ORDER BY, a function argument, a comparison with
-    /// another path) the first.
+    /// The value an attestation path reads in one row.
     ///
-    /// Both read the attestations in the order the version read lists them:
-    /// those on the version at committal first, then by commit instant.
+    /// Without `last`, a projection reads every matching attestation as ONE
+    /// jsonb array cell, `NULL` when there is none
+    /// (`ORIGINAL_VERSION.Attestations_valid` admits no empty list), and a
+    /// scalar context (ORDER BY, a function argument, a comparison with
+    /// another path) reads the first. With `last` (the `LAST(...)`
+    /// extension) every context reads the path off the most recent matching
+    /// attestation, `NULL` where that one lacks it.
+    ///
+    /// The order is the one the version read lists them in: those on the
+    /// version at committal first, then by commit instant.
     ///
     /// # Errors
     /// [`AqlError`] from [`Self::attestation_walk`].
     pub(super) fn attestation_value(
         &mut self,
         leaf: &LeafPath,
+        last: bool,
         mode: ValueMode,
     ) -> Result<Expr, AqlError> {
         let (walk, alias) = self.attestation_walk(leaf, mode)?;
         let mut sub = walk.sub;
-        sub.and_where(walk.item.clone().is_not_null());
         let at_committal = col(&alias, VoAttestation::AtCommittal);
         let time_committed = col(&alias, VoAttestation::TimeCommitted);
         let id = col(&alias, VoAttestation::Id);
+        if last {
+            sub.expr(walk.item);
+            sub.order_by_expr(at_committal, Order::Asc);
+            sub.order_by_expr(time_committed, Order::Desc);
+            sub.order_by_expr(id, Order::Desc);
+            sub.limit(1);
+            return Ok(Expr::from(sub));
+        }
+        sub.and_where(walk.item.clone().is_not_null());
         // NOTE: QUERY master03 §Identified Paths is silent on projecting a
         // list-valued path; as for a list inside a node, every match is ONE cell.
         if matches!(mode, ValueMode::Projection) {
