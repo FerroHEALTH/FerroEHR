@@ -17,6 +17,18 @@ has no matching section here.
 
 ## [Unreleased]
 
+## [5.6.1] - 2026-11-05
+
+5.6.1 is a patch release of 5.6.0. The hosted sandbox's viewer starts again, since its posture carries the session keys the 5.6.0 viewer reads, and the deployment artifacts pin the FerroHEALTH releases published with or after 5.6.0: FerroPIX 0.0.16, FerroBRIDGE 0.0.20, ferroehr-postgres 5.6.0 on the hosted database box and four FerroSYS crates whose releases change no behaviour. The REST surface, AQL, storage and configuration are unchanged from 5.6.0.
+
+### Changed
+
+- The deployment artifacts run the FerroHEALTH releases published with or after 5.6.0, each pinned by its index digest: FerroPIX 0.0.16 (`ghcr.io/ferrohealth/ferropix:0.0.16@sha256:0452371913ce8ed5c5c379693b8bd78683ffaf43d4f51c5278c5444d01d30318`) in the compose quickstart, the hosted sandbox and the Helm chart, with the FerroPIX chart 0.3.8 built for it; FerroBRIDGE 0.0.20 (`ghcr.io/ferrohealth/ferrobridge:0.0.20@sha256:7dd5550d57b7f0bdfdf194453feff95b093152fd235b9378877bebb8e8d055e2`) in the chart; and on the hosted database box `ghcr.io/ferrohealth/ferroehr-postgres:5.6.0@sha256:7e4ee7a8a18a5bd3bf4c1b03afd9f584131f717d088cd6844a4a845ece6a9c1b`. FerroTERM stays at 0.4.1, its newest release. The server and the viewer take `ferrohealth-config` 0.2.9, `ferrohealth-server` 0.4.4, `ferrohealth-telemetry` 0.2.5 and `ferrohealth-usage-report` 0.2.1, which change no public API or behaviour. None of these renames or removes a configuration key FerroEHR sets. The chart moves to 21.0.1 (#4987).
+
+### Fixed
+
+- The hosted sandbox's viewer starts again: its posture (`deploy/hosted/ferroehr-viewer.sandbox.toml`) still spelled the 5.5 `[session]` keys `cookie_secure` and `secret`, which the 5.6.0 viewer refuses, so `sandbox.ferroehr.eu` answered 502 after the 5.6.0 deploy. The posture now sets `store = "sealed"`, `secure_cookie` and `key`, and a viewer test reads it the way the box's viewer does at boot (#4985).
+
 ## [5.6.0] - 2026-11-04
 
 5.6.0 follows 5.5.0 as the stable release and carries every change of its ten release candidates: the EHDS Art. 3(3) delay of a person's own access, the Art. 5 mark of what a person inserts and the Art. 10 opt-out from the access services, each off by default; ADL 2 validation, conversion and Web Templates checked against the AOM 2 rules; storage generations 3 to 6 and AQL plans that keep reads fast as a store grows; the outbox feed that replaces FerroEHR's own broker publisher; RFC 9457 problem details on every error; and the viewer drawn on its server with FerroUI 0.6. It breaks deployments and clients, each break with its upgrade step under Changed or Removed. Before you upgrade from 5.5.0: export the audit records you must keep over ITI-81 with 5.5.0, then drop the audit schema, because audit migration 0017 starts 5.6.0 on an empty audit store and refuses one that holds records written by 5.5.0 or earlier; move every client of a route ITS-REST 1.1.0 does not define from `/ferroehr/rest/openehr/v1/` to `/ferroehr/rest/extensions/v1/`, and the ITI-81 retrieval to `/ferroehr/rest/fhir/r4/AuditEvent`, since the old paths answer no redirect; read an error body as `application/problem+json`, `detail` where a client read `message`, and send `Prefer: return=representation` and read `errors` where it read `validationErrors`; send `POST /ehr/{ehr_id}/contribution` and `POST /demographic/contribution` bodies in the released `NewContribution` shape, since every other shape answers `400`, and send no empty `system_id`, which every write path refuses with `422`; write a space in a query string as `%20`; remove `[events]`, the chart's `secrets.eventsUrl` and `plaintext_broker` from `deployment_accepts`, which refuse the start, and deliver broker events through FerroBRIDGE 0.0.15 or later reading the outbox feed; set `client_auth` beside `[server.tls] client_ca_file`; and set `config.deployment_profile` for Helm chart 21.0.0, which renders no default profile, and `bridge.config.auth` for a chart FerroBRIDGE that serves a mapping set. Clinical migrations 0022 and 0023 and party migrations 0013 and 0014 read every version row of an existing store once, and every viewer user is signed out once. Helm chart 21.0.0 carries `appVersion` 5.6.0. Security carries two advisories, GHSA-2mc2-h3jq-c5wg and GHSA-52mf-qg39-4q4j, and the fix of CVE-2026-115905 in the `zip` crate that 5.5.0 shipped.
@@ -21438,7 +21450,8 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.6.0...HEAD
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.6.1...HEAD
+[5.6.1]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.6.0...v5.6.1
 [5.6.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.5.0...v5.6.0
 [5.6.0-rc10]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.5.0...v5.6.0-rc10
 [5.6.0-rc9]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.5.0...v5.6.0-rc9
