@@ -581,11 +581,7 @@ fn value_emitted(groups: &[&WebTemplateNode], prefix: &str, out: &Map<String, Va
         if tail_attribute(&c.aql_path) != "value" {
             return false;
         }
-        let base = format!("{prefix}/{}", seg_for(c));
-        out.keys().any(|k| {
-            k.strip_prefix(base.as_str())
-                .is_some_and(|rest| rest.is_empty() || rest.starts_with(['|', '/', ':']))
-        })
+        party::emitted_under(&format!("{prefix}/{}", seg_for(c)), out)
     })
 }
 

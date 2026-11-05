@@ -18,6 +18,15 @@ pub(super) fn party_class(rm_type: &str) -> Option<&'static str> {
         .find(|class| *class == rm_type)
 }
 
+/// Whether `out` holds a flat entry at `base` or under it: the node at `base`
+/// itself, one of its attributes (`|`), a child (`/`) or an occurrence (`:`).
+pub(super) fn emitted_under(base: &str, out: &Map<String, Value>) -> bool {
+    out.keys().any(|k| {
+        k.strip_prefix(base)
+            .is_some_and(|rest| rest.is_empty() || rest.starts_with(['|', '/', ':']))
+    })
+}
+
 /// Materialises one `identities` member of a party when the template walk left
 /// none, as RM demographic §PARTY `Identities_valid` (`not identities.is_empty`)
 /// requires one whatever occurrences the template states
@@ -41,14 +50,10 @@ pub(super) fn satisfy_party_identities(
         .into_iter()
         .filter(|c| tail_attribute(&c.aql_path) == "identities")
         .collect();
-    let present = identities.iter().any(|c| {
-        let base = format!("{root}/{}", c.id);
-        out.keys().any(|k| {
-            k.strip_prefix(base.as_str())
-                .is_some_and(|rest| rest.is_empty() || rest.starts_with(['|', '/', ':']))
-        })
-    });
-    if present {
+    if identities
+        .iter()
+        .any(|c| emitted_under(&format!("{root}/{}", c.id), out))
+    {
         return Ok(());
     }
     let identity = identities
