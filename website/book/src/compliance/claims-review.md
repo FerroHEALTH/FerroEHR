@@ -1383,7 +1383,7 @@ release published, so this review also covers the facts of the 5.6.1 and
 5.6.2 reviews. The facts added since 5.6.2 and checked in every text in
 scope: the performance guard's baseline, the newest published release
 (#4998); RUSTSEC-2026-0440 judged `not_affected` (#4996); `ferrohealth-server`
-0.5.0 (#5000); FerroBRIDGE 0.0.21 in the chart by digest (#5017); chart 21.0.3
+0.5.0 (#5000); FerroBRIDGE 0.0.21 in the chart by digest (#5017); chart 21.0.4
 with `appVersion` 5.6.3.
 
 ### Read and kept on 2026-11-05, for 5.6.3
@@ -1399,7 +1399,7 @@ with `appVersion` 5.6.3.
   technical documentation keep their rows, since no module of the logging
   component changed.
 - **The installation pins**: the Kubernetes installation, the chart README and
-  verifying releases name chart 21.0.3 and image 5.6.3.
+  verifying releases name chart 21.0.4 and image 5.6.3.
 - **`SECURITY.md`, the
   [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the
   [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the
