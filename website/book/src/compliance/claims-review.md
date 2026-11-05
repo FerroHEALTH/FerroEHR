@@ -445,6 +445,7 @@ cut, after the texts in scope have been read.
 | 2026-10-25 | 5.4.2, after `2333f98ba` | none; the changes of this release updated their own pages in the pull requests that made them | nothing |
 | 2026-10-27 | 5.5.0, after `bed3543e3` | 1 claim, in the hazard log: H2 named a middleware test renamed by #4192 | the conformance chapter bars counted the CNF TDD cases until the Veredictum 0.3.3 record, which carries none, replaced them (#4204) |
 | 2026-11-04 | 5.6.0, after `25db5c69c` | 4 claims, in the README, the landing page and two book pages: each said FerroBRIDGE's broker delivery was in progress, which FerroBRIDGE 0.0.15 ships | the canonical-XML `reverse_relationships` left open by the 5.6.0-rc8 review shipped (#4778); a v2-namespace OPT 1.4 ordinal list stays tracked on #4777 |
+| 2026-11-05 | 5.6.1, after `75262e1ce` | 1 claim, in the Kubernetes installation: it said the chart pins FerroPIX 0.0.15, which #4987 moved to 0.0.16 | a v2-namespace OPT 1.4 ordinal list stays tracked on #4777 |
 
 ## The review of 2026-10-20, for 5.2.0
 
@@ -1294,5 +1295,47 @@ conformance record of Veredictum 0.4.1 (#4971); chart 21.0.0 with `appVersion`
 
 - A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is
   accepted, tracked on #4777 for the next release.
+- The performance page keeps its earlier figures until a record measured on
+  the reference host replaces them.
+
+## The review of 2026-11-05, for 5.6.1
+
+Read on the tree after commit `75262e1ce`, for FerroEHR 5.6.1, the patch
+release after 5.6.0. The facts added since 5.6.0 and checked in every text in
+scope: the hosted sandbox's viewer posture with the session keys the 5.6.0
+viewer reads (#4985); the family pins, FerroPIX 0.0.16 with its chart 0.3.8,
+FerroBRIDGE 0.0.20 and ferroehr-postgres 5.6.0 on the hosted database box by
+digest, with FerroTERM still at 0.4.1, and four FerroSYS crate releases that
+change no behaviour (#4987); chart 21.0.1 with `appVersion` 5.6.1.
+
+### Changed on 2026-11-05, for 5.6.1
+
+- **The [Kubernetes installation](../installation/kubernetes.md)** said the
+  chart pins FerroPIX 0.0.15 by digest. #4987 moved the pin to 0.0.16 with
+  the FerroPIX chart 0.3.8, so the page now names 0.0.16.
+
+### Read and kept on 2026-11-05, for 5.6.1
+
+- **The README, [beyond core](../beyond-core/index.md) and
+  [change events](../beyond-core/outbox-feed.md)** name FerroBRIDGE 0.0.15 or
+  later for broker delivery, which 0.0.20 still delivers.
+- **[Audit](../audit.md) and the technical documentation** name FerroBRIDGE's
+  recording of its FHIR facade's accesses from 0.0.16, unchanged in 0.0.20.
+- **The hazard log, the technical documentation and the CRA risk
+  assessment**: every test the hazard log names exists; it gains review 20,
+  the CRA risk assessment revision 26, and the technical documentation keeps
+  its 5.6.0 row, since no module of the logging component changed.
+- **The installation pins**: the Kubernetes installation, the chart README and
+  [verifying releases](../verifying-releases.md) name chart 21.0.1 and image
+  5.6.1.
+- **`SECURITY.md`, the
+  [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the
+  [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the
+  chart description** make no claim this release changes.
+
+### Left open on 2026-11-05, for 5.6.1
+
+- A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is
+  accepted, tracked on #4777 for 5.7.0.
 - The performance page keeps its earlier figures until a record measured on
   the reference host replaces them.
