@@ -1,0 +1,1662 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Claims review - FerroEHR Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        <!-- Content-Security-Policy as a <meta> element, because GitHub Pages serves
+             static files and cannot set response headers. A meta CSP is genuinely
+             weaker than the header: `frame-ancestors`, `report-uri` and `sandbox` are
+             IGNORED in meta form (w3c CSP3 §3.3), and it applies only after the parser
+             reaches it. It still stops an injected external script or an exfiltrating
+             `connect-src`, which is the realistic risk for a docs site, so it is worth
+             having while being honest that the site cannot carry the full header set —
+             documented on the security page. `unsafe-inline` is required: mdBook emits
+             inline theme/sidebar scripts and inline styles of its own. -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://raw.githubusercontent.com/FerroHEALTH/FerroEHR/; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <!-- Self-hosted KaTeX stylesheet (fonts under katex/fonts/) — the site
+             serves no external requests, so mdbook-katex runs with no-css = true
+             and the vendored sheet is linked here. Version 0.16.4, matching the
+             KaTeX the katex-rs renderer inside mdbook-katex bundles (its
+             KATEX-VERSION file); provenance in website/book/KATEX-PROVENANCE.md. -->
+        <link rel="stylesheet" href="../katex/katex.min.css">
+
+        <meta name="description" content="User documentation for FerroEHR, a pure-Rust openEHR Clinical Data Repository.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-8adf115d.css">
+        <link rel="stylesheet" href="../css/general-e96d0476.css">
+        <link rel="stylesheet" href="../css/chrome-d279d366.css">
+        <link rel="stylesheet" href="../css/print-9e4910d8.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="mdbook-highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="mdbook-tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="mdbook-ayu-highlight-css" href="../ayu-highlight-3fdfc3ac.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/custom-79743c4e.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "coal";
+            window.path_to_searchindex_js = "../searchindex-fcaf2df9.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-4c389b91.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="mdbook-body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="mdbook-sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("mdbook-sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="mdbook-sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="mdbook-sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="mdbook-page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="mdbook-menu-bar-hover-placeholder"></div>
+                <div id="mdbook-menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="mdbook-sidebar-toggle" class="icon-button" for="mdbook-sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="mdbook-sidebar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M0 96C0 78.3 14.3 64 32 64H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32z"/></svg></span>
+                        </label>
+                        <button id="mdbook-theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="mdbook-theme-list">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M371.3 367.1c27.3-3.9 51.9-19.4 67.2-42.9L600.2 74.1c12.6-19.5 9.4-45.3-7.6-61.2S549.7-4.4 531.1 9.6L294.4 187.2c-24 18-38.2 46.1-38.4 76.1L371.3 367.1zm-19.6 25.4l-116-104.4C175.9 290.3 128 339.6 128 400c0 3.9 .2 7.8 .6 11.6c1.8 17.5-10.2 36.4-27.8 36.4H96c-17.7 0-32 14.3-32 32s14.3 32 32 32H240c61.9 0 112-50.1 112-112c0-2.5-.1-5-.2-7.5z"/></svg></span>
+                        </button>
+                        <ul id="mdbook-theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="mdbook-theme-ayu">Ayu</button></li>
+                        </ul>
+                        <button id="mdbook-search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="mdbook-searchbar">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352c79.5 0 144-64.5 144-144s-64.5-144-144-144S64 128.5 64 208s64.5 144 144 144z"/></svg></span>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">FerroEHR Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <span class=fa-svg id="print-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M128 0C92.7 0 64 28.7 64 64v96h64V64H354.7L384 93.3V160h64V93.3c0-17-6.7-33.3-18.7-45.3L400 18.7C388 6.7 371.7 0 354.7 0H128zM384 352v32 64H128V384 368 352H384zm64 32h32c17.7 0 32-14.3 32-32V256c0-35.3-28.7-64-64-64H64c-35.3 0-64 28.7-64 64v96c0 17.7 14.3 32 32 32H64v64c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V384zm-16-88c-13.3 0-24-10.7-24-24s10.7-24 24-24s24 10.7 24 24s-10.7 24-24 24z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR" title="Git repository" aria-label="Git repository">
+                            <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg></span>
+                        </a>
+                        <a href="https://github.com/FerroHEALTH/FerroEHR/edit/main/website/book/src/compliance/claims-review.md" title="Suggest an edit" aria-label="Suggest an edit" rel="edit">
+                            <span class=fa-svg id="git-edit-button"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M421.7 220.3l-11.3 11.3-22.6 22.6-205 205c-6.6 6.6-14.8 11.5-23.8 14.1L30.8 511c-8.4 2.5-17.5 .2-23.7-6.1S-1.5 489.7 1 481.2L38.7 353.1c2.6-9 7.5-17.2 14.1-23.8l205-205 22.6-22.6 11.3-11.3 33.9 33.9 62.1 62.1 33.9 33.9zM96 353.9l-9.3 9.3c-.9 .9-1.6 2.1-2 3.4l-25.3 86 86-25.3c1.3-.4 2.5-1.1 3.4-2l9.3-9.3H112c-8.8 0-16-7.2-16-16V353.9zM453.3 19.3l39.4 39.4c25 25 25 65.5 0 90.5l-14.5 14.5-22.6 22.6-11.3 11.3-33.9-33.9-62.1-62.1L314.3 67.7l11.3-11.3 22.6-22.6 14.5-14.5c25-25 65.5-25 90.5 0z"/></svg></span>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="mdbook-search-wrapper" class="hidden">
+                    <form id="mdbook-searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="mdbook-searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="mdbook-searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <span class=fa-svg id="fa-spin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M304 48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zm0 416c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM48 304c26.5 0 48-21.5 48-48s-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48zm464-48c0-26.5-21.5-48-48-48s-48 21.5-48 48s21.5 48 48 48s48-21.5 48-48zM142.9 437c18.7-18.7 18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zm0-294.2c18.7-18.7 18.7-49.1 0-67.9S93.7 56.2 75 75s-18.7 49.1 0 67.9s49.1 18.7 67.9 0zM369.1 437c18.7 18.7 49.1 18.7 67.9 0s18.7-49.1 0-67.9s-49.1-18.7-67.9 0s-18.7 49.1 0 67.9z"/></svg></span>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="mdbook-searchresults-outer" class="searchresults-outer hidden">
+                        <div id="mdbook-searchresults-header" class="searchresults-header"></div>
+                        <ul id="mdbook-searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('mdbook-sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('mdbook-sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#mdbook-sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="mdbook-content" class="content">
+                    <main>
+                        <h1 id="claims-review"><a class="header" href="#claims-review">Claims review</a></h1>
+<p>Every public text about FerroEHR is read, once per release, against EHDS
+Art. 28 (Regulation (EU) 2025/327). The article reads: “In the information
+sheet, instructions for use or other information accompanying EHR systems, and
+in the advertising of EHR systems, it shall be prohibited to use text, names,
+trademarks, pictures and figurative or other signs that may mislead the
+professional user […] with regard to their intended purpose, interoperability
+and security by:</p>
+<ul>
+<li>(a) ascribing functions and properties to the EHR system which it does not
+have;</li>
+<li>(b) failing to inform the professional user of likely limitations related to
+interoperability or security features of the EHR system in relation to its
+intended purpose;</li>
+<li>(c) suggesting uses for the EHR system other than those stated to form part
+of the intended purpose in the technical documentation.“</li>
+</ul>
+<p>This page is the record of those reviews: what was read, what was found, what
+was changed. It also carries the re-assessment of EHDS Annex II 2.5. The
+measure for point (c) is the <a href="intended-purpose.html">intended-purpose statement</a>.</p>
+<ul>
+<li><a href="#what-is-reviewed-and-how">What is reviewed, and how</a></li>
+<li><a href="#the-review-of-2026-10-06">The review of 2026-10-06</a>
+<ul>
+<li><a href="#changed">Changed</a></li>
+<li><a href="#read-and-kept">Read and kept</a></li>
+<li><a href="#left-open">Left open</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-10-08">The review of 2026-10-08</a>
+<ul>
+<li><a href="#changed-on-2026-10-08">Changed on 2026-10-08</a></li>
+<li><a href="#read-and-kept-on-2026-10-08">Read and kept on 2026-10-08</a></li>
+<li><a href="#left-open-on-2026-10-08">Left open on 2026-10-08</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-10-15">The review of 2026-10-15</a>
+<ul>
+<li><a href="#changed-on-2026-10-15">Changed on 2026-10-15</a></li>
+<li><a href="#read-and-kept-on-2026-10-15">Read and kept on 2026-10-15</a></li>
+<li><a href="#left-open-on-2026-10-15">Left open on 2026-10-15</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-10-16">The review of 2026-10-16</a>
+<ul>
+<li><a href="#changed-on-2026-10-16">Changed on 2026-10-16</a></li>
+<li><a href="#read-and-kept-on-2026-10-16">Read and kept on 2026-10-16</a></li>
+<li><a href="#left-open-on-2026-10-16">Left open on 2026-10-16</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-10-19">The review of 2026-10-19</a>
+<ul>
+<li><a href="#changed-on-2026-10-19">Changed on 2026-10-19</a></li>
+<li><a href="#read-and-kept-on-2026-10-19">Read and kept on 2026-10-19</a></li>
+<li><a href="#left-open-on-2026-10-19">Left open on 2026-10-19</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-10-19-for-500">The review of 2026-10-19, for 5.0.0</a>
+<ul>
+<li><a href="#changed-on-2026-10-19-for-500">Changed on 2026-10-19, for 5.0.0</a></li>
+<li><a href="#read-and-kept-on-2026-10-19-for-500">Read and kept on 2026-10-19, for 5.0.0</a></li>
+<li><a href="#left-open-on-2026-10-19-for-500">Left open on 2026-10-19, for 5.0.0</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-10-20-for-510">The review of 2026-10-20, for 5.1.0</a>
+<ul>
+<li><a href="#changed-on-2026-10-20-for-510">Changed on 2026-10-20, for 5.1.0</a></li>
+<li><a href="#read-and-kept-on-2026-10-20-for-510">Read and kept on 2026-10-20, for 5.1.0</a></li>
+<li><a href="#left-open-on-2026-10-20-for-510">Left open on 2026-10-20, for 5.1.0</a></li>
+</ul>
+</li>
+<li><a href="#annex-ii-25-re-assessed">Annex II 2.5, re-assessed</a></li>
+<li><a href="#review-record">Review record</a></li>
+<li><a href="#the-review-of-2026-10-20-for-520">The review of 2026-10-20, for 5.2.0</a>
+<ul>
+<li><a href="#changed-on-2026-10-20-for-520">Changed on 2026-10-20, for 5.2.0</a></li>
+<li><a href="#read-and-kept-on-2026-10-20-for-520">Read and kept on 2026-10-20, for 5.2.0</a></li>
+<li><a href="#left-open-on-2026-10-20-for-520">Left open on 2026-10-20, for 5.2.0</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-10-22-for-532">The review of 2026-10-22, for 5.3.2</a>
+<ul>
+<li><a href="#changed-on-2026-10-22-for-532">Changed on 2026-10-22, for 5.3.2</a></li>
+<li><a href="#read-and-kept-on-2026-10-22-for-532">Read and kept on 2026-10-22, for 5.3.2</a></li>
+<li><a href="#left-open-on-2026-10-22-for-532">Left open on 2026-10-22, for 5.3.2</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-10-24-for-540">The review of 2026-10-24, for 5.4.0</a>
+<ul>
+<li><a href="#changed-on-2026-10-24-for-540">Changed on 2026-10-24, for 5.4.0</a></li>
+<li><a href="#read-and-kept-on-2026-10-24-for-540">Read and kept on 2026-10-24, for 5.4.0</a></li>
+<li><a href="#left-open-on-2026-10-24-for-540">Left open on 2026-10-24, for 5.4.0</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-10-24-for-541">The review of 2026-10-24, for 5.4.1</a>
+<ul>
+<li><a href="#changed-on-2026-10-24-for-541">Changed on 2026-10-24, for 5.4.1</a></li>
+<li><a href="#read-and-kept-on-2026-10-24-for-541">Read and kept on 2026-10-24, for 5.4.1</a></li>
+<li><a href="#left-open-on-2026-10-24-for-541">Left open on 2026-10-24, for 5.4.1</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-10-25-for-542">The review of 2026-10-25, for 5.4.2</a>
+<ul>
+<li><a href="#changed-on-2026-10-25-for-542">Changed on 2026-10-25, for 5.4.2</a></li>
+<li><a href="#read-and-kept-on-2026-10-25-for-542">Read and kept on 2026-10-25, for 5.4.2</a></li>
+<li><a href="#left-open-on-2026-10-25-for-542">Left open on 2026-10-25, for 5.4.2</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-10-27-for-550">The review of 2026-10-27, for 5.5.0</a>
+<ul>
+<li><a href="#changed-on-2026-10-27-for-550">Changed on 2026-10-27, for 5.5.0</a></li>
+<li><a href="#read-and-kept-on-2026-10-27-for-550">Read and kept on 2026-10-27, for 5.5.0</a></li>
+<li><a href="#left-open-on-2026-10-27-for-550">Left open on 2026-10-27, for 5.5.0</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-10-28-for-560-rc1">The review of 2026-10-28, for 5.6.0-rc1</a>
+<ul>
+<li><a href="#changed-on-2026-10-28-for-560-rc1">Changed on 2026-10-28, for 5.6.0-rc1</a></li>
+<li><a href="#read-and-kept-on-2026-10-28-for-560-rc1">Read and kept on 2026-10-28, for 5.6.0-rc1</a></li>
+<li><a href="#left-open-on-2026-10-28-for-560-rc1">Left open on 2026-10-28, for 5.6.0-rc1</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-10-29-for-560-rc2">The review of 2026-10-29, for 5.6.0-rc2</a>
+<ul>
+<li><a href="#changed-on-2026-10-29-for-560-rc2">Changed on 2026-10-29, for 5.6.0-rc2</a></li>
+<li><a href="#read-and-kept-on-2026-10-29-for-560-rc2">Read and kept on 2026-10-29, for 5.6.0-rc2</a></li>
+<li><a href="#left-open-on-2026-10-29-for-560-rc2">Left open on 2026-10-29, for 5.6.0-rc2</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-10-29-for-560-rc3">The review of 2026-10-29, for 5.6.0-rc3</a>
+<ul>
+<li><a href="#changed-on-2026-10-29-for-560-rc3">Changed on 2026-10-29, for 5.6.0-rc3</a></li>
+<li><a href="#read-and-kept-on-2026-10-29-for-560-rc3">Read and kept on 2026-10-29, for 5.6.0-rc3</a></li>
+<li><a href="#left-open-on-2026-10-29-for-560-rc3">Left open on 2026-10-29, for 5.6.0-rc3</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-10-31-for-560-rc4">The review of 2026-10-31, for 5.6.0-rc4</a>
+<ul>
+<li><a href="#changed-on-2026-10-31-for-560-rc4">Changed on 2026-10-31, for 5.6.0-rc4</a></li>
+<li><a href="#read-and-kept-on-2026-10-31-for-560-rc4">Read and kept on 2026-10-31, for 5.6.0-rc4</a></li>
+<li><a href="#left-open-on-2026-10-31-for-560-rc4">Left open on 2026-10-31, for 5.6.0-rc4</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-10-31-for-560-rc5">The review of 2026-10-31, for 5.6.0-rc5</a>
+<ul>
+<li><a href="#read-and-kept-on-2026-10-31-for-560-rc5">Read and kept on 2026-10-31, for 5.6.0-rc5</a></li>
+<li><a href="#left-open-on-2026-10-31-for-560-rc5">Left open on 2026-10-31, for 5.6.0-rc5</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-11-01-for-560-rc6">The review of 2026-11-01, for 5.6.0-rc6</a>
+<ul>
+<li><a href="#read-and-kept-on-2026-11-01-for-560-rc6">Read and kept on 2026-11-01, for 5.6.0-rc6</a></li>
+<li><a href="#left-open-on-2026-11-01-for-560-rc6">Left open on 2026-11-01, for 5.6.0-rc6</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-11-01-for-560-rc7">The review of 2026-11-01, for 5.6.0-rc7</a>
+<ul>
+<li><a href="#read-and-kept-on-2026-11-01-for-560-rc7">Read and kept on 2026-11-01, for 5.6.0-rc7</a></li>
+<li><a href="#left-open-on-2026-11-01-for-560-rc7">Left open on 2026-11-01, for 5.6.0-rc7</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-11-02-for-560-rc8">The review of 2026-11-02, for 5.6.0-rc8</a>
+<ul>
+<li><a href="#changed-on-2026-11-02-for-560-rc8">Changed on 2026-11-02, for 5.6.0-rc8</a></li>
+<li><a href="#read-and-kept-on-2026-11-02-for-560-rc8">Read and kept on 2026-11-02, for 5.6.0-rc8</a></li>
+<li><a href="#left-open-on-2026-11-02-for-560-rc8">Left open on 2026-11-02, for 5.6.0-rc8</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-11-02-for-560-rc9">The review of 2026-11-02, for 5.6.0-rc9</a>
+<ul>
+<li><a href="#read-and-kept-on-2026-11-02-for-560-rc9">Read and kept on 2026-11-02, for 5.6.0-rc9</a></li>
+<li><a href="#left-open-on-2026-11-02-for-560-rc9">Left open on 2026-11-02, for 5.6.0-rc9</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-11-02-for-560-rc10">The review of 2026-11-02, for 5.6.0-rc10</a>
+<ul>
+<li><a href="#changed-on-2026-11-02-for-560-rc10">Changed on 2026-11-02, for 5.6.0-rc10</a></li>
+<li><a href="#read-and-kept-on-2026-11-02-for-560-rc10">Read and kept on 2026-11-02, for 5.6.0-rc10</a></li>
+<li><a href="#left-open-on-2026-11-02-for-560-rc10">Left open on 2026-11-02, for 5.6.0-rc10</a></li>
+</ul>
+</li>
+<li><a href="#the-review-of-2026-11-04-for-560">The review of 2026-11-04, for 5.6.0</a>
+<ul>
+<li><a href="#changed-on-2026-11-04-for-560">Changed on 2026-11-04, for 5.6.0</a></li>
+<li><a href="#read-and-kept-on-2026-11-04-for-560">Read and kept on 2026-11-04, for 5.6.0</a></li>
+<li><a href="#left-open-on-2026-11-04-for-560">Left open on 2026-11-04, for 5.6.0</a></li>
+</ul>
+</li>
+</ul>
+<blockquote class="blockquote-tag blockquote-tag-warning">
+<p class="blockquote-tag-title"><svg viewbox="0 0 16 16" width="18" height="18"><path d="M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"></path></svg>Warning</p>
+<p>The quotations are from the Official Journal text vendored at
+<a href="https://github.com/FerroHEALTH/FerroEHR/blob/main/docs/law/eu/ehds/text.html"><code>docs/law/eu/ehds/text.html</code></a>
+(<a href="https://eur-lex.europa.eu/eli/reg/2025/327/oj">EUR-Lex</a>). Art. 28 takes
+“professional user” from Article 3, point (8), of Regulation (EU) 2018/1807,
+which the repository does not carry, so these pages do not restate that
+definition. A text that passes this review has been read against Art. 28 by
+the manufacturer; no authority has examined it.</p>
+</blockquote>
+<h2 id="what-is-reviewed-and-how"><a class="header" href="#what-is-reviewed-and-how">What is reviewed, and how</a></h2>
+<p>The texts in scope, each release:</p>
+<ul>
+<li>the repository <code>README.md</code> and the landing page at <code>ferroehr.eu</code>;</li>
+<li>every page of this book, except the pages generated from the tracker and
+from committed measurement records, whose generators are reviewed instead;</li>
+<li><code>SECURITY.md</code>;</li>
+<li>the READMEs of the published <code>openehr-*</code> crates;</li>
+<li>the OCI labels of the three images (<code>docker/Dockerfile</code>,
+<code>docker/viewer/Dockerfile</code>, <code>docker/postgres/Dockerfile</code>) and the Helm
+chart’s description;</li>
+<li>the public sandbox at <code>sandbox.ferroehr.eu</code>.</li>
+</ul>
+<p>Each claim about a function, a property, interoperability or security is
+checked against the code, the configuration defaults and the committed
+records, and against the intended-purpose statement. A misleading claim is
+fixed in the same change as the review. Measured numbers are never typed into
+a text: the conformance and performance figures come from generators over the
+committed run records, and a CI check fails a page whose numbers disagree
+with them.</p>
+<h2 id="the-review-of-2026-10-06"><a class="header" href="#the-review-of-2026-10-06">The review of 2026-10-06</a></h2>
+<p>Read on the tree after commit <code>d6539d470</code>, before FerroEHR 4.3.5.</p>
+<h3 id="changed"><a class="header" href="#changed">Changed</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>Text</th><th>Claim</th><th>Art. 28</th><th>Finding</th><th>Now reads</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td>README, opening</td><td>“Every compliance claim it makes is machine-verified”</td><td>(a)</td><td>Only the openEHR conformance numbers are machine-verified. The regulatory pages are reviewed by hand, and “compliance” invites the regulatory reading</td><td>“Every conformance claim it makes is machine-verified”</td></tr>
+<tr><td>2</td><td>README, “What makes it different”</td><td>“Compliance you can verify.”</td><td>(a)</td><td>as row 1</td><td>“Conformance you can verify.”</td></tr>
+<tr><td>3</td><td>README, licence paragraph and “Security &amp; operations”</td><td>“Multi-tenancy […] fully integrated: each tenant is an isolated logical openEHR system, enforced by PostgreSQL row-level security”</td><td>(a)</td><td>FerroEHR is single-tenant, with no tenant column, row policy or tenancy configuration (<a href="../security.html#one-instance-one-organisation">one instance, one organisation</a>)</td><td>“One instance per organisation: FerroEHR is single-tenant […]”; multi-tenancy removed from the feature list</td></tr>
+<tr><td>4</td><td>README, “Security &amp; operations”</td><td>national identifiers “sealed under a per-tenant key”</td><td>(a), (b)</td><td>there are no tenants, and the sealing is off by default</td><td>“sealed under a key the deployment holds […] (off by default)”</td></tr>
+<tr><td>5</td><td>README, “Security &amp; operations”</td><td>“IHE ATNA-compliant system log (DICOM audit messages over TLS syslog)”</td><td>(a), (b)</td><td>“compliant” claims a property nobody assessed; the syslog sink is off by default and ships with UDP; the default sink is the local hash-chained store</td><td>the access log, its two renderings, the local store and the optional forwarding, described as they ship</td></tr>
+<tr><td>6</td><td>README, “Security &amp; operations”</td><td>“Hardened by default”</td><td>(b)</td><td>TLS is off by default, and the shipped <code>deployment_profile</code> is <code>sandbox</code>, which must not hold real patient data</td><td>“Hardening built in”, with both limitations stated</td></tr>
+<tr><td>7</td><td>README, “Integration”</td><td>the FHIR R4B connectors, with no limitation</td><td>(b)</td><td>the in-tree connector was removed in favour of FerroBRIDGE in v4.3.6 (#3080)</td><td>the removal is stated</td></tr>
+<tr><td>8</td><td>Landing page, title, <code>og:</code> and <code>twitter:</code> descriptions, structured data</td><td>“Spec-compliant and measured”, “spec-conformant and measured”</td><td>(a)</td><td>states conformity as a property; what exists is a measured openEHR conformance record</td><td>“openEHR conformance, measured”</td></tr>
+<tr><td>9</td><td>Landing page, hero note</td><td>“every compliance claim machine-verified”</td><td>(a)</td><td>as row 1</td><td>“every conformance number machine-verified”</td></tr>
+<tr><td>10</td><td>Landing page, conformance section</td><td>“Compliance you can verify.” and “Every release runs the complete conformance catalogue against the live server”</td><td>(a)</td><td>the release pipeline does not run the catalogue; the committed record measured FerroEHR 4.3.0</td><td>“Conformance you can verify.”; the record “names the FerroEHR version it measured”</td></tr>
+<tr><td>11</td><td>Landing page, feature grid heading</td><td>“Everything the openEHR standard asks for”</td><td>(a)</td><td>claims complete coverage of the standard, which nothing measures</td><td>“The openEHR platform services”</td></tr>
+<tr><td>12</td><td>Landing page, Security card</td><td>“multi-tenancy”</td><td>(a)</td><td>as row 3</td><td>“One instance per organisation.”</td></tr>
+<tr><td>13</td><td>Book, <a href="../introduction.html">Introduction</a></td><td>“Compliance you can run yourself”</td><td>(a)</td><td>as row 1</td><td>“Conformance you can run yourself”</td></tr>
+<tr><td>14</td><td>Book, <a href="../concepts/architecture.html">System architecture</a></td><td>“why the compliance claims are checkable”, “the compliance claims are machine-derived”</td><td>(a)</td><td>as row 1</td><td>“conformance claims”</td></tr>
+<tr><td>15</td><td>Book, <a href="../beyond-core/index.html">Beyond the core</a></td><td>“Security, multi-tenancy, and the audit trail”</td><td>(a)</td><td>as row 3</td><td>“Security, instance separation and the audit trail”</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="read-and-kept"><a class="header" href="#read-and-kept">Read and kept</a></h3>
+<ul>
+<li><strong>The conformance and performance figures</strong> on the README, the landing page
+and the book: rendered from <code>docs/conformance/ferroehr/</code> by
+<code>scripts/render/conformance-stats.sh</code> and <code>scripts/render/perf-assets.sh</code>,
+and checked in CI. No number is typed.</li>
+<li><strong>“openEHR-spec-conformant”</strong>, on the <a href="../conformance.html">Conformance</a> page,
+in the <code>openehr-*</code> crate READMEs, in the <code>org.opencontainers.image.description</code>
+label of the server image and in the Helm chart description: a claim about
+the openEHR specifications, backed by the committed record (CORE and
+STANDARD, every case passed) and explained on that page. It makes no claim
+about any regulation.</li>
+<li><strong>“aims to be the first openly developed, source-available openEHR CDR with a
+published, tracker-backed EU compliance posture”</strong> (the
+<a href="index.html">compliance overview</a>, <a href="../why-ferroehr.html">Why FerroEHR exists</a>):
+stated as an aim, beside the statement that
+FerroEHR holds no certification and no declaration.</li>
+<li><strong>The compliance pages, the DPIA and the go-live checklist</strong>: each says it
+does not make a deployment compliant with anything.</li>
+<li><strong>The image labels</strong>: the server image carries
+<code>eu.ferroehr.image.carries-sandbox-posture="true"</code>, which tells an operator
+the shipped profile; the manufacturer label names Cadasto B.V.</li>
+<li><strong><code>SECURITY.md</code></strong>: its commitments match the procedures in
+<code>docs/post-market.md</code> and the release procedure.</li>
+<li><strong>The public sandbox</strong>: the viewer shows the sandbox notice on every page,
+the README calls its content demo data, wiped nightly, and the landing page
+calls it a live demo.</li>
+</ul>
+<h3 id="left-open"><a class="header" href="#left-open">Left open</a></h3>
+<ul>
+<li><strong>The Helm chart’s description</strong> (<code>Chart.yaml</code>, and the chart README that
+helm-docs generates from it) says “hardened-by-default security posture”
+and lists the workload hardening, which is accurate, but does not say that
+a stock install runs the <code>sandbox</code> profile. The chart now declares
+<code>config.deployment_profile: sandbox</code> in its values, and the chart README
+says so under “Before you install”; the <code>Chart.yaml</code> description still does
+not.</li>
+</ul>
+<h2 id="the-review-of-2026-10-08"><a class="header" href="#the-review-of-2026-10-08">The review of 2026-10-08</a></h2>
+<p>Read on the tree after commit <code>de648fcc3</code>, for FerroEHR 4.3.6. This release
+removes the in-tree FHIR connector (#3080) and moves the deployment gaps off
+the public status document (#3671), so those two facts were checked in every
+text in scope.</p>
+<h3 id="changed-on-2026-10-08"><a class="header" href="#changed-on-2026-10-08">Changed on 2026-10-08</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>Text</th><th>Claim</th><th>Art. 28</th><th>Finding</th><th>Now reads</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td>Landing page, “Fits your stack”</td><td>“FHIR R4B”</td><td>(a)</td><td>FerroEHR maps no FHIR resources; it reaches FHIR R4B terminology servers and renders its access log as FHIR R4 <code>AuditEvent</code></td><td>“FHIR R4B terminology”</td></tr>
+<tr><td>2</td><td>Book, <a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, <a href="cra-user-information.html">CRA user information</a>, <a href="../installation/configuration.html#deployment_profile">configuration</a>, <a href="../security/go-live-checklist.html">go-live checklist</a></td><td>an accepted deployment gap is stated “on <code>GET /ferroehr/rest/status</code>”</td><td>(a)</td><td>the gaps moved to the authenticated <code>GET /management/status</code> (#3671); the public status document carries the profile only</td><td>“on <code>GET /management/status</code>”</td></tr>
+<tr><td>3</td><td>Book, <a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, the deployment profile</td><td>the list of what <code>production</code> refuses</td><td>(b)</td><td>omitted the plaintext audit feed and the plaintext object store (#3676, #3689)</td><td>both named</td></tr>
+<tr><td>4</td><td>Book, <a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, limitations</td><td>none on FHIR</td><td>(b)</td><td>an operator of an earlier release may rely on the removed connector</td><td>FerroEHR maps no FHIR resources, and <code>[fhir]</code> is refused at boot</td></tr>
+<tr><td>5</td><td>Book, <a href="https://ferrohealth.eu/docs/ehds/information-sheet.html">information sheet</a>, (e)</td><td>the standards table</td><td>(b)</td><td>omitted the FHIR terminology operations and RFC 9470, which this release uses</td><td>both listed</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="read-and-kept-on-2026-10-08"><a class="header" href="#read-and-kept-on-2026-10-08">Read and kept on 2026-10-08</a></h3>
+<ul>
+<li><strong>The README’s integration list and the book’s
+<a href="../beyond-core/index.html">Beyond the core</a></strong>: both state that FHIR R4 mapping
+is FerroBRIDGE’s and name the two uses of FHIR FerroEHR keeps.</li>
+<li><strong>Single tenancy</strong>: the README, the landing page and the book state one
+instance per organisation; “multi-tenant” appears only where the book quotes
+openEHR’s placement of multi-tenancy outside one system.</li>
+<li><strong>The Helm chart’s description</strong>: it now says a stock install runs the
+<code>sandbox</code> profile (#3637), which closes the item left open on 2026-10-06.</li>
+</ul>
+<h3 id="left-open-on-2026-10-08"><a class="header" href="#left-open-on-2026-10-08">Left open on 2026-10-08</a></h3>
+<p>Nothing.</p>
+<h2 id="the-review-of-2026-10-15"><a class="header" href="#the-review-of-2026-10-15">The review of 2026-10-15</a></h2>
+<p>Read on the tree after commit <code>606a29cce</code>, for FerroEHR 4.3.9. The facts of
+this release checked in every text in scope: the ABAC patient scope over
+EHR-only queries and <code>[authz.abac] patient_namespace</code> (#3771); a restricted
+<code>EHR_ACCESS</code> default with the role gate off, and the <code>rbac_off</code> gap (#3742);
+national identifiers sealed per party version, the sealed form in write
+responses and the refusal of plaintext protected values on import (#3772);
+digest version 2 of the audit chain (#3686); the AQL row rules (#3733,
+#3734); the removal of FOSSA; the TLS certificate reload and EC keys (#3765,
+#3761); the four-cluster production layout (#3755 to #3757, #3762); the
+example generator (#3739, #3740); quoted GET query parameters (#3781). The
+2026-10-08 move of the deployment gaps to <code>GET /management/status</code> (#3671) was
+re-checked on every page, and eleven pages still named the public document.</p>
+<h3 id="changed-on-2026-10-15"><a class="header" href="#changed-on-2026-10-15">Changed on 2026-10-15</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>Text</th><th>Claim</th><th>Art. 28</th><th>Finding</th><th>Now reads</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td>Book, <a href="../licensing.html">licensing</a>, <a href="../security.html">security</a>, <a href="../security/go-live-checklist.html">go-live checklist</a> (two items), <a href="../installation/kubernetes.html">Kubernetes</a>, <a href="../installation/config-auth.html">authentication configuration</a> (two places), <a href="../installation/compose.html">Compose</a> (two places), <a href="../installation/index.html">installation</a>, <a href="../installation/configuration.html#deployment_profile">configuration</a>, <a href="../installation/config-cli.html">command line</a>, <a href="../security/dpia.html">DPIA</a> R9, <a href="index.html">compliance overview</a> (GDPR Art. 25, DSV Art. 4)</td><td>an open or accepted deployment gap, or the licence in force, is reported on <code>GET /ferroehr/rest/status</code> (or <code>/rest/status</code>)</td><td>(a)</td><td>the public document carries <code>status</code>, the versions, the timestamp and the profile only; the gaps, the licence and the support period are on <code>GET /management/status</code> (#3671)</td><td>“on <code>GET /management/status</code>”; the configuration page adds that the public document carries the profile only</td></tr>
+<tr><td>2</td><td>Book, <a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, the deployment profile</td><td>the list of what <code>production</code> refuses</td><td>(b)</td><td>omitted the role gate off while authentication is on, the <code>rbac_off</code> gap this release adds (#3742)</td><td>named</td></tr>
+<tr><td>3</td><td>Book, <a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, limitations</td><td>none on how AQL reads repeated nodes</td><td>(b)</td><td>AQL 1.1.0 does not define the rows of a path through a repeated node; this release changed them (#3733), so another server, or a client written for an earlier release, may count differently</td><td>the limitation is stated, with the regrouping a client needs</td></tr>
+<tr><td>4</td><td>Book, <a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, limitations</td><td>none on the audit chain’s coverage</td><td>(b)</td><td>records written before the upgrade keep digest version 1, which leaves out the columns added after the chain was introduced (#3686)</td><td>stated, with the columns and the trigger that alone protects them</td></tr>
+<tr><td>5</td><td>Book, <a href="../installation/configuration.html#deployment_profile">configuration</a>, <code>migrate_on_runtime_credential</code></td><td>a domain relocated to its own database “is prepared on that domain’s runtime DSN”</td><td>(a)</td><td><code>[storage.migrate.&lt;domain&gt;] url</code> now prepares it on its own migration credential (#3756); only without it does the runtime DSN prepare it and open the gap</td><td>both cases stated</td></tr>
+<tr><td>6</td><td>Book, <a href="../security/records-of-processing.html">records of processing</a>, categories of personal data</td><td>clinical content “in the <code>ehr</code> schema”; parties “in the <code>demographic</code> schema”</td><td>(a)</td><td>the schemas are <code>clinical</code> and <code>party</code> since the storage rewrite</td><td><code>clinical</code> and <code>party</code></td></tr>
+<tr><td>7</td><td>Book, <a href="../installation/kubernetes.html">Kubernetes</a>, server TLS</td><td>the viewer’s OIDC client “trusts the public roots it is built with”, so a private-CA issuer is not trusted</td><td>(a)</td><td>the viewer’s OIDC client verifies against the platform trust store (#3767)</td><td>a private-CA issuer is trusted once its CA is in the store or under <code>SSL_CERT_DIR</code></td></tr>
+<tr><td>8</td><td>Book, <a href="../querying-aql.html">querying with AQL</a>, the URL form</td><td>how a parameter value binds</td><td>(b)</td><td>silent on a quoted value, which now binds the JSON string it denotes (#3781)</td><td>the quoted form and the malformed case stated</td></tr>
+<tr><td>9</td><td>Book, <a href="../templates-validation.html">templates and validation</a>, the example composition</td><td>“a skeleton instance you can fill in”, with no limitation</td><td>(b)</td><td>the example passes the server’s own validation except for two open defects (#3779, #3780) and templates whose mandatory content only a slot admits</td><td>the exceptions named</td></tr>
+<tr><td>10</td><td>Book, <a href="../threat-model.html">threat model</a>, what each database credential can reach</td><td>the writer roles hold <code>SELECT</code>, <code>INSERT</code>, <code>UPDATE</code> and <code>DELETE</code> on their schema</td><td>(b)</td><td>the migration bookkeeping is now read-only to every runtime role, and the boot refuses a writable one</td><td>stated below the table</td></tr>
+<tr><td>11</td><td>Book, <a href="https://ferrohealth.eu/docs/ehds/information-sheet.html">information sheet</a>, (e)</td><td>TERM “3.1.0”</td><td>(b)</td><td>the server applies amendment 3.1.4 (SPECPR-450), which adds properties and units the template upload and the quantity validation accept (#3717, #3727)</td><td>“3.1.0, with amendment 3.1.4 (SPECPR-450)”</td></tr>
+</tbody>
+</table>
+</div>
+<p>The technical documentation’s Annex III 2 named the public status document for
+the deployment posture too; it names <code>GET /management/status</code> now.
+| 12 | Repository README, the template-model and example bullets (two places) | every template “generates spec-valid example compositions that pass the server’s own validation” | (a) | #3779 and #3780 are open, and a template whose mandatory content only an archetype slot admits has no committable example | “a template […] generates” them, “except for the cases the book’s example page lists” |
+| 13 | Repository README, the deployment posture and licence bullets | <code>sandbox</code> names every open gap “on <code>GET /rest/status</code>”; “<code>GET /ferroehr/rest/status</code> reports the grant in force” | (a) | both are on <code>GET /management/status</code> (#3671) | “on <code>GET /management/status</code>” |
+| 14 | Book, <a href="https://ferrohealth.eu/docs/ehds/readiness.html">EHDS readiness</a> row 1.2 | its issue reference | (a) | the probe that issue asked for ran (#3692), without <code>hostUsers: false</code> or <code>sslmode=verify-full</code> | names #3788 for those two |</p>
+<h3 id="read-and-kept-on-2026-10-15"><a class="header" href="#read-and-kept-on-2026-10-15">Read and kept on 2026-10-15</a></h3>
+<ul>
+<li><strong>FOSSA</strong>: no text in scope names FOSSA, a FOSSA badge or a FOSSA lane after
+its removal in this release.</li>
+<li><strong>The patient scope and <code>patient_namespace</code></strong>: the
+<a href="../installation/config-auth.html#authzabac"><code>[authz.abac]</code></a> table and its
+patient-scope list state the EHR-only queries, the direct-route refusals and
+the namespace rule as they ship; the <a href="../security.html">security</a> page’s
+fail-closed box is unchanged by them.</li>
+<li><strong>The restricted <code>EHR_ACCESS</code> default and <code>rbac_off</code></strong>: the authentication
+configuration, the configuration page, the go-live checklist, the Kubernetes
+values table and the <a href="cra-risk-assessment.html">CRA risk assessment</a> (d) state
+both.</li>
+<li><strong>Identifier protection</strong>: the privacy configuration, the threat model’s
+sealed-identifier section, the operations guide and the admin API page state
+the per-version rows, the sealed write response, the plaintext refusal on
+import and load, and the erasure of sealed rows.</li>
+<li><strong>The audit chain</strong>: the <a href="../audit.html#tamper-evidence">audit trail</a> page
+states both digest versions and the downgrade finding.</li>
+<li><strong>AQL</strong>: <a href="../querying-aql.html">querying with AQL</a> and the AQL engine concept
+page state the row rules and say AQL 1.1.0 does not define them.</li>
+<li><strong>TLS</strong>: the server configuration and the Kubernetes page state the reload
+interval, the EC key formats and the explicit-curve refusal.</li>
+<li><strong>The information sheet’s BALP row</strong> (“the profile revision is not pinned”):
+kept. The delete agent types follow BALP 1.1.4, and the profile URLs the
+records carry are unversioned.</li>
+<li><strong>The image labels and the Helm chart’s description</strong>: unchanged by this
+release but for the chart description’s NetworkPolicy defaults (#3743),
+which match <code>values.yaml</code>.</li>
+</ul>
+<h3 id="left-open-on-2026-10-15"><a class="header" href="#left-open-on-2026-10-15">Left open on 2026-10-15</a></h3>
+<p>Nothing.</p>
+<h2 id="the-review-of-2026-10-16"><a class="header" href="#the-review-of-2026-10-16">The review of 2026-10-16</a></h2>
+<p>Read on the tree after commit <code>e923076de</code>, for FerroEHR 4.3.10. The facts of
+this release checked in every text in scope: the usage report in format 2
+(#3795); the usage report off in a CI run, whatever the switch says (#3794);
+the dump and load archive on zip 9.0.4 (#3798).</p>
+<h3 id="changed-on-2026-10-16"><a class="header" href="#changed-on-2026-10-16">Changed on 2026-10-16</a></h3>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>#</th><th>Text</th><th>Claim</th><th>Art. 28</th><th>Finding</th><th>Now reads</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td>Book, <a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, the usage report</td><td>“Every deployment sends a daily usage report to Cadasto B.V. by default”</td><td>(a)</td><td>the report also goes out at each start, and a server started in a CI run sends none (#3794)</td><td>both stated, with the two CI variables</td></tr>
+<tr><td>2</td><td>Book, <a href="../operations.html#the-usage-report">operations</a>, the usage report</td><td>“It is on by default”</td><td>(a)</td><td>off in a CI run, whatever the switch says (#3794)</td><td>“on by default outside a CI run”</td></tr>
+</tbody>
+</table>
+</div>
+<h3 id="read-and-kept-on-2026-10-16"><a class="header" href="#read-and-kept-on-2026-10-16">Read and kept on 2026-10-16</a></h3>
+<ul>
+<li><strong>The usage report’s fields</strong>: the <a href="../usage-report.html">usage report</a> page
+lists the format 2 fields and the <code>status</code> object as the server sends them,
+and says earlier releases send format 1. The field list in the
+<a href="cra-risk-assessment.html">CRA risk assessment</a>’s outbound data flows, the
+<a href="shared-responsibility.html">shared responsibility</a> summary, the
+<a href="../security/records-of-processing.html">records of processing</a> note, the
+<a href="intended-purpose.html">intended purpose</a> and the
+<a href="../threat-model.html">threat model</a> name the same information, which format 2
+only regroups.</li>
+<li><strong>The CI switch</strong>: the <a href="../usage-report.html#switch-it-off">usage report</a> page
+states the two variables, the boot line and the <code>--print</code> note as they ship,
+and the <a href="../installation/config-server.html#usage_report">server configuration</a>
+table states the two variables.</li>
+<li><strong>The dump and load archive</strong>: the
+<a href="../operations-admin-apis.html#dump-and-load">admin APIs</a> page names no zip
+library and its <code>compression_format</code> values are unchanged.</li>
+<li><strong>The README, <code>SECURITY.md</code>, the crate READMEs, the image labels and the Helm
+chart’s description</strong>: unchanged by this release, and none names the usage
+report’s format or the zip library.</li>
+</ul>
+<h3 id="left-open-on-2026-10-16"><a class="header" href="#left-open-on-2026-10-16">Left open on 2026-10-16</a></h3>
+<p>Nothing.</p>
+<h2 id="the-review-of-2026-10-19"><a class="header" href="#the-review-of-2026-10-19">The review of 2026-10-19</a></h2>
+<p>Read on the tree after commit <code>a15290689</code>, for FerroEHR 4.3.11. The facts of
+this release checked in every text in scope: the viewer drawn in FerroUI
+0.1.6 (#3802, #3811, #3815, #3820); the viewer’s tab icon (#3808); the coming
+split of the logging component with FerroSYS (#3662); the zip advisories
+judged not affecting in the Rust-dependency VEX document (#3806).</p>
+<h3 id="changed-on-2026-10-19"><a class="header" href="#changed-on-2026-10-19">Changed on 2026-10-19</a></h3>
+<p>Nothing. Every text in scope already states these facts.</p>
+<h3 id="read-and-kept-on-2026-10-19"><a class="header" href="#read-and-kept-on-2026-10-19">Read and kept on 2026-10-19</a></h3>
+<ul>
+<li><strong>The viewer pages</strong>: <a href="../viewer/index.html">the viewer</a> names the footer’s
+manufacturer line and the System screen’s Manufacturer card (#3634), and
+<a href="../viewer/preferences.html">dark mode</a> describes the moon and sun button and
+the theme cookie as FerroUI draws them. No page names a component library
+the viewer no longer uses.</li>
+<li><strong>The logging component</strong>: the <a href="https://ferrohealth.eu/docs/ehds/readiness.html">EHDS readiness</a> page and
+the technical documentation say FerroEHR ships the whole logging component
+today and that FerroSYS takes the central store, review, retention and
+retrieval in a later release; nothing calls that split shipped.</li>
+<li><strong>The security notices</strong>: the release’s Security entry names the VEX
+document that records the three zip advisories as not affecting FerroEHR.</li>
+</ul>
+<h3 id="left-open-on-2026-10-19"><a class="header" href="#left-open-on-2026-10-19">Left open on 2026-10-19</a></h3>
+<p>Nothing.</p>
+<h2 id="the-review-of-2026-10-19-for-500"><a class="header" href="#the-review-of-2026-10-19-for-500">The review of 2026-10-19, for 5.0.0</a></h2>
+<p>Read on the tree after commit <code>ec78e7f40</code>, for FerroEHR 5.0.0. The facts of
+this release checked in every text in scope: <code>openehr-sdt</code> builds a canonical
+PARTY from a party Web Template and stamps the caller’s <code>rm_version</code> (#3810,
+#3809); the openEHR terminology serves the <code>interoperability</code> group; archetype
+identifiers follow the BASE 1.3.0 grammar under the <code>development</code> profile
+(#3835, #3845); the nine <code>openehr-*</code> crates at <code>0.0.89</code>; only the newest
+release is supported (#3853); the viewer serves its hydration bundle on a
+route of its own (#3849); the viewer draws with FerroUI 0.1.7 and chooses its
+language from <code>Accept-Language</code> or <code>[ui] locale</code>.</p>
+<h3 id="changed-on-2026-10-19-for-500"><a class="header" href="#changed-on-2026-10-19-for-500">Changed on 2026-10-19, for 5.0.0</a></h3>
+<ul>
+<li><strong><a href="../crates.html">The Rust crates</a></strong>: the dependency examples named the
+crates at <code>0.0.86</code>, three versions behind the published line; they name
+<code>0.0.89</code>. The <code>openehr-sdt</code> row names the PARTY build beside the
+composition formats.</li>
+<li><strong><a href="../viewer/index.html">The viewer</a></strong>: the <code>ui.locale</code> row said a
+deployment adds a language as a catalog file. The catalogs are embedded
+when the viewer is built, so the row now says a new catalog reaches a
+deployment in a rebuilt image, never at run time.</li>
+</ul>
+<h3 id="read-and-kept-on-2026-10-19-for-500"><a class="header" href="#read-and-kept-on-2026-10-19-for-500">Read and kept on 2026-10-19, for 5.0.0</a></h3>
+<ul>
+<li><strong>The support period</strong>: <code>SECURITY.md</code>, <a href="../crates.html">the Rust crates</a> page
+and the release notes say that only the newest release is supported and
+that the five years of security fixes are a commitment for the product,
+shipped in the newest release. No text in scope still promises fixes to an
+earlier release.</li>
+<li><strong>The crate READMEs</strong>: the <code>openehr-sdt</code> README describes the composition
+formats and does not mention the PARTY build. An omission ascribes no
+function the crate lacks, and the README changes with the crate’s next
+content version.</li>
+<li><strong>The specification pins</strong>: <code>docs/VERSIONS.md</code> and the crate table name
+BASE 1.2.0 and 1.3.0, which is what the two generations implement.</li>
+</ul>
+<h3 id="left-open-on-2026-10-19-for-500"><a class="header" href="#left-open-on-2026-10-19-for-500">Left open on 2026-10-19, for 5.0.0</a></h3>
+<p>Nothing.</p>
+<h2 id="the-review-of-2026-10-20-for-510"><a class="header" href="#the-review-of-2026-10-20-for-510">The review of 2026-10-20, for 5.1.0</a></h2>
+<p>Read on the tree after commit <code>18097c6f1</code>, for FerroEHR 5.1.0. The facts of this
+release checked in every text in scope: authentication and the SMART on openEHR
+scope check run on the shared <code>ferrohealth-smart</code> crate, only asymmetric
+algorithms verify a token, the HMAC key is gone, and every route requires a
+scope (#3872); the Keycloak overlay and the development stack serve their
+issuer over TLS with a development CA, and the CDR accepts their tokens again
+(#3873); AQL rooted at <code>PERSON</code>, <code>ORGANISATION</code> and <code>ROLE</code>, and a demographic
+root joined to its EHR’s content (#3818, #3831); the audit FHIR feed and the
+remote policy service authenticate with OAuth 2.0 client credentials (#3829);
+the chart mounts a database CA for <code>sslmode=verify-full</code> (#3788); a rotated
+mTLS client CA is re-read without a restart (#3769); the viewer reads every
+word from its catalog with FerroUI 0.2.0 (#3860); the nine <code>openehr-*</code> crates
+at <code>0.0.90</code>.</p>
+<h3 id="changed-on-2026-10-20-for-510"><a class="header" href="#changed-on-2026-10-20-for-510">Changed on 2026-10-20, for 5.1.0</a></h3>
+<ul>
+<li><strong>The repository <code>README.md</code></strong>: the authentication bullet named Basic and
+OAuth2/OIDC alone. Every route now refuses a caller whose scopes do not
+grant the operation, a limitation a deployment must know (Art. 28(b)), so the
+bullet says the SMART on openEHR scopes are checked on every route.</li>
+<li><strong><a href="../crates.html">The Rust crates</a></strong>: the dependency examples named the crates
+at <code>0.0.89</code>; they name <code>0.0.90</code>.</li>
+</ul>
+<h3 id="read-and-kept-on-2026-10-20-for-510"><a class="header" href="#read-and-kept-on-2026-10-20-for-510">Read and kept on 2026-10-20, for 5.1.0</a></h3>
+<ul>
+<li><strong>The Keycloak quickstart</strong>: <a href="../installation/compose.html">Docker Compose</a>,
+<a href="../getting-started.html">getting started</a> and the README offer the overlay
+for bearer-token authentication. Between #3872 and #3873 the CDR did not
+accept the overlay’s tokens; on this tree it does, and the compose page
+names the development CA and the scopes the realm puts in every token.</li>
+<li><strong>Authentication and authorization</strong>: <a href="../security.html">security</a>,
+<a href="../installation/config-auth.html">the authentication reference</a> and
+<a href="../smart-app-launch.html">SMART App Launch</a> describe the <code>[auth]</code> keys, the
+RFC 9068 profile and the scope check as the code does.</li>
+<li><strong>Annex II 2.5</strong>: a caller refused for want of a scope is refused by the
+grant its own identity provider issued, which the deployment controls; the
+re-assessment below stands.</li>
+</ul>
+<h3 id="left-open-on-2026-10-20-for-510"><a class="header" href="#left-open-on-2026-10-20-for-510">Left open on 2026-10-20, for 5.1.0</a></h3>
+<p>Nothing.</p>
+<h2 id="annex-ii-25-re-assessed"><a class="header" href="#annex-ii-25-re-assessed">Annex II 2.5, re-assessed</a></h2>
+<p>EHDS Annex II 2.5: “The harmonised software components of an EHR system shall
+not include features that prohibit, restrict or place an undue burden on
+authorised access, personal electronic health data sharing or use of personal
+electronic health data for permitted purposes.” The text does not define
+“undue”.</p>
+<p>The <a href="https://ferrohealth.eu/docs/ehds/readiness.html">EHDS readiness</a> page marks the row “Shipped” with two
+pieces of evidence: the query surface over the whole stored record, and an
+authorisation layer that refuses or permits without a commercial gate. The
+question re-assessed here is whether the authorisation defaults change that,
+now that <code>production</code> refuses the open <code>EHR_ACCESS</code> default unless it is
+accepted by name.</p>
+<ul>
+<li><strong>What “authorised” means here.</strong> The deploying organisation decides who is
+authorised, and expresses it in RBAC roles, ABAC policy and per-EHR
+<code>EHR_ACCESS</code> settings. A refusal of a caller the organisation has not
+authorised is not a burden on authorised access.</li>
+<li><strong>The <code>restricted</code> default.</strong> Under <code>ehr_access_default = "restricted"</code>, an
+EHR with no settings is reachable only by the admin role, so a professional
+the organisation means to authorise is refused until someone writes that
+EHR’s settings. That is a burden, and it is the organisation’s choice: the
+<code>open</code> default remains available, <code>production</code> accepts it by name, and the
+restrictive one exists because GDPR Art. 25(2) asks that personal data are
+not by default “made accessible without the individual’s intervention to an
+indefinite number of natural persons”. The settings take role entries
+(<code>role:nurse</code>), so one entry covers a whole role, and the admin role can
+always reach the record to write them
+(<a href="../security.html#per-ehr-access-control-ehr_access">per-EHR access control</a>).</li>
+<li><strong>Restriction of processing.</strong> A record under restriction is refused on every
+read path. The controller sets the mark under GDPR Art. 18; it is a
+restriction the organisation decides on, not one the software imposes
+(<a href="retention.html">retention, restriction and objection</a>).</li>
+<li><strong>Small-cell suppression.</strong> A cohort query that would serve fewer distinct
+EHRs than <code>cohort.small_cell_threshold</code> (default 5) withholds its rows and
+says so. It applies only to population queries across the pseudonymisation
+boundary, and the deployment sets the threshold.</li>
+<li><strong>Rate limits and the admission limit.</strong> On by default, set above the
+server’s own measured whole-server ceiling, so they refuse abuse and leave
+normal load alone (<a href="../security.html#request-limits-and-rate-limiting">request limits</a>).</li>
+<li><strong>The licence.</strong> The licence in force changes only the stamp on new
+identifiers; it gates no feature, endpoint, limit or message
+(<code>app/ferroehr/src/licence/mod.rs</code>).</li>
+</ul>
+<p><strong>Outcome.</strong> No feature found prohibits or restricts access, sharing or use
+that the deploying organisation has authorised, and the burdens found are
+settings the organisation chooses and can change. The “Shipped” status stands
+on this reasoning, which the readiness page will cite.</p>
+<h2 id="review-record"><a class="header" href="#review-record">Review record</a></h2>
+<p>One row per release. The release procedure adds the row when the release is
+cut, after the texts in scope have been read.</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Reviewed</th><th>Tree</th><th>Changed</th><th>Left open</th></tr>
+</thead>
+<tbody>
+<tr><td>2026-10-06</td><td>before 4.3.5, after <code>d6539d470</code></td><td>15 claims, in the README, the landing page and three book pages</td><td>the chart description (#3637)</td></tr>
+<tr><td>2026-10-08</td><td>4.3.6, after <code>de648fcc3</code></td><td>5 claims, in the landing page and five book pages; the chart description item closed</td><td>nothing</td></tr>
+<tr><td>2026-10-15</td><td>4.3.9, after <code>606a29cce</code></td><td>14 claims, in 17 book pages, the README and the readiness row</td><td>nothing</td></tr>
+<tr><td>2026-10-16</td><td>4.3.10, after <code>e923076de</code></td><td>2 claims, in two book pages</td><td>nothing</td></tr>
+<tr><td>2026-10-19</td><td>4.3.11, after <code>a15290689</code></td><td>none</td><td>nothing</td></tr>
+<tr><td>2026-10-19</td><td>5.0.0, after <code>ec78e7f40</code></td><td>2 claims, in two book pages</td><td>nothing</td></tr>
+<tr><td>2026-10-20</td><td>5.1.0, after <code>18097c6f1</code></td><td>2 claims, in the README and one book page</td><td>nothing</td></tr>
+<tr><td>2026-10-20</td><td>5.2.0, after <code>e5aa1902b</code></td><td>1 claim, in one book page</td><td>nothing</td></tr>
+<tr><td>2026-10-22</td><td>5.3.2, after <code>434cd351e</code></td><td>4 claims, in four book pages and the technical documentation</td><td>nothing</td></tr>
+<tr><td>2026-10-23</td><td>5.3.3, after <code>25845e6d3</code></td><td>1 claim, in one book page: the templates page said `</td><td>raw` is write-only, corrected for #3934</td></tr>
+<tr><td>2026-10-24</td><td>5.4.0, after <code>de38ec433</code></td><td>none</td><td>nothing</td></tr>
+<tr><td>2026-10-24</td><td>5.4.1, after <code>9fdd36091</code></td><td>2 claims, in two book pages: the compliance index named <code>[terminology.external]</code> and a terminology route, and the crates page pinned <code>0.0.97</code></td><td>nothing</td></tr>
+<tr><td>2026-10-25</td><td>5.4.2, after <code>2333f98ba</code></td><td>none; the changes of this release updated their own pages in the pull requests that made them</td><td>nothing</td></tr>
+<tr><td>2026-10-27</td><td>5.5.0, after <code>bed3543e3</code></td><td>1 claim, in the hazard log: H2 named a middleware test renamed by #4192</td><td>the conformance chapter bars counted the CNF TDD cases until the Veredictum 0.3.3 record, which carries none, replaced them (#4204)</td></tr>
+<tr><td>2026-11-04</td><td>5.6.0, after <code>25db5c69c</code></td><td>4 claims, in the README, the landing page and two book pages: each said FerroBRIDGE’s broker delivery was in progress, which FerroBRIDGE 0.0.15 ships</td><td>the canonical-XML <code>reverse_relationships</code> left open by the 5.6.0-rc8 review shipped (#4778); a v2-namespace OPT 1.4 ordinal list stays tracked on #4777</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="the-review-of-2026-10-20-for-520"><a class="header" href="#the-review-of-2026-10-20-for-520">The review of 2026-10-20, for 5.2.0</a></h2>
+<p>Read on the tree after commit <code>e5aa1902b</code>, for FerroEHR 5.2.0. The facts of this
+release checked in every text in scope: authentication runs on
+<code>ferrohealth-smart</code> 0.3.1, with <code>[auth.basic] cache_ttl_seconds</code> in place of
+<code>[authz] basic_cache_ttl_seconds</code>, <code>scopeless_subjects</code> accepted and a
+malformed bearer token answered <code>401</code> (#3875); <code>[smart] issuer_metadata_file</code>
+(#3875); the EHDS Art. 8 restriction of access with its emergency override
+(#3682); the audited read of a party’s protected identifiers (#3776); an EHR
+extract never carries a sealed identifier (#3777); the FLAT history origin from
+the earliest event (#3888); the nine <code>openehr-*</code> crates at <code>0.0.91</code>.</p>
+<h3 id="changed-on-2026-10-20-for-520"><a class="header" href="#changed-on-2026-10-20-for-520">Changed on 2026-10-20, for 5.2.0</a></h3>
+<ul>
+<li><strong><a href="../crates.html">The Rust crates</a></strong>: the dependency examples named the crates
+at <code>0.0.90</code>; they name <code>0.0.91</code>.</li>
+</ul>
+<h3 id="read-and-kept-on-2026-10-20-for-520"><a class="header" href="#read-and-kept-on-2026-10-20-for-520">Read and kept on 2026-10-20, for 5.2.0</a></h3>
+<ul>
+<li><strong>The Art. 8 statements</strong>: <a href="../security.html">security</a>, the
+<a href="../audit.html">audit trail</a>, the <a href="index.html">compliance overview</a>, the
+<a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, <a href="https://ferrohealth.eu/docs/ehds/readiness.html">EHDS readiness</a>
+rows 1.1 and 1.3 and the <a href="hazard-log.html">hazard log</a> describe the restriction
+as the code does, and none of them calls it planned any more.</li>
+<li><strong>The authentication reference</strong>: <a href="../installation/config-auth.html">the configuration reference</a>,
+<a href="../security.html">security</a> and <a href="../using-the-api/index.html">using the API</a>
+name the moved cache key and the <code>401</code> for a bearer value outside <code>b64token</code>.</li>
+</ul>
+<h3 id="left-open-on-2026-10-20-for-520"><a class="header" href="#left-open-on-2026-10-20-for-520">Left open on 2026-10-20, for 5.2.0</a></h3>
+<p>Nothing.</p>
+<h2 id="the-review-of-2026-10-22-for-532"><a class="header" href="#the-review-of-2026-10-22-for-532">The review of 2026-10-22, for 5.3.2</a></h2>
+<p>Read on the tree after commit <code>434cd351e</code>, for FerroEHR 5.3.2. The facts of this
+release checked in every text in scope: the access log written through
+FerroAUDIT’s <code>ehds-logging</code> and <code>ihe-atna</code> 0.2.4, with the categories named by
+their HL7 Europe codes, <code>category_basis</code>, and the record’s <code>jti</code>, operation
+subtype and <code>outcomeDesc</code> written again (#3887, #3902); the retention register
+keyed on the category token (clinical migration 0016); the syslog feed over
+RFC 5425 TLS only, with the UDP transport removed; <code>ferrohealth-smart</code> 0.4.0
+and one login record per Basic credential verification (#3895); a <code>+</code> in a
+query string read as a space (#3891); the subject id of a lookup by subject
+kept out of every log, span and error body (#3906); Rust 1.99.1 with the MSRV
+at 1.98; the nine <code>openehr-*</code> crates at <code>0.0.95</code>.</p>
+<h3 id="changed-on-2026-10-22-for-532"><a class="header" href="#changed-on-2026-10-22-for-532">Changed on 2026-10-22, for 5.3.2</a></h3>
+<ul>
+<li><strong><a href="../crates.html">The Rust crates</a></strong>: the dependency examples named the crates
+at <code>0.0.91</code>; they name <code>0.0.95</code>.</li>
+<li><strong><a href="https://ferrohealth.eu/docs/ehds/readiness.html">EHDS readiness</a></strong>, the European logging component row
+(from <code>website/book/ehds.yaml</code>): it named <code>ehds-logging</code> and <code>ihe-atna</code> at
+0.1.1; it names 0.2.4, the version the root <code>Cargo.toml</code> pins.</li>
+<li><strong><a href="hazard-log.html">The hazard log</a></strong>, the component paragraph: as the row
+above.</li>
+<li><strong>The technical documentation’s scope</strong> (<code>docs/technical-documentation/README.md</code>):
+as the row above.</li>
+</ul>
+<h3 id="read-and-kept-on-2026-10-22-for-532"><a class="header" href="#read-and-kept-on-2026-10-22-for-532">Read and kept on 2026-10-22, for 5.3.2</a></h3>
+<ul>
+<li><strong>The audit statements</strong>: the README, <a href="../security.html">security</a>, the
+<a href="../audit.html">audit trail</a>, <a href="../installation/config-audit.html">audit configuration</a>,
+the <a href="../security/go-live-checklist.html">go-live checklist</a>, the
+<a href="https://ferrohealth.eu/docs/ehds/information-sheet.html">information sheet</a> and the
+<a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a> describe the syslog feed as
+TLS only and the categories by their HL7 Europe codes, as the code does.</li>
+<li><strong>The toolchain</strong>: the README and <a href="../installation/from-source.html">building from source</a>
+name the Rust 1.99 toolchain, and <a href="../crates.html">the Rust crates</a> the MSRV 1.98.</li>
+<li><strong>The landing page, <code>SECURITY.md</code>, the crate READMEs, the image labels and
+the chart description</strong> make no claim this release changes.</li>
+</ul>
+<h3 id="left-open-on-2026-10-22-for-532"><a class="header" href="#left-open-on-2026-10-22-for-532">Left open on 2026-10-22, for 5.3.2</a></h3>
+<p>Nothing.</p>
+<h2 id="the-review-of-2026-10-24-for-540"><a class="header" href="#the-review-of-2026-10-24-for-540">The review of 2026-10-24, for 5.4.0</a></h2>
+<p>Read on the tree after commit <code>de38ec433</code>, for FerroEHR 5.4.0. The facts of this
+release checked in every text in scope: the viewer rebuilt on FerroUI 0.3.6 in
+islands mode, working with JavaScript off, with its new addresses, its
+preferences as cookies of their own and an open tab that idles out (#3932,
+#3057); an ECDSA or Ed448 OpenPGP signing key refused at boot for
+RUSTSEC-2026-0387 (#3965); the signer’s choice of subkey and primary key
+(#3967, #3969, #3971); the audit drain closing its syslog connection with
+<code>close_notify</code> and FerroAUDIT 0.2.5 (#3959); the nine <code>openehr-*</code> crates
+unchanged at <code>0.0.97</code>.</p>
+<h3 id="changed-on-2026-10-24-for-540"><a class="header" href="#changed-on-2026-10-24-for-540">Changed on 2026-10-24, for 5.4.0</a></h3>
+<p>Nothing: the pull requests that made these changes updated the texts they
+touched.</p>
+<h3 id="read-and-kept-on-2026-10-24-for-540"><a class="header" href="#read-and-kept-on-2026-10-24-for-540">Read and kept on 2026-10-24, for 5.4.0</a></h3>
+<ul>
+<li><strong>The viewer statements</strong>: the README, the <a href="../viewer/index.html">viewer</a>
+pages and the image label of <code>docker/viewer/Dockerfile</code> describe the viewer
+the code draws; no text names a removed address, the <code>ferroehr-theme</code>
+cookie, the Tailwind build or a background poll.</li>
+<li><strong>The signing statements</strong>: <a href="../signing/pgp.html">PGP signing</a> and the
+<a href="../installation/config-auth.html">authentication and signing configuration</a>
+state the refused ECDSA and Ed448 keys, the subkey the server signs with and
+the retired-key path, as the code does.</li>
+<li><strong>The audit statements</strong>: the <a href="hazard-log.html">hazard log</a> and
+<a href="https://ferrohealth.eu/docs/ehds/readiness.html">EHDS readiness</a> name <code>ehds-logging</code> and <code>ihe-atna</code>
+0.2.5, the version the root <code>Cargo.toml</code> pins.</li>
+<li><strong>The landing page, <code>SECURITY.md</code>, the crate READMEs, the
+<a href="https://ferrohealth.eu/docs/ehds/information-sheet.html">information sheet</a>, the
+<a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, the other image labels and
+the chart description</strong> make no claim this release changes.</li>
+</ul>
+<h3 id="left-open-on-2026-10-24-for-540"><a class="header" href="#left-open-on-2026-10-24-for-540">Left open on 2026-10-24, for 5.4.0</a></h3>
+<p>Nothing.</p>
+<h2 id="the-review-of-2026-10-24-for-541"><a class="header" href="#the-review-of-2026-10-24-for-541">The review of 2026-10-24, for 5.4.1</a></h2>
+<p>Read on the tree after commit <code>9fdd36091</code>, for FerroEHR 5.4.1. The facts of this
+release checked in every text in scope: the CDR asks one terminology server
+under <code>[terminology.server]</code> through <code>ferrobridge-term</code>, and chart 14.0.0 wires
+it (#3085); an unserved method is <code>405</code> with <code>Allow</code> under SMART (#3987);
+the conformance statement declares <code>unmatched-member-refused</code> (#3988); a ROLE
+template whose single attributes state <code>0..*</code> uploads, and a demographic
+template’s example is a party (#3994, #3995); the viewer offers demographic
+templates only where they work (#3997); the nine <code>openehr-*</code> crates at <code>0.0.98</code>.</p>
+<h3 id="changed-on-2026-10-24-for-541"><a class="header" href="#changed-on-2026-10-24-for-541">Changed on 2026-10-24, for 5.4.1</a></h3>
+<ul>
+<li><strong>The compliance index</strong> (SGB V § 355 row) named <code>[terminology.external]</code>
+and “the terminology route”; it now names <code>[terminology.server]</code> and its
+<code>url</code>.</li>
+<li><strong>The crates page</strong> pinned the <code>openehr-*</code> crates at <code>0.0.97</code>; this release
+publishes <code>0.0.98</code>.</li>
+</ul>
+<h3 id="read-and-kept-on-2026-10-24-for-541"><a class="header" href="#read-and-kept-on-2026-10-24-for-541">Read and kept on 2026-10-24, for 5.4.1</a></h3>
+<ul>
+<li><strong>The terminology statements</strong>: the
+<a href="../installation/config-integrations.html">integrations configuration</a>, the
+<a href="../installation/kubernetes.html">Kubernetes installation</a> and the chart README
+describe the one <code>[terminology.server]</code> and <code>secrets.terminologyClientSecret</code>,
+as the code and the chart do.</li>
+<li><strong>The template statements</strong>: the
+<a href="../templates-validation.html">templates page</a> and
+<a href="../using-the-api/content-negotiation.html">content negotiation</a> state the
+example party of a demographic template and its JSON and XML forms.</li>
+<li><strong>The <code>405</code> statement</strong>: content negotiation’s “<code>405</code> always names the
+allowed methods” holds under SMART as well.</li>
+<li><strong>The landing page, <code>SECURITY.md</code>, the crate READMEs, the
+<a href="https://ferrohealth.eu/docs/ehds/information-sheet.html">information sheet</a>, the
+<a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, the image labels and the
+chart description</strong> make no claim this release changes.</li>
+</ul>
+<h3 id="left-open-on-2026-10-24-for-541"><a class="header" href="#left-open-on-2026-10-24-for-541">Left open on 2026-10-24, for 5.4.1</a></h3>
+<p>Nothing.</p>
+<h2 id="the-review-of-2026-10-25-for-542"><a class="header" href="#the-review-of-2026-10-25-for-542">The review of 2026-10-25, for 5.4.2</a></h2>
+<p>Read on the tree after commit <code>2333f98ba</code>, for FerroEHR 5.4.2. The facts of this
+release checked in every text in scope: a valid Certification Revocation of a
+Direct Key signature cancels it, so it no longer lets the primary key sign
+(#3972); an access record whose patient lookup failed writes <code>unavailable</code>
+(#3900); the viewer’s Paths tab offers a query only on a COMPOSITION template,
+on FerroUI 0.3.7 (#4001); <code>ferrohealth-smart</code> 0.5.0, one <code>openehr-sdt</code> in the
+build (#4002); <code>ihe-atna</code> and <code>ehds-logging</code> 0.2.7 (#3954); zip 8.6.0 out of
+the build (#3799); chart 14.0.1; the nine <code>openehr-*</code> crates at <code>0.0.98</code>.</p>
+<h3 id="changed-on-2026-10-25-for-542"><a class="header" href="#changed-on-2026-10-25-for-542">Changed on 2026-10-25, for 5.4.2</a></h3>
+<p>Nothing at the cut: each change above updated its page in its own pull request.</p>
+<h3 id="read-and-kept-on-2026-10-25-for-542"><a class="header" href="#read-and-kept-on-2026-10-25-for-542">Read and kept on 2026-10-25, for 5.4.2</a></h3>
+<ul>
+<li><strong>The signing statement</strong>: the <a href="../signing/pgp.html">PGP signing page</a> states
+that a revoked Direct Key signature is not chosen, as the code does.</li>
+<li><strong>The viewer statement</strong>: <a href="../viewer/browsing.html">Templates &amp; EHRs</a> says a
+node offers Build a query on this path only on a COMPOSITION template.</li>
+<li><strong>The logging component</strong>: the <a href="https://ferrohealth.eu/docs/ehds/readiness.html">EHDS readiness page</a>,
+rendered from the FerroHEALTH book’s <code>website/book/ehds.yaml</code>, and the <a href="hazard-log.html">hazard log</a>
+name <code>ehds-logging</code> and <code>ihe-atna</code> 0.2.7.</li>
+<li><strong>The installation pins</strong>: the <a href="../installation/kubernetes.html">Kubernetes installation</a>,
+the chart README and <a href="../verifying-releases.html">verifying releases</a> name chart
+14.0.1 and image 5.4.2.</li>
+<li><strong>The landing page, <code>SECURITY.md</code>, the crate READMEs, the
+<a href="https://ferrohealth.eu/docs/ehds/information-sheet.html">information sheet</a>, the
+<a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, the image labels and the
+chart description</strong> make no claim this release changes.</li>
+</ul>
+<h3 id="left-open-on-2026-10-25-for-542"><a class="header" href="#left-open-on-2026-10-25-for-542">Left open on 2026-10-25, for 5.4.2</a></h3>
+<p>Nothing.</p>
+<h2 id="the-review-of-2026-10-27-for-550"><a class="header" href="#the-review-of-2026-10-27-for-550">The review of 2026-10-27, for 5.5.0</a></h2>
+<p>Read on the tree after commit <code>bed3543e3</code>, for FerroEHR 5.5.0. The facts of
+this release checked in every text in scope: the server and the viewer run on
+the family’s <code>ferrohealth-server</code>, <code>ferrohealth-config</code>, <code>ferrohealth-telemetry</code>,
+<code>ferrohealth-smart</code>, <code>ferrohealth-authz</code> and <code>ferrohealth-secret</code> crates, with
+the renamed and retired configuration keys under Changed and Removed (#4087,
+#4038, #4028, #4139, #4214); the EHR index asks an IHE patient identity source
+over PIXm by default (#3380); opaque access tokens are checked by introspection
+(#4033); <code>[auth] ca_file</code> trusts a private issuer CA (#3909); the audit trail is
+delivered and retrieved through <code>ihe-atna</code> and carries the data permit (#4029,
+#4030, #4120); Template Data Document import is removed (#4199); the quickstart
+Keycloak overlay trusts its CA through <code>ca_file</code> and signs the viewer in
+(#4236, #4243); the chart’s <code>usageReport.enabled=false</code> reaches FerroTERM, FerroBRIDGE and FerroPIX (#4270); chart 20.0.0 with <code>appVersion</code> 5.5.0.</p>
+<h3 id="changed-on-2026-10-27-for-550"><a class="header" href="#changed-on-2026-10-27-for-550">Changed on 2026-10-27, for 5.5.0</a></h3>
+<ul>
+<li><strong>The hazard log</strong>: H2 named <code>ehr_id_from_various_paths</code>, which #4192
+replaced with <code>ehr_id_from_the_matched_route</code>; the log names the new test.</li>
+</ul>
+<h3 id="read-and-kept-on-2026-10-27-for-550"><a class="header" href="#read-and-kept-on-2026-10-27-for-550">Read and kept on 2026-10-27, for 5.5.0</a></h3>
+<ul>
+<li><strong>The configuration pages</strong>: <a href="../installation/config-server.html">the server configuration</a>,
+<a href="../installation/config-auth.html">authentication</a>, <a href="../security.html">security</a> and
+the <a href="../viewer/index.html">viewer</a> name the new keys and say which old keys
+refuse the start (<code>slow_aql_ms</code>, <code>user_role</code>, <code>LEPTOS_SITE_ADDR</code>); no page
+still offers <code>token_url</code>, <code>server.bind</code>, <code>ferroehr config default</code>,
+<code>healthcheck --url</code> or the TDD routes.</li>
+<li><strong>The CRA risk assessment</strong>: its outbound data flows table gains the token
+introspection flow and the patient identity source over PIXm, with revision 14.</li>
+<li><strong>The installation pins</strong>: the <a href="../installation/kubernetes.html">Kubernetes installation</a>,
+the chart README and <a href="../verifying-releases.html">verifying releases</a> name chart
+20.0.0 and image 5.5.0, and the <a href="../installation/compose.html">compose page</a>
+names <code>FERROEHR_CONFIG</code> and the Keycloak overlay’s <code>ca_file</code>.</li>
+<li><strong>The landing page, <code>SECURITY.md</code>, the crate READMEs, the
+<a href="https://ferrohealth.eu/docs/ehds/information-sheet.html">information sheet</a>, the
+<a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, the image labels and the
+chart description</strong> make no claim this release changes.</li>
+</ul>
+<h3 id="left-open-on-2026-10-27-for-550"><a class="header" href="#left-open-on-2026-10-27-for-550">Left open on 2026-10-27, for 5.5.0</a></h3>
+<ul>
+<li>The conformance chapter bars showed the CNF TDD cases from the last
+measured run until the Veredictum 0.3.3 record, which carries none, replaced
+the record and the bars (#4204).</li>
+</ul>
+<h2 id="the-review-of-2026-10-28-for-560-rc1"><a class="header" href="#the-review-of-2026-10-28-for-560-rc1">The review of 2026-10-28, for 5.6.0-rc1</a></h2>
+<p>Read on the tree after commit <code>df14b4311</code>, for the FerroEHR release candidate
+5.6.0-rc1. The facts of this release checked in every text in scope: the REST
+surface serves three namespaces, ITS-REST alone under <code>/openehr/v1/</code>, FHIR and
+IHE under <code>/fhir/r4/</code> and FerroEHR’s extensions under <code>/extensions/v1/</code>, with
+no redirect from the old paths (#4330); the audit store renders each record’s
+<code>AuditEvent</code> from its columns, answers every ITI-81 parameter through search
+tokens, and its migration refuses a store holding records of an earlier
+release (#4300, #4302, #4313); <code>ferrohealth-server</code> 0.3.7 bounds a silent
+connection by <code>[server] header_read_timeout_ms</code> (#4283, GHSA-2mc2-h3jq-c5wg);
+an AQL query nested past its depth bound answers <code>400</code> (#4284); a cut or
+unreachable database answers <code>503</code> with <code>Retry-After</code> within about a second
+(#4290, #4323); an abandoned query frees its connection (#4285); storage
+generation 3 (#4306); a deployment that declares no category map records
+accesses through the map FerroEHR ships (#4298); chart 20.0.1-rc1 with
+<code>appVersion</code> 5.6.0-rc1.</p>
+<h3 id="changed-on-2026-10-28-for-560-rc1"><a class="header" href="#changed-on-2026-10-28-for-560-rc1">Changed on 2026-10-28, for 5.6.0-rc1</a></h3>
+<ul>
+<li><strong>The hazard log</strong>: H7 named <code>the_current_digest_covers_every_column</code> and
+<code>records_under_the_original_digest_still_verify</code> and kept a remainder for
+records under the version 1 digest; #4300 retired the versioned digests with
+the records they covered, so H7 names <code>the_digest_covers_every_column</code> and
+the render-policy and search-token tests, and drops that remainder. H3
+said FerroEHR ships no category map; it names the shipped map and its test
+(#4298).</li>
+<li><strong>The technical documentation</strong> named the FerroAUDIT pins as 0.2.5; it names
+0.3.1, the version the root <code>Cargo.toml</code> pins.</li>
+</ul>
+<h3 id="read-and-kept-on-2026-10-28-for-560-rc1"><a class="header" href="#read-and-kept-on-2026-10-28-for-560-rc1">Read and kept on 2026-10-28, for 5.6.0-rc1</a></h3>
+<ul>
+<li><strong>The API pages</strong>: <a href="../using-the-api/index.html">the API overview</a> names the
+three namespaces, the <a href="../using-the-api/resources.html">resources page</a> the
+paged CONTRIBUTION list under <code>/extensions/v1/</code>, and the
+<a href="../audit.html">audit trail</a> the ITI-81 route under <code>/fhir/r4/</code> and the empty
+audit store 5.6.0 starts on; no page in scope names a moved route under
+<code>/openehr/v1/</code>.</li>
+<li><strong>The operations pages</strong>: <a href="../querying-aql.html">AQL</a> states the depth bounds,
+<a href="../operations.html">operations</a> the <code>503</code> on a cut or unreachable database,
+and <a href="../installation/config-server.html">the server configuration</a> and
+<a href="../security.html">security</a> <code>header_read_timeout_ms</code>.</li>
+<li><strong>The installation pins</strong>: the <a href="../installation/kubernetes.html">Kubernetes installation</a>,
+the chart README and <a href="../verifying-releases.html">verifying releases</a> name chart
+20.0.1-rc1 and image 5.6.0-rc1 in the book of main; the frozen book of 5.5.0
+under <code>/docs/latest/</code> keeps the 5.5.0 pins, since a pre-release freezes no
+book.</li>
+<li><strong>The landing page, <code>SECURITY.md</code>, the crate READMEs, the
+<a href="https://ferrohealth.eu/docs/ehds/information-sheet.html">information sheet</a>, the
+<a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, the image labels and the
+chart description</strong> make no claim this release changes.</li>
+</ul>
+<h3 id="left-open-on-2026-10-28-for-560-rc1"><a class="header" href="#left-open-on-2026-10-28-for-560-rc1">Left open on 2026-10-28, for 5.6.0-rc1</a></h3>
+<ul>
+<li>The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
+serves the old paths until 5.6.0 ships.</li>
+</ul>
+<h2 id="the-review-of-2026-10-29-for-560-rc2"><a class="header" href="#the-review-of-2026-10-29-for-560-rc2">The review of 2026-10-29, for 5.6.0-rc2</a></h2>
+<p>Read on the tree after commit <code>40982f374</code>, for the FerroEHR release candidate
+5.6.0-rc2; 5.6.0-rc1 was tagged at <code>61d5d1ff7</code> and not published. The review of
+2026-10-28 stands for everything 5.6.0-rc1 carried. The facts added since and
+checked in every text in scope: the <code>[origins]</code> register stamps a direct commit
+from a registered client with that client’s origin, a retention period may be
+keyed on a registered origin, and the ABAC request carries <code>category</code> and
+<code>origin</code> attributes (#4299); a client CA under <code>client_auth = "none"</code> is
+refused at load (#4349, GHSA-52mf-qg39-4q4j); the chart refuses to render
+without an explicit deployment profile (#4294); the logging component’s
+intended performance is stated and measured (#4293) and its ATNA transactions
+are exercised against independent implementations (#4296); an unclassified
+record’s FHIR rendering carries the BALP <code>entity:data</code> slice (#4353); chart
+21.0.0-rc2 with <code>appVersion</code> 5.6.0-rc2.</p>
+<h3 id="changed-on-2026-10-29-for-560-rc2"><a class="header" href="#changed-on-2026-10-29-for-560-rc2">Changed on 2026-10-29, for 5.6.0-rc2</a></h3>
+<ul>
+<li><strong>The hazard log</strong>: H4 said a body without <code>FEEDER_AUDIT</code> records this
+server as its origin; it names the registered client’s origin and its test
+(#4299). H3’s remainder said the chart’s empty map matches the binary, which
+ships a map since #4298; it says the shipped map applies.</li>
+</ul>
+<h3 id="read-and-kept-on-2026-10-29-for-560-rc2"><a class="header" href="#read-and-kept-on-2026-10-29-for-560-rc2">Read and kept on 2026-10-29, for 5.6.0-rc2</a></h3>
+<ul>
+<li><strong>The retention and access pages</strong>: <a href="retention.html">retention</a>, the
+<a href="../installation/config-audit.html">audit configuration</a> and
+<a href="../security.html">security</a> describe the <code>[origins]</code> register, the
+origin-keyed retention policy and the two ABAC attributes as the code
+implements them.</li>
+<li><strong>The installation pins</strong>: the <a href="../installation/kubernetes.html">Kubernetes installation</a>,
+the chart README and <a href="../verifying-releases.html">verifying releases</a> name chart
+21.0.0-rc2 and image 5.6.0-rc2 in the book of main, and the Kubernetes page
+sets <code>config.deployment_profile</code> in its install example (#4294).</li>
+<li><strong>The TLS and performance pages</strong>: <a href="../installation/config-server.html">the server configuration</a>
+says <code>client_ca_file</code> is refused under <code>client_auth = "none"</code>, and
+<a href="logging-performance.html">logging performance</a> states the claims
+<code>scripts/perf/audit.sh</code> measures.</li>
+<li><strong>The landing page, <code>SECURITY.md</code>, the crate READMEs, the
+<a href="https://ferrohealth.eu/docs/ehds/information-sheet.html">information sheet</a>, the
+<a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, the image labels and the
+chart description</strong> make no claim this release changes.</li>
+</ul>
+<h3 id="left-open-on-2026-10-29-for-560-rc2"><a class="header" href="#left-open-on-2026-10-29-for-560-rc2">Left open on 2026-10-29, for 5.6.0-rc2</a></h3>
+<ul>
+<li>The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
+serves the old paths until 5.6.0 ships.</li>
+</ul>
+<h2 id="the-review-of-2026-10-29-for-560-rc3"><a class="header" href="#the-review-of-2026-10-29-for-560-rc3">The review of 2026-10-29, for 5.6.0-rc3</a></h2>
+<p>Read on the tree after commit <code>df26a92e6</code>, for the FerroEHR release candidate
+5.6.0-rc3. The review of 2026-10-29 for 5.6.0-rc2 stands for everything that
+release candidate carried. The facts added since and checked in every text in
+scope: every error on the openEHR, extension and management routes is RFC 9457
+problem details, the violations of a validation refusal reach a client as
+<code>errors</code> under <code>Prefer: return=representation</code>, and an authentication refusal
+under the FHIR base is an <code>OperationOutcome</code> (#4342); the <code>openehr-its</code> client
+reads a problem details refusal (#4355); a <code>+</code> in a query string is a literal
+plus (#4356); <code>FROM PERSON p CONTAINS EHR e</code> joins through the EHR’s
+<code>EHR_STATUS.subject.external_ref</code> (#4411); a projection ending on a list
+attribute answers the list once (#4413); the local EHR index is a supported
+posture (#4379); <code>[server] idle_timeout_ms</code> closes an idle kept-alive
+connection on <code>ferrohealth-server</code> 0.4.0 (#4417); the FHIR <code>AuditEvent</code> names
+the object it touched by <code>entity.what.identifier</code> on FerroAUDIT 0.3.2 (#4366);
+<code>openehr-query</code> is Apache-2.0 from 0.0.116 (#4405); the chart and the sandbox
+run FerroPIX 0.0.12 (#4392); chart 21.0.0-rc3 with <code>appVersion</code> 5.6.0-rc3.</p>
+<h3 id="changed-on-2026-10-29-for-560-rc3"><a class="header" href="#changed-on-2026-10-29-for-560-rc3">Changed on 2026-10-29, for 5.6.0-rc3</a></h3>
+<ul>
+<li><strong>The validation pages</strong>: <a href="../templates-validation.html">template validation</a>
+and the <a href="../installation/config-privacy.html">privacy configuration</a> said a
+<code>422</code> lists its violations in <code>validationErrors</code>, the body #4342 replaced;
+they name the problem’s <code>errors</code>, sent under
+<code>Prefer: return=representation</code>, and link the <code>validation-failed</code> type.</li>
+<li><strong>The hazard log</strong>: H2 states that the FHIR <code>AuditEvent</code> names the object it
+touched by <code>entity.what.identifier</code> and names its test (#4366).</li>
+</ul>
+<h3 id="read-and-kept-on-2026-10-29-for-560-rc3"><a class="header" href="#read-and-kept-on-2026-10-29-for-560-rc3">Read and kept on 2026-10-29, for 5.6.0-rc3</a></h3>
+<ul>
+<li><strong>The API pages</strong>: <a href="../using-the-api/problems.html">Problem types</a> and
+<a href="../using-the-api/content-negotiation.html">content negotiation and errors</a>
+describe the problem body, its types and the <code>Prefer</code> members as the code
+writes them; <a href="../querying-aql.html">querying with AQL</a> describes the party
+join through the subject reference and the list projection as the engine
+answers them.</li>
+<li><strong>The server configuration</strong>: <a href="../installation/config-server.html">the server configuration</a>
+states <code>idle_timeout_ms</code> and the head bound as <code>ferrohealth-server</code> 0.4.0
+applies them.</li>
+<li><strong>The licensing page and the crate READMEs</strong> name <code>openehr-query</code> Apache-2.0
+from 0.0.116 and BUSL-1.1 for 0.0.60 to 0.0.115.</li>
+<li><strong>The installation pins</strong>: the <a href="../installation/kubernetes.html">Kubernetes installation</a>,
+the chart README and <a href="../verifying-releases.html">verifying releases</a> name chart
+21.0.0-rc3 and image 5.6.0-rc3 in the book of main.</li>
+<li><strong>The landing page, <code>SECURITY.md</code>, the
+<a href="https://ferrohealth.eu/docs/ehds/information-sheet.html">information sheet</a>, the
+<a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, the image labels and the
+chart description</strong> make no claim this release changes.</li>
+</ul>
+<h3 id="left-open-on-2026-10-29-for-560-rc3"><a class="header" href="#left-open-on-2026-10-29-for-560-rc3">Left open on 2026-10-29, for 5.6.0-rc3</a></h3>
+<ul>
+<li>The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
+serves the old paths and the old error body until 5.6.0 ships.</li>
+</ul>
+<h2 id="the-review-of-2026-10-31-for-560-rc4"><a class="header" href="#the-review-of-2026-10-31-for-560-rc4">The review of 2026-10-31, for 5.6.0-rc4</a></h2>
+<p>Read on the tree after commit <code>d79ef8b40</code>, for the FerroEHR release candidate
+5.6.0-rc4. The review of 2026-10-29 for 5.6.0-rc3 stands for everything that
+release candidate carried. The facts added since and checked in every text in
+scope: an AQL lookup by an ELEMENT value reads a value index in both stores
+(#4437), and a lookup of an EHR by its <code>EHR_STATUS.subject</code> reads the EHR row
+(#4442); a request on a kept-alive connection idle past the head bound is
+answered (#4381); the server keeps planner statistics on the partitioned
+tables and the serving roles hold <code>MAINTAIN</code> on them (#4453), and a version
+read probes its commit audit by key (#4438); <code>EHR e NOT CONTAINS</code> runs
+(#4465); a <code>DV_DATE_TIME</code> comparison compares instants (#4466); the REST,
+party, template and Simplified Format fixes of the Veredictum 0.3.0 catalogue
+(#4458 to #4464, #4468 to #4475); a token holding only <code>system/</code> SMART on
+openEHR scopes passes the role gate on clinical operations (#4467); the viewer
+draws every page on its server with FerroUI 0.6, with no WebAssembly (#4433);
+AQL <code>TERMINOLOGY('expand', …)</code> takes the value set from the <code>url</code> argument of
+a <code>$expand</code> query form (#4488); the conformance pipeline runs the Veredictum
+0.3.0 catalogue against one deployment with FerroTERM beside it, in CI through
+the Veredictum GitHub Action, and keeps no EHRbase comparison (#4448, #4449,
+#4476); chart 21.0.0-rc4 with <code>appVersion</code> 5.6.0-rc4.</p>
+<h3 id="changed-on-2026-10-31-for-560-rc4"><a class="header" href="#changed-on-2026-10-31-for-560-rc4">Changed on 2026-10-31, for 5.6.0-rc4</a></h3>
+<ul>
+<li><strong>The threat model</strong>: its grant table listed what each credential reaches
+and left out the <code>MAINTAIN</code> grant clinical migration 0026 and party
+migration 0018 give the serving roles; the <code>ferroehr_clinical</code> and
+<code>ferroehr_party</code> rows name it (#4453).</li>
+</ul>
+<h3 id="read-and-kept-on-2026-10-31-for-560-rc4"><a class="header" href="#read-and-kept-on-2026-10-31-for-560-rc4">Read and kept on 2026-10-31, for 5.6.0-rc4</a></h3>
+<ul>
+<li><strong>The viewer pages</strong>: <a href="../viewer/index.html">the viewer</a> and
+<a href="../security.html">security</a> describe the server-drawn viewer, its
+Content-Security-Policy and its configuration as the image runs them.</li>
+<li><strong>The operations pages</strong>: <a href="../operations.html">operations</a> states the
+<code>MAINTAIN</code> grant and the statistics refresh as the server applies them.</li>
+<li><strong>The API and query pages</strong>: <a href="../querying-aql.html">querying with AQL</a> lists
+<code>NOT CONTAINS</code> as supported and refuses only a read through its variable;
+<a href="../security.html">security</a> states the <code>system/</code> scope rule of the role gate.</li>
+<li><strong>The hazard log and the technical documentation</strong>: the logging component is
+unchanged since 5.6.0-rc3, so neither gains a row.</li>
+<li><strong>The installation pins</strong>: the <a href="../installation/kubernetes.html">Kubernetes installation</a>,
+the chart README and <a href="../verifying-releases.html">verifying releases</a> name chart
+21.0.0-rc4 and image 5.6.0-rc4 in the book of main.</li>
+<li><strong>The landing page, <code>SECURITY.md</code>, the
+<a href="https://ferrohealth.eu/docs/ehds/information-sheet.html">information sheet</a>, the
+<a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, the image labels and the
+chart description</strong> make no claim this release changes.</li>
+</ul>
+<h3 id="left-open-on-2026-10-31-for-560-rc4"><a class="header" href="#left-open-on-2026-10-31-for-560-rc4">Left open on 2026-10-31, for 5.6.0-rc4</a></h3>
+<ul>
+<li>The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
+serves the old paths and the old error body until 5.6.0 ships.</li>
+</ul>
+<h2 id="the-review-of-2026-10-31-for-560-rc5"><a class="header" href="#the-review-of-2026-10-31-for-560-rc5">The review of 2026-10-31, for 5.6.0-rc5</a></h2>
+<p>Read on the tree after commit <code>b3df38e01</code>, for the FerroEHR release candidate
+5.6.0-rc5. 5.6.0-rc4 was tagged and not published, so its review above stands
+for everything it carried. The facts added since and checked in every text in
+scope: CVE-2026-84243 is judged <code>not_affected</code> in every image (#4500); AQL
+<code>TERMINOLOGY('validate', …)</code> and <code>TERMINOLOGY('subsumes', …)</code> keep a
+<code>params_uri</code> value that carries a <code>?</code> whole (#4490); an AQL query aimed at
+named EHRs reads their objects first (#4487); the viewer takes its
+Content-Security-Policy from <code>ferrohealth-server</code> 0.4.2, with the same policy
+(#4439); the Conformance workflow runs the Veredictum SMART documents (#4450);
+the storage bench measures on one runner (#4318); the LANG specification is
+re-vendored and the <code>openehr-*</code> crates step to 0.0.122 (#4377); chart
+21.0.0-rc5 with <code>appVersion</code> 5.6.0-rc5.</p>
+<h3 id="read-and-kept-on-2026-10-31-for-560-rc5"><a class="header" href="#read-and-kept-on-2026-10-31-for-560-rc5">Read and kept on 2026-10-31, for 5.6.0-rc5</a></h3>
+<ul>
+<li><strong>The viewer and security pages</strong>: <a href="../viewer/index.html">the viewer</a> and
+<a href="../security.html">security</a> state the Content-Security-Policy the viewer
+sends on <code>ferrohealth-server</code> 0.4.2.</li>
+<li><strong>The query page</strong>: <a href="../querying-aql.html">querying with AQL</a> describes
+<code>TERMINOLOGY()</code> as the engine answers it.</li>
+<li><strong>The hazard log and the technical documentation</strong>: the logging component is
+unchanged since 5.6.0-rc4, so neither gains a row.</li>
+<li><strong>The installation pins</strong>: the <a href="../installation/kubernetes.html">Kubernetes installation</a>,
+the chart README and <a href="../verifying-releases.html">verifying releases</a> name chart
+21.0.0-rc5 and image 5.6.0-rc5 in the book of main.</li>
+<li><strong>The landing page, <code>SECURITY.md</code>, the
+<a href="https://ferrohealth.eu/docs/ehds/information-sheet.html">information sheet</a>, the
+<a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, the image labels and the
+chart description</strong> make no claim this release changes.</li>
+</ul>
+<h3 id="left-open-on-2026-10-31-for-560-rc5"><a class="header" href="#left-open-on-2026-10-31-for-560-rc5">Left open on 2026-10-31, for 5.6.0-rc5</a></h3>
+<ul>
+<li>The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
+serves the old paths and the old error body until 5.6.0 ships.</li>
+</ul>
+<h2 id="the-review-of-2026-11-01-for-560-rc6"><a class="header" href="#the-review-of-2026-11-01-for-560-rc6">The review of 2026-11-01, for 5.6.0-rc6</a></h2>
+<p>Read on the tree after commit <code>df911334d</code>, for the FerroEHR release candidate
+5.6.0-rc6. The facts added since 5.6.0-rc5 and checked in every text in scope:
+the CONTRIBUTION commit reads the body through the released <code>NewContribution</code>
+schema and refuses the shapes it does not define with <code>400</code> (#3595, #4543);
+the EHDS Art. 3(3) delay of the person’s own access, off by default under
+<code>[access_delay]</code> (#4351); the EHDS Art. 5 mark of what a person inserts and the
+<code>403</code> on their change of a professional’s version (#4350); the ADL 2
+validation fixes (#4505, #4513, #4522, #4529, #4536, #4540, #4567); the FLAT
+and STRUCTURED reads under an ADL 2 template (#4551, #4559); the node header
+columns and the smaller storage per version (#4525); the audit search tokens
+taken from the record’s columns (#4524); the <code>400</code> for a malformed versioned
+read (#4541); the viewer’s template releases and its unavailable count
+(#4506, #4533); the conformance pipeline on Veredictum 0.3.2 with the released
+and development profiles and their README badges (#4503); and the
+<code>openehr-*</code> crates versioned at publish (#4555); chart 21.0.0-rc6 with
+<code>appVersion</code> 5.6.0-rc6.</p>
+<h3 id="read-and-kept-on-2026-11-01-for-560-rc6"><a class="header" href="#read-and-kept-on-2026-11-01-for-560-rc6">Read and kept on 2026-11-01, for 5.6.0-rc6</a></h3>
+<ul>
+<li><strong>The README and the conformance page</strong>: the badges are drawn from the runs
+on <code>main</code> under each profile, and <a href="../conformance.html">conformance</a> states
+that the released profile alone backs a released claim and that the
+development profile is never counted toward it.</li>
+<li><strong>The security, authentication and audit pages</strong>: <a href="../security.html">security</a>
+and the <a href="../installation/config-auth.html">authentication configuration</a>
+describe the Art. 3(3) delay as a Member State option, off by default, that
+withholds data from the person and never from a professional, and
+<a href="../audit.html">the audit trail</a> names the feeds that carry records about a
+held composition as controller feeds.</li>
+<li><strong>The resources page</strong>: <a href="../using-the-api/resources.html">resources</a> states the
+CONTRIBUTION body as the released <code>NewContribution</code> schema reads it.</li>
+<li><strong>The operations page</strong>: the storage sizing section names 5.6.0-rc5 as the
+measured release and states the node header columns’ effect on it.</li>
+<li><strong>The hazard log and the technical documentation</strong>: the logging component
+changed since 5.6.0-rc5 (<code>ehds-logging</code> and <code>ihe-atna</code> 0.3.3, the held
+composition’s records, audit migration 0020), so the hazard log gains
+review 14, H6 names the hold and its tests, and the technical documentation
+gains its 5.6.0-rc6 row.</li>
+<li><strong>The installation pins</strong>: the <a href="../installation/kubernetes.html">Kubernetes installation</a>,
+the chart README and <a href="../verifying-releases.html">verifying releases</a> name chart
+21.0.0-rc6 and image 5.6.0-rc6 in the book of main.</li>
+<li><strong><code>SECURITY.md</code>, the
+<a href="https://ferrohealth.eu/docs/ehds/information-sheet.html">information sheet</a>, the
+<a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, the image labels and the
+chart description</strong> make no claim this release changes.</li>
+</ul>
+<h3 id="left-open-on-2026-11-01-for-560-rc6"><a class="header" href="#left-open-on-2026-11-01-for-560-rc6">Left open on 2026-11-01, for 5.6.0-rc6</a></h3>
+<ul>
+<li>The conformance run on <code>main</code> had known red rows under the released
+profile; two of them were Veredictum’s (Vernum-Projecten/Veredictum#964 and
+Vernum-Projecten/Veredictum#965). The triage on #4455 attributed every row,
+and the Veredictum 0.3.3 released-profile run on <code>main</code> has none left.</li>
+<li>The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
+serves the old paths and the old error body until 5.6.0 ships.</li>
+</ul>
+<h2 id="the-review-of-2026-11-01-for-560-rc7"><a class="header" href="#the-review-of-2026-11-01-for-560-rc7">The review of 2026-11-01, for 5.6.0-rc7</a></h2>
+<p>Read on the tree after commit <code>3e519c06b</code>, for the FerroEHR release candidate
+5.6.0-rc7. The facts added since 5.6.0-rc6 and checked in every text in scope:
+the EHDS Art. 10 opt-out from the access services, off until
+<code>[authz.rbac] access_service_roles</code> declares their roles, with the Art. 10(2)
+vital-interest override (#4516); every write’s committer checked against the
+authenticated caller and a Bearer caller’s default committer issued by the
+token issuer (#4520, #4585); the ADL 2 FLAT and STRUCTURED writes, Web
+Template and validation fixes (#4552, #4559, #4560, #4568, #4574, #4579,
+#4580); the AQL archetype predicate that matches the namespace exactly and the
+version as the oldest release (#4629, #4630); the CONTRIBUTION merge inputs
+and the import of a malformed one (#4577, #4602); the syslog form of an
+access-delay record naming the held composition (#4569); the viewer’s upload
+refusals (#4523, #4596); storage generation 4 and the storage bench on one
+runner (#4525); <code>ferroehr report</code> naming the published <code>openehr-*</code> crate
+versions (#4565); the response texts without the Service Model vocabulary
+(#4531, #4634); chart 21.0.0-rc7 with <code>appVersion</code> 5.6.0-rc7.</p>
+<h3 id="read-and-kept-on-2026-11-01-for-560-rc7"><a class="header" href="#read-and-kept-on-2026-11-01-for-560-rc7">Read and kept on 2026-11-01, for 5.6.0-rc7</a></h3>
+<ul>
+<li><strong>The security, authentication and administration pages</strong>:
+<a href="../security.html">security</a>, the
+<a href="../installation/config-auth.html">authentication configuration</a> and the
+<a href="../operations-admin-apis.html">administration APIs</a> describe the Art. 10
+opt-out as a Member State option that FerroEHR ships the software part of,
+off by default, which hides the EHR from the declared access services only
+and deletes nothing.</li>
+<li><strong>The audit page</strong>: <a href="../audit.html">the audit trail</a> states that the syslog
+and FHIR forms of the hold’s record name the same <code>access-delay:&lt;vo&gt;</code>.</li>
+<li><strong>The resources and query pages</strong>:
+<a href="../using-the-api/resources.html">resources</a> states the committer check and
+the CONTRIBUTION merge inputs, and <a href="../querying-aql.html">querying with AQL</a>
+states the namespace and version rule of an archetype predicate.</li>
+<li><strong>The performance and operations pages</strong>: <a href="../performance.html">performance</a>
+describes the storage bench as two builds on one runner and names its
+bounds, and <a href="../operations.html">operations</a> and the
+<a href="../installation/config-cli.html">command line</a> say which <code>openehr-*</code>
+versions <code>ferroehr report</code> names, read through <code>openehr_crates_origin</code>.</li>
+<li><strong>The hazard log and the technical documentation</strong>: the logging component
+changed since 5.6.0-rc6 (the syslog object of an EHR-level record, the
+opt-out’s access records and the override’s mark), so the hazard log gains
+review 15, H2 and H9 name their new tests, and the technical documentation
+gains its 5.6.0-rc7 row.</li>
+<li><strong>The installation pins</strong>: the <a href="../installation/kubernetes.html">Kubernetes installation</a>,
+the chart README and <a href="../verifying-releases.html">verifying releases</a> name chart
+21.0.0-rc7 and image 5.6.0-rc7 in the book of main.</li>
+<li><strong><code>SECURITY.md</code>, the
+<a href="https://ferrohealth.eu/docs/ehds/information-sheet.html">information sheet</a>, the
+<a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, the image labels and the
+chart description</strong> make no claim this release changes.</li>
+</ul>
+<h3 id="left-open-on-2026-11-01-for-560-rc7"><a class="header" href="#left-open-on-2026-11-01-for-560-rc7">Left open on 2026-11-01, for 5.6.0-rc7</a></h3>
+<ul>
+<li>The conformance run on <code>main</code> under the released profile fails no row
+against the server and has one errored row, Veredictum’s own
+(Vernum-Projecten/Veredictum#964, closed upstream after the pinned 0.3.2,
+which still errors on it); the triage on #4455 stays open. The badges show the run as it
+stands, and no text claims a green record.</li>
+<li>The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
+serves the old paths and the old error body until 5.6.0 ships.</li>
+</ul>
+<h2 id="the-review-of-2026-11-02-for-560-rc8"><a class="header" href="#the-review-of-2026-11-02-for-560-rc8">The review of 2026-11-02, for 5.6.0-rc8</a></h2>
+<p>Read on the tree after commit <code>97265816d</code>, for the FerroEHR release candidate
+5.6.0-rc8. The facts added since 5.6.0-rc7 and checked in every text in scope:
+the published Veredictum 0.4.0 record of a released-profile run against
+FerroEHR on <code>spec_profile = "stable"</code> with no failed and no errored row, the
+Veredictum 0.1.6 documents removed, and the released-profile verdict required
+in the merge queue and the release (#4451, #4455, #4771); <code>conformance_profile</code> derived from that record (#4672); the read-only
+ADL 1.4 to ADL 2 conversion routes (#4655); a template upload that answers
+<code>400</code> for every invalid template and never refuses a stored one (#4643,
+#4647); the ITS-JSON <code>minItems</code> of <code>folders</code>, <code>events</code> and <code>languages</code>
+(#4644, #4648); the canonical XML <code>items</code> root of a LOCATABLE (#4645); an AQL
+parent archetype that admits a child release only through that release’s own
+parent release (#4637); a subject resolved through the EHR subject columns and
+the empty linkage domain removed (#4675, #4684, #4697); the
+<code>processing-restricted</code> type on a refused write and the curated <code>500</code> texts
+(#4657); the identifier scan reading a <code>DV_IDENTIFIER</code>’s declared type
+(#4702); the validation refusal’s <code>Prefer</code> advice (#4597); the inline
+primitive’s node id (#4739); the viewer’s session gate on every unsafe method
+and <code>LEPTOS_SITE_ADDR</code> no longer read (#4724, #4725); every item-tag
+operation checked by ABAC in its target’s mode (#4768); <code>reverse_relationships</code>
+in a stable-profile canonical-JSON party read (#4775); chart 21.0.0-rc8 with
+<code>appVersion</code> 5.6.0-rc8.</p>
+<h3 id="changed-on-2026-11-02-for-560-rc8"><a class="header" href="#changed-on-2026-11-02-for-560-rc8">Changed on 2026-11-02, for 5.6.0-rc8</a></h3>
+<ul>
+<li><strong><a href="../installation/config-privacy.html">Privacy configuration</a></strong>: the
+identifier scanner was said to refuse a national-identifier value “wherever
+it sits, <code>DV_IDENTIFIER.id</code> included”. Since #4702 a <code>DV_IDENTIFIER</code> whose
+<code>type</code> declares an item is not scanned, and one in a <code>FEEDER_AUDIT</code> only when
+its <code>type</code> names a person, which the same page’s table states. The sentence
+now points at that table.</li>
+<li><strong><a href="../installation/kubernetes.html">Kubernetes installation</a></strong>: the production
+deployment probe was said to run against four PostgreSQL clusters. With the
+linkage domain gone (#4684) it runs against three, and the text says so.</li>
+<li><strong><a href="../security/records-of-processing.html">Records of processing</a></strong>: the audit
+schema was said to sit outside “all three” pseudonymisation domains; since
+#4684 there are two, the clinical and the demographic.</li>
+<li><strong><a href="../conformance.html">Conformance</a></strong>: the page said the instrument judges
+FerroEHR on its default <code>development</code> profile. Since #4775 the released run
+judges it on <code>spec_profile = "stable"</code>, as the workflow sets; the page now
+names the profile of each run.</li>
+</ul>
+<h3 id="read-and-kept-on-2026-11-02-for-560-rc8"><a class="header" href="#read-and-kept-on-2026-11-02-for-560-rc8">Read and kept on 2026-11-02, for 5.6.0-rc8</a></h3>
+<ul>
+<li><strong>The conformance pages</strong>: <a href="../conformance.html">conformance</a>, the landing
+page and the README show the Veredictum 0.4.0 badges and the record’s counts
+per part from the committed record, and state that the released run decides
+the job. No text types a number the record does not carry.</li>
+<li><strong>The API pages</strong>: <a href="../using-the-api/index.html">using the API</a> derives
+<code>conformance_profile</code> from the record and names no configuration key for it;
+<a href="../using-the-api/problems.html">problem types</a> states the <code>400</code> of a template
+upload and the <code>processing-restricted</code> type; <a href="../templates-validation.html">templates and
+validation</a> describes the conversion routes as
+FerroEHR’s own design with their <code>404</code> and <code>422</code>;
+<a href="../using-the-api/content-negotiation.html">content negotiation</a> names the
+root elements no ITS-XML schema publishes.</li>
+<li><strong>The security and demographics pages</strong>: <a href="../security.html">security</a> states
+that an item-tag operation takes its target’s ABAC mode (#4768), and
+<a href="../beyond-core/demographics.html">demographics</a> states that a stable-profile
+canonical-JSON party read carries <code>reverse_relationships</code> and the
+canonical-XML read does not yet.</li>
+<li><strong>The storage and configuration pages</strong>: the
+<a href="../installation/config-server.html">server configuration</a> refuses
+<code>[storage.linkage]</code> as an unknown key, <a href="../operations.html">operations</a> carries
+the upgrade past the linkage domain, and <a href="../audit.html">the audit trail</a> keeps
+the <code>linkage</code> access-record domain for a crossing, which the code still
+writes.</li>
+<li><strong>The hazard log and the technical documentation</strong>: the logging component
+changed since 5.6.0-rc7 (the operation table, the conversion routes’ access
+records, the service error type, the batch insert, audit migration 0021, the
+tag read’s object and the records of the parties a party read discloses), so
+the hazard log gains review 16 and the technical documentation its 5.6.0-rc8
+row; no control changed and every named test exists.</li>
+<li><strong>The installation pins</strong>: the <a href="../installation/kubernetes.html">Kubernetes installation</a>,
+the chart README and <a href="../verifying-releases.html">verifying releases</a> name chart
+21.0.0-rc8 and image 5.6.0-rc8 in the book of main.</li>
+<li><strong><code>SECURITY.md</code>, the
+<a href="https://ferrohealth.eu/docs/ehds/information-sheet.html">information sheet</a>, the
+<a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, the image labels and the
+chart description</strong> make no claim this release changes.</li>
+</ul>
+<h3 id="left-open-on-2026-11-02-for-560-rc8"><a class="header" href="#left-open-on-2026-11-02-for-560-rc8">Left open on 2026-11-02, for 5.6.0-rc8</a></h3>
+<ul>
+<li>The development-profile run, shown beside the record and never counted
+toward it, fails the row tracked on #4777; its badges show the run as it
+stands, and no text claims it green. The two rows #4776 tracked pass: under
+the development profile an ADL 2 description without an author or a
+lifecycle state is refused.</li>
+<li>A stable-profile canonical-XML party read does not carry
+<code>reverse_relationships</code> yet (#4778); the demographics page says so.</li>
+<li>The public sandbox runs 5.5.0 and is not redeployed for a pre-release, so it
+serves the old paths and the old error body until 5.6.0 ships.</li>
+<li>The <a href="../performance.html">performance</a> page keeps the figures the
+Veredictum 0.1 line measured until a <code>perf-result</code> record measured on the
+reference host replaces them, as the page says.</li>
+</ul>
+<h2 id="the-review-of-2026-11-02-for-560-rc9"><a class="header" href="#the-review-of-2026-11-02-for-560-rc9">The review of 2026-11-02, for 5.6.0-rc9</a></h2>
+<p>Read on the tree after commit <code>e6100379c</code>, for the FerroEHR release candidate
+5.6.0-rc9. 5.6.0-rc8 was tagged and not published: its vulnerability record
+refused findings that had no OpenVEX judgement, so every claim of the 5.6.0-rc8
+review above reaches users first with this release. The facts added since
+5.6.0-rc8 and checked in every text in scope: the OpenVEX judgements of the
+gcc-14 and SQLite findings (#4789); the vulnerability record run on a release
+pull request and every day, and the published images re-scanned every day
+(#4795); audit migration 0022 and the three unused horizon reap functions
+removed (#4770); the AOM2 node id of a primitive constraint inside a rule or a
+slot assertion (#4770); chart 21.0.0-rc8 with <code>appVersion</code> 5.6.0-rc9.</p>
+<h3 id="read-and-kept-on-2026-11-02-for-560-rc9"><a class="header" href="#read-and-kept-on-2026-11-02-for-560-rc9">Read and kept on 2026-11-02, for 5.6.0-rc9</a></h3>
+<ul>
+<li><strong>The supply-chain pages</strong>: <a href="../verifying-releases.html">verifying releases</a>,
+the <a href="../installation/hardening-supply-chain.html">supply-chain hardening</a> page
+and the <a href="cra-risk-assessment.html">CRA risk assessment</a> state the daily
+re-scan and the vulnerability record each release publishes, as the
+workflows run them.</li>
+<li><strong>The audit and retention pages</strong>: <a href="../audit.html">the audit trail</a> and the
+hazard log’s H5 describe reaping through each record’s own retention end,
+and no text names a removed reap function; the hazard log gains review 17
+and the technical documentation its 5.6.0-rc9 row.</li>
+<li><strong>The installation pins</strong>: the <a href="../installation/kubernetes.html">Kubernetes installation</a>,
+the chart README and <a href="../verifying-releases.html">verifying releases</a> name chart
+21.0.0-rc8 and image 5.6.0-rc9 in the book of main.</li>
+<li><strong><code>SECURITY.md</code>, the
+<a href="https://ferrohealth.eu/docs/ehds/information-sheet.html">information sheet</a>, the
+<a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, the image labels and the
+chart description</strong> make no claim this release changes.</li>
+</ul>
+<h3 id="left-open-on-2026-11-02-for-560-rc9"><a class="header" href="#left-open-on-2026-11-02-for-560-rc9">Left open on 2026-11-02, for 5.6.0-rc9</a></h3>
+<ul>
+<li>Everything the 5.6.0-rc8 review left open: the development-profile run’s
+failed rows (#4776, #4777), the canonical-XML <code>reverse_relationships</code>
+(#4778), the 5.5.0 sandbox and the performance page’s earlier figures.</li>
+</ul>
+<h2 id="the-review-of-2026-11-02-for-560-rc10"><a class="header" href="#the-review-of-2026-11-02-for-560-rc10">The review of 2026-11-02, for 5.6.0-rc10</a></h2>
+<p>Read on the tree after commit <code>797ceb527</code>, for the FerroEHR release candidate
+5.6.0-rc10. 5.6.0-rc8 and 5.6.0-rc9 were tagged and not published, so the
+claims of their reviews above reach users first with this release. The facts
+added since 5.6.0-rc9 and checked in every text in scope: the outbox served to
+its named readers over a cursor feed under the <code>__ferroehr.outbox</code> scope, and
+FerroEHR’s own broker publisher, <code>[events]</code>, the subscription routes and the
+viewer’s Subscriptions page removed (#4786, #4766); the access record of a
+VERSION read naming the content it served (#4660); the BASE 1.3.0 description
+invariants of an ADL 2 template under the <code>development</code> profile (#4776); a
+slow database connect no longer recorded as an outage, and a reset one
+recorded as an outage on the pool’s own connect too (#4782, #4807); <code>Prefer</code>
+read on every route as RFC 7240 §2 defines it (#4722); chart
+21.0.0-rc9 with <code>appVersion</code> 5.6.0-rc10.</p>
+<h3 id="changed-on-2026-11-02-for-560-rc10"><a class="header" href="#changed-on-2026-11-02-for-560-rc10">Changed on 2026-11-02, for 5.6.0-rc10</a></h3>
+<ul>
+<li><strong>The README, the landing page, <a href="../beyond-core/index.html">beyond core</a> and
+<a href="../beyond-core/outbox-feed.html">change events</a></strong> said FerroBRIDGE reads the
+feed and delivers the events to an AMQP broker, and the landing page listed
+“RabbitMQ via FerroBRIDGE”. FerroBRIDGE’s broker delivery is still in
+progress (FerroHEALTH/FerroBRIDGE issue 1367), so each text now says so, and
+the change-events page says a deployment that needs broker events keeps a
+release with FerroEHR’s own publisher until a FerroBRIDGE release carries it.
+The removal fragment of the changelog says the same.</li>
+</ul>
+<h3 id="read-and-kept-on-2026-11-02-for-560-rc10"><a class="header" href="#read-and-kept-on-2026-11-02-for-560-rc10">Read and kept on 2026-11-02, for 5.6.0-rc10</a></h3>
+<ul>
+<li><strong>The configuration, integrations, administration API, audit and privacy
+pages</strong> describe <code>[outbox] readers</code>, the feed’s scope and its access
+records, and the change-events page the removed <code>[events]</code>,
+<code>secrets.eventsUrl</code> and <code>plaintext_broker</code>, which the server refuses at
+boot.</li>
+<li><strong>The hazard log and the technical documentation</strong>: the logging component’s
+modules did not change since 5.6.0-rc9; the hazard log gains review 18 and
+the technical documentation its 5.6.0-rc10 row for the VERSION read’s
+record and the feed’s access records.</li>
+<li><strong>The installation pins</strong>: the <a href="../installation/kubernetes.html">Kubernetes installation</a>,
+the chart README and <a href="../verifying-releases.html">verifying releases</a> name chart
+21.0.0-rc9 and image 5.6.0-rc10 in the book of main.</li>
+<li><strong><code>SECURITY.md</code>, the
+<a href="https://ferrohealth.eu/docs/ehds/information-sheet.html">information sheet</a>, the
+<a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, the image labels and the
+chart description</strong> make no claim this release changes.</li>
+</ul>
+<h3 id="left-open-on-2026-11-02-for-560-rc10"><a class="header" href="#left-open-on-2026-11-02-for-560-rc10">Left open on 2026-11-02, for 5.6.0-rc10</a></h3>
+<ul>
+<li>Broker delivery waits on a FerroBRIDGE release (FerroHEALTH/FerroBRIDGE
+issue 1367), as the change-events page says.</li>
+<li>Everything the 5.6.0-rc8 review left open: the development-profile run’s
+failed row tracked on #4777, the canonical-XML <code>reverse_relationships</code>
+(#4778), the 5.5.0 sandbox and the performance page’s earlier figures.</li>
+</ul>
+<h2 id="the-review-of-2026-11-04-for-560"><a class="header" href="#the-review-of-2026-11-04-for-560">The review of 2026-11-04, for 5.6.0</a></h2>
+<p>Read on the tree after commit <code>25db5c69c</code>, for FerroEHR 5.6.0, the stable
+release after 5.5.0 and the ten release candidates whose reviews stand above.
+The facts added since 5.6.0-rc10 and checked in every text in scope: an EHR
+whose access settings do not parse held closed, such settings refused on every
+write and load, and the administrator’s repair route (#4846, #4854, #4865,
+#4853); the manifest export checked against the <code>EHR_ACCESS</code> settings of every
+EHR it names, both EHR Extract export and import routes behind the ABAC
+pre-check, and an Art. 10(2) override export recorded (#4864, #4869, #4872,
+#4870); the viewer’s sign-in through <code>ferrohealth-session</code>, its absolute
+session lifetime and session watch, and its CDR requests confined to the
+configured CDR (#4873, #3057, #4223, #4954); a version equal to its predecessor
+stored once, and <code>[versioning] skip_identical_resend</code> (#4415); storage
+generation 5 (#4904); the family pins, FerroTERM 0.4.1, FerroPIX 0.0.15 and
+FerroBRIDGE 0.0.19 by digest, and the newest family crates (#4933, #4981, #4968); the
+conformance record of Veredictum 0.4.1 (#4971); chart 21.0.0 with <code>appVersion</code>
+5.6.0.</p>
+<h3 id="changed-on-2026-11-04-for-560"><a class="header" href="#changed-on-2026-11-04-for-560">Changed on 2026-11-04, for 5.6.0</a></h3>
+<ul>
+<li><strong>The README, the landing page, <a href="../beyond-core/index.html">beyond core</a> and
+<a href="../beyond-core/outbox-feed.html">change events</a></strong> said FerroBRIDGE’s broker
+delivery was in progress and that a deployment needing broker events keeps
+5.5.0 or 5.6.0-rc7. FerroBRIDGE 0.0.15 delivers the outbox feed to an AMQP
+broker under its <code>[events]</code> lane (FerroHEALTH/FerroBRIDGE issue 1367, closed
+2026-11-02), so each text now names that release, and the migration steps
+on the change-events page apply to FerroBRIDGE 0.0.15 or later.</li>
+</ul>
+<h3 id="read-and-kept-on-2026-11-04-for-560"><a class="header" href="#read-and-kept-on-2026-11-04-for-560">Read and kept on 2026-11-04, for 5.6.0</a></h3>
+<ul>
+<li><strong>The chart, its README and the <a href="../installation/kubernetes.html">Kubernetes installation</a></strong>
+say what FerroBRIDGE 0.0.17 checks through <code>[auth]</code>, which #4933 corrected
+where they said FerroBRIDGE authenticated no caller.</li>
+<li><strong>The configuration and operations pages</strong> name the refusal of the OTLP TLS
+files beside an endpoint that is not <code>https://</code>, the span named by method
+and route and <code>http_server_active_requests</code> (#4968).</li>
+<li><strong>The hazard log, the technical documentation and the CRA risk
+assessment</strong>: every test the hazard log names exists; it gains review 19,
+the CRA risk assessment revision 25, and the technical documentation keeps
+its 5.6.0 row.</li>
+<li><strong>The installation pins</strong>: the Kubernetes installation, the chart README and
+<a href="../verifying-releases.html">verifying releases</a> name chart 21.0.0 and image
+5.6.0.</li>
+<li><strong><code>SECURITY.md</code>, the
+<a href="https://ferrohealth.eu/docs/ehds/information-sheet.html">information sheet</a>, the
+<a href="https://ferrohealth.eu/docs/ehds/instructions-for-use.html">instructions for use</a>, the image labels and the
+chart description</strong> make no claim this release changes.</li>
+</ul>
+<h3 id="left-open-on-2026-11-04-for-560"><a class="header" href="#left-open-on-2026-11-04-for-560">Left open on 2026-11-04, for 5.6.0</a></h3>
+<ul>
+<li>A v2-namespace OPT 1.4 whose ordinal list keeps <code>xsi:type DV_ORDINAL</code> is
+accepted, tracked on #4777 for the next release.</li>
+<li>The performance page keeps its earlier figures until a record measured on
+the reference host replaces them.</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../compliance/logging-performance.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                            </a>
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../compliance/logging-performance.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
+                    </a>
+
+            </nav>
+
+        </div>
+
+        <template id=fa-eye><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zM432 256c0 79.5-64.5 144-144 144s-144-64.5-144-144s64.5-144 144-144s144 64.5 144 144zM288 192c0 35.3-28.7 64-64 64c-11.5 0-22.3-3-31.6-8.4c-.2 2.8-.4 5.5-.4 8.4c0 53 43 96 96 96s96-43 96-96s-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6z"/></svg></span></template>
+        <template id=fa-eye-slash><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c5.2-11.8 8-24.8 8-38.5c0-53-43-96-96-96c-2.8 0-5.6 .1-8.4 .4c5.3 9.3 8.4 20.1 8.4 31.6c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zm223.1 298L373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5z"/></svg></span></template>
+        <template id=fa-copy><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M502.6 70.63l-61.25-61.25C435.4 3.371 427.2 0 418.7 0H255.1c-35.35 0-64 28.66-64 64l.0195 256C192 355.4 220.7 384 256 384h192c35.2 0 64-28.8 64-64V93.25C512 84.77 508.6 76.63 502.6 70.63zM464 320c0 8.836-7.164 16-16 16H255.1c-8.838 0-16-7.164-16-16L239.1 64.13c0-8.836 7.164-16 16-16h128L384 96c0 17.67 14.33 32 32 32h47.1V320zM272 448c0 8.836-7.164 16-16 16H63.1c-8.838 0-16-7.164-16-16L47.98 192.1c0-8.836 7.164-16 16-16H160V128H63.99c-35.35 0-64 28.65-64 64l.0098 256C.002 483.3 28.66 512 64 512h192c35.2 0 64-28.8 64-64v-32h-47.1L272 448z"/></svg></span></template>
+        <template id=fa-play><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg></span></template>
+        <template id=fa-clock-rotate-left><span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M75 75L41 41C25.9 25.9 0 36.6 0 57.9V168c0 13.3 10.7 24 24 24H134.1c21.4 0 32.1-25.9 17-41l-30.8-30.8C155 85.5 203 64 256 64c106 0 192 86 192 192s-86 192-192 192c-40.8 0-78.6-12.7-109.7-34.4c-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6C151.2 495 201.7 512 256 512c141.4 0 256-114.6 256-256S397.4 0 256 0C185.3 0 121.3 28.7 75 75zm181 53c-13.3 0-24 10.7-24 24V256c0 6.4 2.5 12.5 7 17l72 72c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-65-65V152c0-13.3-10.7-24-24-24z"/></svg></span></template>
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-09f2665d.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-609e4cb8.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../theme/mermaid-eefea253.min.js"></script>
+        <script src="../theme/mermaid-init-ccf746f1.js"></script>
+        <script src="../theme/version-picker-dddf05c1.js"></script>
+
+
+
+    </div>
+    </body>
+</html>
