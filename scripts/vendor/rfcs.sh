@@ -3,7 +3,8 @@
 # SPDX-License-Identifier: BUSL-1.1
 # Vendor the IETF RFCs the party binding and provisioning cite into
 # docs/specs/rfc/: SCIM 2.0, the identifier and string rules, the HTTP status
-# codes and the OAuth 2.0 documents, the text form of each from the RFC Editor.
+# codes, the HTTP entity tags and the OAuth 2.0 documents, the text form of
+# each from the RFC Editor.
 #
 # Each RFC is pinned by the sha256 of its published text. The RFC Editor's
 # metadata is read too, and an RFC it reports obsoleted refuses the run,
@@ -34,6 +35,7 @@ PINS=(
   "8265 ec987e39b242228e870b8d1df836451e19cdb2bd66b1ac105355adeae36ff32f"
   "8693 358d658014738bf4dc56c8aae2094ce716ede23b6d5a80488a7dc8e8d72da609"
   "9068 68d3ff3910c0f2340fd7b93b430e00053da845b6eebe095ebef0c8bfda5e14c5"
+  "9110 21c1cdce6ab0e5509b04d84a28000836c7a087cf786efe6f04877ebfff47232a"
   "9449 3842c58e1f6043389416023b9bb8d765048266024982fbbd90640e05943f4e13"
   "9700 9919d061d40a97886ca866b51c69389b6c81c65cd4b979056c14fdbebfcf622a"
 )

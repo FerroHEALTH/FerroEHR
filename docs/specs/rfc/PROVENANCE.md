@@ -42,6 +42,7 @@
 | RFC 8265 | Preparation, Enforcement, and Comparison of Internationalized Strings Representing Usernames and Passwords | October 2017 | PROPOSED STANDARD | none | `rfc8265.txt` | `ec987e39b242228e870b8d1df836451e19cdb2bd66b1ac105355adeae36ff32f` |
 | RFC 8693 | OAuth 2.0 Token Exchange | January 2020 | PROPOSED STANDARD | none | `rfc8693.txt` | `358d658014738bf4dc56c8aae2094ce716ede23b6d5a80488a7dc8e8d72da609` |
 | RFC 9068 | JSON Web Token (JWT) Profile for OAuth 2.0 Access Tokens | October 2021 | PROPOSED STANDARD | none | `rfc9068.txt` | `68d3ff3910c0f2340fd7b93b430e00053da845b6eebe095ebef0c8bfda5e14c5` |
+| RFC 9110 | HTTP Semantics | June 2022 | INTERNET STANDARD | none | `rfc9110.txt` | `21c1cdce6ab0e5509b04d84a28000836c7a087cf786efe6f04877ebfff47232a` |
 | RFC 9449 | OAuth 2.0 Demonstrating Proof of Possession (DPoP) | September 2023 | PROPOSED STANDARD | none | `rfc9449.txt` | `3842c58e1f6043389416023b9bb8d765048266024982fbbd90640e05943f4e13` |
 | RFC 9700 | Best Current Practice for OAuth 2.0 Security | January 2025 | BEST CURRENT PRACTICE | none | `rfc9700.txt` | `9919d061d40a97886ca866b51c69389b6c81c65cd4b979056c14fdbebfcf622a` |
 
