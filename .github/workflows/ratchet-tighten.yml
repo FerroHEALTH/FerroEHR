@@ -12,6 +12,14 @@
 # and opens one pull request that holds only the ratchet files, or moves its
 # open one to the new counts. When nothing fell it does nothing.
 #
+# MAIN MOVES (#5049). The counts hold only for the commit they were measured
+# on: a merge after the measurement that grows a count within main's recorded
+# one leaves the open pull request unable to pass the merge queue. So every
+# push to main moves an open tightening pull request to the counts measured
+# at the pushed commit, and closes it when nothing falls there any more or a
+# guard fails there. A push never opens a pull request; only the schedule and
+# a dispatch do.
+#
 # It is a pull request, never a push to main. The commit is made through the
 # Git Data REST API, so GitHub signs it and it shows Verified, the same
 # mechanism toolchain-watcher.yml uses
@@ -33,21 +41,47 @@ on:
     # estate's slots with `grep -rE '^ +- cron:' .github/workflows/`.
     - cron: "53 4 * * *"
   workflow_dispatch:
+  push:
+    branches: [main]
 
 permissions: {}
 
-concurrency:
-  group: ratchet-tighten
-  cancel-in-progress: false
-
 jobs:
-  tighten:
-    name: tighten
-    # The counts are main's; a dispatch from another branch would lower them
-    # to that branch's tree.
+  # A push with no open tightening pull request ends here, before the
+  # concurrency group, so it can never displace a pending scheduled run.
+  find:
+    name: find the open tightening pull request
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read # list the open pull request of the lane's branch
+    outputs:
+      open: ${{ steps.find.outputs.open }}
+    steps:
+      - name: List it
+        id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          open=$(gh pr list --repo "$REPO" --head chore/ratchet-tighten --state open --json number --jq '.[0].number // empty')
+          echo "open=${open}" >>"$GITHUB_OUTPUT"
+
+  tighten:
+    name: tighten
+    needs: find
+    # The counts are main's; a dispatch from another branch would lower them
+    # to that branch's tree. A push only moves an open pull request.
+    if: github.ref == 'refs/heads/main' && (github.event_name != 'push' || needs.find.outputs.open != '')
+    runs-on: ubuntu-latest
     timeout-minutes: 30
+    # One run touches the branch at a time; a newer pending push run replaces
+    # an older one, which measures an older commit.
+    concurrency:
+      group: ratchet-tighten
+      cancel-in-progress: false
     permissions:
       contents: write # create the blob, tree, commit and branch ref
       pull-requests: write # open the pull request and arm its auto-merge
@@ -64,12 +98,31 @@ jobs:
       # A rise on main is a failure for a person to look at, never a count
       # this lane writes down.
       - name: No ratchet has risen on main
+        id: guards
         run: |
           set -euo pipefail
           bash scripts/checks/duplication.sh
           bash scripts/checks/file-size.sh
           bash scripts/checks/stray-literals.sh app/ferroehr-viewer/src
           bash scripts/checks/forwarders.sh
+
+      # The open pull request lowers counts below what main measures now, so it
+      # can no longer pass; close it so it cannot be merged by hand.
+      - name: Close the tightening pull request a rise invalidated
+        if: failure() && steps.guards.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.RATCHET_TIGHTEN_TOKEN || secrets.TOOLCHAIN_BUMP_TOKEN || github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          open=$(gh pr list --repo "$REPO" --head chore/ratchet-tighten --state open --json number --jq '.[0].number // empty')
+          if [ -z "$open" ]; then
+            exit 0
+          fi
+          gh pr close "$open" --repo "$REPO" --delete-branch \
+            --comment "A ratchet guard fails on \`main\` at ${HEAD_SHA}, so these counts no longer hold. Closed by \`.github/workflows/ratchet-tighten.yml\`; the next scheduled run opens a new one once \`main\` passes."
+          echo "::warning::Closed #${open}: a ratchet guard fails on main."
 
       - name: Lower the counts
         id: update
@@ -123,13 +176,14 @@ jobs:
             echo '```'
           } >>"$GITHUB_STEP_SUMMARY"
 
-      - name: Open or move the tightening pull request
-        if: steps.update.outputs.changed == '1'
+      - name: Open, move or close the tightening pull request
         env:
           GH_TOKEN: ${{ secrets.RATCHET_TIGHTEN_TOKEN || secrets.TOOLCHAIN_BUMP_TOKEN || github.token }}
           HAVE_TOKEN: ${{ (secrets.RATCHET_TIGHTEN_TOKEN != '' || secrets.TOOLCHAIN_BUMP_TOKEN != '') && '1' || '0' }}
           REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
           BASE_SHA: ${{ github.sha }}
+          CHANGED: ${{ steps.update.outputs.changed }}
           DUP_BEFORE: ${{ steps.update.outputs.duplication_before }}
           DUP_AFTER: ${{ steps.update.outputs.duplication_after }}
           FWD_BEFORE: ${{ steps.update.outputs.forwarders_before }}
@@ -137,6 +191,45 @@ jobs:
         run: |
           set -euo pipefail
           branch="chore/ratchet-tighten"
+          ratchet_files=(
+            scripts/checks/duplication.count scripts/checks/duplication-baseline.txt
+            scripts/checks/file-size.list scripts/checks/stray-literals.baseline
+            scripts/checks/forwarders.count scripts/checks/forwarders-baseline.txt
+          )
+          open=$(gh pr list --repo "$REPO" --head "$branch" --state open --json number --jq '.[0].number // empty')
+
+          # Nothing falls at this commit, so an open pull request lowers a
+          # count below what main measures and can no longer pass.
+          if [ "$CHANGED" != "1" ]; then
+            if [ -n "$open" ]; then
+              gh pr close "$open" --repo "$REPO" --delete-branch \
+                --comment "Nothing falls on \`main\` at ${BASE_SHA} any more, so these counts no longer hold. Closed by \`.github/workflows/ratchet-tighten.yml\`."
+              echo "::notice::Closed #${open}: nothing falls on main at ${BASE_SHA}."
+            fi
+            exit 0
+          fi
+          if [ "$EVENT" = "push" ] && [ -z "$open" ]; then
+            echo "::notice::No open tightening pull request to move; a push opens none."
+            exit 0
+          fi
+
+          # An open pull request that already carries these counts holds for
+          # this commit too; moving it would only restart its checks.
+          if [ -n "$open" ]; then
+            same=1
+            for f in "${ratchet_files[@]}"; do
+              theirs=$(gh api "repos/${REPO}/contents/${f}?ref=${branch}" --jq .sha)
+              ours=$(git hash-object "$f")
+              if [ "$theirs" != "$ours" ]; then
+                same=0
+                break
+              fi
+            done
+            if [ "$same" = "1" ]; then
+              echo "::notice::#${open} already carries the counts measured at ${BASE_SHA}."
+              exit 0
+            fi
+          fi
 
           # The parent is the commit the counts were measured on, so the
           # lowered counts hold for it; CI on the pull request measures them
@@ -159,23 +252,8 @@ jobs:
                      -f "message=chore(checks): lower the ratchet counts" \
                      -f "tree=${tree}" -f "parents[]=${BASE_SHA}" --jq .sha)
 
-          # One pull request at a time: an open one moves to the new commit,
-          # which is this lane's own branch and never main.
-          open=$(gh pr list --repo "$REPO" --head "$branch" --state open --json number --jq '.[0].number // empty')
-          if [ -n "$open" ]; then
-            gh api -X PATCH "repos/${REPO}/git/refs/heads/${branch}" \
-              -f "sha=${commit}" -F force=true --jq .ref
-            echo "::notice::Moved #${open} to ${commit}."
-            exit 0
-          fi
-          if gh api "repos/${REPO}/git/ref/heads/${branch}" --silent 2>/dev/null; then
-            gh api -X DELETE "repos/${REPO}/git/refs/heads/${branch}"
-          fi
-          gh api "repos/${REPO}/git/refs" \
-            -f "ref=refs/heads/${branch}" -f "sha=${commit}" --jq .ref
-
           {
-            echo "The ratchet guards pass a fall and fail only a rise, so pull requests leave the ratchet files alone (#4554). This pull request records what fell on \`main\`, and carries only the ratchet files:"
+            echo "The ratchet guards pass a fall and fail only a rise, so pull requests leave the ratchet files alone (#4554). This pull request records what fell on \`main\` at ${BASE_SHA}, and carries only the ratchet files:"
             echo
             while IFS= read -r f; do echo "- \`$f\`"; done <changed-files.txt
             if [ -n "$DUP_BEFORE" ] && [ "$DUP_BEFORE" != "$DUP_AFTER" ]; then
@@ -187,12 +265,33 @@ jobs:
               echo "Forwarders: ${FWD_BEFORE} -> ${FWD_AFTER}."
             fi
             echo
+            echo "Merge it only through the merge queue, never by hand: the counts hold for the commit they were measured on, and the queue measures them again on the head they land on. Each push to \`main\` moves this pull request to the counts measured there, or closes it when they no longer hold (#5049)."
+            echo
             echo "Made by \`.github/workflows/ratchet-tighten.yml\` from each guard's \`--update\`. No user-visible change, so no changelog fragment."
             if [ "$HAVE_TOKEN" != "1" ]; then
               echo
               echo "No \`RATCHET_TIGHTEN_TOKEN\` is configured, so this pull request was opened with the workflow token and its checks did not start. Close and reopen it to raise them."
             fi
           } >pr-body.md
+
+          # One pull request at a time: an open one moves to the new commit,
+          # which is this lane's own branch and never main.
+          if [ -n "$open" ]; then
+            gh api -X PATCH "repos/${REPO}/git/refs/heads/${branch}" \
+              -f "sha=${commit}" -F force=true --jq .ref
+            gh pr edit "$open" --repo "$REPO" --body-file pr-body.md
+            # A push to the head takes the pull request out of the queue; arm it again.
+            if ! gh pr merge "$open" --repo "$REPO" --auto --squash; then
+              echo "::warning::Could not arm auto-merge on #${open} again; arm it by hand."
+            fi
+            echo "::notice::Moved #${open} to ${commit}."
+            exit 0
+          fi
+          if gh api "repos/${REPO}/git/ref/heads/${branch}" --silent 2>/dev/null; then
+            gh api -X DELETE "repos/${REPO}/git/refs/heads/${branch}"
+          fi
+          gh api "repos/${REPO}/git/refs" \
+            -f "ref=refs/heads/${branch}" -f "sha=${commit}" --jq .ref
 
           # The workflow token may not open a pull request where the repository
           # forbids it; the branch is then the hand-off and a maintainer opens it.
