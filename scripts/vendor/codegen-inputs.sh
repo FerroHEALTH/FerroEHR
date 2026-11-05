@@ -48,7 +48,7 @@ esac
 
 # name | upstream repo | pinned commit | upstream subdir | file filter | destination | provenance record
 SETS=(
-  "bmm|specifications-ITS-BMM|37b317396eb9b5f03c4c422296a15bdd665028dd|components|no-yaml|tools/openehr-codegen/vendor/bmm/components|tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
+  "bmm|specifications-ITS-BMM|1c67840603911a4e8a3e5ec74cd1593b76ce0e3d|components|no-yaml|tools/openehr-codegen/vendor/bmm/components|tools/openehr-codegen/vendor/bmm/PROVENANCE.md"
   "its-json|specifications-ITS-JSON|14387ce9191f228d768b6bade3308b79aaf87471|components|all|crates/openehr-its/schemas/json|crates/openehr-its/schemas/json/PROVENANCE.md"
   "its-xml-nsv1|specifications-ITS-XML|f7a937778bf9ea43b01b0f9d8a616e47f35017c1|components|all|crates/openehr-its/schemas/xml/its-xml-1.0.2-nsv1|crates/openehr-its/schemas/xml/PROVENANCE.md"
   "its-xml-nsv2|specifications-ITS-XML|de8b37ba6c9a5e126623a063cafba3b58ebf1107|components|all|crates/openehr-its/schemas/xml/its-xml-2.0.0-nsv2|crates/openehr-its/schemas/xml/PROVENANCE.md"
