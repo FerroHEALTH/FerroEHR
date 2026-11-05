@@ -18,6 +18,11 @@
 #       Prints the release tag before <tag> by version order, read from
 #       `git ls-remote` of origin: a pushed tag counts whether or not its
 #       release published, and ancestry plays no part.
+#   plan.sh published-tag <tag>
+#       Prints the newest stable release tag below <tag> whose GitHub release
+#       is published, skipping a pushed tag whose release never published,
+#       read from `git ls-remote` of origin and the repository's releases.
+#       The performance guard compares against its published images.
 #   plan.sh notes <tag> <file>
 #       Writes the release notes for <tag>: its changelog section, the support
 #       period and the CRA user-information link. A pre-release's support
@@ -31,7 +36,7 @@
 #   plan.sh support-end <YYYY-MM-DD>
 #       Prints the month the support period of a release of that date ends.
 #   plan.sh --self-test
-#       Proves prev-tag's ordering, the pre-release rule, the support
+#       Proves prev-tag's and published-tag's ordering, the pre-release rule, the support
 #       statement and support-end's arithmetic offline.
 #
 # The milestone check reads the tracker through gh (GH_TOKEN in CI, the
@@ -41,7 +46,7 @@ set -euo pipefail
 readonly TAG_RE='^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
 
 usage() {
-  echo "usage: plan.sh checks <tag> [--notes <file>] | prev-tag <tag> | notes <tag> <file> | fragments <tag> | support-end <YYYY-MM-DD> | --self-test" >&2
+  echo "usage: plan.sh checks <tag> [--notes <file>] | prev-tag <tag> | published-tag <tag> | notes <tag> <file> | fragments <tag> | support-end <YYYY-MM-DD> | --self-test" >&2
   exit 2
 }
 
@@ -59,7 +64,7 @@ valid_tag() {
 # below TAG's release (its pre-release suffix dropped) by version order.
 order_prev() {
   local base="${1%%-*}"
-  grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -vxF "$base" |
+  { grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true; } | { grep -vxF "$base" || true; } |
     { cat; echo "$base"; } | sort -V | awk -v t="$base" '$0==t{print p; exit} {p=$0}'
 }
 
@@ -68,6 +73,30 @@ prev_tag() {
   prev="$(git ls-remote --tags --refs origin 'v*' | sed 's#.*refs/tags/##' | order_prev "$tag")"
   [[ -n "$prev" ]] || {
     echo "::error::plan: no release tag below ${tag%%-*}" >&2
+    return 1
+  }
+  printf '%s\n' "$prev"
+}
+
+# keep_published PUBLISHED: reads tag names on stdin and keeps those PUBLISHED
+# names, one tag per line.
+keep_published() {
+  PUBLISHED="$1" awk 'BEGIN { n = split(ENVIRON["PUBLISHED"], list, "\n"); for (i = 1; i <= n; i++) if (list[i] != "") keep[list[i]] = 1 } ($0 in keep)'
+}
+
+# published_tag TAG: the newest stable release below TAG whose GitHub release
+# is published; a draft or pre-release does not count, so neither does a tag
+# whose release run stopped before finalize-release.
+published_tag() {
+  local tag="$1" released prev
+  released="$(gh release list --repo "${GITHUB_REPOSITORY:-FerroHEALTH/FerroEHR}" --exclude-drafts \
+    --exclude-pre-releases --limit 1000 --json tagName --jq '.[].tagName')" || {
+    echo "::error::plan: the published releases could not be read" >&2
+    return 1
+  }
+  prev="$(git ls-remote --tags --refs origin 'v*' | sed 's#.*refs/tags/##' | keep_published "$released" | order_prev "$tag")"
+  [[ -n "$prev" ]] || {
+    echo "::error::plan: no published release below ${tag%%-*}" >&2
     return 1
   }
   printf '%s\n' "$prev"
@@ -381,6 +410,12 @@ self_test() {
   expect "an unpushed tag" "$got" "v5.3.3"
   got="$(printf '%s\n' v5.3.3 | order_prev v1.0.0)"
   expect "no tag below" "$got" ""
+  got="$(printf '%s\n' v5.5.0 v5.6.0 v5.6.1 v5.6.2 | keep_published $'v5.5.0\nv5.6.0' | order_prev v5.6.3)"
+  expect "a tag whose release never published is skipped" "$got" "v5.6.0"
+  got="$(printf '%s\n' v5.6.0 v5.6.1 | keep_published $'v5.6.0\nv5.6.1\nv9.9.9' | order_prev v5.6.2)"
+  expect "a published release is the baseline" "$got" "v5.6.1"
+  got="$(printf '%s\n' v5.6.0 v5.6.1 | keep_published '' | order_prev v5.6.2)"
+  expect "no published release below" "$got" ""
   expect "a release candidate is a pre-release" "$(prerelease 5.6.0-rc1 && echo yes || echo no)" "yes"
   expect "a dotted suffix is a pre-release" "$(prerelease 5.6.0-rc.1 && echo yes || echo no)" "yes"
   expect "a stable version is no pre-release" "$(prerelease 5.6.0 && echo yes || echo no)" "no"
@@ -466,6 +501,12 @@ main() {
     [[ "$#" -eq 2 ]] || usage
     valid_tag "$tag"
     prev_tag "$tag"
+    ;;
+  published-tag)
+    local tag="${2:-}"
+    [[ "$#" -eq 2 ]] || usage
+    valid_tag "$tag"
+    published_tag "$tag"
     ;;
   notes)
     local tag="${2:-}" out="${3:-}"
