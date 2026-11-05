@@ -50,7 +50,7 @@ for FerroPIX) and FerroPIX's sealing key (`FERROPIX_DATA_KEY`) live in the
 app box's `.env` and nowhere else; CI never holds them. The release deploy
 lane touches the APP box only — the
 database box has no deploy lane, and its image moves by hand. It runs
-`ghcr.io/ferrohealth/ferroehr-postgres:5.5.0@sha256:dfe1d5c1bb95d31d3f6ff00fec03cd76ae20d57d20e6225b31e5bc68adf7fa81`,
+`ghcr.io/ferrohealth/ferroehr-postgres:5.6.0@sha256:7e4ee7a8a18a5bd3bf4c1b03afd9f584131f717d088cd6844a4a845ece6a9c1b`,
 the release tag and index digest `cloud-init-postgres.yaml` pins as the
 `FERROEHR_POSTGRES_IMAGE` default (`scripts/checks/compose-image-tags.sh`
 holds the two to the same reference). The pin moves after a release
