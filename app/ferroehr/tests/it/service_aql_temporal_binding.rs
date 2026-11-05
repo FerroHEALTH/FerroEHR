@@ -84,11 +84,13 @@ async fn a_non_temporal_parameter_in_a_version_predicate_is_a_bad_request() {
     }
 }
 
-/// A number literal against a temporal path in `WHERE` is the caller's `400`.
+/// A number, boolean or `NULL` literal against a temporal path in `WHERE` is
+/// the caller's `400`: QUERY master03 §Literals and §Comparison operators give
+/// `NULL` no comparison meaning, presence being §EXISTS.
 #[tokio::test]
-async fn a_number_literal_against_a_temporal_path_is_a_bad_request() {
+async fn a_non_temporal_literal_against_a_temporal_path_is_a_bad_request() {
     let (_db, svc) = crate::fixtures::service().await;
-    for literal in ["5", "1.5"] {
+    for literal in ["5", "1.5", "true", "NULL"] {
         let aql = format!(
             "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
              WHERE c/context/start_time/value >= {literal}"
