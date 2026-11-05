@@ -447,6 +447,7 @@ cut, after the texts in scope have been read.
 | 2026-11-04 | 5.6.0, after `25db5c69c` | 4 claims, in the README, the landing page and two book pages: each said FerroBRIDGE's broker delivery was in progress, which FerroBRIDGE 0.0.15 ships | the canonical-XML `reverse_relationships` left open by the 5.6.0-rc8 review shipped (#4778); a v2-namespace OPT 1.4 ordinal list stays tracked on #4777 |
 | 2026-11-05 | 5.6.1, after `75262e1ce` | 1 claim, in the Kubernetes installation: it said the chart pins FerroPIX 0.0.15, which the 5.6.1 pins moved to 0.0.16 | a v2-namespace OPT 1.4 ordinal list stays tracked on #4777 |
 | 2026-11-05 | 5.6.2, after `ea1190926` | none; the texts in scope make no claim this release changes | a v2-namespace OPT 1.4 ordinal list stays tracked on #4777 |
+| 2026-11-05 | 5.6.3, after `6b2ff1644` | none; the texts in scope make no claim this release changes | a v2-namespace OPT 1.4 ordinal list stays tracked on #4777 |
 
 ## The review of 2026-10-20, for 5.2.0
 
@@ -1368,6 +1369,43 @@ in scope: CVE-2026-76844 in the zlib package of the three images, judged
   chart description** make no claim this release changes.
 
 ### Left open on 2026-11-05, for 5.6.2
+
+- A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is
+  accepted, tracked on #4777 for 5.7.0.
+- The performance page keeps its earlier figures until a record measured on
+  the reference host replaces them.
+
+## The review of 2026-11-05, for 5.6.3
+
+Read on the tree after commit `6b2ff1644`, for FerroEHR 5.6.3, the first
+published release since 5.6.0; the v5.6.1 and v5.6.2 tags exist and neither
+release published, so this review also covers the facts of the 5.6.1 and
+5.6.2 reviews. The facts added since 5.6.2 and checked in every text in
+scope: the performance guard's baseline, the newest published release
+(#4998); RUSTSEC-2026-0440 judged `not_affected` (#4996); `ferrohealth-server`
+0.5.0 (#5000); FerroBRIDGE 0.0.21 in the chart by digest (#5017); chart 21.0.4
+with `appVersion` 5.6.3.
+
+### Read and kept on 2026-11-05, for 5.6.3
+
+- **[Verifying releases](../verifying-releases.md)** describes the Rust
+  document as the advisories the gate accepts plus the one a lock-file
+  scanner reports, which holds with RUSTSEC-2026-0440 among the accepted.
+- **The README, [beyond core](../beyond-core/index.md),
+  [change events](../beyond-core/outbox-feed.md) and [audit](../audit.md)**
+  name FerroBRIDGE 0.0.15 or later for broker delivery and its facade's
+  access records from 0.0.16, which 0.0.21 still provides.
+- **The CRA risk assessment** gains revision 28; the hazard log and the
+  technical documentation keep their rows, since no module of the logging
+  component changed.
+- **The installation pins**: the Kubernetes installation, the chart README and
+  verifying releases name chart 21.0.4 and image 5.6.3.
+- **`SECURITY.md`, the
+  [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the
+  [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the
+  chart description** make no claim this release changes.
+
+### Left open on 2026-11-05, for 5.6.3
 
 - A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is
   accepted, tracked on #4777 for 5.7.0.
