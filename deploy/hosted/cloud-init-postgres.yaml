@@ -74,7 +74,7 @@ write_files:
         postgres:
           # A release tag and its index digest, read from the registry. The pin
           # moves after a release publishes, since its digest exists only then.
-          image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:5.5.0@sha256:dfe1d5c1bb95d31d3f6ff00fec03cd76ae20d57d20e6225b31e5bc68adf7fa81}
+          image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:5.6.0@sha256:7e4ee7a8a18a5bd3bf4c1b03afd9f584131f717d088cd6844a4a845ece6a9c1b}
           container_name: ferroehr-sandbox-postgres
           restart: unless-stopped
           # Docker's default 64MB /dev/shm starves PostgreSQL's dynamic
