@@ -1,6 +1,11 @@
 {
   "_type": "PARTY_RELATIONSHIP",
   "archetype_node_id": "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.relationship.v1",
+  "archetype_details": {
+    "_type": "ARCHETYPED",
+    "archetype_id": { "_type": "ARCHETYPE_ID", "value": "openEHR-DEMOGRAPHIC-PARTY_RELATIONSHIP.relationship.v1" },
+    "rm_version": "1.2.0"
+  },
   "name": { "_type": "DV_TEXT", "value": "registered with" },
   "source": {
     "_type": "PARTY_REF",
