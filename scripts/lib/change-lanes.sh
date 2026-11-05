@@ -30,7 +30,8 @@ readonly ROOT
 # ci deploy: the deployment harness, the compose files and the server image.
 # ci code: the Rust trees and manifests, the shared corpus (#2811), and the
 # only scripts a code-gated job runs (the drift check and the e2e harness);
-# any other script costs no Rust run.
+# any other script costs no Rust run. The sandbox viewer posture is read by a
+# viewer test (#4985).
 # ci msrv (#3120): what can move the minimum Rust version, a manifest, the
 # lockfile, the toolchain, or the recipe; a source edit cannot.
 # ci viewer (#335, #3190): the viewer, its harness, the stack it drives, the
@@ -54,7 +55,7 @@ readonly ROOT
 # the conformance deployment's compose files and what it mounts, the
 # pipeline scripts and the recipe, conformance.yml, which ci.yml calls.
 readonly LANES='ci|deploy|^(scripts/deploy-probe|docker-compose|docker/)
-ci|code|^scripts/(checks/codegen-drift|ui-e2e)\.sh$|^(app/|crates/|tools/|corpus/|\.cargo/|\.config/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|rustfmt\.toml$|clippy\.toml$|deny\.toml$)
+ci|code|^scripts/(checks/codegen-drift|ui-e2e)\.sh$|^deploy/hosted/ferroehr-viewer\.sandbox\.toml$|^(app/|crates/|tools/|corpus/|\.cargo/|\.config/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|rustfmt\.toml$|clippy\.toml$|deny\.toml$)
 ci|msrv|(^|/)Cargo\.toml$|^Cargo\.lock$|^rust-toolchain\.toml$|^clippy\.toml$|^\.github/workflows/ci\.yml$
 ci|viewer|^(app/ferroehr-viewer/|app/ferroehr-server/src/|app/ferroehr/src/privacy/|app/ferroehr/src/config/|app/ferroehr-rest/src/extensions/access/|app/ferroehr-rest/src/smart/|app/ferroehr-rest/src/config\.rs$|app/ferroehr-rest/src/router\.rs$|docker/ferroehr\.dev\.toml$|app/ferroehr/assets/ferroehr\.default\.toml$|scripts/ui-e2e\.sh$|docker-compose\.yml$|docker-compose\.override\.yml$|docker-compose\.dev\.yml$|docker-compose\.keycloak\.yml$|docker/Dockerfile$|docker/viewer/|docker/keycloak/|docker/postgres/|Cargo\.lock$|\.github/workflows/ci\.yml$)
 ci|server_dockerfile|^(docker/Dockerfile|\.dockerignore)$
@@ -190,6 +191,7 @@ a nested manifest moves the msrv and the cache|ci|crates/openehr-rm/Cargo.toml|c
 the lockfile reaches the viewer, the msrv and the cache|ci|Cargo.lock|code,msrv,viewer,cache
 the cargo configuration moves the cache|ci|.cargo/config.toml|code,cache
 the e2e harness runs the cargo lanes and the viewer|ci|scripts/ui-e2e.sh|code,viewer
+the sandbox viewer posture runs its viewer test|ci|deploy/hosted/ferroehr-viewer.sandbox.toml|code
 any other script runs no lane|ci|scripts/watch/eu-acts.sh|
 the deploy probe runs the deploy lane|ci|scripts/deploy-probe.sh|deploy
 the server Dockerfile reaches five lanes|ci|docker/Dockerfile|deploy,viewer,server_dockerfile,chart_boot
@@ -245,7 +247,7 @@ CASES
     failures=1
   fi
   [[ "$failures" -eq 0 ]] || return 1
-  echo "change-lanes: self-test OK (26 paths classified first and last in a 2000-path list, the pipe form fails on it, and the fuzz closure follows fuzz/Cargo.toml)."
+  echo "change-lanes: self-test OK (27 paths classified first and last in a 2000-path list, the pipe form fails on it, and the fuzz closure follows fuzz/Cargo.toml)."
 }
 
 case "${1-}" in
