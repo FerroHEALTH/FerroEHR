@@ -5,7 +5,6 @@
 # scripts/checks/file-size.sh admits, each with the length it may not
 # pass. An entry may fall and never rise; --update lowers and removes
 # entries.
-app/ferroehr-rest/src/api/definition/openapi_routes.rs 1928
 app/ferroehr-rest/src/api/demographic/openapi_routes.rs 3196
 app/ferroehr-rest/src/api/demographic/relationship.rs 867
 app/ferroehr-rest/src/api/ehr/openapi_routes.rs 6490
