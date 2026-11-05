@@ -1,0 +1,1 @@
+Shipped with functional changes because: the advisory reaches only a deployment that trusts several issuers, which no configuration FerroEHR ships does, and its fix changes what such a configuration must state at boot, so it lands on main beside the AQL version attestations already merged for this release; a security-only patch of the last release remains open to the release cut.
