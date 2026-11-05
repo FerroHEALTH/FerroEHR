@@ -303,6 +303,22 @@ fn version_latest_explicit() {
     assert_eq!(*rm_scope(&ir, 2), VersionScope::Latest);
 }
 
+/// A `VERSION` class expression without a version predicate scopes like
+/// `VERSION v[LATEST_VERSION]`, on the `VERSION` source and on the versioned
+/// object it contains, the same default a query without a `VERSION` class
+/// expression gets.
+#[test]
+fn version_without_predicate_is_latest() {
+    // NOTE: QUERY master03 §Class expressions makes the predicate optional and names no
+    // default scope, so `LATEST_VERSION` here is our own design.
+    let ir = plan_ok(
+        "SELECT c/uid/value FROM EHR e CONTAINS \
+         VERSION v CONTAINS COMPOSITION c",
+    );
+    assert!(matches!(&ir.sources[1], Source::Version(s) if s.scope == VersionScope::Latest));
+    assert_eq!(*rm_scope(&ir, 2), VersionScope::Latest);
+}
+
 #[test]
 fn version_at_time_standard_predicate() {
     let ir = plan_ok(
