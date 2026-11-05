@@ -757,7 +757,7 @@ spec:
         supplementalGroupsPolicy: Strict
       containers:
         - name: terminology
-          image: "ghcr.io/ferrohealth/ferroterm@sha256:efaa80152721c3738e0d0c0695cadbfefe89c1cf6df3567b9d3bc1788767e047"
+          image: "ghcr.io/ferrohealth/ferroterm@sha256:b7f10609992377a7b8bca666254bceca79fe4366e2e54fc5fbce079eb9abf619"
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

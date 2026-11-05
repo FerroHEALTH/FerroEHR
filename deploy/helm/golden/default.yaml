@@ -7,9 +7,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.14"
+    app.kubernetes.io/version: "0.0.15"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.6
+    helm.sh/chart: ferropix-0.3.7
 spec:
   podSelector:
     matchLabels:
@@ -73,9 +73,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.14"
+    app.kubernetes.io/version: "0.0.15"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.6
+    helm.sh/chart: ferropix-0.3.7
 spec:
   maxUnavailable: 1
   unhealthyPodEvictionPolicy: AlwaysAllow
@@ -118,9 +118,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.14"
+    app.kubernetes.io/version: "0.0.15"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.6
+    helm.sh/chart: ferropix-0.3.7
 automountServiceAccountToken: false
 
 ---
@@ -178,9 +178,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.14"
+    app.kubernetes.io/version: "0.0.15"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.6
+    helm.sh/chart: ferropix-0.3.7
 data:
   ferropix.toml: |
     profile = "production"
@@ -352,9 +352,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.14"
+    app.kubernetes.io/version: "0.0.15"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.6
+    helm.sh/chart: ferropix-0.3.7
     app.kubernetes.io/component: server
 spec:
   type: ClusterIP
@@ -403,9 +403,9 @@ metadata:
   labels:
     app.kubernetes.io/name: ferropix
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "0.0.14"
+    app.kubernetes.io/version: "0.0.15"
     app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: ferropix-0.3.6
+    helm.sh/chart: ferropix-0.3.7
     app.kubernetes.io/component: server
 spec:
   replicas: 1
@@ -419,9 +419,9 @@ spec:
       labels:
         app.kubernetes.io/name: ferropix
         app.kubernetes.io/instance: ferroehr
-        app.kubernetes.io/version: "0.0.14"
+        app.kubernetes.io/version: "0.0.15"
         app.kubernetes.io/managed-by: Helm
-        helm.sh/chart: ferropix-0.3.6
+        helm.sh/chart: ferropix-0.3.7
         app.kubernetes.io/component: server
       annotations:
         checksum/config: 7b6bf5aaab794d1bad427f629d127e4dfe5ebaef6732b1c617acfc91f90e777f
@@ -440,7 +440,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: ferropix
-          image: "ghcr.io/ferrohealth/ferropix@sha256:389f40d144fe2ef3d79c1c1628e9a662a058961b1650c5541e601addc27112d8"
+          image: "ghcr.io/ferrohealth/ferropix@sha256:5572f80a3a17fe83228a2a6fcf40f1dcaf8cacc48275136927286ba6ded5c74b"
           imagePullPolicy: IfNotPresent
           args: ["serve"]
           env:

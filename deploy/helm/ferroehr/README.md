@@ -177,7 +177,7 @@ Kubernetes: `>=1.36.0-0`
 
 | Repository | Name | Version |
 |------------|------|---------|
-| oci://ghcr.io/ferrohealth/charts | ferropix | 0.3.6 |
+| oci://ghcr.io/ferrohealth/charts | ferropix | 0.3.7 |
 
 > [!NOTE]
 > Rows under `config.*` carry no description here on purpose. Those keys are the
@@ -238,10 +238,10 @@ Kubernetes: `>=1.36.0-0`
 | bridge.extraEnv | list | `[]` | Extra environment for FerroBRIDGE (escape hatch). |
 | bridge.extraVolumeMounts | list | `[]` | Extra volume mounts for the FerroBRIDGE container. |
 | bridge.extraVolumes | list | `[]` | Extra volumes for the FerroBRIDGE pod, such as a Secret holding a `_file` credential named in `config`. |
-| bridge.image.digest | string | `"sha256:4cdf8d4b4c4d626b99a3929a363198067f87ac70875f4ce6db1d0614884f12af"` | Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an install runs the exact image this chart was validated against. |
+| bridge.image.digest | string | `"sha256:bdf4bd416f772ac36e4b3a940eb67841989552c0a0950d680049d959bd54dcba"` | Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an install runs the exact image this chart was validated against. |
 | bridge.image.pullPolicy | string | `"IfNotPresent"` | Pull policy. |
 | bridge.image.repository | string | `"ghcr.io/ferrohealth/ferrobridge"` | FerroBRIDGE image repository. A separate product on its own release line (https://github.com/FerroHEALTH/FerroBRIDGE), BUSL-1.1 from the same Licensor as FerroEHR. |
-| bridge.image.tag | string | `""` | Image tag. Empty falls back to the FerroBRIDGE release this chart is pinned to (0.0.17), never `.Chart.appVersion`, which is FerroEHR's line. A tag other than that pin is REFUSED while `digest` below is non-empty: the digest wins, so the tag would be inert. Clear `digest` to deploy a tag. |
+| bridge.image.tag | string | `""` | Image tag. Empty falls back to the FerroBRIDGE release this chart is pinned to (0.0.19), never `.Chart.appVersion`, which is FerroEHR's line. A tag other than that pin is REFUSED while `digest` below is non-empty: the digest wins, so the tag would be inert. Clear `digest` to deploy a tag. |
 | bridge.mappings.existingConfigMap | string | `""` | Name of an EXISTING ConfigMap holding the FHIRconnect mapping files FerroBRIDGE serves `$tofhir` and `$toopenehr` with. Empty means no mapping set: FerroBRIDGE starts, and those two operations answer 503. The templates each context names are fetched from this release's CDR at boot, so a template the CDR does not hold stops the start. |
 | bridge.mappings.files | list | `[]` | The keys of `existingConfigMap` to mount, one file each. Required with `existingConfigMap`. Each key is mounted on its own (`subPath`), because a whole ConfigMap volume carries the kubelet's `..data` snapshot directories, which FerroBRIDGE's recursive walk reads as a second and third copy of every file and refuses as duplicate mapping names. A `subPath` mount does not follow later edits to the ConfigMap; the pod's rollout annotation hashes this list, not the ConfigMap's contents, so restart the workload after editing it. |
 | bridge.networkPolicy.extraEgress | list | `[]` | Egress rules beyond the ones the chart writes (this release's CDR, its FerroTERM when that runs, and DNS). Raw NetworkPolicyEgressRule entries, for an upstream you name in `config`, such as an external terminology server. |
@@ -331,8 +331,8 @@ Kubernetes: `>=1.36.0-0`
 | extraVolumes | list | `[]` | Extra volumes / volumeMounts (e.g. an external secret store for the PGP key). |
 | ferropix.config.server.base_path | string | `""` | FerroPIX's `[server] base_path`, read here to build the FHIR base the CDR is pointed at. |
 | ferropix.enabled | bool | `true` | Deploy FerroPIX beside the CDR and point config.ehr_index at it. |
-| ferropix.image.digest | string | `"sha256:389f40d144fe2ef3d79c1c1628e9a662a058961b1650c5541e601addc27112d8"` | FerroPIX image digest of release `tag`. Pinned here so the image this chart deploys is stated by this chart. |
-| ferropix.image.tag | string | `"0.0.14"` | The FerroPIX release the pinned `digest` belongs to. The dependency chart deploys the digest, and the Artifact Hub entry names this tag. |
+| ferropix.image.digest | string | `"sha256:5572f80a3a17fe83228a2a6fcf40f1dcaf8cacc48275136927286ba6ded5c74b"` | FerroPIX image digest of release `tag`. Pinned here so the image this chart deploys is stated by this chart. |
+| ferropix.image.tag | string | `"0.0.15"` | The FerroPIX release the pinned `digest` belongs to. The dependency chart deploys the digest, and the Artifact Hub entry names this tag. |
 | ferropix.service.port | int | `8080` | FerroPIX's Service port, read here to build the FHIR base the CDR is pointed at. |
 | ferropix.usageReport.enabled | bool | `true` | FerroPIX's own usage report switch, read by the dependency chart. A dependency chart cannot read this chart's `usageReport.enabled`, so with that set to false, set this false too: the render refuses the pair `usageReport.enabled=false` and `ferropix.usageReport.enabled=true`. |
 | fullnameOverride | string | `""` | Override the full resource name. |
@@ -440,10 +440,10 @@ Kubernetes: `>=1.36.0-0`
 | terminology.enabled | bool | `false` | Deploy FerroTERM alongside the CDR. |
 | terminology.extraEnv | list | `[]` | Extra environment for FerroTERM (escape hatch). |
 | terminology.failOnError | bool | `false` | What the CDR does when the terminology server cannot answer. `false` (the server's own shipped default) accepts the binding; `true` turns an unreachable server into a 422 refusal. No released openEHR text decides between the two. |
-| terminology.image.digest | string | `"sha256:efaa80152721c3738e0d0c0695cadbfefe89c1cf6df3567b9d3bc1788767e047"` | Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an install runs the exact image this chart was validated against. |
+| terminology.image.digest | string | `"sha256:b7f10609992377a7b8bca666254bceca79fe4366e2e54fc5fbce079eb9abf619"` | Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an install runs the exact image this chart was validated against. |
 | terminology.image.pullPolicy | string | `"IfNotPresent"` | Pull policy. |
 | terminology.image.repository | string | `"ghcr.io/ferrohealth/ferroterm"` | FerroTERM image repository. A separate product on its own release line (https://github.com/FerroHEALTH/FerroTERM), BUSL-1.1 from the same Licensor as FerroEHR. |
-| terminology.image.tag | string | `""` | Image tag. Empty falls back to the FerroTERM release this chart is pinned to (0.4.0) — never `.Chart.appVersion`, which is FerroEHR's line. A tag other than that pin is REFUSED while `digest` below is non-empty: the digest wins, so the tag would be inert while the values file claimed otherwise. Clear `digest` to deploy a tag. |
+| terminology.image.tag | string | `""` | Image tag. Empty falls back to the FerroTERM release this chart is pinned to (0.4.1) — never `.Chart.appVersion`, which is FerroEHR's line. A tag other than that pin is REFUSED while `digest` below is non-empty: the digest wins, so the tag would be inert while the values file claimed otherwise. Clear `digest` to deploy a tag. |
 | terminology.index.mountPath | string | `"/data/index"` | Directory the index claim is mounted at, read-only. Rendered as `FERROTERM__TERMINOLOGY__INDEX` only when a claim is named. |
 | terminology.index.persistentVolumeClaim | string | `""` | Name of an EXISTING PersistentVolumeClaim holding a built index for a release you hold a licence for. Empty means the shaped seed is served alone. The chart provisions no storage and renders no build Job: build the index off-cluster with `ferroterm-build --rf2 <release.zip> --out <dir>` and fill the claim from that output. |
 | terminology.logFormat | string | `"json"` | Log format (`json` or `pretty`), passed as `FERROTERM__TELEMETRY__FORMAT`. |

@@ -606,7 +606,7 @@ has no matching section here.
   - The variables follow: for example `FERROEHR_VIEWER__AUTH__OIDC__ISSUER` is
     now `FERROEHR_VIEWER__OIDC__ISSUER`. Bookmarks to `/login` reach the
     OpenID Connect sign-in, not the sign-in page.
-  - The Helm chart (21.0.0-rc10) renders the new variables from the same
+  - The Helm chart (21.0.0) renders the new variables from the same
     `viewer.auth.oidc.*` values.
 
 - A clinical or party node row stores a `HISTORY` `origin` and an `EVENT` or `ACTION` `time` of the plain `DV_DATE_TIME` shape as their value string, leaves out an `ENTRY` `subject` that is a bare `PARTY_SELF`, and the root row leaves out its `uid`, which the version row already holds, and keeps its archetype header, language and encoding in the columns a row below the root used since generation 4, with the version's `template_id` put back into the header. Four new boolean markers on the row (`origin_compact`, `time_compact`, `party_self`, `uid_derived`) say which keys it left out, so every reader puts them back exactly where they stood and a fragment of any other shape stays as written; the canonical JSON, every AQL result and the served key order are unchanged. Migrations `ext/0010`, `clinical/0031` and `party/0024` add the markers and the readers; no data is migrated, and a row written before keeps its keys and reads the same (#4904).
@@ -643,8 +643,7 @@ has no matching section here.
   `enabled = false`. Upgrade: a values file that sets `bridge.mappings` adds
   `bridge.config.auth.issuer` and `bridge.config.auth.audience`, or
   `bridge.config.auth.enabled: false` to serve the operations to every peer
-  `bridge.networkPolicy.ingressFrom` admits. The chart moves to
-  21.0.0-rc12 (#4933).
+  `bridge.networkPolicy.ingressFrom` admits (#4933).
 
 - The viewer draws with FerroUI 0.6.6 (`ferrohealth-ui`), and serves its
   stylesheet and scripts under `/ferrohealth-ui/0.6.6/`, with FerroUI's fixes
@@ -676,6 +675,18 @@ has no matching section here.
   element's index (#4968).
 
 - The conformance instrument is Veredictum 0.4.1, and the published conformance record (`docs/conformance/ferroehr/results.json` with its `summary.md`) is a 0.4.1 released-profile run. The record gains the three `aqlc_select` cases of the aql-conformance corpus at `3ecd250` (a quoted `'True'` and a quoted `'3e102'` stay String literals, and a quoted date/time literal projects as the value it writes). Veredictum 0.4.1 skips a refusal row whose every control was skipped, where 0.4.0 errored it, so on the development profile `template_adl2/get_template_adl2_example-invalid_type` and `-invalid_detail_level` are no longer errored. The development snapshot moves RM to `09e481e9` and ITS-XML to `27c7a78b` (#4971).
+
+- The deployment artifacts run the newest FerroHEALTH releases, each pinned
+  by its index digest: FerroTERM 0.4.1
+  (`ghcr.io/ferrohealth/ferroterm:0.4.1@sha256:b7f10609992377a7b8bca666254bceca79fe4366e2e54fc5fbce079eb9abf619`)
+  in the terminology overlay, the SUT stack, the hosted sandbox and the Helm
+  chart, with the index layout unchanged; FerroPIX 0.0.15
+  (`ghcr.io/ferrohealth/ferropix:0.0.15@sha256:5572f80a3a17fe83228a2a6fcf40f1dcaf8cacc48275136927286ba6ded5c74b`)
+  in the compose quickstart, the hosted sandbox and the chart, with the
+  FerroPIX chart 0.3.7 built for it; and FerroBRIDGE 0.0.19
+  (`ghcr.io/ferrohealth/ferrobridge:0.0.19@sha256:bdf4bd416f772ac36e4b3a940eb67841989552c0a0950d680049d959bd54dcba`)
+  in the chart. None of the three renames or removes a configuration key
+  FerroEHR sets. Helm chart 21.0.0 carries the three pins (#4981).
 
 ### Removed
 

@@ -528,7 +528,7 @@ spec:
         supplementalGroupsPolicy: Strict
       containers:
         - name: bridge
-          image: "ghcr.io/ferrohealth/ferrobridge@sha256:4cdf8d4b4c4d626b99a3929a363198067f87ac70875f4ce6db1d0614884f12af"
+          image: "ghcr.io/ferrohealth/ferrobridge@sha256:bdf4bd416f772ac36e4b3a940eb67841989552c0a0950d680049d959bd54dcba"
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

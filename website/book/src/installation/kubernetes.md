@@ -946,7 +946,7 @@ Secret you own through `extraEnv` instead. Another PIX Manager:
 `ferropix.enabled: false` and `config.ehr_index.pixm_url`. A CDR run on its
 own: `ferropix.enabled: false` and `config.ehr_index.provider: local`.
 
-The chart pins FerroPIX 0.0.14 by digest (`ferropix.image`) with the
+The chart pins FerroPIX 0.0.15 by digest (`ferropix.image`) with the
 FerroPIX chart built for it. Since FerroPIX 0.0.8, `public_base_url` is a
 top-level key and the clients that may act as a Patient Identity Source sit
 in the `[[trust.issuer]]` table, apart from the `[[auth.issuer]]` entry that

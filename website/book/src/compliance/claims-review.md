@@ -1255,8 +1255,8 @@ pre-check, and an Art. 10(2) override export recorded (#4864, #4869, #4872,
 session lifetime and session watch, and its CDR requests confined to the
 configured CDR (#4873, #3057, #4223, #4954); a version equal to its predecessor
 stored once, and `[versioning] skip_identical_resend` (#4415); storage
-generation 5 (#4904); the family pins, FerroTERM 0.4.0, FerroPIX 0.0.14 and
-FerroBRIDGE 0.0.17 by digest, and the newest family crates (#4933, #4968); the
+generation 5 (#4904); the family pins, FerroTERM 0.4.1, FerroPIX 0.0.15 and
+FerroBRIDGE 0.0.19 by digest, and the newest family crates (#4933, #4981, #4968); the
 conformance record of Veredictum 0.4.1 (#4971); chart 21.0.0 with `appVersion`
 5.6.0.
 
