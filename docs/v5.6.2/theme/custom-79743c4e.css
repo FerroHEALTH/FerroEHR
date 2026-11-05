@@ -1,0 +1,72 @@
+/* FerroEHR book theme — brand recolour of the mdBook "rust"/"coal" themes.
+   Design tokens per docs/plans/w1-docs-website.md §3a. Only recolours; keeps
+   mdBook's typography and layout. */
+
+:root {
+  --rs-rust: #b7410e;
+  --rs-rust-600: #9a360b;
+  --rs-umber: #5a2408;
+  --rs-umber-050: #f6ede7;
+}
+
+/* ── Light themes (light / rust) ─────────────────────────────────────────── */
+.light,
+.rust {
+  --links: var(--rs-rust);
+  --sidebar-active: var(--rs-rust);
+  --inline-code-color: var(--rs-umber);
+  --search-mark-bg: #e4a06a;
+}
+
+.light .content code,
+.rust .content code {
+  background-color: var(--rs-umber-050);
+}
+
+/* ── Dark themes (coal / navy / ayu) ─────────────────────────────────────── */
+.coal,
+.navy,
+.ayu {
+  --links: #e4712f; /* brightened rust for AA contrast on dark */
+  --sidebar-active: #e4712f;
+  --inline-code-color: #e4a06a;
+}
+
+/* ── Shared brand touches ────────────────────────────────────────────────── */
+.content a,
+.content a:visited {
+  color: var(--links);
+}
+.content a:hover {
+  color: var(--rs-rust-600);
+}
+
+/* Rust-tinted rule under page headings. */
+.content h1,
+.content h2 {
+  border-bottom: 2px solid var(--rs-rust);
+  padding-bottom: 0.2em;
+}
+
+/* Version picker + API link injected into the top menu bar (§2e). */
+#rs-version-picker {
+  margin: 0 0.5rem;
+  font: inherit;
+  color: var(--fg);
+  background: var(--theme-hover, transparent);
+  border: 1px solid var(--rs-rust);
+  border-radius: 4px;
+  padding: 0.15rem 0.35rem;
+  cursor: pointer;
+}
+#rs-api-link {
+  display: inline-flex;
+  align-items: center;
+  color: var(--rs-rust);
+  font-weight: 600;
+  text-decoration: none;
+  padding: 0 0.5rem;
+}
+#rs-api-link:hover {
+  color: var(--rs-rust-600);
+}
