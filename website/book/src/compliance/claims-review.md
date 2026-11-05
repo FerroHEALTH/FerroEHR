@@ -446,6 +446,7 @@ cut, after the texts in scope have been read.
 | 2026-10-27 | 5.5.0, after `bed3543e3` | 1 claim, in the hazard log: H2 named a middleware test renamed by #4192 | the conformance chapter bars counted the CNF TDD cases until the Veredictum 0.3.3 record, which carries none, replaced them (#4204) |
 | 2026-11-04 | 5.6.0, after `25db5c69c` | 4 claims, in the README, the landing page and two book pages: each said FerroBRIDGE's broker delivery was in progress, which FerroBRIDGE 0.0.15 ships | the canonical-XML `reverse_relationships` left open by the 5.6.0-rc8 review shipped (#4778); a v2-namespace OPT 1.4 ordinal list stays tracked on #4777 |
 | 2026-11-05 | 5.6.1, after `75262e1ce` | 1 claim, in the Kubernetes installation: it said the chart pins FerroPIX 0.0.15, which the 5.6.1 pins moved to 0.0.16 | a v2-namespace OPT 1.4 ordinal list stays tracked on #4777 |
+| 2026-11-05 | 5.6.2, after `ea1190926` | none; the texts in scope make no claim this release changes | a v2-namespace OPT 1.4 ordinal list stays tracked on #4777 |
 
 ## The review of 2026-10-20, for 5.2.0
 
@@ -1334,6 +1335,39 @@ change no behaviour (#4987); chart 21.0.1 with `appVersion` 5.6.1.
   chart description** make no claim this release changes.
 
 ### Left open on 2026-11-05, for 5.6.1
+
+- A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is
+  accepted, tracked on #4777 for 5.7.0.
+- The performance page keeps its earlier figures until a record measured on
+  the reference host replaces them.
+
+## The review of 2026-11-05, for 5.6.2
+
+Read on the tree after commit `ea1190926`, for FerroEHR 5.6.2, the
+security-only patch release after 5.6.0; the v5.6.1 tag exists and its
+release never published. The fact added since 5.6.1 and checked in every text
+in scope: CVE-2026-76844 in the zlib package of the three images, judged
+`not_affected` in `security/vex/ferroehr-os.openvex.json` and
+`security/vex/postgres-os.openvex.json` (#4993); chart 21.0.2 with
+`appVersion` 5.6.2.
+
+### Read and kept on 2026-11-05, for 5.6.2
+
+- **[Verifying releases](../verifying-releases.md)** describes the two OS
+  documents by the packages they cover, zlib among them, and counts six
+  `affected` findings in `ferroehr-postgres`; the new statements are
+  `not_affected`, so both hold.
+- **The CRA risk assessment** gains revision 27 for the judgement; the hazard
+  log and the technical documentation keep their rows, since no module of the
+  logging component changed.
+- **The installation pins**: the Kubernetes installation, the chart README and
+  verifying releases name chart 21.0.2 and image 5.6.2.
+- **`SECURITY.md`, the
+  [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the
+  [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the
+  chart description** make no claim this release changes.
+
+### Left open on 2026-11-05, for 5.6.2
 
 - A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is
   accepted, tracked on #4777 for 5.7.0.
