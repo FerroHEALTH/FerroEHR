@@ -1477,6 +1477,8 @@ fn every_partitioned_relation_is_pinned_to_the_hot_tier_by_a_literal() {
         WARD_QUERY,
         "SELECT f1/name/value FROM EHR e CONTAINS FOLDER f1 NOT CONTAINS FOLDER f2",
         "SELECT c/uid/value FROM EHR e CONTAINS VERSION v[ALL_VERSIONS] CONTAINS COMPOSITION c",
+        "SELECT v/attestations FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c \
+         WHERE EXISTS v/attestations[is_pending=true]",
     ] {
         let sql = build_sql(aql);
         // One `tier =` comparison per partitioned relation in the statement,

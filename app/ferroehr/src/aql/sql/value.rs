@@ -34,6 +34,7 @@ use super::expr::{
     version_field_expr,
 };
 use super::from::{attribute_child, is_vo_root_type};
+use super::jsonpath::{jsonpath_var, jsonpath_vars};
 use super::{Builder, ValueMode};
 
 impl Builder<'_> {
@@ -54,6 +55,7 @@ impl Builder<'_> {
                 })?;
                 Ok(version_field_expr(&voa, || self.ensure_audit(&voa), *field))
             }
+            PathTarget::Attestations { leaf, last } => self.attestation_value(leaf, *last, mode),
             PathTarget::Ehr { source, field } => {
                 let alias = self.ehr_alias.get(&source.0).cloned().ok_or_else(|| {
                     SqlError::Unsupported("EHR path without a bound EHR".to_owned())
@@ -246,7 +248,12 @@ impl Builder<'_> {
                 self.ensure_ehr_status_root(leaf.source.0)?;
                 leaf
             }
-            PathTarget::Version { .. } | PathTarget::Ehr { .. } => return Ok(None),
+            PathTarget::Attestations { leaf, last: false } => {
+                return Ok(Some(self.attestation_walk(leaf, mode)?.0));
+            }
+            PathTarget::Version { .. }
+            | PathTarget::Ehr { .. }
+            | PathTarget::Attestations { last: true, .. } => return Ok(None),
         };
         if self.has_column_read(leaf, mode) {
             return Ok(None);
@@ -564,17 +571,16 @@ impl Builder<'_> {
                   third argument of jsonb_path_query*), not an RM value — no \
                   generated type models it"
     )]
-    fn fragment_path(&self, leaf: &LeafPath) -> Result<Option<(String, Option<Expr>)>, AqlError> {
+    pub(super) fn fragment_path(
+        &self,
+        leaf: &LeafPath,
+    ) -> Result<Option<(String, Option<Expr>)>, AqlError> {
         if leaf.fragment.is_empty() {
             return Ok(None);
         }
         let mut jp = String::from("$");
         let mut vars = serde_json::Map::new();
-        let var = |v: serde_json::Value, vars: &mut serde_json::Map<String, serde_json::Value>| {
-            let name = format!("p{}", vars.len());
-            vars.insert(name.clone(), v);
-            name
-        };
+        let var = jsonpath_var;
         for step in &leaf.fragment {
             let _ = write!(jp, ".{}", step.name);
             // NOTE: PostgreSQL 18 docs "Strict and Lax Modes": lax mode matches a path
@@ -613,27 +619,12 @@ impl Builder<'_> {
                     }
                 }
             }
-            for sp in &pred.standard {
-                let value = jsonpath_scalar(self.bind_value(&sp.value)?)?;
-                let v = var(value, &mut vars);
-                let mut lhs = String::from("@");
-                for part in &sp.path {
-                    let _ = write!(lhs, ".{part}");
-                }
-                conds.push(format!("{lhs} {} ${v}", jsonpath_op(sp.op)));
-            }
+            conds.extend(self.standard_conds(&pred.standard, &mut vars)?);
             if !conds.is_empty() {
                 let _ = write!(jp, " ? ({})", conds.join(" && "));
             }
         }
-        let vars_expr = if vars.is_empty() {
-            None
-        } else {
-            Some(cast(
-                Expr::val(serde_json::Value::Object(vars).to_string()),
-                "jsonb",
-            ))
-        };
+        let vars_expr = jsonpath_vars(vars);
         Ok(Some((jp, vars_expr)))
     }
 
@@ -965,7 +956,7 @@ fn all_of(conds: Option<Vec<Expr>>) -> Option<Expr> {
 /// preceding FROM items — PostgreSQL docs §7.2.1.5 LATERAL Subqueries), and
 /// for a scalar-returning function the table alias doubles as the column name
 /// (§7.2.1.4 Table Functions).
-fn fragment_items(
+pub(super) fn fragment_items(
     sub: &mut sea_query::SelectStatement,
     data: Expr,
     jp: &str,
@@ -981,56 +972,6 @@ fn fragment_items(
     }
     sub.from_function(func, Alias::new(alias.as_str()));
     derived_col(&alias, &alias)
-}
-
-// ── jsonpaths ───────────────────────────────────────────────────────────────
-
-/// The jsonpath filter-expression operator for an AQL comparison operator
-/// (PostgreSQL docs §9.16.2 — the SQL/JSON path comparison operators).
-fn jsonpath_op(op: openehr_query::lexer::CompOp) -> &'static str {
-    match op {
-        openehr_query::lexer::CompOp::Eq => "==",
-        openehr_query::lexer::CompOp::Ne => "!=",
-        openehr_query::lexer::CompOp::Lt => "<",
-        openehr_query::lexer::CompOp::Le => "<=",
-        openehr_query::lexer::CompOp::Gt => ">",
-        openehr_query::lexer::CompOp::Ge => ">=",
-    }
-}
-
-/// A bound predicate value as the JSON scalar a jsonpath `vars` object
-/// carries. A non-scalar bind cannot appear in a filter comparison and is a
-/// typed reject.
-#[expect(
-    clippy::disallowed_types,
-    reason = "the jsonpath vars object is SQL/JSON wire material (the bound \
-              third argument of jsonb_path_query*), not an RM value — no \
-              generated type models it"
-)]
-fn jsonpath_scalar(value: sea_query::Value) -> Result<serde_json::Value, AqlError> {
-    Ok(match value {
-        sea_query::Value::String(Some(s)) => serde_json::Value::String(s),
-        sea_query::Value::Bool(Some(b)) => serde_json::Value::Bool(b),
-        sea_query::Value::BigInt(Some(i)) => serde_json::Value::from(i),
-        sea_query::Value::Int(Some(i)) => serde_json::Value::from(i),
-        sea_query::Value::Double(Some(f)) => serde_json::Value::from(f),
-        other => {
-            return Err(SqlError::Unsupported(format!(
-                "a fragment-step predicate compares against a non-scalar value ({other:?})"
-            ))
-            .into());
-        }
-    })
-}
-
-/// Build a jsonpath from a relative object path (`[a, b]` → `$.a.b`) — a node
-/// standard-predicate sub-path (QUERY master03 §Standard predicate).
-pub(super) fn jsonpath(parts: &[String]) -> String {
-    let mut jp = String::from("$");
-    for p in parts {
-        let _ = write!(jp, ".{p}");
-    }
-    jp
 }
 
 /// The per-row walk over every data item a path selects

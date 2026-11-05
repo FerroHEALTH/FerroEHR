@@ -49,12 +49,14 @@
 //! test rather than a runtime SQL error.
 
 mod archetype;
+mod attestation;
 mod compact;
 mod condition;
 mod expr;
 mod from;
 mod gates;
 mod head;
+mod jsonpath;
 mod predicate;
 mod scope;
 mod select;

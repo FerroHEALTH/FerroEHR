@@ -21,7 +21,8 @@
 //! re-derives it from real output over a query corpus, so a new construct that
 //! widens the set fails this suite.
 //!
-//! * **Tables** — `db::iden` (`Node`, `VoVersion`, `Ehr`, `Audit`): `sea-query`
+//! * **Tables** — `db::iden` (`Node`, `VoVersion`, `Ehr`, `Audit`,
+//!   `VoAttestation`): `sea-query`
 //!   `Iden` enums, one variant per relation, no string path in.
 //! * **Columns** — string literals at every `aql::sql::expr::col` call site,
 //!   plus `storage::promoted::PROMOTED_LEAVES[..].column`, whose fields are
@@ -233,6 +234,21 @@ const PARAM_POSITIONS: &[(&str, &str)] = &[
     (
         "VERSION commit-audit predicate",
         "SELECT c/name/value FROM VERSION v[commit_audit/committer/name = $p] CONTAINS COMPOSITION c",
+    ),
+    (
+        "VERSION attestations predicate",
+        "SELECT c/name/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c \
+         WHERE EXISTS v/attestations[reason/value = $p]",
+    ),
+    (
+        "VERSION attestations comparison",
+        "SELECT c/name/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c \
+         WHERE v/attestations/reason/value = $p",
+    ),
+    (
+        "LAST over a predicated attestations path",
+        "SELECT c/name/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c \
+         WHERE LAST(v/attestations[reason/value = $p]/is_pending) = true",
     ),
     (
         "ORDER BY over a filtered path",
@@ -525,6 +541,8 @@ const CORPUS: &[&str] = &[
     "SELECT e/ehr_status FROM EHR e",
     "SELECT v/commit_audit/time_committed, v/lifecycle_state/value FROM VERSION v CONTAINS COMPOSITION c",
     "SELECT c/name/value FROM VERSION v[ALL_VERSIONS] CONTAINS COMPOSITION c",
+    "SELECT v/attestations, v/commit_audit/is_pending FROM EHR e CONTAINS VERSION v \
+     CONTAINS COMPOSITION c WHERE EXISTS v/attestations[is_pending = true]",
     "SELECT e/ehr_id/value FROM EHR e CONTAINS (COMPOSITION c OR OBSERVATION o)",
     "SELECT c/name/value FROM COMPOSITION c NOT CONTAINS OBSERVATION o",
     "SELECT c/name/value FROM COMPOSITION c WHERE c/context/start_time/value > '2020-01-01'",
@@ -599,6 +617,10 @@ const IDENTIFIERS: &[&str] = &[
     "change_type",
     "description",
     "committer",
+    "attestation",
+    // vo_attestation (`migrations/clinical/0003_change_control.sql`)
+    "vo_attestation",
+    "at_committal",
     // NOTE: `T` is the literal date/time separator inside the `to_char` format
     // string of QUERY master03 §Date and time functions, not an identifier.
     "T",

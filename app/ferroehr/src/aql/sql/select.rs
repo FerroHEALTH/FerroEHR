@@ -260,7 +260,9 @@ impl Builder<'_> {
         let mut collect = |t: &PathTarget| match t {
             PathTarget::Data(leaf) => leaves.push((false, (**leaf).clone())),
             PathTarget::EhrStatus(leaf) => leaves.push((true, (**leaf).clone())),
-            PathTarget::Version { .. } | PathTarget::Ehr { .. } => {}
+            PathTarget::Version { .. }
+            | PathTarget::Ehr { .. }
+            | PathTarget::Attestations { .. } => {}
         };
         // Aggregate arguments add no binding: an aggregate reads every data
         // item of its own path per row (`aggregate_over_items`).
@@ -428,7 +430,10 @@ fn target_path_string(target: &PathTarget) -> Option<String> {
         // text (`SelectColumn.path`), which the caller prefers; this fallback is
         // unused for them (a leaf under EHR_STATUS is rooted below `ehr_status`,
         // so its bare leaf path would omit that prefix).
-        PathTarget::Version { .. } | PathTarget::Ehr { .. } | PathTarget::EhrStatus(_) => None,
+        PathTarget::Version { .. }
+        | PathTarget::Ehr { .. }
+        | PathTarget::EhrStatus(_)
+        | PathTarget::Attestations { .. } => None,
     }
 }
 
@@ -519,6 +524,7 @@ impl Builder<'_> {
             PathTarget::Data(leaf) | PathTarget::EhrStatus(leaf) => {
                 !self.has_column_read(leaf, mode)
             }
+            PathTarget::Attestations { .. } => true,
             PathTarget::Version { .. } | PathTarget::Ehr { .. } => false,
         }
     }

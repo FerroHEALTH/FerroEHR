@@ -251,6 +251,17 @@ pub enum AqlFeatureError {
     #[error("function `{0}` is not supported (QUERY §Functions)")]
     UnsupportedFunction(String),
 
+    /// A call of the FerroEHR extension function `LAST` whose arguments are
+    /// not exactly one path below `attestations` of a VERSION variable. QUERY
+    /// master03 §Functions admits implementation functions; this one is our
+    /// own design.
+    #[error(
+        "LAST takes exactly one path below the attestations of a VERSION variable, \
+         e.g. LAST(v/attestations/is_pending); got {0} (a FerroEHR extension function, \
+         QUERY §Functions)"
+    )]
+    LastArgument(String),
+
     /// A version predicate addressing metadata the planner does not model.
     /// QUERY §Predicates/Standard predicate (version).
     #[error("version predicate on `{0}` is not supported (QUERY §Predicates/Standard predicate)")]

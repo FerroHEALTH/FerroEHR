@@ -20,7 +20,7 @@ use openehr_rm::v1_2::model;
 
 use super::analyze::{
     Binding, BindingKind, Bindings, analyze_path, param_name, resolve_ehr_predicate,
-    resolve_node_predicate, resolve_version_predicate, typed_lit,
+    resolve_node_predicate, typed_lit,
 };
 use super::error::{AnalysisError, AqlError, AqlFeatureError};
 use super::ir::{
@@ -28,6 +28,7 @@ use super::ir::{
     Link, Operand, OrderKey, PathTarget, QueryDomain, QueryIr, RmSource, SelectColumn, SelectValue,
     Source, SourceId, TypeSet, TypedLit, VersionScope, VersionSource,
 };
+use super::version_path::{last_attestation, resolve_version_predicate};
 use crate::versioning::Kind;
 
 /// The demographic roots the experimental demographic extension serves.
@@ -446,8 +447,12 @@ impl Planner {
             ColumnExpr::Primitive(p) => SelectValue::Literal(typed_lit(p)),
             ColumnExpr::Aggregate(agg) => self.lower_aggregate(agg)?,
             ColumnExpr::Function(f) => {
-                let (func, args) = self.lower_function(f)?;
-                SelectValue::Function { func, args }
+                if let Some(target) = last_attestation(f, &self.bindings)? {
+                    SelectValue::Path(target)
+                } else {
+                    let (func, args) = self.lower_function(f)?;
+                    SelectValue::Function { func, args }
+                }
             }
         };
         // The RESULT_SET column `path` echoes the query's own path text
@@ -574,10 +579,7 @@ impl Planner {
     fn lower_compare_operand(&self, op: &CompareOperand) -> Result<Operand, AqlError> {
         match op {
             CompareOperand::Path(p) => Ok(Operand::Path(analyze_path(p, &self.bindings)?)),
-            CompareOperand::Function(f) => {
-                let (func, args) = self.lower_function(f)?;
-                Ok(Operand::Function { func, args })
-            }
+            CompareOperand::Function(f) => self.lower_call(f),
         }
     }
 
@@ -586,11 +588,18 @@ impl Planner {
             Terminal::Primitive(p) => Ok(Operand::Literal(typed_lit(p))),
             Terminal::Parameter(p) => Ok(Operand::Param(param_name(p))),
             Terminal::Path(p) => Ok(Operand::Path(analyze_path(p, &self.bindings)?)),
-            Terminal::Function(f) => {
-                let (func, args) = self.lower_function(f)?;
-                Ok(Operand::Function { func, args })
-            }
+            Terminal::Function(f) => self.lower_call(f),
         }
+    }
+
+    /// A function call as an operand: the `LAST` extension's path, or a
+    /// built-in function.
+    fn lower_call(&self, call: &FunctionCall) -> Result<Operand, AqlError> {
+        if let Some(target) = last_attestation(call, &self.bindings)? {
+            return Ok(Operand::Path(target));
+        }
+        let (func, args) = self.lower_function(call)?;
+        Ok(Operand::Function { func, args })
     }
 
     fn lower_function(
@@ -673,7 +682,9 @@ pub(crate) fn lower_limit(
 /// the target is numerically aggregable.
 fn non_numeric_leaf(target: &PathTarget) -> Option<&'static str> {
     let coercion = match target {
-        PathTarget::Data(leaf) | PathTarget::EhrStatus(leaf) => leaf.coercion,
+        PathTarget::Data(leaf)
+        | PathTarget::EhrStatus(leaf)
+        | PathTarget::Attestations { leaf, .. } => leaf.coercion,
         PathTarget::Version { .. } | PathTarget::Ehr { .. } => return Some("version/EHR metadata"),
     };
     match coercion {
@@ -745,14 +756,10 @@ fn comparison_coercion(lhs: &Operand, rhs: &Operand) -> Coercion {
 
 fn target_coercion(t: &PathTarget) -> Coercion {
     match t {
-        PathTarget::Data(l) | PathTarget::EhrStatus(l) => l.coercion,
-        PathTarget::Version { field, .. } => {
-            if *field == super::ir::VersionField::TimeCommitted {
-                Coercion::Temporal
-            } else {
-                Coercion::Text
-            }
-        }
+        PathTarget::Data(l)
+        | PathTarget::EhrStatus(l)
+        | PathTarget::Attestations { leaf: l, .. } => l.coercion,
+        PathTarget::Version { field, .. } => field.coercion(),
         PathTarget::Ehr { field, .. } => {
             if *field == super::ir::EhrField::TimeCreated {
                 Coercion::Temporal
