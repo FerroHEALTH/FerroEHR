@@ -358,7 +358,8 @@ async fn serve_tls(tls: TlsSection) -> u16 {
     let port = listener.local_addr().expect("addr").port();
     // Fail on the test's own thread when the files do not load, rather than in
     // the listener task.
-    ferrohealth_server::tls::server_config(&tls).expect("tls config");
+    ferrohealth_server::tls::server_config_of(&tls, ferrohealth_server::tls::TlsKeys::SERVER)
+        .expect("tls config");
     let section = ServerSection {
         tls: Some(tls),
         ..ServerSection::default()
@@ -626,8 +627,11 @@ fn the_configured_suites_are_aead_only_over_ephemeral_key_agreement() {
     use rustls::CipherSuite;
 
     let dir = assert_fs::TempDir::new().expect("tempdir");
-    let config = ferrohealth_server::tls::server_config(&tls_files(&dir, ClientAuth::None))
-        .expect("tls config");
+    let config = ferrohealth_server::tls::server_config_of(
+        &tls_files(&dir, ClientAuth::None),
+        ferrohealth_server::tls::TlsKeys::SERVER,
+    )
+    .expect("tls config");
     let suites = &config.crypto_provider().cipher_suites;
     assert!(!suites.is_empty(), "the provider must offer suites");
 
@@ -664,7 +668,9 @@ fn the_configured_suites_are_aead_only_over_ephemeral_key_agreement() {
 async fn missing_key_material_is_a_typed_boot_error() {
     let dir = assert_fs::TempDir::new().expect("tempdir");
     let tls = TlsSection::new(dir.path().join("absent.pem"), dir.path().join("absent.key"));
-    let err = ferrohealth_server::tls::server_config(&tls).expect_err("must fail");
+    let err =
+        ferrohealth_server::tls::server_config_of(&tls, ferrohealth_server::tls::TlsKeys::SERVER)
+            .expect_err("must fail");
     assert!(
         matches!(err, ferrohealth_server::tls::TlsError::Read { .. }),
         "{err:?}"
@@ -753,7 +759,9 @@ fn an_explicit_curve_certificate_is_refused() {
         PKI.explicit_curve.as_bytes(),
         PKI.explicit_curve_key.as_bytes(),
     );
-    let err = ferrohealth_server::tls::server_config(&tls).expect_err("must refuse");
+    let err =
+        ferrohealth_server::tls::server_config_of(&tls, ferrohealth_server::tls::TlsKeys::SERVER)
+            .expect_err("must refuse");
     assert!(
         matches!(err, ferrohealth_server::tls::TlsError::Config(_)),
         "{err:?}"
@@ -765,7 +773,9 @@ fn an_explicit_curve_certificate_is_refused() {
 fn a_key_of_another_certificate_is_refused() {
     let dir = assert_fs::TempDir::new().expect("tempdir");
     let tls = pair_files(&dir, PKI.ec_leaf.as_bytes(), PKI.leaf_key.as_bytes());
-    let err = ferrohealth_server::tls::server_config(&tls).expect_err("must refuse");
+    let err =
+        ferrohealth_server::tls::server_config_of(&tls, ferrohealth_server::tls::TlsKeys::SERVER)
+            .expect_err("must refuse");
     assert!(
         matches!(err, ferrohealth_server::tls::TlsError::Config(_)),
         "{err:?}"
