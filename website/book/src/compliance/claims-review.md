@@ -444,6 +444,7 @@ cut, after the texts in scope have been read.
 | 2026-10-24 | 5.4.1, after `9fdd36091` | 2 claims, in two book pages: the compliance index named `[terminology.external]` and a terminology route, and the crates page pinned `0.0.97` | nothing |
 | 2026-10-25 | 5.4.2, after `2333f98ba` | none; the changes of this release updated their own pages in the pull requests that made them | nothing |
 | 2026-10-27 | 5.5.0, after `bed3543e3` | 1 claim, in the hazard log: H2 named a middleware test renamed by #4192 | the conformance chapter bars counted the CNF TDD cases until the Veredictum 0.3.3 record, which carries none, replaced them (#4204) |
+| 2026-11-04 | 5.6.0, after `25db5c69c` | 4 claims, in the README, the landing page and two book pages: each said FerroBRIDGE's broker delivery was in progress, which FerroBRIDGE 0.0.15 ships | the canonical-XML `reverse_relationships` left open by the 5.6.0-rc8 review shipped (#4778); a v2-namespace OPT 1.4 ordinal list stays tracked on #4777 |
 
 ## The review of 2026-10-20, for 5.2.0
 
@@ -1239,3 +1240,59 @@ read on every route as RFC 7240 §2 defines it (#4722); chart
 - Everything the 5.6.0-rc8 review left open: the development-profile run's
   failed row tracked on #4777, the canonical-XML `reverse_relationships`
   (#4778), the 5.5.0 sandbox and the performance page's earlier figures.
+
+## The review of 2026-11-04, for 5.6.0
+
+Read on the tree after commit `25db5c69c`, for FerroEHR 5.6.0, the stable
+release after 5.5.0 and the ten release candidates whose reviews stand above.
+The facts added since 5.6.0-rc10 and checked in every text in scope: an EHR
+whose access settings do not parse held closed, such settings refused on every
+write and load, and the administrator's repair route (#4846, #4854, #4865,
+#4853); the manifest export checked against the `EHR_ACCESS` settings of every
+EHR it names, both EHR Extract export and import routes behind the ABAC
+pre-check, and an Art. 10(2) override export recorded (#4864, #4869, #4872,
+#4870); the viewer's sign-in through `ferrohealth-session`, its absolute
+session lifetime and session watch, and its CDR requests confined to the
+configured CDR (#4873, #3057, #4223, #4954); a version equal to its predecessor
+stored once, and `[versioning] skip_identical_resend` (#4415); storage
+generation 5 (#4904); the family pins, FerroTERM 0.4.1, FerroPIX 0.0.15 and
+FerroBRIDGE 0.0.19 by digest, and the newest family crates (#4933, #4981, #4968); the
+conformance record of Veredictum 0.4.1 (#4971); chart 21.0.0 with `appVersion`
+5.6.0.
+
+### Changed on 2026-11-04, for 5.6.0
+
+- **The README, the landing page, [beyond core](../beyond-core/index.md) and
+  [change events](../beyond-core/outbox-feed.md)** said FerroBRIDGE's broker
+  delivery was in progress and that a deployment needing broker events keeps
+  5.5.0 or 5.6.0-rc7. FerroBRIDGE 0.0.15 delivers the outbox feed to an AMQP
+  broker under its `[events]` lane (FerroHEALTH/FerroBRIDGE issue 1367, closed
+  2026-11-02), so each text now names that release, and the migration steps
+  on the change-events page apply to FerroBRIDGE 0.0.15 or later.
+
+### Read and kept on 2026-11-04, for 5.6.0
+
+- **The chart, its README and the [Kubernetes installation](../installation/kubernetes.md)**
+  say what FerroBRIDGE 0.0.17 checks through `[auth]`, which #4933 corrected
+  where they said FerroBRIDGE authenticated no caller.
+- **The configuration and operations pages** name the refusal of the OTLP TLS
+  files beside an endpoint that is not `https://`, the span named by method
+  and route and `http_server_active_requests` (#4968).
+- **The hazard log, the technical documentation and the CRA risk
+  assessment**: every test the hazard log names exists; it gains review 19,
+  the CRA risk assessment revision 25, and the technical documentation keeps
+  its 5.6.0 row.
+- **The installation pins**: the Kubernetes installation, the chart README and
+  [verifying releases](../verifying-releases.md) name chart 21.0.0 and image
+  5.6.0.
+- **`SECURITY.md`, the
+  [information sheet](https://ferrohealth.eu/docs/ehds/information-sheet.html), the
+  [instructions for use](https://ferrohealth.eu/docs/ehds/instructions-for-use.html), the image labels and the
+  chart description** make no claim this release changes.
+
+### Left open on 2026-11-04, for 5.6.0
+
+- A v2-namespace OPT 1.4 whose ordinal list keeps `xsi:type DV_ORDINAL` is
+  accepted, tracked on #4777 for the next release.
+- The performance page keeps its earlier figures until a record measured on
+  the reference host replaces them.

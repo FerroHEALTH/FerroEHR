@@ -1,1 +1,0 @@
-- An archetype root converted from an ADL 1.4 operational template records each language its terminology carries beside the template's own as a `conversion_details` entry, `translation.<language>`, naming the source template. An OPT 1.4 has no translation record, so the conversion writes no `translations` entry for these languages.

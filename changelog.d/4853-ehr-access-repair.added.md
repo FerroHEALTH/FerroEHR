@@ -1,1 +1,0 @@
-- An administrator repairs an EHR held closed by `EHR_ACCESS` settings that do not parse with `POST /admin/ehr-access/repair` under the extensions root, naming the EHR and the new settings in the body. The repair commits a new `EHR_ACCESS` version with its commit audit and contribution, writes an access record, and is refused with `409` for an EHR that is not held.

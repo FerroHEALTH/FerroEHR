@@ -1,1 +1,0 @@
-- The Veredictum pin watcher workflow, `scripts/checks/veredictum-pin.sh` with its `veredictum-pin-guard` job, and the `no-conformance-run` label are gone: a pin bump now runs the new catalogue against its own build in the Conformance workflow.

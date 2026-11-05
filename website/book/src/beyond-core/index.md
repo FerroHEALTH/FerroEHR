@@ -89,8 +89,8 @@ for the exact list of settings a slim binary rejects.
 - **[Change events (outbox feed)](outbox-feed.md):** a transactional outbox
   that records a PHI-free event for every commit and serves it, in order and
   at least once, to the readers you name, so downstream systems can respond to
-  changes instead of polling. Delivery on to an AMQP broker moves to
-  FerroBRIDGE, where it is [in progress](https://github.com/FerroHEALTH/FerroBRIDGE/issues/1367).
+  changes instead of polling. FerroBRIDGE 0.0.15 and later deliver the events
+  on to an AMQP broker.
 - **[S3 multimedia](s3-multimedia.md):** threshold-based, content-addressed
   offload of large `DV_MULTIMEDIA` blobs to any S3-compatible object store, with
   integrity verification on the way back in.

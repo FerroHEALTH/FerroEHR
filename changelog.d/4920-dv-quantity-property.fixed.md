@@ -1,1 +1,0 @@
-- The ADL 1.4 to 2 converter no longer writes a `property` attribute on `DV_QUANTITY`, which no RM release defines, from an ADL 1.4 archetype or an operational template; it drops the `C_DV_QUANTITY` property constraint and records it in `conversion_details`. Before, a converted archetype carrying one was refused with VCARM.
