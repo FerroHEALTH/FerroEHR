@@ -271,12 +271,17 @@ timeout_ms = 10000           # one call to the authorization server
 realm = ""                   # the challenge realm; empty = "ferroehr"
 # The exact `sub` values whose token, when it carries no resource scope of
 # either grammar, meets every SMART on openEHR requirement; a token that
-# carries scopes gets only its scopes.
+# carries scopes gets only its scopes. Beside several [[auth.issuer]] tables
+# each entry is "<issuer>#<sub>" and admits that issuer's tokens alone; a bare
+# entry refuses the start (GHSA-pfgx-xq28-2629).
 scopeless_subjects = []
 # The token claims the caller's roles are read from, in order; a dotted path
 # reaches a nested claim. `scope` is not a role source: a scope grants a client
 # delegated authority (RFC 6749 §3.3). The default is RFC 9068 §2.2.3.1's
-# three; a Keycloak issuer adds its nested "realm_access.roles".
+# three; a Keycloak issuer adds its nested "realm_access.roles". Beside
+# several [[auth.issuer]] tables each path is "<issuer>#<path>", read from that
+# issuer's tokens alone, and a bare path, this default included, refuses the
+# start: name the issuers whose roles count, or set [] to read none.
 role_claims = ["roles", "groups", "entitlements"]
 capabilities = []            # SMART capabilities the discovery document adds
 scopes_supported = []        # the scopes the discovery document lists; empty = the ones the route table honours
