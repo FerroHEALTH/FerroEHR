@@ -149,8 +149,12 @@ impl FerroEhrService {
         // commit runtime", ITS-REST overview `Requests_and_responses.md`
         // §"openehr-version and openehr-audit-details").
         let Resolved {
-            audit, envelope, ..
+            audit,
+            envelope,
+            incomplete,
         } = self.resolve_write(&request, change_type::CREATION, "PARTY creation")?;
+        self.mapped_template_gate(kind.rm_type(), &request.data, incomplete)
+            .await?;
         let body = request.data;
         // Keep the served bytes for the in-memory representation, unless the
         // commit rewrites the body (then the fresh read is the stored form).
@@ -240,6 +244,13 @@ impl FerroEhrService {
             party_invariants(kind.rm_type(), &request.data, false, Some(vo_id))?;
             self.resolve_write(&request, change_type::MODIFICATION, "PARTY update")
         })();
+        let checked = match checked {
+            Ok(resolved) => self
+                .mapped_template_gate(kind.rm_type(), &request.data, resolved.incomplete)
+                .await
+                .map(|()| resolved),
+            Err(e) => Err(e),
+        };
         let body = request.data;
         let repr_body = (!support::commit_rewrites_body(self)).then(|| body.clone());
         let committed = self

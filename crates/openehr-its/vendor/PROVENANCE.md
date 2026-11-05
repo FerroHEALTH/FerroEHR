@@ -13,7 +13,7 @@ tooling deliberately excluded. All four `specifications-ITS-*` repos are
 | ITS-XML XSDs (v2/nsv2) | specifications-ITS-XML | `de8b37ba…` (tag `Release-2.0.0v2`) | `../schemas/xml/its-xml-2.0.0-nsv2/` (70 XSDs) |
 | ITS-XML XSDs (v1/nsv1) | specifications-ITS-XML | `f7a93777…` (tag `Release-1.0.2v2`) | `../schemas/xml/its-xml-1.0.2-nsv1/` (17 XSDs — parity target) |
 | ITS-REST OAS | specifications-ITS-REST | `24058992…` (tag `Release-1.1.0`) | `rest-oas/*.openapi.yaml` (all 21: 7 groups × codegen/html/validation) |
-| ITS-BMM meta-model | specifications-ITS-BMM | `37b31739…` (master), plus three json overlays from the component repos | `../../openehr-codegen/vendor/bmm/components/` (json+odin, 36 files) |
+| ITS-BMM meta-model | specifications-ITS-BMM | `1c678406…` (master), plus four json overlays from the component repos | `../../openehr-codegen/vendor/bmm/components/` (json+odin, 36 files) |
 
 Every surface above is fetched and reproduced by
 `scripts/vendor/codegen-inputs.sh`; `--check` diffs a fresh fetch at the

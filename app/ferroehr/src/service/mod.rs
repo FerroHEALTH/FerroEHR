@@ -231,6 +231,9 @@ pub struct FerroEhrService {
     /// which leaves the person's access immediate.
     pub(in crate::service) access_delay:
         Option<Arc<crate::config::access_delay::AccessDelayPolicy>>,
+    /// The demographic definitions of the shared party mapping; empty in
+    /// [`Self::new`], which validates no party against a template.
+    pub(in crate::service) party_templates: Arc<demographic::template::MappedPartyTemplates>,
 }
 
 impl FerroEhrService {
@@ -286,6 +289,7 @@ impl FerroEhrService {
             cohort: Arc::new(linkage::cohort::config::CohortConfig::default()),
             ehr_index: ehr_index::provider::EhrIndexProvider::Unconfigured,
             access_delay: None,
+            party_templates: Arc::default(),
         }
     }
 

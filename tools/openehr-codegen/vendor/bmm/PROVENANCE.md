@@ -1,7 +1,12 @@
 # Vendored openEHR BMM meta-model (ITS-BMM), verbatim
 
 Source: https://github.com/openEHR/specifications-ITS-BMM
-Pinned commit: `37b317396eb9b5f03c4c422296a15bdd665028dd` (master)
+Pinned commit: `1c67840603911a4e8a3e5ec74cd1593b76ce0e3d` (master)
+Re-pinned: 2026-11-05 from `37b317396eb9b5f03c4c422296a15bdd665028dd`. The six
+commits between them add repository scaffolding (`.claude/`, `AGENTS.md`,
+`.gitignore`) and the design note `docs/bmm-sync.md`; `components/` is
+byte-identical at both commits, so the vendored tree and the generated crates
+do not change, and ITS-BMM still republishes none of the four overlays below.
 Fetched: 2026-07-04 · Layout: **verbatim upstream `components/`** mirror,
 `json/` and `odin/` serializations (the `yaml/` one is not vendored: nothing
 here reads it).
@@ -85,7 +90,7 @@ both P_BMM readers and requires the same `P_BMM_SCHEMA` value. The other
 `tests/it/el_assertions.rs`) read the json files codegen reads. For BASE 1.3.0,
 RM 1.2.0, TERM 3.1.0 and LANG 1.1.0 (the P_BMM file; its `-bmm3` twin keeps its
 ODIN file) no ODIN file is vendored: the ITS-BMM copies at
-`37b31739…` predate the json overlays above, and `codegen-inputs.sh` drops them.
+`1c678406…` predate the json overlays above, and `codegen-inputs.sh` drops them.
 
 Note (drift caught 2026-07-04): re-vendoring verbatim at this commit corrected a
 one-character doc typo (`senstive`->`sensitive`) in BASE's

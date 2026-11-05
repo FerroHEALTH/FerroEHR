@@ -111,6 +111,7 @@ mod service_events;
 mod service_extract;
 mod service_import;
 mod service_message_audit;
+mod service_party_template;
 mod service_relationship_index;
 mod service_signing;
 mod service_spec_profile;

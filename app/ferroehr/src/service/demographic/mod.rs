@@ -30,6 +30,7 @@
 //! - `versioned` — the `VERSIONED_PARTY` read surface,
 //! - `contribution` — the demographic (ehr-less) CONTRIBUTION,
 //! - `tags` — the demographic `ITEM_TAG` surface,
+//! - `template` — the template layer of a party of a mapped template,
 //! - `api` — the public `FerroEhrService` seam the ITS-REST adapter calls.
 //!
 //! The wire contract is the Demographic API of ITS-REST Release-1.1.0
@@ -40,9 +41,10 @@
 //! Three design points:
 //! - The wire seam carries a bare RM party, wrapped in its commit envelope
 //!   server-side, and `lifecycle_state` defaults to `532|complete|`.
-//! - A party's archetype and template ids are not checked against a store,
-//!   there being no demographic archetype or OPT store; only RM validity →
-//!   `422` is enforced.
+//! - A party is validated against a template only when the shared party
+//!   mapping names it ([`template::MappedPartyTemplates`]), with the RM common
+//!   master06 §Incomplete Content relaxation; every other party is judged on
+//!   RM validity alone (`422`), so its template id is not resolved.
 //! - `PARTY.reverse_relationships` (`party.adoc`
 //!   §`Reverse_relationships_validity`) is derived from the inline
 //!   `relationships` of other parties through the `party_relationship_target`
@@ -62,6 +64,7 @@
 pub mod identifier;
 pub mod precondition;
 pub mod reverse;
+pub mod template;
 pub mod types;
 
 mod api;

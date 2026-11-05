@@ -210,7 +210,8 @@ pub enum Narrowing {
         existence: Intervalofinteger,
     },
     /// Removes the optional object node at `path`; on a slot it closes the
-    /// slot after its fillers are placed.
+    /// slot after its fillers are placed, a mandatory slot included once its
+    /// fillers carry its occurrences lower bound.
     Exclude {
         /// The object node's path.
         path: String,
