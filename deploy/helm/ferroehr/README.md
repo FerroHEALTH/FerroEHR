@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). The chart refuses to render until config.deployment_profile names the posture: sandbox, which must not hold real patient data, or production (start from values-production.yaml).
 
-![Version: 21.0.2](https://img.shields.io/badge/Version-21.0.2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.6.2](https://img.shields.io/badge/AppVersion-5.6.2-informational?style=flat-square)
+![Version: 21.0.3](https://img.shields.io/badge/Version-21.0.3-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.6.2](https://img.shields.io/badge/AppVersion-5.6.2-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -44,7 +44,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 21.0.2 \
+  --version 21.0.3 \
   --namespace ferroehr --create-namespace \
   --set config.deployment_profile=sandbox \
   --set database.existingSecret=ferroehr-db \
@@ -62,7 +62,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `21.0.2` |
+| the **chart** (templates, defaults, this document) | `--version` | `21.0.3` |
 | the **server image** | `image.tag` | `5.6.2` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -74,7 +74,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:21.0.2 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:21.0.3 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -82,7 +82,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:21.0.2 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:21.0.2 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:21.0.3 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.6.2 \
   -R FerroHEALTH/FerroEHR
@@ -238,10 +238,10 @@ Kubernetes: `>=1.36.0-0`
 | bridge.extraEnv | list | `[]` | Extra environment for FerroBRIDGE (escape hatch). |
 | bridge.extraVolumeMounts | list | `[]` | Extra volume mounts for the FerroBRIDGE container. |
 | bridge.extraVolumes | list | `[]` | Extra volumes for the FerroBRIDGE pod, such as a Secret holding a `_file` credential named in `config`. |
-| bridge.image.digest | string | `"sha256:7dd5550d57b7f0bdfdf194453feff95b093152fd235b9378877bebb8e8d055e2"` | Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an install runs the exact image this chart was validated against. |
+| bridge.image.digest | string | `"sha256:83bd9d2cb5e4ef6b19617c9434242f88489b0fd4150b2238a22acf17435c9a35"` | Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an install runs the exact image this chart was validated against. |
 | bridge.image.pullPolicy | string | `"IfNotPresent"` | Pull policy. |
 | bridge.image.repository | string | `"ghcr.io/ferrohealth/ferrobridge"` | FerroBRIDGE image repository. A separate product on its own release line (https://github.com/FerroHEALTH/FerroBRIDGE), BUSL-1.1 from the same Licensor as FerroEHR. |
-| bridge.image.tag | string | `""` | Image tag. Empty falls back to the FerroBRIDGE release this chart is pinned to (0.0.20), never `.Chart.appVersion`, which is FerroEHR's line. A tag other than that pin is REFUSED while `digest` below is non-empty: the digest wins, so the tag would be inert. Clear `digest` to deploy a tag. |
+| bridge.image.tag | string | `""` | Image tag. Empty falls back to the FerroBRIDGE release this chart is pinned to (0.0.21), never `.Chart.appVersion`, which is FerroEHR's line. A tag other than that pin is REFUSED while `digest` below is non-empty: the digest wins, so the tag would be inert. Clear `digest` to deploy a tag. |
 | bridge.mappings.existingConfigMap | string | `""` | Name of an EXISTING ConfigMap holding the FHIRconnect mapping files FerroBRIDGE serves `$tofhir` and `$toopenehr` with. Empty means no mapping set: FerroBRIDGE starts, and those two operations answer 503. The templates each context names are fetched from this release's CDR at boot, so a template the CDR does not hold stops the start. |
 | bridge.mappings.files | list | `[]` | The keys of `existingConfigMap` to mount, one file each. Required with `existingConfigMap`. Each key is mounted on its own (`subPath`), because a whole ConfigMap volume carries the kubelet's `..data` snapshot directories, which FerroBRIDGE's recursive walk reads as a second and third copy of every file and refuses as duplicate mapping names. A `subPath` mount does not follow later edits to the ConfigMap; the pod's rollout annotation hashes this list, not the ConfigMap's contents, so restart the workload after editing it. |
 | bridge.networkPolicy.extraEgress | list | `[]` | Egress rules beyond the ones the chart writes (this release's CDR, its FerroTERM when that runs, and DNS). Raw NetworkPolicyEgressRule entries, for an upstream you name in `config`, such as an external terminology server. |
