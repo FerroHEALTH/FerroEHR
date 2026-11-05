@@ -329,7 +329,7 @@ async fn the_worklist_returns_a_pending_version_until_it_is_signed() {
         listed
             .iter()
             .find(|r| r[0] == json!(ovid))
-            .unwrap_or_else(|| panic!("a row for {ovid}"))
+            .expect("the query returns a row for each composition")
     };
     let attested = row(&pending);
     let list = attested[1].as_array().expect("the attestations list");
@@ -395,15 +395,16 @@ async fn latest_and_all_versions_read_their_own_versions_attestations() {
     )
     .await;
     let vo: VoId = vo_of(&v1).parse().expect("vo id");
-    let v2 = svc
-        .update_composition(ehr, vo, uv(&composition("result"), "251", Some(&v1)))
+    svc.update_composition(ehr, vo, uv(&composition("result"), "251", Some(&v1)))
         .await
-        .expect("a second version")
-        .version_uid();
+        .expect("a second version");
 
     let latest = "SELECT v/uid/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c \
          WHERE EXISTS v/attestations[is_pending=true]";
-    assert!(run(&svc, latest, ehr).await.is_empty(), "{v2} carries none");
+    assert!(
+        run(&svc, latest, ehr).await.is_empty(),
+        "the second version carries no attestation"
+    );
     let all = "SELECT v/uid/value FROM EHR e CONTAINS VERSION v[ALL_VERSIONS] CONTAINS COMPOSITION c \
          WHERE EXISTS v/attestations[is_pending=true] \
            AND NOT EXISTS v/attestations[is_pending=false]";
@@ -421,7 +422,10 @@ async fn latest_and_all_versions_read_their_own_versions_attestations() {
         } else {
             Value::Null
         };
-        assert_eq!(row[1], expected, "{row}");
+        assert_eq!(
+            row[1], expected,
+            "the first version carries its pending attestation, the second none"
+        );
     }
 }
 
