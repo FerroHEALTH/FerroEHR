@@ -454,6 +454,9 @@ jsonschema = "0.60.0"               # validate against openEHR ITS-JSON schemas 
 
 # ── Dev / test (dev-dependencies at the crate level) ─────────────────────────
 insta = { version = "1", features = ["json", "redactions", "filters"] }
+# Property tests: the SCIM filter grammar (parse and print round trips, no panic
+# on arbitrary input) in ferroehr-rest.
+proptest = "1.12.0"
 wiremock = "0.6"
 assert_fs = "1"
 # HELD at 0.27 by testcontainers-modules: its newest release (0.15.0) requires

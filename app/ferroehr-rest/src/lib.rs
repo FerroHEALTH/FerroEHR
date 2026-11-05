@@ -24,6 +24,9 @@
 //!   management/observability, `OpenAPI` serving, terminology, eventing, the
 //!   ITI-81 audit retrieval, and each config-gated so a stock server exposes
 //!   only the standardised ITS-REST surface.
+//! - [`scim`] — the SCIM 2.0 service provider (RFC 7643, RFC 7644), which no
+//!   openEHR spec governs; so far its standards layer, [`scim::protocol`],
+//!   which no route mounts.
 //!
 //! [`router::router`] assembles these under the configured base path inside
 //! the family stack of `ferrohealth-server`, and [`serve_full`] serves them
@@ -47,6 +50,7 @@ pub mod formats;
 mod limits;
 pub mod overview;
 pub mod router;
+pub mod scim;
 pub mod smart;
 pub mod state;
 pub mod system_log;

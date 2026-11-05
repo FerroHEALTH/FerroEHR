@@ -97,6 +97,7 @@ mod query_ehr_id_header;
 mod query_refusals_http;
 mod rbac_e2e;
 mod sandbox_seed_http;
+mod scim_protocol;
 mod served_openapi;
 mod served_openapi_snapshot;
 mod server_tls;
