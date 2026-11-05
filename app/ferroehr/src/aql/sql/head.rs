@@ -23,11 +23,13 @@
 
 use sea_query::{Alias, Expr, ExprTrait as _, JoinType, Query, SelectStatement};
 
-use crate::aql::ir::{Source, VersionScope};
+use crate::aql::error::AqlError;
+use crate::aql::ir::{Source, VersionField, VersionScope};
 use crate::db::iden::{VersionRow, VoHead};
 
 use super::Builder;
-use super::expr::{col, hot};
+use super::expr::{binoper, cast, col, hot, version_field_expr};
+use super::value::coerce_rhs;
 
 /// Where [`bind_head`] puts the head row.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -173,5 +175,44 @@ impl Builder<'_> {
         // NOTE: every version alias is opened by an RM source (`vo_alias`); the content-key
         // join is the right answer under every scope, so an alias without one keeps it.
         scope.map_or_else(|| content_key(voa), |scope| node_key(voa, scope))
+    }
+
+    /// Binds the head row of the version row `voa` and the predicates its
+    /// VERSION scope selects.
+    pub(super) fn push_scope(&mut self, voa: &str, scope: &VersionScope) -> Result<(), AqlError> {
+        let placement = match (self.streaming, self.joined_heads.contains(&head_alias(voa))) {
+            (_, true) => HeadPlacement::Joined,
+            (true, false) => HeadPlacement::Join,
+            (false, false) => HeadPlacement::From,
+        };
+        match scope {
+            VersionScope::Latest => {
+                // LATEST_VERSION = the latest TRUNK version (RM common master06
+                // latest_trunk_version; open branch tips coexist and are not
+                // "the latest version" of the container).
+                bind_head(&mut self.q, voa, true, self.gates, placement);
+            }
+            VersionScope::All => {
+                bind_head(&mut self.q, voa, false, self.gates, placement);
+            }
+            VersionScope::Predicate(p) if p.field == VersionField::TimeCommitted => {
+                bind_head(&mut self.q, voa, false, self.gates, placement);
+                // Version-at-time: the TRUNK version in force at the instant; a
+                // branch version live at that instant coexists by design and
+                // must not duplicate the row.
+                let value = self.bind_value(&p.value)?;
+                self.q
+                    .and_where(col(voa, VersionRow::BranchNumber).eq(Expr::val(0)));
+                self.q
+                    .and_where(trunk_at_instant(voa, cast(Expr::val(value), "timestamptz")));
+            }
+            VersionScope::Predicate(p) => {
+                bind_head(&mut self.q, voa, false, self.gates, placement);
+                let rhs = coerce_rhs(self.bind_value(&p.value)?, p.field.coercion())?;
+                let lhs = version_field_expr(voa, || self.ensure_audit(voa), p.field);
+                self.q.and_where(lhs.binary(binoper(p.op), rhs));
+            }
+        }
+        Ok(())
     }
 }
