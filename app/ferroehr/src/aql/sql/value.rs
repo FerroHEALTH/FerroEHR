@@ -886,8 +886,9 @@ pub(super) fn coerce_rhs(value: sea_query::Value, coercion: Coercion) -> Result<
         Coercion::Magnitude => cast(Expr::val(value), "numeric"),
         Coercion::Boolean => cast(Expr::val(value), "boolean"),
         Coercion::Temporal => {
-            // NOTE: QUERY master03 §Built-in Types, Dates and Times treats a date/time as a
-            // string literal, so a number, boolean or NULL bound has no date/time reading.
+            // NOTE: QUERY master03 §Dates and Times reads a date/time as a string literal and
+            // §Literals, §Comparison operators give `NULL` no comparison meaning (presence is
+            // §EXISTS), so only an ISO 8601 string bounds a temporal comparison.
             if !matches!(&value, sea_query::Value::String(Some(s)) if is_iso_temporal(s)) {
                 return Err(SqlError::UncoercibleTemporal.into());
             }
