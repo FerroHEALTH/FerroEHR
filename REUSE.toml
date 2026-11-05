@@ -464,3 +464,65 @@ path = [
 precedence = "override"
 SPDX-FileCopyrightText = "Cadasto B.V."
 SPDX-License-Identifier = "BUSL-1.1"
+
+# ── The identity and provisioning documents (#5046) ─────────────────────────
+# The documents the party binding and the SCIM provisioning cite, under
+# docs/specs/, each fetched verbatim and pinned by sha256 by its own
+# scripts/vendor/*.sh. Each tree's PROVENANCE.md quotes the licence as read;
+# `override`, because these are the publishers' bytes.
+#
+# The RFCs: the IETF Trust Legal Provisions section 3.c grant to copy and
+# distribute an IETF Document in full and without modification. Not an
+# SPDX-listed licence, so the LicenseRef text records the grant.
+[[annotations]]
+path = "docs/specs/rfc/**"
+precedence = "override"
+SPDX-FileCopyrightText = "IETF Trust and the persons identified as the document authors"
+SPDX-License-Identifier = "LicenseRef-IETF-Trust-Legal-Provisions"
+
+# OpenID Connect Core 1.0: the OpenID Foundation's Notices grant, for
+# implementing the specification with attribution.
+[[annotations]]
+path = "docs/specs/openid-connect-core/**"
+precedence = "override"
+SPDX-FileCopyrightText = "The OpenID Foundation"
+SPDX-License-Identifier = "LicenseRef-OpenID-Foundation-Specification"
+
+# The Microsoft Entra articles: the repository's README grants CC BY 4.0 for
+# its documentation and points at a LICENSE file that reads MIT. Both grants
+# are Microsoft's and both are recorded, so the expression offers either.
+[[annotations]]
+path = "docs/specs/microsoft-entra/**"
+precedence = "override"
+SPDX-FileCopyrightText = "Microsoft Corporation"
+SPDX-License-Identifier = "CC-BY-4.0 OR MIT"
+
+# The SCIMReferenceCode Workload Identity Federation guide: the repository's
+# MIT licence, vendored beside it.
+[[annotations]]
+path = "docs/specs/scim-reference-code/**"
+precedence = "override"
+SPDX-FileCopyrightText = "Microsoft Corporation"
+SPDX-License-Identifier = "MIT"
+
+# The Keycloak documentation excerpt: the repository's Apache-2.0 licence,
+# vendored beside it.
+[[annotations]]
+path = "docs/specs/keycloak/**"
+precedence = "override"
+SPDX-FileCopyrightText = "Keycloak contributors"
+SPDX-License-Identifier = "Apache-2.0"
+
+# The provenance records of those five trees are first-party prose about the
+# material. Placed LAST: a later matching annotation wins.
+[[annotations]]
+path = [
+  "docs/specs/rfc/PROVENANCE.md",
+  "docs/specs/openid-connect-core/PROVENANCE.md",
+  "docs/specs/microsoft-entra/PROVENANCE.md",
+  "docs/specs/scim-reference-code/PROVENANCE.md",
+  "docs/specs/keycloak/PROVENANCE.md",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "Cadasto B.V."
+SPDX-License-Identifier = "BUSL-1.1"

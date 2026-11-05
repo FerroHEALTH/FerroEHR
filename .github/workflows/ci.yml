@@ -777,6 +777,10 @@ jobs:
           persist-credentials: false
       - name: Vendored legal texts match their recorded digests
         run: bash scripts/checks/law-corpus.sh
+      # The identity and provisioning documents under docs/specs/ are pinned by
+      # sha256 per file in the same way, so the same job holds them to it.
+      - name: Vendored identity documents match their recorded digests
+        run: bash scripts/checks/pinned-docs.sh
 
   copyright-holder:
     name: copyright-holder

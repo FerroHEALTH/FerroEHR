@@ -17,6 +17,13 @@
 # bytes the digest records. The ePrivacy consolidation is served with CRLF.
 docs/law/**/*.html -text
 docs/law/**/*.xml  -text
+# The identity and provisioning documents are pinned by sha256 per file, and the
+# SCIMReferenceCode LICENSE is served with CRLF.
+docs/specs/rfc/** -text
+docs/specs/openid-connect-core/** -text
+docs/specs/microsoft-entra/** -text
+docs/specs/scim-reference-code/** -text
+docs/specs/keycloak/** -text
 
 # Binary assets
 *.png  binary
