@@ -672,10 +672,7 @@ config:
   # Every route enforces SMART on openEHR scopes: a Basic user's `scopes` and a
   # token's `scope` claim must grant what it calls; a subject listed in
   # `scopeless_subjects` whose token carries no resource scope meets every
-  # SMART on openEHR requirement. With several `issuer` tables, every
-  # `scopeless_subjects` and `role_claims` entry is written `<issuer>#<value>`
-  # and set explicitly, since a bare entry, the default `role_claims` included,
-  # refuses the boot (GHSA-pfgx-xq28-2629). `basic.cache_ttl_seconds` (default 300) keeps a
+  # SMART on openEHR requirement. `basic.cache_ttl_seconds` (default 300) keeps a
   # verified Basic credential for that long, so a repeat request skips the
   # Argon2id derivation; 0 checks every request.
   # `mode: introspection` checks opaque tokens at the issuer's RFC 7662
