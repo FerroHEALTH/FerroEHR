@@ -113,9 +113,61 @@
       "vulnerability": {
         "name": "RUSTSEC-2026-0387"
       }
+    },
+    {
+      "ferroehr:reachability": {
+        "direct_dependents": [
+          "testcontainers"
+        ],
+        "package": "astral-tokio-tar",
+        "workspace_roots": [
+          "ferroehr",
+          "ferroehr-ext",
+          "ferroehr-rest",
+          "ferroehr-server",
+          "ferroehr-viewer",
+          "openehr-adl",
+          "openehr-its",
+          "openehr-rm",
+          "openehr-sdt",
+          "testkit"
+        ]
+      },
+      "impact_statement": "The advisory is informational: Astral ended maintenance of `astral-tokio-tar` on 2026-11-03 and no version is patched. Its one carrier is `testcontainers` 0.27.3, which `testkit`, the shared test-database harness (`publish = false`), uses to start the PostgreSQL 18 server the DB-backed tests run against. Every workspace root above reaches it only through a dev-dependency on `testkit`, so the crate is in none of the three products: `cargo tree -p ferroehr-server` and `cargo tree -p ferroehr-viewer` over normal and build edges, all features and all targets, find no `astral-tokio-tar` node, and the server binary, the `ferroehr` image and the `ferroehr-viewer` image are built from exactly those graphs. No release of `testcontainers` leaves the crate (0.28.0 requires ^0.6.1 and the upstream main branch requires 0.7.0), and `testcontainers-modules` 0.15.0 holds the harness on `testcontainers` 0.27. Re-evaluate when a `testcontainers` release, with a `testcontainers-modules` release on it, drops the dependency, or if `testkit` ever becomes a normal dependency of a shipped crate.",
+      "justification": "component_not_present",
+      "products": [
+        {
+          "@id": "pkg:cargo/ferroehr-server",
+          "subcomponents": [
+            {
+              "@id": "pkg:cargo/astral-tokio-tar"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr",
+          "subcomponents": [
+            {
+              "@id": "pkg:cargo/astral-tokio-tar"
+            }
+          ]
+        },
+        {
+          "@id": "pkg:oci/ferroehr-viewer",
+          "subcomponents": [
+            {
+              "@id": "pkg:cargo/astral-tokio-tar"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "vulnerability": {
+        "name": "RUSTSEC-2026-0440"
+      }
     }
   ],
-  "timestamp": "2026-11-03T00:00:00Z",
+  "timestamp": "2026-11-05T00:00:00Z",
   "tooling": "scripts/security/vex-generate.sh from security/vex/rust-advisories.toml + deny.toml",
-  "version": 11
+  "version": 12
 }
