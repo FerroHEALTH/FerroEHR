@@ -152,18 +152,18 @@ pub fn router(app_state: AppState) -> axum::Router {
 fn same_origin_check(state: &AppState) -> SameOrigin {
     let public = state.config.auth.public_base_url.as_str();
     if public.is_empty() {
-        return SameOrigin::new();
+        return SameOrigin::default();
     }
     let checked = crate::config::public_origin(public)
         .map_err(|error| error.to_string())
         .and_then(|url| {
-            SameOrigin::new()
+            SameOrigin::default()
                 .with_origin(&url)
                 .map_err(|error| error.to_string())
         });
     checked.unwrap_or_else(|error| {
         tracing::error!(%error, "the same-origin check knows no public origin");
-        SameOrigin::new()
+        SameOrigin::default()
     })
 }
 
