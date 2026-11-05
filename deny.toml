@@ -68,6 +68,14 @@ ignore = [
   # day it ships).
   # https://rustsec.org/advisories/RUSTSEC-2026-0387
   { id = "RUSTSEC-2026-0387", reason = "ECDSA and Ed448 signing keys are refused at boot (#3965), so crypto-bigint 0.5 runs only over public values in verification" },
+  # 2026-11-05 (#4996): astral-tokio-tar is unmaintained in every version, and
+  # testcontainers is its one carrier: 0.28.0, the newest release, still needs
+  # ^0.6.1 and its main branch has moved to 0.7.0. The path argument is the
+  # RUSTSEC-2026-0440 statement in security/vex/rust-advisories.toml.
+  # DELETING EVENT: a testcontainers release, with a testcontainers-modules
+  # release on it, that no longer depends on astral-tokio-tar.
+  # https://rustsec.org/advisories/RUSTSEC-2026-0440
+  { id = "RUSTSEC-2026-0440", reason = "reached only through testcontainers in the testkit test harness, which no shipped artefact links" },
 ]
 
 [licenses]
