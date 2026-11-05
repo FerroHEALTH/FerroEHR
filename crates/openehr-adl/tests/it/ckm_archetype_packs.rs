@@ -345,7 +345,7 @@ fn ckm_adl14_pack_is_resource_meta_clean() {
 /// validity code the refusal must carry and the adjudication behind it.
 ///
 /// The validation-level twin of [`Refusal`]: these files parse, and the CDR's
-/// own upload path (`POST /definition/template/adl2`) refuses them with `422`
+/// own upload path (`POST /definition/template/adl2`) refuses them with `400`
 /// on exactly these codes, so the sandbox seed's pinned accepted/refused split
 /// has this table as its authority.
 pub(crate) type ValidityRefusal = (&'static str, ValidationCode, &'static str);

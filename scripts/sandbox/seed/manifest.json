@@ -91,6 +91,7 @@
       "root": "corpus/archetypes/adl2/ckm-2013-12-09",
       "accepted": 231,
       "refused": 91,
+    "refused_status": 400,
       "loinc": {
         "probe": "LA9605-2",
         "refused_when_served": [
