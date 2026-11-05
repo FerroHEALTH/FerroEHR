@@ -243,6 +243,14 @@ adls_parents_first() {
 lib_root="$ROOT_DIR/$(mf '.adl2.archetype_library.root')"
 want_accepted="$(mf '.adl2.archetype_library.accepted')"
 want_refused="$(mf '.adl2.archetype_library.refused')"
+# The upload declares only 201, 400 and 409 (ITS-REST 1.1.0
+# operations/definition_template_adl2_upload.yaml), so the CDR refuses an
+# AOM2-invalid archetype with a 400 (#5044); the manifest pins that status.
+refused_status="$(mf '.adl2.archetype_library.refused_status')"
+[[ "$refused_status" =~ ^[0-9]{3}$ ]] || {
+  echo "::error::the manifest's adl2.archetype_library.refused_status is '$refused_status'; want the HTTP status the upload refuses an invalid archetype with" >&2
+  exit 1
+}
 
 # The pin assumes a CDR whose terminology server serves LOINC: VETDF refuses
 # the files `loinc.refused_when_served` names only when it can look their
@@ -289,11 +297,11 @@ while read -r adls; do
     -H "$CT_PLAIN" --data-binary @"$adls")
   case "$code" in
     200 | 201 | 409) accepted=$((accepted + 1)) ;;
-    422)
+    "$refused_status")
       refused=$((refused + 1))
       basename "$adls" >> "$WORK/library-refused"
       ;;
-    *) expect "archetype $(basename "$adls")" "$code" 201 409 422 ;;
+    *) expect "archetype $(basename "$adls")" "$code" 201 409 "$refused_status" ;;
   esac
 done < <(adls_parents_first "$lib_root")
 
