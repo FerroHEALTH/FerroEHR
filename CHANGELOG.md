@@ -17,6 +17,19 @@ has no matching section here.
 
 ## [Unreleased]
 
+## [5.6.2] - 2026-11-05
+
+5.6.2 is a security-only patch release over 5.6.1. The v5.6.1 tag exists, but its release never published: its vulnerability record found CVE-2026-76844 in the zlib package of every image without a judgement, and Debian has no fixed package for trixie. 5.6.2 adds that judgement and nothing else. It is the first published release since 5.6.0, so it also brings the 5.6.1 changes of this changelog: the hosted sandbox's viewer posture and the FerroHEALTH releases the deployment artifacts pin. The REST surface, AQL, storage and configuration are those of 5.6.0.
+
+### Security
+
+- CVE-2026-76844, a heap overflow in zlib's gzip file writer after a failed
+  write, has no Debian fix for trixie and is judged `not_affected` in every
+  image. The `ferroehr` and `ferroehr-viewer` programs never load the Debian
+  zlib (`security/vex/ferroehr-os.openvex.json`), and in `ferroehr-postgres`
+  the zlib 1.3.1 overflow needs a `gzclearerr()` call that nothing in the
+  image makes (`security/vex/postgres-os.openvex.json`) (#4993).
+
 ## [5.6.1] - 2026-11-05
 
 5.6.1 is a patch release of 5.6.0. The hosted sandbox's viewer starts again, since its posture carries the session keys the 5.6.0 viewer reads, and the deployment artifacts pin the FerroHEALTH releases published with or after 5.6.0: FerroPIX 0.0.16, FerroBRIDGE 0.0.20, ferroehr-postgres 5.6.0 on the hosted database box and four FerroSYS crates whose releases change no behaviour. The REST surface, AQL, storage and configuration are unchanged from 5.6.0.
@@ -21450,7 +21463,8 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.6.1...HEAD
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.6.2...HEAD
+[5.6.2]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.6.1...v5.6.2
 [5.6.1]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.6.0...v5.6.1
 [5.6.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.5.0...v5.6.0
 [5.6.0-rc10]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.5.0...v5.6.0-rc10
