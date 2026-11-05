@@ -748,3 +748,21 @@ pub(crate) fn find_by_xtype<'a>(extract: &'a Value, xtype: &str) -> Option<&'a V
         .iter()
         .find(|it| it["item"]["_type"] == json!(xtype))
 }
+
+/// Upload one vendored CKM template and generate its committable example, as
+/// the storage bench seeds it.
+pub(crate) async fn ckm_example(svc: &ferroehr::service::FerroEhrService, template: &str) -> Value {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join(format!("../../corpus/templates/ckm/{template}.opt"));
+    let xml = std::fs::read_to_string(path).expect("the vendored OPT is readable");
+    let template_id = openehr_its::opt14::from_xml(&xml)
+        .expect("the vendored OPT parses")
+        .template_id
+        .value;
+    svc.template_adl14_upload(&xml)
+        .await
+        .expect("upload the template");
+    svc.template_adl14_example(template_id, Some("medium".to_owned()), None)
+        .await
+        .expect("the template generates an example composition")
+}

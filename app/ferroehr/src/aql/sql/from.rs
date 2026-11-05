@@ -168,6 +168,26 @@ pub(super) fn strict_descendant(child: &str, parent: &str) -> Expr {
         .and(col(child, Node::Num).lte(col(parent, Node::NumCap)))
 }
 
+/// [`strict_descendant`] of a parent the FROM clause binds as its version's
+/// root: a class [`is_root_only`] names, pinned to `num = 0` by
+/// [`Builder::emit_rm`].
+///
+/// The root's interval holds its whole tree, so a strict descendant is any
+/// other row of the same `(vo_id, sys_version)`: `num > 0`. The planner prices
+/// that restriction from the `num` histogram, where it priced the interval
+/// join at a tenth of its rows, and that estimate cost the flat population
+/// read its `LIMIT` early stop (#4944). No openEHR spec governs the SQL form
+/// of containment: our own design.
+fn descendant_in_from(child: &str, parent: &str, parent_types: &crate::aql::ir::TypeSet) -> Expr {
+    if !is_root_only(parent_types) {
+        return strict_descendant(child, parent);
+    }
+    col(child, Node::VoId)
+        .eq(col(parent, Node::VoId))
+        .and(col(child, Node::SysVersion).eq(col(parent, Node::SysVersion)))
+        .and(col(child, Node::Num).gt(0))
+}
+
 /// Whether `child` is the node an attribute step `attribute` reaches from
 /// `parent`: a strict descendant whose structure parent IS `parent` and whose
 /// stored path continues `parent`'s by exactly that attribute (the codec
@@ -799,7 +819,8 @@ impl Builder<'_> {
         }
 
         if let Some(parent) = structural {
-            self.q.and_where(strict_descendant(&node, &parent.node));
+            self.q
+                .and_where(descendant_in_from(&node, &parent.node, &parent.types));
             Ok(VoGroup {
                 node,
                 vo: parent.vo.clone(),

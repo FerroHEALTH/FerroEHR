@@ -8,7 +8,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use sea_query::extension::postgres::PgFunc;
-use sea_query::{Expr, ExprTrait as _};
+use sea_query::{BinOper, Expr, ExprTrait as _};
 
 use super::expr::{call, cast, col};
 use crate::aql::lineage::{
@@ -81,8 +81,7 @@ pub(super) fn archetype_predicate(node: &str, value: &str, lineage: &ArchetypeLi
         own = own.and(release);
     }
     if queried.legacy_form {
-        let child_prefix = format!("{}-%", like_escape(&key.concept));
-        own = own.or(col(node, Node::ArchConcept).like(child_prefix));
+        own = own.or(legacy_children(node, &key.concept));
     }
     let mut cond = interface(node, key).and(own);
 
@@ -113,6 +112,25 @@ pub(super) fn archetype_predicate(node: &str, value: &str, lineage: &ArchetypeLi
         cond = cond.or(interface(node, &boundary).and(concept_match(node, &concepts)));
     }
     cond
+}
+
+/// The ADL 1.4 specialisations of `concept`: every `arch_concept` beginning
+/// with `concept-`.
+///
+/// The byte range `[concept-, concept.)` in the pattern operators, which
+/// compare bytes whatever the collation, admits exactly what `LIKE
+/// 'concept-%'` admits ('.' follows '-') and is an index range on the
+/// `text_pattern_ops` column of `idx_node_arch_subsume`. It also keeps the
+/// predicate inside the `st_node_*_archetype` extended statistics, which the
+/// `LIKE` form left: on `PostgreSQL` 18.6 the storage bench's blood-pressure
+/// observations were estimated at 188 of 1 467 rows with `LIKE` and 1 313
+/// with the range, and the low estimate cost the flat read its `LIMIT` early
+/// stop (#4944).
+fn legacy_children(node: &str, concept: &str) -> Expr {
+    let column = || col(node, Node::ArchConcept);
+    column()
+        .binary(BinOper::Custom("~>=~"), Expr::val(format!("{concept}-")))
+        .and(column().binary(BinOper::Custom("~<~"), Expr::val(format!("{concept}."))))
 }
 
 /// The stored release is one of `releases`, each a `(minor, patch)` within
@@ -243,6 +261,16 @@ mod tests {
     const NO_NAMESPACE: &str = r#""n"."archetype" NOT LIKE '%::%'"#;
     const MINOR: &str = r#"CAST(substring("n"."archetype", E'\\.v[0-9]+\\.([0-9]+)\\.[0-9]+(-[^:]*)?$') AS numeric)"#;
     const PATCH: &str = r#"CAST(substring("n"."archetype", E'\\.v[0-9]+\\.[0-9]+\\.([0-9]+)(-[^:]*)?$') AS numeric)"#;
+    /// The pattern operator that opens the ADL 1.4 children's byte range.
+    const CHILD_RANGE: &str = "~>=~";
+
+    /// The ADL 1.4 children of `concept` as rendered: the byte range
+    /// `[concept-, concept.)`.
+    fn children(concept: &str) -> String {
+        format!(
+            r#"("n"."arch_concept" ~>=~ '{concept}-') AND ("n"."arch_concept" ~<~ '{concept}.')"#
+        )
+    }
 
     /// The `archetype_node_id` predicate: an ADL 1.4 id lowers to the
     /// subsumption condition (parent + specialisation children, same
@@ -258,7 +286,7 @@ mod tests {
             r#""n"."arch_entity" = 'openehr-ehr-observation'"#,
             r#""n"."arch_major" = 1"#,
             r#""n"."arch_concept" = 'laboratory'"#,
-            r#""n"."arch_concept" LIKE 'laboratory-%'"#,
+            children("laboratory").as_str(),
         ] {
             assert!(parent.contains(part), "{part}: {parent}");
         }
@@ -275,7 +303,7 @@ mod tests {
             "exact specialised concept: {child}"
         );
         assert!(
-            child.contains(r#""n"."arch_concept" LIKE 'laboratory-glucose-%'"#),
+            child.contains(&children("laboratory-glucose")),
             "further-specialisation prefix: {child}"
         );
 
@@ -323,7 +351,7 @@ mod tests {
     fn the_queried_version_bounds_the_stored_release() {
         let specific = predicate_sql("openEHR-EHR-OBSERVATION.x.v1.2");
         assert!(specific.contains(&format!("{MINOR} >= 2")), "{specific}");
-        assert!(!specific.contains("LIKE 'x-%'"), "{specific}");
+        assert!(!specific.contains(CHILD_RANGE), "{specific}");
         assert!(!specific.contains(PATCH), "{specific}");
 
         let physical = predicate_sql("openEHR-EHR-OBSERVATION.x.v1.2.3");
@@ -388,7 +416,7 @@ mod tests {
             "the queried identity keeps its version bound: {sql}"
         );
         assert!(
-            !sql.contains("LIKE E'lipid"),
+            !sql.contains(CHILD_RANGE),
             "the widening is lineage-derived, never a string heuristic: {sql}"
         );
 
@@ -396,7 +424,7 @@ mod tests {
         // on top of the stored lineage: the two sources are additive.
         let legacy = archetype_predicate_sql("openEHR-EHR-OBSERVATION.lipid_panel.v1", &lineage);
         assert!(
-            legacy.contains(r#""n"."arch_concept" LIKE E'lipid\\_panel-%'"#),
+            legacy.contains(&children("lipid_panel")),
             "the 1.4-form prefix rule is unchanged: {legacy}"
         );
         assert!(legacy.contains("'hdl_result','ldl_result'"), "{legacy}");
