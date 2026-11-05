@@ -39,7 +39,16 @@ The checks, in the order the plan job runs them:
 The previous release is resolved the way the plan job resolves it: from
 `git ls-remote --tags origin 'v*'`, by version order. A tag that was pushed but
 whose release never published still counts, and ancestry plays no part
-(`bash scripts/release/plan.sh prev-tag vX.Y.Z` prints it).
+(`bash scripts/release/plan.sh prev-tag vX.Y.Z` prints it). The change-control
+checks compare against that tag.
+
+The performance guard needs the previous release's published images, so it
+takes its baseline differently: the newest release below the tag, by version
+order, whose GitHub release is published, neither a draft nor a pre-release
+(`bash scripts/release/plan.sh published-tag vX.Y.Z` prints it). A tag whose
+release run stopped before `finalize-release` has no published images and is
+skipped. After v5.6.1 and v5.6.2 were tagged and never published, the baseline
+of v5.6.3 is v5.6.0.
 
 You need `gh` logged in (the milestone check reads the tracker) and `helm` (the
 chart check reads the published chart versions). A missing tool refuses its

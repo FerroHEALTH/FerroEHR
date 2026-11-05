@@ -1072,8 +1072,10 @@ jobs:
   # of the previous release's or its median p95 latency rises above 110 %.
   # scan-and-tag and finalize-release need it, so a refused release gets no
   # image tags and its GitHub release stays a draft. The previous release is
-  # the tag below this one by version (plan.sh prev-tag); its images must be
-  # published, or the A/B cannot run and the leg fails.
+  # the newest release below this one by version whose GitHub release is
+  # published (plan.sh published-tag), so a pushed tag whose release never
+  # published is skipped: it has no images to pull. The change-control checks
+  # keep plan.sh prev-tag, which counts every pushed tag (docs/release.md).
   # The same job then runs the logging component's performance evaluation
   # (scripts/perf/audit.sh, EHDS Annex II 1.1 and Annex III point 2): the
   # candidate with the access log off and on, failing closed, against the
@@ -1114,11 +1116,15 @@ jobs:
           docker tag  "${APP_IMAGE}@${DIGEST}" ferroehr:perf
       - name: Build the postgres image (amd64; COPY-only, seconds)
         run: docker build -t ferroehr-postgres:perf docker/postgres
-      - name: The previous release
+      - name: The previous published release
         id: previous
         env:
+          GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.plan.outputs.tag }}
-        run: echo "tag=$(bash scripts/release/plan.sh prev-tag "$TAG")" >> "$GITHUB_OUTPUT"
+        run: |
+          set -euo pipefail
+          tag="$(bash scripts/release/plan.sh published-tag "$TAG")"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
       - name: The candidate against the previous release
         env:
           PREVIOUS: ${{ steps.previous.outputs.tag }}
