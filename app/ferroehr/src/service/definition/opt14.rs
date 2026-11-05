@@ -363,22 +363,26 @@ fn note_cache_event(event: &'static str) {
 /// class. The operation allows a `400` for what the server does not generate;
 /// a template rooted at an ENTRY or a SECTION admits none of those classes, so
 /// it is refused rather than served an instance its root class does not
-/// declare (#3780).
+/// declare (#3780). A party template that constrains no `PARTY_IDENTITY` is
+/// refused the same way, since RM demographic §PARTY `Identities_valid` admits
+/// no party without one.
 ///
 /// # Errors
 ///
 /// [`ServiceError::BadRequest`] (`400`) naming the root for a template rooted
-/// at neither a COMPOSITION nor a party class; [`ServiceError::Internal`]
-/// (`500`) when the generated document does not build.
+/// at neither a COMPOSITION nor a party class, or naming the class of a party
+/// template that constrains no identity; [`ServiceError::Internal`] (`500`)
+/// when the generated document does not build.
 pub(super) fn example_or_refusal(
     wt: &WebTemplate,
     level: DetailLevel,
 ) -> Result<Value, ServiceError> {
     match openehr_sdt::flat::example::example_instance(wt, level) {
         Ok(instance) => Ok(instance),
-        Err(e @ openehr_sdt::flat::error::FlatError::NoExampleForRoot { .. }) => {
-            Err(ServiceError::bad_request(e.to_string(), e))
-        }
+        Err(
+            e @ (openehr_sdt::flat::error::FlatError::NoExampleForRoot { .. }
+            | openehr_sdt::flat::error::FlatError::NoExampleIdentity { .. }),
+        ) => Err(ServiceError::bad_request(e.to_string(), e)),
         Err(e) => Err(ServiceError::internal("generate the template example", e)),
     }
 }

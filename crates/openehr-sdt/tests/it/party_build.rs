@@ -51,10 +51,23 @@ fn interval(lower: u32, upper: Option<u32>) -> String {
 /// and at most `upper` times (unbounded for `None`), with the given attribute
 /// bodies.
 fn object(kind: &str, rm_type: &str, node_id: &str, upper: Option<u32>, attrs: &str) -> String {
+    object_from(kind, rm_type, node_id, 1, upper, attrs)
+}
+
+/// A `C_COMPLEX_OBJECT` of `rm_type` with `node_id`, occurring `lower` to
+/// `upper` times (unbounded for `None`), with the given attribute bodies.
+fn object_from(
+    kind: &str,
+    rm_type: &str,
+    node_id: &str,
+    lower: u32,
+    upper: Option<u32>,
+    attrs: &str,
+) -> String {
     format!(
         "<children xsi:type=\"{kind}\"><rm_type_name>{rm_type}</rm_type_name>\
          <occurrences>{}</occurrences><node_id>{node_id}</node_id>{attrs}</children>",
-        interval(1, upper)
+        interval(lower, upper)
     )
 }
 
@@ -98,13 +111,20 @@ fn text_element(node_id: &str) -> String {
 /// details") holds one `DV_TEXT` element (at0005, "Name"), and a details tree
 /// (at0001) with one `DV_TEXT` element (at0002, "Note").
 fn party_template(class: &str) -> WebTemplate {
+    party_template_with(class, 1)
+}
+
+/// [`party_template`] with the `identities` attribute's cardinality and its
+/// `PARTY_IDENTITY`'s occurrences both starting at `identity_lower`.
+fn party_template_with(class: &str, identity_lower: u32) -> WebTemplate {
     let concept = format!("Synthetic {}", class.to_ascii_lowercase());
     let archetype = format!("openEHR-DEMOGRAPHIC-{class}.synthetic.v1");
     let template_id = format!("synthetic.{}.v1", class.to_ascii_lowercase());
-    let identity = object(
+    let identity = object_from(
         "C_COMPLEX_OBJECT",
         "PARTY_IDENTITY",
         "at0003",
+        identity_lower,
         None,
         &single(
             "details",
@@ -144,7 +164,7 @@ fn party_template(class: &str) -> WebTemplate {
          <template_id><value>{template_id}</value></template_id>\
          {t0}{t1}{t2}{t3}{t4}{t5}</definition></template>",
         occ = interval(1, Some(1)),
-        identities = multiple("identities", 1, &identity),
+        identities = multiple("identities", identity_lower, &identity),
         details = single("details", 0, &details),
         t0 = term("at0000", &concept),
         t1 = term("at0001", "Details"),
@@ -549,6 +569,34 @@ fn a_party_template_has_an_example_party_at_every_level() {
         &example_party(&party_template("ORGANISATION"), DetailLevel::Medium).expect("ORGANISATION"),
     )
     .expect("decodes as ORGANISATION");
+}
+
+/// RM demographic §PARTY declares `identities` 1..1 with `Identities_valid`
+/// (`not identities.is_empty`), so a template that marks its identity
+/// optional still gets an example party carrying one identity at every
+/// level, `required` included (`org.openehr.rm.demographic.party.adoc`).
+#[test]
+fn an_optional_identity_is_still_in_every_example_party() {
+    for class in ["PERSON", "ORGANISATION", "GROUP", "AGENT", "ROLE"] {
+        let wt = party_template_with(class, 0);
+        for level in LEVELS {
+            let party =
+                example_party(&wt, level).unwrap_or_else(|e| panic!("{class}@{level:?}: {e}"));
+            assert_eq!(party["_type"], class, "{class}@{level:?}");
+            let identity = party
+                .pointer("/identities/0")
+                .unwrap_or_else(|| panic!("{class}@{level:?}: no identity: {party}"));
+            assert_eq!(identity["_type"], "PARTY_IDENTITY", "{class}@{level:?}");
+            assert_eq!(
+                identity["details"]["_type"], "ITEM_TREE",
+                "{class}@{level:?}"
+            );
+        }
+    }
+    from_canonical_value::<Person>(
+        &example_party(&party_template_with("PERSON", 0), DetailLevel::Required).expect("PERSON"),
+    )
+    .expect("decodes as PERSON");
 }
 
 /// RM demographic §ROLE makes `performer` mandatory, so the example ROLE

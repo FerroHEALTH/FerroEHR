@@ -164,6 +164,19 @@ pub enum FlatError {
         root: String,
     },
 
+    /// An example party was asked of a party template that constrains no
+    /// `identities` member, while RM demographic §PARTY `Identities_valid`
+    /// requires at least one and the template names no archetype node to
+    /// make it from.
+    #[error(
+        "the {class} template constrains no PARTY_IDENTITY, so no example {class} carries the \
+         identity the RM requires"
+    )]
+    NoExampleIdentity {
+        /// The template root's party class.
+        class: String,
+    },
+
     /// A party build was asked of a template whose root is not a party class
     /// (`PERSON`, `ORGANISATION`, `GROUP`, `AGENT` or `ROLE`).
     #[error("the template root {root} is not a PARTY class, so no party builds from it")]
