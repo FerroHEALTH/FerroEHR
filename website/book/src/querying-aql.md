@@ -592,10 +592,14 @@ FROM EHR e
 
 `LATEST_VERSION` (the default) reads only current trunk versions;
 `ALL_VERSIONS` reads across history (including branch versions, where a version
-tree has any) so you can see how a record changed over time. A version
-predicate on `commit_audit/time_committed` reads the trunk version current at
-that instant. The `VERSION` variable also exposes commit metadata: the audit, the
-committed time, and the version uid.
+tree has any) so you can see how a record changed over time. A standard
+predicate on a version attribute selects the versions it holds for, with the
+operator you write: `VERSION v[commit_audit/time_committed/value > $t]` reads
+every version committed after `$t`, and `>=`, `=`, `<`, `<=` and `!=` read the
+versions their comparison admits. The bound is an ISO 8601 date, time or
+date-time; a number, boolean or `NULL` literal there, or a string no ISO 8601
+form reads, is refused with **400**. The `VERSION` variable also exposes commit
+metadata: the audit, the committed time, and the version uid.
 
 A `VERSIONED_OBJECT` operand between the EHR and the version names the
 versioned object itself. Its variable answers `uid/value`, the object id every
@@ -620,7 +624,7 @@ A `VERSION` variable answers these paths:
 | `uid/value` | the version id, `object_id::creating_system_id::version_tree_id` |
 | `contribution/id/value` | the CONTRIBUTION the version was committed in |
 | `lifecycle_state/value`, `lifecycle_state/defining_code/code_string`, `lifecycle_state/defining_code/terminology_id/value` | the lifecycle state as rubric, code or terminology |
-| `commit_audit/time_committed`, `commit_audit/system_id`, `commit_audit/committer` | the commit audit |
+| `commit_audit/time_committed`, `commit_audit/time_committed/value`, `commit_audit/system_id`, `commit_audit/committer` | the commit audit |
 | `commit_audit/change_type/value`, `.../defining_code/code_string`, `.../defining_code/terminology_id/value` | the audit change type |
 | `commit_audit/description`, `commit_audit/description/value`, `.../defining_code/code_string`, `.../defining_code/terminology_id/value` | the audit description |
 | `commit_audit/is_pending`, `commit_audit/reason`, `commit_audit/reason/value` | the `ATTESTATION` attributes of a commit audit that is an `ATTESTATION`; empty on a plain `AUDIT_DETAILS` |

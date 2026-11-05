@@ -5,9 +5,9 @@
 //!
 //! A version whose content equals its predecessor's reads its predecessor's
 //! node rows (`version.content_key`, #4415), so one node row belongs to every
-//! version of an identical-content chain. Under `ALL_VERSIONS` and at an
-//! instant every version the content key matches can be an answer row, and
-//! the node rows join the version row on that key. Under `LATEST_VERSION` one
+//! version of an identical-content chain. Under `ALL_VERSIONS` and under a
+//! version predicate every version the content key matches can be an answer
+//! row, and the node rows join the version row on that key. Under `LATEST_VERSION` one
 //! version answers, the head's, so the node rows join the head row on its own
 //! copy of the key (`vo_head.trunk_head_content_key`, #4944): one head row
 //! per object, and the version row is reached through the head's primary key.
@@ -24,11 +24,11 @@
 use sea_query::{Alias, Expr, ExprTrait as _, JoinType, Query, SelectStatement};
 
 use crate::aql::error::AqlError;
-use crate::aql::ir::{Source, VersionField, VersionScope};
+use crate::aql::ir::{Source, VersionScope};
 use crate::db::iden::{VersionRow, VoHead};
 
 use super::Builder;
-use super::expr::{binoper, cast, col, hot, version_field_expr};
+use super::expr::{binoper, col, version_field_expr};
 use super::value::coerce_rhs;
 
 /// Where [`bind_head`] puts the head row.
@@ -140,28 +140,6 @@ pub(super) fn trunk_head_version(scope: &VersionScope, voa: &str, vo_id: Expr) -
     Some(col(voa, VersionRow::SysVersion).eq(Expr::SubQuery(None, Box::new(sub.into()))))
 }
 
-/// Version-at-time: the version row is the TRUNK version in force at `at`.
-///
-/// Validity is derived rather than stored: version *i* is valid over
-/// `[committed_at_i, committed_at_i+1)`, so the row in force at an instant is
-/// the trunk row with the greatest `committed_at` at or before it (RM common
-/// master06 §Committal and Audits gives `committed_at` its meaning; the
-/// derivation is our own storage design).
-pub(super) fn trunk_at_instant(version_alias: &str, at: Expr) -> Expr {
-    let s = format!("{version_alias}_at");
-    let mut sub = Query::select();
-    sub.expr(Expr::val(1));
-    sub.from_as(VersionRow::Table, Alias::new(s.as_str()));
-    sub.and_where(hot(&s, VersionRow::Tier));
-    sub.and_where(col(&s, VersionRow::VoId).eq(col(version_alias, VersionRow::VoId)));
-    sub.and_where(col(&s, VersionRow::BranchNumber).eq(Expr::val(0)));
-    sub.and_where(col(&s, VersionRow::CommittedAt).gt(col(version_alias, VersionRow::CommittedAt)));
-    sub.and_where(col(&s, VersionRow::CommittedAt).lte(at.clone()));
-    col(version_alias, VersionRow::CommittedAt)
-        .lte(at)
-        .and(Expr::exists(sub).not())
-}
-
 impl Builder<'_> {
     /// [`node_key`] of the version row `voa` under the scope of the source
     /// that opened it.
@@ -195,17 +173,9 @@ impl Builder<'_> {
             VersionScope::All => {
                 bind_head(&mut self.q, voa, false, self.gates, placement);
             }
-            VersionScope::Predicate(p) if p.field == VersionField::TimeCommitted => {
-                bind_head(&mut self.q, voa, false, self.gates, placement);
-                // Version-at-time: the TRUNK version in force at the instant; a
-                // branch version live at that instant coexists by design and
-                // must not duplicate the row.
-                let value = self.bind_value(&p.value)?;
-                self.q
-                    .and_where(col(voa, VersionRow::BranchNumber).eq(Expr::val(0)));
-                self.q
-                    .and_where(trunk_at_instant(voa, cast(Expr::val(value), "timestamptz")));
-            }
+            // QUERY master03 §Standard predicate: the version predicate keeps
+            // its operator, so a `time_committed` bound filters the versions by
+            // their commit time like every other version attribute.
             VersionScope::Predicate(p) => {
                 bind_head(&mut self.q, voa, false, self.gates, placement);
                 let rhs = coerce_rhs(self.bind_value(&p.value)?, p.field.coercion())?;

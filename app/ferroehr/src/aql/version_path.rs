@@ -132,7 +132,10 @@ fn version_field_from_parts(parts: &[&str]) -> Result<VersionField, AqlError> {
         ),
         ["contribution", ..] => Ok(VersionField::ContributionId),
         ["commit_audit", rest @ ..] => match rest {
-            ["time_committed", ..] => Ok(VersionField::TimeCommitted),
+            // `time_committed` is a `DV_DATE_TIME` (RM common
+            // `org.openehr.rm.common.audit_details.adoc`): the whole value
+            // compares like its `value` (QUERY master03 §Dates and Times).
+            ["time_committed"] | ["time_committed", "value"] => Ok(VersionField::TimeCommitted),
             ["system_id", ..] => Ok(VersionField::SystemId),
             ["change_type", rest2 @ ..] => coded_version_field(
                 rest2,
@@ -193,6 +196,25 @@ pub(crate) fn resolve_version_predicate(
     let parts: Vec<&str> = sp.path.parts.iter().map(|p| p.name.as_str()).collect();
     let field = version_field_from_parts(&parts)?;
     let value = bind_from_operand(&sp.operand)?;
+    if field == VersionField::TimeCommitted
+        && let Bind::Literal(lit) = &value
+    {
+        // QUERY master03 §Built-in Types: a date/time literal is a quoted
+        // string, so a bare number, boolean or NULL has no date/time reading.
+        let kind = match lit {
+            TypedLit::Integer(_) | TypedLit::Real(_) => Some("a number"),
+            TypedLit::Boolean(_) => Some("a boolean"),
+            TypedLit::Null => Some("NULL"),
+            TypedLit::String(_) | TypedLit::Temporal(_) => None,
+        };
+        if let Some(kind) = kind {
+            return Err(AnalysisError::TypeMismatch(format!(
+                "`{}` compares a date/time, not {kind}",
+                parts.join("/")
+            ))
+            .into());
+        }
+    }
     if field == VersionField::Uid
         && let Bind::Literal(TypedLit::String(s)) = &value
         && is_branch_version_id(s)

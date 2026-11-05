@@ -11,10 +11,9 @@
 //! (structure hops, fragment jsonpaths, coercions, version scope, wildcard
 //! semantics) and leaves every SQL-shaped decision to the SQL package.
 //!
-//! AQL expresses version-at-time only as a standard predicate on version
-//! metadata, so every version-selection predicate lowers uniformly to
-//! [`VersionScope::Predicate`], the at-time case being a predicate on
-//! `commit_audit/time_committed`. `Coercion::Magnitude` covers both `DV_ORDERED`
+//! A version standard predicate (QUERY master03 §Standard predicate) lowers
+//! to [`VersionScope::Predicate`] with its operator, a bound on
+//! `commit_audit/time_committed` included. `Coercion::Magnitude` covers both `DV_ORDERED`
 //! value objects (extracted via `ext.openehr_magnitude`) and numeric primitives
 //! (a direct numeric cast); the analyzer records the candidate leaf [`TypeSet`]
 //! on the [`LeafPath`] and the SQL package picks the exact extraction from it.
@@ -190,7 +189,8 @@ pub enum VersionScope {
     /// from day one by design).
     All,
     /// A standard predicate on version metadata, e.g.
-    /// `commit_audit/time_committed <= $t` (version-at-time) or `uid/value=$v`.
+    /// `commit_audit/time_committed <= $t` (every version committed at or
+    /// before `$t`) or `uid/value=$v`.
     Predicate(VersionMetaPredicate),
 }
 

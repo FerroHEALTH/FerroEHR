@@ -287,8 +287,8 @@ async fn a_latest_read_of_a_shared_tree_reads_it_once() {
     }
 }
 
-/// The bench's `aql_version_at_time`: the trunk version in force at an
-/// instant before the chains, which no version of a chain is.
+/// The bench's `aql_version_at_time`: every version committed at or before
+/// an instant before the chains, which no version of a chain is.
 #[tokio::test]
 async fn a_read_at_an_instant_reads_a_shared_tree_once() {
     let db = testkit::db().await.expect("testkit database");
