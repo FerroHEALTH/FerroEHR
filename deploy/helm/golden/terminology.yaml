@@ -26,7 +26,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.3
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.2"
+    app.kubernetes.io/version: "5.6.3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 spec:
@@ -63,7 +63,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.3
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.2"
+    app.kubernetes.io/version: "5.6.3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: terminology
@@ -119,7 +119,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.3
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.2"
+    app.kubernetes.io/version: "5.6.3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 spec:
@@ -140,7 +140,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.3
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.2"
+    app.kubernetes.io/version: "5.6.3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 automountServiceAccountToken: false
@@ -155,7 +155,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.3
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.2"
+    app.kubernetes.io/version: "5.6.3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: terminology
@@ -184,7 +184,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.3
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.2"
+    app.kubernetes.io/version: "5.6.3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 type: Opaque
@@ -201,7 +201,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.3
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.2"
+    app.kubernetes.io/version: "5.6.3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 data:
@@ -329,7 +329,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.3
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.2"
+    app.kubernetes.io/version: "5.6.3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: terminology
@@ -457,7 +457,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.3
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.2"
+    app.kubernetes.io/version: "5.6.3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
   annotations:
@@ -487,7 +487,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.3
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.2"
+    app.kubernetes.io/version: "5.6.3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: terminology
@@ -513,7 +513,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.3
     app.kubernetes.io/name: ferroehr
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.2"
+    app.kubernetes.io/version: "5.6.3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
 spec:
@@ -561,7 +561,7 @@ spec:
         supplementalGroupsPolicy: Strict
       containers:
         - name: ferroehr
-          image: "ghcr.io/ferrohealth/ferroehr:5.6.2"
+          image: "ghcr.io/ferrohealth/ferroehr:5.6.3"
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -713,7 +713,7 @@ metadata:
     helm.sh/chart: ferroehr-21.0.3
     app.kubernetes.io/name: ferroehr-terminology
     app.kubernetes.io/instance: ferroehr
-    app.kubernetes.io/version: "5.6.2"
+    app.kubernetes.io/version: "5.6.3"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: ferroehr
     app.kubernetes.io/component: terminology

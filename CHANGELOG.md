@@ -17,6 +17,33 @@ has no matching section here.
 
 ## [Unreleased]
 
+## [5.6.3] - 2026-11-05
+
+5.6.3 is a patch release of 5.6.0 and the first published release since it. The v5.6.1 and v5.6.2 tags exist, but neither release published: the v5.6.1 vulnerability record found CVE-2026-76844 in the zlib package of every image without a judgement, and the v5.6.2 performance guard took the unpublished v5.6.1 as its baseline, whose images do not exist. The guard now compares against the newest published release (#4998). 5.6.3 therefore carries the changes of the 5.6.1 and 5.6.2 sections below: the hosted sandbox's viewer posture, the FerroHEALTH releases the deployment artifacts pin, and the `not_affected` judgement of CVE-2026-76844 in every image. It adds `ferrohealth-server` 0.5.0, FerroBRIDGE 0.0.21 in the Helm chart and the judgement of RUSTSEC-2026-0440, which reaches only the test harness. The REST surface, AQL, storage and configuration are those of 5.6.0.
+
+### Changed
+
+- The server and the viewer take `ferrohealth-server` 0.5.0, whose release
+  removes five forwarding functions from its public API and changes no
+  behaviour, so the HTTP stack, TLS, the same-origin check and the health
+  check answer as before (#5000).
+
+- The Helm chart deploys FerroBRIDGE 0.0.21
+  (`ghcr.io/ferrohealth/ferrobridge:0.0.21@sha256:83bd9d2cb5e4ef6b19617c9434242f88489b0fd4150b2238a22acf17435c9a35`),
+  its newest release, which renames or removes no configuration key the
+  chart sets. The chart moves to 21.0.3 (#5017).
+
+### Security
+
+Shipped with functional changes because: no shipped artefact is affected (the VEX statement below records why), so there is no security update to separate from the other changes this release carries.
+
+- RUSTSEC-2026-0440 (`astral-tokio-tar` is unmaintained, with no patched
+  version) does not affect FerroEHR: `testcontainers` reaches the crate only
+  in the test harness, and the server binary, the `ferroehr` image and the
+  `ferroehr-viewer` image do not contain it. `deny.toml` accepts the advisory
+  until a `testcontainers` release drops the crate
+  (`security/vex/rust-advisories.openvex.json`) (#4996).
+
 ## [5.6.2] - 2026-11-05
 
 5.6.2 is a security-only patch release over 5.6.1. The v5.6.1 tag exists, but its release never published: its vulnerability record found CVE-2026-76844 in the zlib package of every image without a judgement, and Debian has no fixed package for trixie. 5.6.2 adds that judgement and nothing else. It is the first published release since 5.6.0, so it also brings the 5.6.1 changes of this changelog: the hosted sandbox's viewer posture and the FerroHEALTH releases the deployment artifacts pin. The REST surface, AQL, storage and configuration are those of 5.6.0.
@@ -21463,7 +21490,8 @@ but has not yet run in production.
   seccomp, default-deny NetworkPolicy) and golden-render validation.
 
 
-[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.6.2...HEAD
+[unreleased]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.6.3...HEAD
+[5.6.3]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.6.2...v5.6.3
 [5.6.2]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.6.1...v5.6.2
 [5.6.1]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.6.0...v5.6.1
 [5.6.0]: https://github.com/FerroHEALTH/FerroEHR/compare/v5.5.0...v5.6.0
