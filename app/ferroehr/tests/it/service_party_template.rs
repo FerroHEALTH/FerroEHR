@@ -482,7 +482,7 @@ async fn a_person_meeting_its_mapped_template_commits_complete() {
         let uid = create(&svc, PartyKind::Person, &body, COMPLETE)
             .await
             .unwrap_or_else(|e| panic!("{profile:?}: the complete person commits: {e:?}"));
-        assert!(uid.ends_with("::1"), "{uid}");
+        assert!(uid.ends_with("::1"), "the create is the first version");
     }
 }
 
