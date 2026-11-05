@@ -26,6 +26,10 @@
 !.vscode/extensions.json
 .DS_Store
 
+# Documents vendored cache only: fetched by scripts/vendor/*.sh for reading,
+# never committed, because their terms permit no redistribution.
+/.vendor-cache/
+
 # Claude Code local overrides
 CLAUDE.local.md
 .claude/settings.local.json

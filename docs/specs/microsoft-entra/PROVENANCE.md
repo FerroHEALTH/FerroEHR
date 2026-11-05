@@ -1,4 +1,4 @@
-# Provenance: Microsoft Entra ID provisioning articles
+# Provenance: Microsoft Entra ID provisioning and identity platform articles
 
 - Source: <https://github.com/MicrosoftDocs/entra-docs>, the repository Microsoft Learn
   publishes the Entra documentation from
@@ -11,6 +11,19 @@
   `docs/identity/app-provisioning/customize-application-attributes.md` ("Tutorial - Customize
   Microsoft Entra attribute mappings in Application Provisioning",
   `ms.date` 08/06/2026), with every figure they reference
+- Identity platform articles: `docs/identity-platform/reference-microsoft-graph-app-manifest.md`
+  ("Understand the app manifest (Microsoft Graph format)", `ms.date`
+  02/03/2025, `api.requestedAccessTokenVersion`, with the include file
+  `docs/includes/entra-identifier-uri-patterns.md` it embeds),
+  `docs/identity-platform/access-token-claims-reference.md` ("Access token claims
+  reference", `ms.date` 05/26/2023, `oid`, `idp`, `sub` and the groups
+  overage claim) and `docs/identity-platform/optional-claims-reference.md` ("Optional
+  claims reference", `ms.date` 07/22/2026, `acct` and `idtyp`); the two
+  claims references link no include file and no figure. "Access tokens in
+  the Microsoft identity platform" (`docs/identity-platform/access-tokens.md`) is not
+  taken: its sample access tokens are refused by GitHub push protection as
+  Entra ID tokens, and the manifest reference states the same setting.
+  The two claims references are the bytes FerroHEALTH/FerroAUTH vendors in `docs/specs/entra-docs/` at the same commit.
 - Upstream licence: the repository states two grants, both recorded here as
   read 2026-11-05. The `README.md` "Legal Notices" section reads:
   "Microsoft and any contributors grant you a license to the Microsoft
@@ -47,3 +60,7 @@
 | `docs/identity/app-provisioning/media/use-scim-to-provision-users-and-groups/scim-figure-4.png` | `a12bbbe83270e8f10d906ddbbc1a7dd341e231e46815af3d58d86d14095a4bd0` |
 | `docs/identity/app-provisioning/media/use-scim-to-provision-users-and-groups/scim-figure-5.png` | `aa4ddedc8a9d2d6bb4ceeec64620f9b5f35a98386f13292c47de76f01ca923f7` |
 | `docs/identity/app-provisioning/media/use-scim-to-provision-users-and-groups/scim-provisioning-overview.png` | `2d307f01860e79438addfaf6b1c072f7cd66c5e62a50246491d59c579360ff49` |
+| `docs/identity-platform/reference-microsoft-graph-app-manifest.md` | `a4738d13921f6c7363d1b9e615f7b00a941289c2cf8584f81c434aa1b80b678f` |
+| `docs/includes/entra-identifier-uri-patterns.md` | `ffe8720160b46f32d6e93d5fd1235e93d0ca2f46b18e47c0556b25474f2e7eac` |
+| `docs/identity-platform/access-token-claims-reference.md` | `e07447d46ab82957979f12b3caccaf9d07179c6556c7ffbde150d1f754f1e232` |
+| `docs/identity-platform/optional-claims-reference.md` | `3b714c57087ee02fbc3ad49ddcd2399a144b2da2bca327b7cd9f7f0a0da797dc` |

@@ -513,8 +513,47 @@ precedence = "override"
 SPDX-FileCopyrightText = "Keycloak contributors"
 SPDX-License-Identifier = "Apache-2.0"
 
-# The provenance records of those five trees are first-party prose about the
-# material. Placed LAST: a later matching annotation wins.
+# The eHDSI documents (#5055): each cover states "Reuse is authorised, provided
+# the source is acknowledged." with distribution level PU. Not an SPDX-listed
+# licence, so the LicenseRef text records the statement.
+[[annotations]]
+path = "docs/specs/ehdsi-specifications/**"
+precedence = "override"
+SPDX-FileCopyrightText = "European Union, DG SANTE"
+SPDX-License-Identifier = "LicenseRef-eHDSI-Reuse"
+
+# The Okta OpenAPI documents: Apache-2.0, as each document's info.license, the
+# README badge and the npm package state; the repository has no licence file.
+[[annotations]]
+path = "docs/specs/okta/**"
+precedence = "override"
+SPDX-FileCopyrightText = "Okta, Inc."
+SPDX-License-Identifier = "Apache-2.0"
+
+# The OASIS SAML V2.0 Profiles: the document's own notice, a grant to copy and
+# distribute it unmodified with the notice kept.
+[[annotations]]
+path = "docs/specs/oasis-saml/**"
+precedence = "override"
+SPDX-FileCopyrightText = "OASIS Open"
+SPDX-License-Identifier = "LicenseRef-OASIS-Copyright"
+
+# The IHE IUA supplement: the repository's CC BY 4.0 licence, vendored beside it.
+[[annotations]]
+path = "docs/specs/ihe-iua/**"
+precedence = "override"
+SPDX-FileCopyrightText = "IHE International, Inc."
+SPDX-License-Identifier = "CC-BY-4.0"
+
+# Nuts RFC021: the CC BY-SA 4.0 licence its Copyright Notice states.
+[[annotations]]
+path = "docs/specs/nuts-rfc/**"
+precedence = "override"
+SPDX-FileCopyrightText = "Nuts foundation"
+SPDX-License-Identifier = "CC-BY-SA-4.0"
+
+# The provenance records of those trees, and the cache-only record of the Mitz
+# document, are first-party prose about the material. Placed LAST: a later matching annotation wins.
 [[annotations]]
 path = [
   "docs/specs/rfc/PROVENANCE.md",
@@ -522,6 +561,12 @@ path = [
   "docs/specs/microsoft-entra/PROVENANCE.md",
   "docs/specs/scim-reference-code/PROVENANCE.md",
   "docs/specs/keycloak/PROVENANCE.md",
+  "docs/specs/ehdsi-specifications/PROVENANCE.md",
+  "docs/specs/okta/PROVENANCE.md",
+  "docs/specs/oasis-saml/PROVENANCE.md",
+  "docs/specs/ihe-iua/PROVENANCE.md",
+  "docs/specs/nuts-rfc/PROVENANCE.md",
+  "docs/specs/mitz/PROVENANCE.md",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "Cadasto B.V."

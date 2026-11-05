@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: Cadasto B.V.
 # SPDX-License-Identifier: BUSL-1.1
-# Vendor the two Microsoft Entra ID provisioning articles the SCIM endpoint and
-# the Entra walk-through cite into docs/specs/microsoft-entra/: "Develop a SCIM
-# endpoint for user provisioning to apps from Microsoft Entra ID" and
-# "Customize Microsoft Entra attribute mappings in Application Provisioning",
-# with the figures they reference and the repository's licence files.
+# Vendor the Microsoft Entra ID articles the SCIM endpoint, the Entra
+# walk-through and the `entra` issuer preset cite into docs/specs/microsoft-entra/:
+# "Develop a SCIM endpoint for user provisioning to apps from Microsoft Entra
+# ID" and "Customize Microsoft Entra attribute mappings in Application
+# Provisioning", with the figures they reference, and the identity platform's
+# "Access token claims reference", "Optional claims reference" and "Understand
+# the app manifest (Microsoft Graph format)", with the repository's licence files.
 #
 # The source is the MicrosoftDocs/entra-docs repository at a pinned commit,
 # each file checked against its sha256. The copy is verbatim; move the pin
@@ -27,6 +29,7 @@ DEST="$ROOT/docs/specs/microsoft-entra"
 RETRIEVED="2026-11-05"
 ARTICLES="docs/identity/app-provisioning"
 MEDIA="$ARTICLES/media"
+PLATFORM="docs/identity-platform"
 
 # `path sha256` per file, by its path in the repository.
 PINS=(
@@ -46,6 +49,10 @@ PINS=(
   "$MEDIA/use-scim-to-provision-users-and-groups/scim-figure-4.png a12bbbe83270e8f10d906ddbbc1a7dd341e231e46815af3d58d86d14095a4bd0"
   "$MEDIA/use-scim-to-provision-users-and-groups/scim-figure-5.png aa4ddedc8a9d2d6bb4ceeec64620f9b5f35a98386f13292c47de76f01ca923f7"
   "$MEDIA/use-scim-to-provision-users-and-groups/scim-provisioning-overview.png 2d307f01860e79438addfaf6b1c072f7cd66c5e62a50246491d59c579360ff49"
+  "$PLATFORM/reference-microsoft-graph-app-manifest.md a4738d13921f6c7363d1b9e615f7b00a941289c2cf8584f81c434aa1b80b678f"
+  "docs/includes/entra-identifier-uri-patterns.md ffe8720160b46f32d6e93d5fd1235e93d0ca2f46b18e47c0556b25474f2e7eac"
+  "$PLATFORM/access-token-claims-reference.md e07447d46ab82957979f12b3caccaf9d07179c6556c7ffbde150d1f754f1e232"
+  "$PLATFORM/optional-claims-reference.md 3b714c57087ee02fbc3ad49ddcd2399a144b2da2bca327b7cd9f7f0a0da797dc"
 )
 
 pinned_require curl shasum
@@ -56,7 +63,7 @@ trap 'rm -rf "$work"' EXIT
 pinned_fetch_all "$BASE" "$work/tree" "${PINS[@]}"
 
 cat >"$work/tree/PROVENANCE.md" <<EOF
-# Provenance: Microsoft Entra ID provisioning articles
+# Provenance: Microsoft Entra ID provisioning and identity platform articles
 
 - Source: <https://github.com/${REPO}>, the repository Microsoft Learn
   publishes the Entra documentation from
@@ -69,6 +76,19 @@ cat >"$work/tree/PROVENANCE.md" <<EOF
   \`${ARTICLES}/customize-application-attributes.md\` ("Tutorial - Customize
   Microsoft Entra attribute mappings in Application Provisioning",
   \`ms.date\` 08/06/2026), with every figure they reference
+- Identity platform articles: \`${PLATFORM}/reference-microsoft-graph-app-manifest.md\`
+  ("Understand the app manifest (Microsoft Graph format)", \`ms.date\`
+  02/03/2025, \`api.requestedAccessTokenVersion\`, with the include file
+  \`docs/includes/entra-identifier-uri-patterns.md\` it embeds),
+  \`${PLATFORM}/access-token-claims-reference.md\` ("Access token claims
+  reference", \`ms.date\` 05/26/2023, \`oid\`, \`idp\`, \`sub\` and the groups
+  overage claim) and \`${PLATFORM}/optional-claims-reference.md\` ("Optional
+  claims reference", \`ms.date\` 07/22/2026, \`acct\` and \`idtyp\`); the two
+  claims references link no include file and no figure. "Access tokens in
+  the Microsoft identity platform" (\`${PLATFORM}/access-tokens.md\`) is not
+  taken: its sample access tokens are refused by GitHub push protection as
+  Entra ID tokens, and the manifest reference states the same setting.
+  The two claims references are the bytes FerroHEALTH/FerroAUTH vendors in \`docs/specs/entra-docs/\` at the same commit.
 - Upstream licence: the repository states two grants, both recorded here as
   read ${RETRIEVED}. The \`README.md\` "Legal Notices" section reads:
   "Microsoft and any contributors grant you a license to the Microsoft

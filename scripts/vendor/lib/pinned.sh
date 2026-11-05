@@ -65,3 +65,52 @@ pinned_install() {
   mkdir -p "$(dirname "$dest")"
   cp -R "$from" "$dest"
 }
+
+# Downloads URL $1 into the git-ignored cache as .vendor-cache/$2/$3 and
+# refuses the run unless it hashes to $4. A cache-only document is one whose
+# terms do not permit redistribution: it is read from the cache and never
+# enters the vendored tree.
+pinned_cache() {
+  local url="$1" corpus="$2" file="$3" want="$4" root
+  root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+  pinned_fetch "$url" "$root/.vendor-cache/$corpus/$file" "$want"
+  say "$file (cache only)"
+}
+
+# Copies the file in directory $1 that hashes to $3 to $2, refusing the run
+# when $1 holds no such file. For a document the owner retrieved by hand from
+# a source that answers an automated client with a login.
+pinned_supplied() {
+  local from="$1" out="$2" want="$3" candidate
+  while IFS= read -r -d '' candidate; do
+    if [[ "$(pinned_sha256 "$candidate")" == "$want" ]]; then
+      mkdir -p "$(dirname "$out")"
+      cp "$candidate" "$out"
+      return 0
+    fi
+  done < <(find "$from" -maxdepth 1 -type f -print0)
+  die "$from holds no file that hashes to $want"
+}
+
+# Refuses the run unless directory $1 holds a file that hashes to $2. For a
+# document the owner read whose terms permit no copy: its digest is checked
+# and recorded, and it is copied nowhere.
+pinned_withheld() {
+  local from="$1" want="$2" candidate
+  while IFS= read -r -d '' candidate; do
+    [[ "$(pinned_sha256 "$candidate")" == "$want" ]] && return 0
+  done < <(find "$from" -maxdepth 1 -type f -print0)
+  die "$from holds no file that hashes to $want"
+}
+
+# One Markdown table row per `path sha256` pin argument after the first, with
+# the status $1 (`cache only`, `not redistributed`) as a third cell. Those
+# rows name a document the tree must not hold.
+pinned_status_rows() {
+  local status="$1" pin
+  shift
+  for pin in "$@"; do
+    # shellcheck disable=SC2016 # the backticks are literal Markdown, not expansions
+    printf '| `%s` | `%s` | %s |\n' "${pin% *}" "${pin##* }" "$status"
+  done
+}

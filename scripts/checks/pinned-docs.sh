@@ -11,7 +11,11 @@
 #
 #   1. every file a record lists exists and hashes to the recorded sha256, so
 #      a hand edit or a partial re-fetch fails here;
-#   2. every file in the tree is listed, so an unrecorded file cannot ride in.
+#   2. every file in the tree is listed, so an unrecorded file cannot ride in;
+#   3. no file a record marks `cache only` or `not redistributed` (a third
+#      cell after the sha256) is in the tree, so a document whose terms permit
+#      no copy cannot be committed; a cached copy under .vendor-cache/, where
+#      one exists, must hash to the recorded sha256 too.
 #
 # WHAT IT DOES NOT CHECK: whether a pin is still the newest upstream, and
 # whether a record quotes its licence truthfully. Both are review-enforced.
@@ -30,6 +34,12 @@ readonly TREES=(
   docs/specs/microsoft-entra
   docs/specs/scim-reference-code
   docs/specs/keycloak
+  docs/specs/ehdsi-specifications
+  docs/specs/okta
+  docs/specs/oasis-saml
+  docs/specs/ihe-iua
+  docs/specs/nuts-rfc
+  docs/specs/mitz
 )
 
 fail=0
@@ -42,7 +52,19 @@ for tree in "${TREES[@]}"; do
   # The last two backticked cells of a table row: the file, then its sha256.
   # shellcheck disable=SC2016 # the backticks are literal Markdown, not expansions
   sed -nE 's/^\|(.*\|)? `([^`]+)` \| `([0-9a-f]{64})` \|$/\2 \3/p' "$record" >"$listed"
-  [[ -s "$listed" ]] || note "$record lists no file with its sha256"
+  absent=$(mktemp)
+  # shellcheck disable=SC2016 # the backticks are literal Markdown, not expansions
+  sed -nE 's/^\| `([^`]+)` \| `([0-9a-f]{64})` \| (cache only|not redistributed) \|$/\1 \2/p' "$record" >"$absent"
+  [[ -s "$listed" || -s "$absent" ]] || note "$record lists no file with its sha256"
+  while read -r path sha; do
+    if [[ -e "$tree/$path" ]]; then
+      note "$tree holds $path, which $record marks as not redistributed"
+    fi
+    cached=".vendor-cache/${tree##*/}/$path"
+    if [[ -f "$cached" && "$(shasum -a 256 "$cached" | cut -d' ' -f1)" != "$sha" ]]; then
+      note "$cached does not hash to the sha256 $record records"
+    fi
+  done <"$absent"
   while read -r path sha; do
     file="$tree/$path"
     if [[ ! -f "$file" ]]; then
@@ -55,7 +77,7 @@ for tree in "${TREES[@]}"; do
     path="${file#"$tree"/}"
     grep -qxF "$path" <(cut -d' ' -f1 "$listed") || note "$file is not listed in $record"
   done < <(find "$tree" -type f ! -name PROVENANCE.md | LC_ALL=C sort)
-  rm -f "$listed"
+  rm -f "$listed" "$absent"
 done
 
 [[ "$fail" -eq 0 ]] || exit 1

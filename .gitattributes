@@ -24,6 +24,11 @@ docs/specs/openid-connect-core/** -text
 docs/specs/microsoft-entra/** -text
 docs/specs/scim-reference-code/** -text
 docs/specs/keycloak/** -text
+docs/specs/ehdsi-specifications/** -text
+docs/specs/okta/** -text
+docs/specs/oasis-saml/** -text
+docs/specs/ihe-iua/** -text
+docs/specs/nuts-rfc/** -text
 
 # Binary assets
 *.png  binary
