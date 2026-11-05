@@ -91,6 +91,30 @@ pub enum CommitAudit {
     Attestation,
 }
 
+/// `vo_attestation` — the `ATTESTATION`s of a version, at committal and
+/// after it (RM common master06 §Attestation).
+#[derive(Debug, Clone, Copy, sea_query::Iden)]
+pub enum VoAttestation {
+    /// The `vo_attestation` table itself.
+    #[iden = "vo_attestation"]
+    Table,
+    /// `tier` — the storage tier, and the partition key: `hot` or `cold`.
+    Tier,
+    /// `id` — the attestation row id (a uuidv7).
+    Id,
+    /// `vo_id` — the versioned object of the attested version.
+    VoId,
+    /// `sys_version` — the commit ordinal of the attested version.
+    SysVersion,
+    /// `time_committed` — the commit instant of the attestation.
+    TimeCommitted,
+    /// `at_committal` — whether the attestation was on the version at
+    /// committal rather than added afterwards.
+    AtCommittal,
+    /// `data` — the canonical `ATTESTATION`, verbatim.
+    Data,
+}
+
 /// `version` — one write-once row per version of a versioned object.
 #[derive(Debug, Clone, Copy, sea_query::Iden)]
 pub enum VersionRow {
@@ -327,6 +351,10 @@ mod tests {
             include_str!("../../migrations/clinical/0003_change_control.sql"),
         ),
         (
+            "vo_attestation",
+            include_str!("../../migrations/clinical/0003_change_control.sql"),
+        ),
+        (
             "node",
             include_str!("../../migrations/clinical/0004_node.sql"),
         ),
@@ -507,6 +535,18 @@ mod tests {
                     VoHead::ArchiveReason.to_string(),
                 ],
             ),
+            (
+                VoAttestation::Table.to_string(),
+                vec![
+                    VoAttestation::Tier.to_string(),
+                    VoAttestation::Id.to_string(),
+                    VoAttestation::VoId.to_string(),
+                    VoAttestation::SysVersion.to_string(),
+                    VoAttestation::TimeCommitted.to_string(),
+                    VoAttestation::AtCommittal.to_string(),
+                    VoAttestation::Data.to_string(),
+                ],
+            ),
             (Node::Table.to_string(), node_columns()),
         ]
     }
@@ -532,6 +572,7 @@ mod tests {
         assert_eq!(VersionRow::Table.to_string(), "version");
         assert_eq!(VoHead::Table.to_string(), "vo_head");
         assert_eq!(Node::Table.to_string(), "node");
+        assert_eq!(VoAttestation::Table.to_string(), "vo_attestation");
     }
 
     #[test]

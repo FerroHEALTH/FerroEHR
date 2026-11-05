@@ -333,7 +333,7 @@ impl Builder<'_> {
         bound_paths(filter, &mut |t| match t {
             PathTarget::Data(leaf) => leaves.push((false, (**leaf).clone())),
             PathTarget::EhrStatus(leaf) => leaves.push((true, (**leaf).clone())),
-            PathTarget::Version { .. } | PathTarget::Ehr { .. } => {}
+            PathTarget::Version { .. } | PathTarget::Ehr { .. } | PathTarget::Attestations(_) => {}
         });
         let mut bound = false;
         for (ehr_status, leaf) in leaves {
@@ -513,6 +513,7 @@ impl Builder<'_> {
         };
         let leaf = match target {
             PathTarget::Data(leaf) | PathTarget::EhrStatus(leaf) => leaf,
+            PathTarget::Attestations(leaf) => return self.attestation_test(expr, leaf, nested),
             PathTarget::Version { .. } | PathTarget::Ehr { .. } => return Ok(None),
         };
         // NOTE: QUERY master03 §WHERE is silent; list elements inside one node are
@@ -543,18 +544,44 @@ impl Builder<'_> {
                 sub.and_where(cond);
             }
         }
-        sub.expr(Expr::val(1));
-        let mut hit = sub.clone();
-        hit.and_where(test(value));
-        let (present, hit) = if nested {
-            (Expr::exists(sub), Expr::exists(hit))
-        } else {
-            (self.correlated_exists(sub), self.correlated_exists(hit))
+        Ok(Some(self.any_item(sub, test(value), nested)))
+    }
+
+    /// Lowers a test of a `v/attestations[...]/...` path against bound values
+    /// (QUERY master03 §Comparison operators is silent on a multi-valued
+    /// path): it holds when ANY attestation of the version satisfies it, and
+    /// is unknown when the version carries none.
+    ///
+    /// # Errors
+    /// [`AqlError`] from the bound-value and path lowerings.
+    fn attestation_test(
+        &mut self,
+        expr: &ir::Expr,
+        leaf: &LeafPath,
+        nested: bool,
+    ) -> Result<Option<Expr>, AqlError> {
+        let Some((mode, test)) = self.value_test(expr)? else {
+            return Ok(None);
         };
-        // An absent or empty list is unknown, as every absent path is.
-        Ok(Some(
-            sea_query::CaseStatement::new().case(present, hit).into(),
-        ))
+        let (walk, _) = self.attestation_walk(leaf, mode)?;
+        // NOTE: AQL 1.1.0 (QUERY master03 §WHERE) is silent; FerroEHR's own decision
+        // reads `v/attestations/is_pending = true` as "some attestation matches".
+        Ok(Some(self.any_item(walk.sub, test(walk.item), nested)))
+    }
+
+    /// `CASE WHEN EXISTS(<items>) THEN EXISTS(<items> AND <hit>) END`: true
+    /// when some item of `items` satisfies `hit`, unknown when there is no
+    /// item, as every absent path is.
+    fn any_item(&mut self, mut items: SelectStatement, hit: Expr, nested: bool) -> Expr {
+        items.expr(Expr::val(1));
+        let mut hits = items.clone();
+        hits.and_where(hit);
+        let (present, hits) = if nested {
+            (Expr::exists(items), Expr::exists(hits))
+        } else {
+            (self.correlated_exists(items), self.correlated_exists(hits))
+        };
+        sea_query::CaseStatement::new().case(present, hits).into()
     }
 
     /// The extraction mode and the test a one-path test applies to the value

@@ -42,7 +42,6 @@ use super::error::{AnalysisError, AqlError, AqlFeatureError};
 use super::ir::{
     ArchetypeConstraint, Bind, Coercion, EhrField, FragmentStep, LeafPath, NameConstraint,
     NodeConstraint, PathTarget, SourceId, StdPredicate, StructureStep, TypeSet, TypedLit,
-    VersionField, VersionMetaPredicate,
 };
 
 /// The variable → source bindings gathered from the FROM clause. Built by
@@ -104,13 +103,18 @@ pub(crate) fn analyze_path(
     let source = binding.source;
     match &binding.kind {
         BindingKind::Ehr => analyze_ehr_path(source, path, bindings.profile),
-        BindingKind::Version => Ok(PathTarget::Version {
-            source,
-            field: resolve_version_field(path.path.as_ref())?,
-        }),
+        BindingKind::Version => {
+            match super::version_path::analyze_attestation_path(source, path, bindings.profile)? {
+                Some(leaf) => Ok(PathTarget::Attestations(Box::new(leaf))),
+                None => Ok(PathTarget::Version {
+                    source,
+                    field: super::version_path::resolve_version_field(path.path.as_ref())?,
+                }),
+            }
+        }
         BindingKind::VersionedObject => Ok(PathTarget::Version {
             source,
-            field: resolve_versioned_object_field(path.path.as_ref())?,
+            field: super::version_path::resolve_versioned_object_field(path.path.as_ref())?,
         }),
         BindingKind::Rm(types) => {
             let root_predicate = path
@@ -132,7 +136,7 @@ pub(crate) fn analyze_path(
 
 /// The RM-path split: walk `object_path` from `root_types`, classifying each
 /// step as a structure hop or a fragment step.
-fn analyze_rm_path(
+pub(super) fn analyze_rm_path(
     source: SourceId,
     root_types: &TypeSet,
     root_predicate: Option<NodeConstraint>,
@@ -205,7 +209,7 @@ fn analyze_rm_path(
 /// Resolve `attr` across every concrete type in `current`, returning the union
 /// of concrete declared types and whether the attribute is a container on any
 /// of them.
-fn resolve_attribute(
+pub(super) fn resolve_attribute(
     current: &TypeSet,
     attr: &str,
     profile: crate::config::profile::SpecProfile,
@@ -448,125 +452,6 @@ fn resolve_ehr_field(object_path: Option<&ObjectPath>) -> Result<EhrField, AqlEr
     }
 }
 
-fn resolve_version_field(object_path: Option<&ObjectPath>) -> Result<VersionField, AqlError> {
-    let Some(op) = object_path else {
-        // A bare VERSION variable addresses its uid.
-        return Ok(VersionField::Uid);
-    };
-    let parts: Vec<&str> = op.parts.iter().map(|p| p.name.as_str()).collect();
-    version_field_from_parts(&parts)
-}
-
-/// The field a `VERSIONED_OBJECT` path addresses: its `uid` (the bare variable
-/// too) or its `owner_id`, the two attributes of RM common master06
-/// §`VERSIONED_OBJECT` a stored versioned object answers from its versions.
-fn resolve_versioned_object_field(
-    object_path: Option<&ObjectPath>,
-) -> Result<VersionField, AqlError> {
-    let Some(op) = object_path else {
-        return Ok(VersionField::ObjectUid);
-    };
-    let parts: Vec<&str> = op.parts.iter().map(|p| p.name.as_str()).collect();
-    match parts.as_slice() {
-        ["uid"] | ["uid", "value"] => Ok(VersionField::ObjectUid),
-        ["owner_id", "id"] | ["owner_id", "id", "value"] => Ok(VersionField::OwnerId),
-        _ => Err(AqlFeatureError::UnsupportedVersionedObjectPath(parts.join("/")).into()),
-    }
-}
-
-fn version_field_from_parts(parts: &[&str]) -> Result<VersionField, AqlError> {
-    match parts {
-        ["uid", ..] => Ok(VersionField::Uid),
-        // The two CODED version fields are sub-path-sensitive: the stored
-        // representation is the numeric group code, the rubric renders from the
-        // openEHR terminology group, and the terminology id is the constant
-        // `openehr` — a flat mapping would silently never match.
-        ["lifecycle_state", rest @ ..] => coded_version_field(
-            rest,
-            parts,
-            VersionField::LifecycleState,
-            VersionField::LifecycleStateRubric,
-            VersionField::LifecycleStateTerminology,
-        ),
-        ["contribution", ..] => Ok(VersionField::ContributionId),
-        ["commit_audit", rest @ ..] => match rest {
-            ["time_committed", ..] => Ok(VersionField::TimeCommitted),
-            ["system_id", ..] => Ok(VersionField::SystemId),
-            ["change_type", rest2 @ ..] => coded_version_field(
-                rest2,
-                parts,
-                VersionField::ChangeType,
-                VersionField::ChangeTypeRubric,
-                VersionField::ChangeTypeTerminology,
-            ),
-            ["committer", ..] => Ok(VersionField::Committer),
-            // AUDIT_DETAILS.description is a DV_TEXT whose DV_CODED_TEXT
-            // subtype carries a defining_code (`audit_details.adoc`
-            // §Attributes), so each addressed representation resolves to its own
-            // extraction.
-            ["description", rest @ ..] => match rest {
-                [] => Ok(VersionField::Description),
-                ["value"] => Ok(VersionField::DescriptionValue),
-                ["defining_code", "code_string"] => Ok(VersionField::DescriptionCode),
-                ["defining_code", "terminology_id", "value"] => {
-                    Ok(VersionField::DescriptionTerminology)
-                }
-                _ => Err(AqlFeatureError::UnsupportedVersionPredicate(parts.join("/")).into()),
-            },
-            _ => Err(AqlFeatureError::UnsupportedVersionPredicate(parts.join("/")).into()),
-        },
-        _ => Err(AqlFeatureError::UnsupportedVersionPredicate(parts.join("/")).into()),
-    }
-}
-
-/// Resolve the sub-path of a coded (`DV_CODED_TEXT`) version field to the
-/// representation it addresses; any other suffix — including the bare coded
-/// object, which has no defined scalar comparison form — is a typed reject.
-fn coded_version_field(
-    suffix: &[&str],
-    full: &[&str],
-    code: VersionField,
-    rubric: VersionField,
-    terminology: VersionField,
-) -> Result<VersionField, AqlError> {
-    match suffix {
-        ["defining_code", "code_string"] => Ok(code),
-        ["value"] => Ok(rubric),
-        ["defining_code", "terminology_id", "value"] => Ok(terminology),
-        _ => Err(AqlFeatureError::UnsupportedVersionPredicate(full.join("/")).into()),
-    }
-}
-
-/// Resolve a version standard predicate (`VERSION v[commit_audit/... op val]`).
-/// Rejects branch (non-trunk) version ids explicitly.
-pub(crate) fn resolve_version_predicate(
-    sp: &StandardPredicate,
-) -> Result<VersionMetaPredicate, AqlError> {
-    let parts: Vec<&str> = sp.path.parts.iter().map(|p| p.name.as_str()).collect();
-    let field = version_field_from_parts(&parts)?;
-    let value = bind_from_operand(&sp.operand)?;
-    if field == VersionField::Uid
-        && let Bind::Literal(TypedLit::String(s)) = &value
-        && is_branch_version_id(s)
-    {
-        return Err(AqlFeatureError::BranchVersionAddressing.into());
-    }
-    Ok(VersionMetaPredicate {
-        field,
-        op: sp.op,
-        value,
-    })
-}
-
-/// Whether an `OBJECT_VERSION_ID` string names a branch version. The format is
-/// `object_id::creating_system_id::version_tree_id`; a trunk `version_tree_id` is
-/// a plain integer, while a branch id contains dots (`1.1.1`).
-fn is_branch_version_id(s: &str) -> bool {
-    s.split("::")
-        .nth(2)
-        .is_some_and(|tree_id| tree_id.contains('.'))
-}
-
 // ── predicate resolution ─────────────────────────────────────────────────────
 
 /// Resolve an EHR class-predicate `[ehr_id/value=$id]` to its field + value.
@@ -722,7 +607,7 @@ fn parse_name_term_code(raw: &str) -> NameConstraint {
 /// Convert a path-predicate operand to a [`Bind`]. A path operand (rare in a
 /// standard predicate RHS) is rejected as a type mismatch — the SQL package
 /// handles path-vs-path comparisons only in the WHERE clause, not in predicates.
-fn bind_from_operand(operand: &PathPredicateOperand) -> Result<Bind, AqlError> {
+pub(super) fn bind_from_operand(operand: &PathPredicateOperand) -> Result<Bind, AqlError> {
     match operand {
         PathPredicateOperand::Primitive(p) => Ok(Bind::Literal(typed_lit(p))),
         PathPredicateOperand::Parameter(p) => Ok(Bind::Param(param_name(p))),

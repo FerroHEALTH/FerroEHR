@@ -611,6 +611,62 @@ FROM EHR e
             CONTAINS COMPOSITION c
 ```
 
+### VERSION paths
+
+A `VERSION` variable answers these paths:
+
+| Path | Reads |
+|---|---|
+| `uid/value` | the version id, `object_id::creating_system_id::version_tree_id` |
+| `contribution/id/value` | the CONTRIBUTION the version was committed in |
+| `lifecycle_state/value`, `lifecycle_state/defining_code/code_string`, `lifecycle_state/defining_code/terminology_id/value` | the lifecycle state as rubric, code or terminology |
+| `commit_audit/time_committed`, `commit_audit/system_id`, `commit_audit/committer` | the commit audit |
+| `commit_audit/change_type/value`, `.../defining_code/code_string`, `.../defining_code/terminology_id/value` | the audit change type |
+| `commit_audit/description`, `commit_audit/description/value`, `.../defining_code/code_string`, `.../defining_code/terminology_id/value` | the audit description |
+| `commit_audit/is_pending`, `commit_audit/reason`, `commit_audit/reason/value` | the `ATTESTATION` attributes of a commit audit that is an `ATTESTATION`; empty on a plain `AUDIT_DETAILS` |
+| `attestations`, `attestations[<predicate>]`, `attestations/<path>` | the version's `ATTESTATION`s, see below |
+
+Any other path on a `VERSION` variable is refused with a typed error.
+
+### Attestations and the review worklist
+
+A version carries the attestations committed with it and every attestation
+added to it afterwards through a `666|attestation|` contribution (RM common,
+change control package, §Attestation). `ATTESTATION` is not `LOCATABLE`, so
+you reach it by path from the `VERSION` variable, not with
+`CONTAINS ATTESTATION`. A path below `attestations` is any attribute of
+`ATTESTATION`: `is_pending`, `reason/value`, `proof`, `items/value`,
+`committer/name`, `time_committed/value` and the others the class declares.
+
+When a pending attestation is signed, the RM adds a second `ATTESTATION`
+with `is_pending = false` and keeps the pending one. A version still waiting
+for review therefore has a pending attestation and no completed one:
+
+```text
+SELECT e/ehr_id/value, c/uid/value, v/commit_audit/time_committed
+FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c
+WHERE EXISTS v/attestations[is_pending=true]
+  AND NOT EXISTS v/attestations[is_pending=false]
+```
+
+- **`SELECT v/attestations`** returns the version's attestations as one list,
+  those committed with the version first, then in commit order. A path below
+  it returns the list of that attribute, one entry per attestation that has
+  it. A version with no attestation gives an empty cell.
+- **A predicate on `attestations`** tests attributes of each attestation
+  (`[is_pending=true]`, `[reason/value=$reason]`). An archetype or name
+  predicate is refused: `ATTESTATION` has neither.
+- **A comparison on a path below `attestations`** holds when any attestation
+  of the version satisfies it: `v/attestations/is_pending = true` keeps a
+  version with at least one pending attestation, signed or not. On a version
+  with no attestation the comparison is unknown, so neither it nor its `NOT`
+  keeps the row. AQL 1.1.0 does not say how a comparison over a multi-valued
+  attribute evaluates; this reading is FerroEHR's own decision.
+- **`LATEST_VERSION`** (the default) reads the attestations of each
+  composition's current version only. Attestations do not carry over to a
+  new version (§Attestation), so `ALL_VERSIONS` is how you find older
+  versions that are still pending.
+
 ## Terminology in queries
 
 Value filters can be backed by terminology in three ways:
@@ -708,7 +764,8 @@ results. Supported today includes:
   order their operand by type (a quantity by its openEHR magnitude, a date/time
   chronologically, text lexically) so they work over non-numeric leaves;
 - `FROM` over `EHR`, `VERSIONED_OBJECT` (its `uid` and `owner_id`), `VERSION`
-  (`LATEST_VERSION` / `ALL_VERSIONS`), and the RM
+  (`LATEST_VERSION` / `ALL_VERSIONS`, its commit metadata and its
+  attestations, see [VERSION paths](#version-paths)), and the RM
   structure classes, with archetype and name predicates, and over `PERSON`,
   `ORGANISATION` and `ROLE` as the experimental demographic extension;
 - `CONTAINS` trees with `AND`, `OR`, and `NOT CONTAINS`;

@@ -346,14 +346,10 @@ pub(super) fn type_cond(node: &str, types: &TypeSet) -> Option<Expr> {
 /// compare by ordered-magnitude; mirrors the analyzer's leaf typing).
 pub(super) fn order_coercion(target: &PathTarget) -> Coercion {
     match target {
-        PathTarget::Data(leaf) | PathTarget::EhrStatus(leaf) => leaf.coercion,
-        PathTarget::Version { field, .. } => {
-            if *field == VersionField::TimeCommitted {
-                Coercion::Temporal
-            } else {
-                Coercion::Text
-            }
+        PathTarget::Data(leaf) | PathTarget::EhrStatus(leaf) | PathTarget::Attestations(leaf) => {
+            leaf.coercion
         }
+        PathTarget::Version { field, .. } => field.coercion(),
         PathTarget::Ehr { field, .. } => {
             if *field == EhrField::TimeCreated {
                 Coercion::Temporal
@@ -446,6 +442,29 @@ pub(super) fn version_field_expr(
             coded_rubric_case(&col(&audit(), CommitAudit::ChangeType), "audit_change_type")
         }
         VersionField::Committer => col(&audit(), CommitAudit::Committer),
+        // `commit_audit.attestation` holds the ATTESTATION-declared attributes
+        // of a commit audit that is one, and is NULL on a plain AUDIT_DETAILS,
+        // so every read below is NULL there.
+        VersionField::CommitAuditIsPending => cast(
+            sea_query::extension::postgres::PgExpr::cast_json_field(
+                col(&audit(), CommitAudit::Attestation),
+                Expr::val("is_pending"),
+            ),
+            "boolean",
+        ),
+        VersionField::CommitAuditReason => sea_query::extension::postgres::PgExpr::get_json_field(
+            col(&audit(), CommitAudit::Attestation),
+            Expr::val("reason"),
+        ),
+        VersionField::CommitAuditReasonValue => {
+            sea_query::extension::postgres::PgExpr::cast_json_field(
+                sea_query::extension::postgres::PgExpr::get_json_field(
+                    col(&audit(), CommitAudit::Attestation),
+                    Expr::val("reason"),
+                ),
+                Expr::val("value"),
+            )
+        }
         // The stored description is the whole canonical DV_TEXT fragment, so
         // the addressed representation is a jsonb extraction: the bare
         // attribute is the object (as `committer` is), each scalar sub-path a

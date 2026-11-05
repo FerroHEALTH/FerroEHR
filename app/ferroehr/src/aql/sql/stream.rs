@@ -179,7 +179,10 @@ fn path_needs_root_node(target: &PathTarget, root: usize) -> bool {
         // Version metadata reads `version`; EHR fields read `ehr`; an
         // `e/ehr_status/...` path joins its OWN EHR_STATUS root node (its
         // leaf is rooted at the EHR source, never the streaming root).
-        PathTarget::Version { .. } | PathTarget::Ehr { .. } | PathTarget::EhrStatus(_) => false,
+        PathTarget::Version { .. }
+        | PathTarget::Ehr { .. }
+        | PathTarget::EhrStatus(_)
+        | PathTarget::Attestations(_) => false,
     }
 }
 
