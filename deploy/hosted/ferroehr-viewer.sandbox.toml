@@ -17,13 +17,16 @@
 base_url = "https://sandbox.ferroehr.eu"
 
 [session]
+# The sessions live in one sealed cookie, so a viewer restart keeps them; a
+# sealed store is the one that takes a key (ferrohealth-session, #4985).
+store = "sealed"
 # TLS terminates at Caddy on the same box.
-cookie_secure = true
+secure_cookie = true
 # The cookie-sealing key, DELIBERATELY public (owner call, #2949): the
 # sandbox is a demo whose only credential is itself public, so a forgeable
 # demo session protects nothing — and a committed key keeps the deployment
 # zero-secret. Every real deployment generates its own and keeps it secret.
-secret = "QbcUgnEXEpoyarA0YLvc0Lw1BsTGigAEcFgQQu0Kb8ym1eTJc2ehU96CIQv1YrP0I1J9KjOnSwKaFaTRG89+e/svrxGYsbd4WM2JlgB6WMugNWWUBLPOIyXwkLs1zROR"
+key = "QbcUgnEXEpoyarA0YLvc0Lw1BsTGigAEcFgQQu0Kb8ym1eTJc2ehU96CIQv1YrP0I1J9KjOnSwKaFaTRG89+e/svrxGYsbd4WM2JlgB6WMugNWWUBLPOIyXwkLs1zROR"
 
 # The sign-in card states what a visitor needs (#2941): the demo credentials
 # and the free-tier expectations, with the API reference linked underneath.

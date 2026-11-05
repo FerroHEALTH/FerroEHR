@@ -15,6 +15,7 @@
 mod cdr_record;
 mod common;
 
+mod sandbox_posture;
 mod serving;
 mod ssr_app;
 mod ssr_assets;
