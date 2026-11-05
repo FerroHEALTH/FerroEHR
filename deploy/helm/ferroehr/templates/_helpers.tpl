@@ -850,7 +850,7 @@ entry in Chart.yaml to it. Bumping FerroBRIDGE is this line plus
 `bridge.image.digest` in values.yaml.
 */}}
 {{- define "ferroehr.bridgePinnedVersion" -}}
-0.0.20
+0.0.21
 {{- end }}
 
 {{/*

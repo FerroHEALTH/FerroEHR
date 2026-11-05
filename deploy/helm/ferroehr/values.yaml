@@ -1573,13 +1573,13 @@ bridge:
     # -- Pull policy.
     pullPolicy: IfNotPresent
     # -- Image tag. Empty falls back to the FerroBRIDGE release this chart is
-    # pinned to (0.0.20), never `.Chart.appVersion`, which is FerroEHR's line.
+    # pinned to (0.0.21), never `.Chart.appVersion`, which is FerroEHR's line.
     # A tag other than that pin is REFUSED while `digest` below is non-empty:
     # the digest wins, so the tag would be inert. Clear `digest` to deploy a tag.
     tag: ""
     # -- Image digest (`sha256:…`); wins over `tag`. Pinned by default, so an
     # install runs the exact image this chart was validated against.
-    digest: sha256:7dd5550d57b7f0bdfdf194453feff95b093152fd235b9378877bebb8e8d055e2
+    digest: sha256:83bd9d2cb5e4ef6b19617c9434242f88489b0fd4150b2238a22acf17435c9a35
   service:
     # -- Service port. The Service is always ClusterIP and the container always
     # listens on 8080.
