@@ -237,6 +237,14 @@ pub enum VersionField {
     /// `commit_audit/description/defining_code/terminology_id/value` — the
     /// terminology of a `DV_CODED_TEXT` description.
     DescriptionTerminology,
+    /// `commit_audit/is_pending` — `ATTESTATION.is_pending` when the commit
+    /// audit is an `ATTESTATION`, `NULL` on a plain `AUDIT_DETAILS` (RM common
+    /// master06 §Attestation).
+    CommitAuditIsPending,
+    /// `commit_audit/reason` — the whole `ATTESTATION.reason` `DV_TEXT`.
+    CommitAuditReason,
+    /// `commit_audit/reason/value` — the reason's display text.
+    CommitAuditReasonValue,
     /// `contribution/id[/value]`.
     ContributionId,
     /// `lifecycle_state/defining_code/code_string` — the stored numeric
@@ -534,6 +542,14 @@ pub enum PathTarget {
     /// fragment-extraction machinery once the root node is joined in. RM 1.2.0
     /// `EHR.ehr_status` (`docs/specs/openehr/RM/docs/ehr/`).
     EhrStatus(Box<LeafPath>),
+    /// A path into `ORIGINAL_VERSION.attestations` of a VERSION variable
+    /// (`v/attestations[...]/...`). `ATTESTATION` is no `LOCATABLE` and no
+    /// node row, so the wrapped [`LeafPath`] is analysed relative to
+    /// `ATTESTATION` (`leaf.source` = the VERSION source): its
+    /// `root_predicate` is the predicate on the `attestations` step, its
+    /// anchor is empty and its fragment addresses the stored attestation. RM
+    /// common master06 §Attestation, `ORIGINAL_VERSION.attestations`.
+    Attestations(Box<LeafPath>),
 }
 
 /// A `LIKE` pattern with its AQL wildcard semantics preserved for the SQL
@@ -739,65 +755,4 @@ pub enum ParamValue {
     Str(String),
     /// A JSON null.
     Null,
-}
-
-// ── identified-path visitors ─────────────────────────────────────────────────
-
-impl Operand {
-    /// Calls `f` on every identified path of this operand, nested function
-    /// arguments included.
-    pub fn for_each_path(&self, f: &mut impl FnMut(&PathTarget)) {
-        match self {
-            Operand::Path(t) => f(t),
-            Operand::Function { args, .. } => args.iter().for_each(|a| a.for_each_path(f)),
-            Operand::Literal(_) | Operand::Param(_) => {}
-        }
-    }
-}
-
-impl Expr {
-    /// Calls `f` on every identified path of this predicate tree.
-    pub fn for_each_path(&self, f: &mut impl FnMut(&PathTarget)) {
-        match self {
-            Expr::Compare { lhs, rhs, .. } => {
-                lhs.for_each_path(f);
-                rhs.for_each_path(f);
-            }
-            Expr::Exists(t) | Expr::Like { path: t, .. } | Expr::Matches { path: t, .. } => f(t),
-            Expr::Const(_) => {}
-            Expr::And(a, b) | Expr::Or(a, b) => {
-                a.for_each_path(f);
-                b.for_each_path(f);
-            }
-            Expr::Not(a) => a.for_each_path(f),
-        }
-    }
-}
-
-impl SelectValue {
-    /// Calls `f` on every identified path of this column: the path itself, an
-    /// aggregate's argument, or a function's arguments.
-    pub fn for_each_path(&self, f: &mut impl FnMut(&PathTarget)) {
-        match self {
-            SelectValue::Path(t) | SelectValue::Aggregate { arg: Some(t), .. } => f(t),
-            SelectValue::Function { args, .. } => args.iter().for_each(|a| a.for_each_path(f)),
-            SelectValue::Aggregate { arg: None, .. } | SelectValue::Literal(_) => {}
-        }
-    }
-}
-
-impl QueryIr {
-    /// Calls `f` on every identified path the query reads: the SELECT
-    /// columns, the WHERE predicate and the ORDER BY keys.
-    pub fn for_each_path(&self, f: &mut impl FnMut(&PathTarget)) {
-        for column in &self.select {
-            column.value.for_each_path(f);
-        }
-        if let Some(filter) = &self.filter {
-            filter.for_each_path(f);
-        }
-        for key in &self.order_by {
-            f(&key.path);
-        }
-    }
 }

@@ -231,7 +231,9 @@ fn referenced_sources(ir: &QueryIr) -> std::collections::BTreeSet<usize> {
     let mut out = std::collections::BTreeSet::new();
     ir.for_each_path(&mut |t| {
         out.insert(match t {
-            PathTarget::Data(leaf) | PathTarget::EhrStatus(leaf) => leaf.source.0,
+            PathTarget::Data(leaf)
+            | PathTarget::EhrStatus(leaf)
+            | PathTarget::Attestations(leaf) => leaf.source.0,
             PathTarget::Version { source, .. } | PathTarget::Ehr { source, .. } => source.0,
         });
     });
@@ -1141,7 +1143,7 @@ impl Builder<'_> {
             }
             VersionScope::Predicate(p) => {
                 bind_head(&mut self.q, voa, false, self.gates, placement);
-                let rhs = cast(Expr::val(self.bind_value(&p.value)?), "text");
+                let rhs = super::value::coerce_rhs(self.bind_value(&p.value)?, p.field.coercion())?;
                 let lhs = version_field_expr(voa, || self.ensure_audit(voa), p.field);
                 self.q
                     .and_where(lhs.binary(super::expr::binoper(p.op), rhs));

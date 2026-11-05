@@ -20,12 +20,14 @@ pub mod constraints;
 pub mod error;
 pub mod exec;
 pub mod ir;
+mod ir_impl;
 pub mod join;
 pub mod lineage;
 mod lower;
 pub mod sql;
 pub mod subject;
 pub mod terminology;
+mod version_path;
 
 use std::collections::BTreeSet;
 
@@ -210,7 +212,9 @@ fn collect_select(value: &SelectValue, out: &mut BTreeSet<String>) {
 
 fn collect_path_target(target: &PathTarget, out: &mut BTreeSet<String>) {
     let leaf = match target {
-        PathTarget::Data(leaf) | PathTarget::EhrStatus(leaf) => leaf,
+        PathTarget::Data(leaf) | PathTarget::EhrStatus(leaf) | PathTarget::Attestations(leaf) => {
+            leaf
+        }
         PathTarget::Version { .. } | PathTarget::Ehr { .. } => return,
     };
     if let Some(c) = &leaf.root_predicate {

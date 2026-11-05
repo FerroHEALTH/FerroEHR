@@ -20,7 +20,7 @@ use openehr_rm::v1_2::model;
 
 use super::analyze::{
     Binding, BindingKind, Bindings, analyze_path, param_name, resolve_ehr_predicate,
-    resolve_node_predicate, resolve_version_predicate, typed_lit,
+    resolve_node_predicate, typed_lit,
 };
 use super::error::{AnalysisError, AqlError, AqlFeatureError};
 use super::ir::{
@@ -28,6 +28,7 @@ use super::ir::{
     Link, Operand, OrderKey, PathTarget, QueryDomain, QueryIr, RmSource, SelectColumn, SelectValue,
     Source, SourceId, TypeSet, TypedLit, VersionScope, VersionSource,
 };
+use super::version_path::resolve_version_predicate;
 use crate::versioning::Kind;
 
 /// The demographic roots the experimental demographic extension serves.
@@ -673,7 +674,9 @@ pub(crate) fn lower_limit(
 /// the target is numerically aggregable.
 fn non_numeric_leaf(target: &PathTarget) -> Option<&'static str> {
     let coercion = match target {
-        PathTarget::Data(leaf) | PathTarget::EhrStatus(leaf) => leaf.coercion,
+        PathTarget::Data(leaf) | PathTarget::EhrStatus(leaf) | PathTarget::Attestations(leaf) => {
+            leaf.coercion
+        }
         PathTarget::Version { .. } | PathTarget::Ehr { .. } => return Some("version/EHR metadata"),
     };
     match coercion {
@@ -745,14 +748,8 @@ fn comparison_coercion(lhs: &Operand, rhs: &Operand) -> Coercion {
 
 fn target_coercion(t: &PathTarget) -> Coercion {
     match t {
-        PathTarget::Data(l) | PathTarget::EhrStatus(l) => l.coercion,
-        PathTarget::Version { field, .. } => {
-            if *field == super::ir::VersionField::TimeCommitted {
-                Coercion::Temporal
-            } else {
-                Coercion::Text
-            }
-        }
+        PathTarget::Data(l) | PathTarget::EhrStatus(l) | PathTarget::Attestations(l) => l.coercion,
+        PathTarget::Version { field, .. } => field.coercion(),
         PathTarget::Ehr { field, .. } => {
             if *field == super::ir::EhrField::TimeCreated {
                 Coercion::Temporal
