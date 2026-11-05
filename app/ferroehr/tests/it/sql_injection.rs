@@ -246,6 +246,11 @@ const PARAM_POSITIONS: &[(&str, &str)] = &[
          WHERE v/attestations/reason/value = $p",
     ),
     (
+        "LAST over a predicated attestations path",
+        "SELECT c/name/value FROM EHR e CONTAINS VERSION v CONTAINS COMPOSITION c \
+         WHERE LAST(v/attestations[reason/value = $p]/is_pending) = true",
+    ),
+    (
         "ORDER BY over a filtered path",
         "SELECT c/name/value FROM COMPOSITION c WHERE c/name/value != $p ORDER BY c/name/value DESC",
     ),

@@ -333,7 +333,9 @@ impl Builder<'_> {
         bound_paths(filter, &mut |t| match t {
             PathTarget::Data(leaf) => leaves.push((false, (**leaf).clone())),
             PathTarget::EhrStatus(leaf) => leaves.push((true, (**leaf).clone())),
-            PathTarget::Version { .. } | PathTarget::Ehr { .. } | PathTarget::Attestations(_) => {}
+            PathTarget::Version { .. }
+            | PathTarget::Ehr { .. }
+            | PathTarget::Attestations { .. } => {}
         });
         let mut bound = false;
         for (ehr_status, leaf) in leaves {
@@ -513,8 +515,12 @@ impl Builder<'_> {
         };
         let leaf = match target {
             PathTarget::Data(leaf) | PathTarget::EhrStatus(leaf) => leaf,
-            PathTarget::Attestations(leaf) => return self.attestation_test(expr, leaf, nested),
-            PathTarget::Version { .. } | PathTarget::Ehr { .. } => return Ok(None),
+            PathTarget::Attestations { leaf, last: false } => {
+                return self.attestation_test(expr, leaf, nested);
+            }
+            PathTarget::Version { .. }
+            | PathTarget::Ehr { .. }
+            | PathTarget::Attestations { last: true, .. } => return Ok(None),
         };
         // NOTE: QUERY master03 §WHERE is silent; list elements inside one node are
         // not bindings (an aggregate under this test still counts every element).

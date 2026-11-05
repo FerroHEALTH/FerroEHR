@@ -549,7 +549,13 @@ pub enum PathTarget {
     /// `root_predicate` is the predicate on the `attestations` step, its
     /// anchor is empty and its fragment addresses the stored attestation. RM
     /// common master06 §Attestation, `ORIGINAL_VERSION.attestations`.
-    Attestations(Box<LeafPath>),
+    Attestations {
+        /// The path below `attestations`, rooted at the VERSION source.
+        leaf: Box<LeafPath>,
+        /// Whether the path is read off the most recent attestation only,
+        /// the FerroEHR `LAST(...)` extension function.
+        last: bool,
+    },
 }
 
 /// A `LIKE` pattern with its AQL wildcard semantics preserved for the SQL

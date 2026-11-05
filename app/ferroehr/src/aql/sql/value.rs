@@ -55,7 +55,7 @@ impl Builder<'_> {
                 })?;
                 Ok(version_field_expr(&voa, || self.ensure_audit(&voa), *field))
             }
-            PathTarget::Attestations(leaf) => self.attestation_value(leaf, mode),
+            PathTarget::Attestations { leaf, last } => self.attestation_value(leaf, *last, mode),
             PathTarget::Ehr { source, field } => {
                 let alias = self.ehr_alias.get(&source.0).cloned().ok_or_else(|| {
                     SqlError::Unsupported("EHR path without a bound EHR".to_owned())
@@ -248,10 +248,12 @@ impl Builder<'_> {
                 self.ensure_ehr_status_root(leaf.source.0)?;
                 leaf
             }
-            PathTarget::Attestations(leaf) => {
+            PathTarget::Attestations { leaf, last: false } => {
                 return Ok(Some(self.attestation_walk(leaf, mode)?.0));
             }
-            PathTarget::Version { .. } | PathTarget::Ehr { .. } => return Ok(None),
+            PathTarget::Version { .. }
+            | PathTarget::Ehr { .. }
+            | PathTarget::Attestations { last: true, .. } => return Ok(None),
         };
         if self.has_column_read(leaf, mode) {
             return Ok(None);

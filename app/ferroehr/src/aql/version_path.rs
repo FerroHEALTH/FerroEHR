@@ -7,13 +7,16 @@
 //! the version standard predicate of a `VERSION` class expression (QUERY
 //! master03 §Standard predicate).
 
-use openehr_query::ast::{IdentifiedPath, ObjectPath, StandardPredicate};
+use openehr_query::ast::{FunctionCall, IdentifiedPath, ObjectPath, StandardPredicate, Terminal};
 
 use super::analyze::{
-    analyze_rm_path, bind_from_operand, resolve_attribute, resolve_node_predicate,
+    Bindings, analyze_path, analyze_rm_path, bind_from_operand, resolve_attribute,
+    resolve_node_predicate,
 };
 use super::error::{AnalysisError, AqlError, AqlFeatureError};
-use super::ir::{Bind, LeafPath, SourceId, TypeSet, TypedLit, VersionField, VersionMetaPredicate};
+use super::ir::{
+    Bind, LeafPath, PathTarget, SourceId, TypeSet, TypedLit, VersionField, VersionMetaPredicate,
+};
 
 /// Resolve an identified path into `ORIGINAL_VERSION.attestations` of a
 /// VERSION variable, or `None` when the path does not start there.
@@ -210,4 +213,39 @@ fn is_branch_version_id(s: &str) -> bool {
     s.split("::")
         .nth(2)
         .is_some_and(|tree_id| tree_id.contains('.'))
+}
+
+/// The FerroEHR extension function `LAST(<path below v/attestations>)`: the
+/// path read off the most recent attestation of the version, or `None` for
+/// any other call.
+///
+/// RM common master04 §Attestation completes a pending attestation by adding
+/// another, and a pending one may follow a completed one, so only the latest
+/// says whether a version waits for signature; AQL 1.1.0 cannot select the
+/// last element of a list.
+///
+/// # Errors
+/// [`AqlFeatureError::LastArgument`] when the call is not exactly one path
+/// below `attestations`, and the path analysis errors of that path.
+pub(super) fn last_attestation(
+    call: &FunctionCall,
+    bindings: &Bindings,
+) -> Result<Option<PathTarget>, AqlError> {
+    let FunctionCall::Other { name, args } = call else {
+        return Ok(None);
+    };
+    // NOTE: QUERY master03 §Functions ("Various other functions may exist however
+    // in various AQL implementations"); `LAST` is FerroEHR's own extension.
+    if !name.eq_ignore_ascii_case("LAST") {
+        return Ok(None);
+    }
+    let [Terminal::Path(path)] = args.as_slice() else {
+        return Err(AqlFeatureError::LastArgument(format!("{} argument(s)", args.len())).into());
+    };
+    match analyze_path(path, bindings)? {
+        PathTarget::Attestations { leaf, .. } => {
+            Ok(Some(PathTarget::Attestations { leaf, last: true }))
+        }
+        _ => Err(AqlFeatureError::LastArgument(format!("`{}`", path.column_path_text())).into()),
+    }
 }
