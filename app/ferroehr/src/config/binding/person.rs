@@ -429,6 +429,16 @@ impl Sections<'_> {
             if let Some(external_id) = &template.external_id {
                 selectors = selectors.with_external_id(identifier(external_id)?);
             }
+            let canonical = crate::templates::identity::canonical_key(&template.template_id);
+            let name = self.person.attribute.iter().filter(|a| a.name).find_map(|a| {
+                a.path
+                    .iter()
+                    .find(|(id, _)| crate::templates::identity::canonical_key(id) == canonical)
+                    .map(|(_, path)| path.clone())
+            });
+            if let Some(path) = name {
+                selectors = selectors.with_name(NameSelector::new(path)?);
+            }
             mapping = mapping.with_person_selectors(&template.template_id, selectors);
         }
         if let Some(role) = self.professional_role {

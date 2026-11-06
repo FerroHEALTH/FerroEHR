@@ -65,7 +65,7 @@ use std::sync::Arc;
 use ferroehr::service::FerroEhrService;
 use ferroehr::storage::dpop_replay::PgReplayStore;
 use ferrohealth_server::serve::{Drained, Listener};
-use ferrohealth_smart::party::source::PartySource;
+use ferroehr::party_binding::source::BindingSource;
 use ferrohealth_smart::sender::replay::ReplayStore;
 use tokio::net::TcpListener;
 
@@ -156,7 +156,7 @@ pub async fn build_full(
 async fn build_authenticator(
     config: &AppConfig,
     authz: Option<&AuthzHandle>,
-    source: Option<Arc<dyn PartySource>>,
+    source: Option<Arc<dyn BindingSource>>,
     replay: Arc<dyn ReplayStore>,
 ) -> Result<Arc<Authenticator>, ServeError> {
     let claim = authz
@@ -183,7 +183,7 @@ async fn build_authenticator(
 
 /// The local party source over `backend`'s party pool, naming each party
 /// under `[authz.party_binding] namespace`.
-fn party_source(config: &AppConfig, backend: &FerroEhrService) -> Arc<dyn PartySource> {
+fn party_source(config: &AppConfig, backend: &FerroEhrService) -> Arc<dyn BindingSource> {
     Arc::new(backend.party_source(config.party_binding.namespace.clone()))
 }
 

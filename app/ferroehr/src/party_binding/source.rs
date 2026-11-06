@@ -32,6 +32,19 @@ const PERSON: &str = "PERSON";
 /// The RM class of a group a party belongs to.
 const GROUP: &str = "GROUP";
 
+/// A party source that also reads the name a bound `PERSON`'s committer
+/// carries.
+pub trait BindingSource: PartySource {
+    /// Returns the name of the bound `PERSON` `party` at the name path of the
+    /// party mapping, `None` when it has none.
+    fn person_name<'a>(
+        &'a self,
+        _party: &'a str,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<String>, SourceError>> + Send + 'a>> {
+        Box::pin(async { Ok(None) })
+    }
+}
+
 /// The party source over the binding side table.
 #[derive(Debug, Clone)]
 pub struct LocalPartySource {
@@ -39,6 +52,8 @@ pub struct LocalPartySource {
     pool: PgPool,
     /// The `PARTY_REF.namespace` a reported party is named under.
     namespace: String,
+    /// The mapping whose name paths name a bound `PERSON`.
+    mapping: std::sync::Arc<crate::party_binding::BindingMapping>,
 }
 
 impl LocalPartySource {
@@ -49,7 +64,49 @@ impl LocalPartySource {
         Self {
             pool,
             namespace: namespace.into(),
+            mapping: std::sync::Arc::default(),
         }
+    }
+
+    /// Returns this source naming a bound `PERSON` at the name paths of
+    /// `mapping`.
+    #[must_use]
+    pub fn with_mapping(mut self, mapping: std::sync::Arc<crate::party_binding::BindingMapping>) -> Self {
+        self.mapping = mapping;
+        self
+    }
+
+    /// Returns the name of the `PERSON` `party` at the name path of its
+    /// template, from its head version; `None` when it has none.
+    ///
+    /// # Errors
+    /// [`StorageError`] when the party pool cannot answer.
+    pub async fn name(&self, party: Uuid) -> Result<Option<String>, StorageError> {
+        let mut conn = self.pool.acquire().await?;
+        for (template, selectors) in &self.mapping.persons {
+            let Some(name) = &selectors.name else {
+                continue;
+            };
+            let found: Option<Option<String>> = sqlx::query_scalar(
+                "SELECT jsonb_path_query_first(v.body::jsonb, $3::jsonpath, $4::jsonb) ->> 'value' \
+                 FROM vo_head h \
+                 JOIN version v ON v.tier = h.tier AND v.vo_id = h.vo_id \
+                               AND v.sys_version = h.trunk_head_sys_version \
+                 WHERE h.vo_id = $1 AND h.kind = 'PERSON' AND v.body IS NOT NULL \
+                   AND lower(btrim(v.body::jsonb -> 'archetype_details' -> 'template_id' \
+                                   ->> 'value')) = $2",
+            )
+            .bind(party)
+            .bind(template)
+            .bind(&name.json_path)
+            .bind(&name.variables)
+            .fetch_optional(&mut *conn)
+            .await?;
+            if let Some(found) = found {
+                return Ok(found);
+            }
+        }
+        Ok(None)
     }
 
     /// Returns what the side table holds for the key `value` of
@@ -179,6 +236,22 @@ impl PartySource for LocalPartySource {
             )
             .await
             .map_err(SourceError::new)
+        })
+    }
+}
+
+impl BindingSource for LocalPartySource {
+    fn person_name<'a>(
+        &'a self,
+        party: &'a str,
+    ) -> Pin<Box<dyn Future<Output = Result<Option<String>, SourceError>> + Send + 'a>> {
+        Box::pin(async move {
+            // NOTE: the local source names each party by its container's UUID, so
+            // another id names no PERSON of this store and no name.
+            let Ok(id) = party.parse::<Uuid>() else {
+                return Ok(None);
+            };
+            self.name(id).await.map_err(SourceError::new)
         })
     }
 }

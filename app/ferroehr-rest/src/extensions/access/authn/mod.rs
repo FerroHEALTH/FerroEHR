@@ -350,7 +350,7 @@ pub struct Authenticator {
     role_issuers: build::RoleIssuers,
     /// The party binding every admitted caller is looked up in, when an
     /// `[[auth.party]]` table binds an issuer.
-    party: Option<Arc<ferrohealth_smart::party::binding::PartyBinding>>,
+    party: Option<Arc<party::Binding>>,
 }
 
 impl std::fmt::Debug for Authenticator {
@@ -409,7 +409,7 @@ impl Authenticator {
             .await
             .map_err(|denied| AuthError::from_refusal(denied.refusal()))?;
         let access = match &self.party {
-            Some(binding) => party::bind(binding, access.clone())
+            Some(binding) => party::bind(&binding.shared, access.clone())
                 .await
                 .map_err(|refusal| self.naming_caller(refusal, &access))?,
             None => access,
@@ -536,7 +536,13 @@ pub(crate) async fn middleware(
             }
             req.extensions_mut().insert(principal.clone());
             let for_audit = principal.clone();
-            let committer = committer_identity(&for_audit);
+            let mut committer = committer_identity(&for_audit);
+            if let Some(binding) = auth.party.as_deref() {
+                match binding.details(&for_audit).await {
+                    Ok(details) => committer.bound = details,
+                    Err(e) => return refusal_response(auth, req.headers(), &e),
+                }
+            }
             // The roles ride beside the committer identity for the request
             // scope, so a record the service layer emits by itself carries
             // them too (#3239).
@@ -735,6 +741,10 @@ fn committer_identity(principal: &Principal) -> ferroehr::versioning::committer:
             .and_then(Caller::party)
             .and_then(ferrohealth_smart::party::Outcome::bound)
             .cloned(),
+        representative: principal.access.caller().is_some_and(|caller| {
+            matches!(caller.kind(), ferrohealth_smart::kind::CallerKind::Representative { .. })
+        }),
+        bound: None,
     }
 }
 

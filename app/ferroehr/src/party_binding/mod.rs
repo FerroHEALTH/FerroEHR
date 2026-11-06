@@ -202,6 +202,8 @@ pub struct PersonSelectors {
     user_name: Option<IdentifierSelector>,
     /// The SCIM `externalId`.
     external_id: Option<IdentifierSelector>,
+    /// The name the committer reads.
+    name: Option<NameSelector>,
 }
 
 impl PersonSelectors {
@@ -212,6 +214,7 @@ impl PersonSelectors {
             key,
             user_name: None,
             external_id: None,
+            name: None,
         }
     }
 
@@ -219,6 +222,13 @@ impl PersonSelectors {
     #[must_use]
     pub fn with_user_name(mut self, selector: IdentifierSelector) -> Self {
         self.user_name = Some(selector);
+        self
+    }
+
+    /// Returns these selectors with the committer's name at `selector`.
+    #[must_use]
+    pub fn with_name(mut self, selector: NameSelector) -> Self {
+        self.name = Some(selector);
         self
     }
 

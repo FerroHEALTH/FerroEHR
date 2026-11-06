@@ -41,6 +41,8 @@ fn professional() -> CommitterIdentity {
         client: None,
         person: false,
         party: None,
+        representative: false,
+        bound: None,
     }
 }
 
@@ -218,6 +220,8 @@ async fn a_basic_login_is_checked_against_this_server() {
         client: Some("alice".to_owned()),
         person: false,
         party: None,
+        representative: false,
+        bound: None,
     };
     assert_eq!(
         composition_create(

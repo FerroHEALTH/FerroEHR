@@ -413,7 +413,7 @@ impl AttestationInput {
                     .with_invariant("AUDIT_DETAILS.System_id_valid"),
             ));
         }
-        check_committer(&update.committer)?;
+        let committer = check_committer(&update.committer)?;
         Ok(Self {
             parts: AttestationParts {
                 attested_view: update.attested_view.clone(),
@@ -422,7 +422,7 @@ impl AttestationInput {
                 reason: update.reason.clone(),
                 is_pending: update.is_pending,
             },
-            committer: update.committer.clone(),
+            committer,
             // The inherited `UPDATE_AUDIT.description`, kept WHOLE: the wire
             // types it `DV_TEXT` (`schemas/common/UpdateAudit.yaml`), whose
             // `DV_CODED_TEXT` subtype substitutes for it, and reducing it to a
