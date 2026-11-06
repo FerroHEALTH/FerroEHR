@@ -857,34 +857,45 @@ async fn aql_over_one_ehr_reads_the_hot_partition_only() {
     let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
     let seeded = seed(&svc, &pool).await;
 
-    let plan = explain_aql(&pool, aql_sql(CONTAINS_AQL, vec![seeded.ehr])).await;
-    let scans = scans(&plan);
-    // H4: the emitter writes `tier = 'hot'` as a literal, so exactly one
-    // partition of each partitioned relation is left in the plan — the cold
-    // ones are pruned at plan time and never appear at all.
-    assert_eq!(
-        partitions(&scans, "node"),
-        vec!["node_hot"],
-        "H4: an EHR-scoped query reads the hot node partition and no other:\n{}",
-        render(&scans)
-    );
-    assert_eq!(
-        partitions(&scans, "version"),
-        vec!["version_hot"],
-        "H4: and the hot version partition and no other:\n{}",
-        render(&scans)
-    );
-    assert_head_join_by_key(&scans);
-    assert!(
-        scans
-            .iter()
-            .filter(|scan| scan.relation.starts_with("node"))
-            .all(|scan| scan.index.is_some()),
-        "H4: an EHR-scoped CONTAINS enters through an index, not a partition \
-         scan:\n{}",
-        render(&scans)
-    );
-    assert_no_policy_qual(&plan, &scans);
+    // The uid of each composition comes off its version row, so the chain
+    // reads no node at all; the name reads the root node.
+    for (aql, nodes) in [
+        (CONTAINS_AQL, Vec::new()),
+        (
+            "SELECT c/name/value FROM EHR e CONTAINS COMPOSITION c",
+            vec!["node_hot"],
+        ),
+    ] {
+        let plan = explain_aql(&pool, aql_sql(aql, vec![seeded.ehr])).await;
+        let scans = scans(&plan);
+        // H4: the emitter writes `tier = 'hot'` as a literal, so at most one
+        // partition of each partitioned relation is left in the plan — the
+        // cold ones are pruned at plan time and never appear at all.
+        assert_eq!(
+            partitions(&scans, "node"),
+            nodes,
+            "H4: {aql} over one EHR reads the hot node partition and no other:\n{}",
+            render(&scans)
+        );
+        assert_eq!(
+            partitions(&scans, "version"),
+            vec!["version_hot"],
+            "H4: and the hot version partition and no other:\n{}",
+            render(&scans)
+        );
+        assert_head_join_by_key(&scans);
+        assert!(
+            scans
+                .iter()
+                .filter(|scan| scan.relation.starts_with("node")
+                    || scan.relation.starts_with("version"))
+                .all(|scan| scan.index.is_some()),
+            "H4: an EHR-scoped CONTAINS enters through an index, not a partition \
+             scan:\n{}",
+            render(&scans)
+        );
+        assert_no_policy_qual(&plan, &scans);
+    }
 }
 
 #[tokio::test]
@@ -2297,4 +2308,68 @@ async fn the_serving_roles_may_analyze_the_partitioned_parents() {
         );
         pool.close().await;
     }
+}
+
+/// An ordered query pinned to one EHR by its WHERE clause walks that EHR's
+/// versions through the `ehr_id` index and reads each object's nodes by key
+/// (#5076).
+///
+/// The flat shape gave the planner a join search over every node binding: on
+/// a store of 100 000 compositions it planned in 40 to 60 ms against a 1 ms
+/// execution. The streaming shape fixes the join order, and the spine finds
+/// the pinned EHR's versions only when the planner carries the `ehr.id`
+/// equality across the spine's `ehr_id` join, which this plan pins.
+#[tokio::test]
+async fn an_ordered_query_pinned_to_one_ehr_walks_its_versions_by_the_ehr_index() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    let example = ckm_example(&svc, "generic-lab-test-result").await;
+    let mut ehrs = Vec::new();
+    for _ in 0..4 {
+        let ehr = crate::fixtures::create_ehr(&svc).await;
+        for _ in 0..3 {
+            svc.create_composition(ehr, uv(&example, "249", None))
+                .await
+                .expect("commit a lab result");
+        }
+        ehrs.push(ehr);
+    }
+    pool.execute("ANALYZE")
+        .await
+        .expect("give the planner statistics over the seeded corpus");
+
+    let pinned = ehrs.first().copied().expect("a seeded EHR");
+    let params = Params::default().with("ehr", ParamValue::Str(pinned.0.to_string()));
+    let prepared = aql_sql_with(
+        "SELECT o/data[at0001]/events[at0002]/time/value, a/items[at0001]/value \
+         FROM EHR e CONTAINS COMPOSITION c \
+         CONTAINS OBSERVATION o[openEHR-EHR-OBSERVATION.laboratory_test_result.v1] \
+         CONTAINS CLUSTER a[openEHR-EHR-CLUSTER.laboratory_test_analyte.v1] \
+         WHERE e/ehr_id/value = $ehr \
+         ORDER BY o/data[at0001]/events[at0002]/time/value DESC",
+        &params,
+        Vec::new(),
+        Some(501),
+    );
+    let plan = explain_aql(&pool, prepared).await;
+    let scans = scans(&plan);
+    let spine = on(&scans, "version_hot");
+    assert!(
+        !spine.is_empty()
+            && spine
+                .iter()
+                .all(|scan| scan.index.as_deref() == Some("idx_version_hot_ehr")),
+        "#5076: the spine enters through the EHR's versions:\n{}",
+        render(&scans)
+    );
+    let nodes = on(&scans, "node_hot");
+    assert!(
+        !nodes.is_empty()
+            && nodes
+                .iter()
+                .all(|scan| scan.index.as_deref() == Some("node_hot_pkey")),
+        "#5076: every node binding reads its object's rows by key:\n{}",
+        render(&scans)
+    );
 }
