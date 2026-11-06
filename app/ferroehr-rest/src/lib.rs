@@ -65,6 +65,7 @@ use std::sync::Arc;
 use ferroehr::service::FerroEhrService;
 use ferroehr::storage::dpop_replay::PgReplayStore;
 use ferrohealth_server::serve::{Drained, Listener};
+use ferrohealth_smart::party::source::PartySource;
 use ferrohealth_smart::sender::replay::ReplayStore;
 use tokio::net::TcpListener;
 
@@ -102,8 +103,13 @@ pub async fn build_with(
     config: AppConfig,
     backend: Arc<FerroEhrService>,
 ) -> Result<axum::Router, ServeError> {
-    let authenticator =
-        build_authenticator(&config, None, Arc::new(PgReplayStore::of(&backend))).await?;
+    let authenticator = build_authenticator(
+        &config,
+        None,
+        Some(party_source(&config, &backend)),
+        Arc::new(PgReplayStore::of(&backend)),
+    )
+    .await?;
     let state = AppState::with_backend(config, backend);
     state.observability().lifecycle.booted();
     Ok(router(state, authenticator))
@@ -127,6 +133,7 @@ pub async fn build_full(
     let authenticator = build_authenticator(
         &config,
         authz.as_deref(),
+        Some(party_source(&config, &backend)),
         Arc::new(PgReplayStore::of(&backend)),
     )
     .await?;
@@ -136,7 +143,7 @@ pub async fn build_full(
 }
 
 /// Builds the [`Authenticator`] of `config`, reading each `[auth]` issuer's
-/// metadata and key set.
+/// metadata and key set, looking every caller up in the party `source`.
 ///
 /// The role-claim paths are `[auth] role_claims`, which `ferrohealth-smart`
 /// reads whether or not an authorization gate is wired. A served SMART discovery document needs the issuer's
@@ -149,12 +156,13 @@ pub async fn build_full(
 async fn build_authenticator(
     config: &AppConfig,
     authz: Option<&AuthzHandle>,
+    source: Option<Arc<dyn PartySource>>,
     replay: Arc<dyn ReplayStore>,
 ) -> Result<Arc<Authenticator>, ServeError> {
     let claim = authz
         .and_then(AuthzHandle::abac)
         .and_then(|abac| abac.patient_claim.as_deref());
-    let authenticator = Authenticator::new(config, claim, replay)
+    let authenticator = Authenticator::new(config, claim, source, replay)
         .await
         .map_err(ServeError::Auth)?;
     if config.smart.enabled
@@ -171,6 +179,12 @@ async fn build_authenticator(
         ));
     }
     Ok(authenticator)
+}
+
+/// The local party source over `backend`'s party pool, naming each party
+/// under `[authz.party_binding] namespace`.
+fn party_source(config: &AppConfig, backend: &FerroEhrService) -> Arc<dyn PartySource> {
+    Arc::new(backend.party_source(config.party_binding.namespace.clone()))
 }
 
 /// Builds and serves the application with full observability until the
@@ -239,6 +253,7 @@ where
     let authenticator = build_authenticator(
         &config,
         authz.as_deref(),
+        Some(party_source(&config, &backend)),
         Arc::new(PgReplayStore::of(&backend)),
     )
     .await?;
@@ -410,6 +425,7 @@ mod tests {
         };
         let authenticator = build_authenticator(
             &config,
+            None,
             None,
             Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
         )

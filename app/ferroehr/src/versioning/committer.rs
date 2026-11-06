@@ -71,6 +71,9 @@ pub struct CommitterIdentity {
     /// marked as inserted by the person, and it may alter only what such a
     /// commit inserted (EHDS Art. 5, `docs/law/eu/ehds/text.html`).
     pub person: bool,
+    /// The demographic party the login is bound to, with its groups and the
+    /// subjects it represents, when the login binding bound one (#5004).
+    pub party: Option<ferrohealth_smart::party::Bound>,
 }
 
 task_local! {
@@ -270,6 +273,7 @@ mod tests {
             issuer: issuer.map(str::to_owned),
             client: None,
             person: false,
+            party: None,
         }
     }
 

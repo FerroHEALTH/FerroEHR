@@ -40,6 +40,7 @@ fn professional() -> CommitterIdentity {
         issuer: Some(ISSUER.to_owned()),
         client: None,
         person: false,
+        party: None,
     }
 }
 
@@ -216,6 +217,7 @@ async fn a_basic_login_is_checked_against_this_server() {
         issuer: None,
         client: Some("alice".to_owned()),
         person: false,
+        party: None,
     };
     assert_eq!(
         composition_create(
@@ -262,6 +264,7 @@ async fn party_self_is_the_persons_committer_only() {
     let person = CommitterIdentity {
         subject: "jane".to_owned(),
         person: true,
+        party: None,
         ..professional()
     };
     let mut body = composition("mine");

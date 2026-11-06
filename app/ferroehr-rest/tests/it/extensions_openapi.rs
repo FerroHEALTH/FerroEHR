@@ -554,6 +554,7 @@ fn app_config() -> AppConfig {
         rbac: ferroehr::config::authz::RbacConfig::default(),
         assurance: ferrohealth_smart::assurance::AssuranceSection::default(),
         spec_profile: ferroehr::config::profile::SpecProfile::default(),
+        party_binding: ferroehr::config::binding::PartyBindingConfig::default(),
     }
 }
 

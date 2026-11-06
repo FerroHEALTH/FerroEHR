@@ -146,6 +146,7 @@ pub(crate) async fn router_with(config: AppConfig, service: Arc<FerroEhrService>
     let authenticator = Authenticator::new(
         &config,
         None,
+        None,
         Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
     )
     .await

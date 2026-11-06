@@ -90,6 +90,7 @@ async fn a_metadata_file_naming_no_issuer_refuses_the_boot() {
     let error = Authenticator::new(
         &cfg,
         None,
+        None,
         std::sync::Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
     )
     .await
