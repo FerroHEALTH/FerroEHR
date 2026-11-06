@@ -1874,7 +1874,7 @@ jobs:
   # transactions a second while idle, and no gate saw it. This one starts the
   # server this tree builds with its own PostgreSQL, holds it to absolute idle
   # limits, drives perf/plan.toml against it and judges the load phase against
-  # perf/baseline.toml (scripts/perf/gate.sh over ferrohealth-perf, pinned in
+  # perf/baseline.toml once it lands (#5095; scripts/perf/gate.sh over ferrohealth-perf, pinned in
   # docs/VERSIONS.md). The self-test runs first: an idle busy-loop must fail
   # it. The baseline is measured on this runner image; docs/release.md says
   # how to read the report and write the baseline again.
@@ -1914,17 +1914,10 @@ jobs:
         run: docker buildx build --load -t ferroehr-postgres:perf docker/postgres
       - name: An idle busy-loop fails the gate
         run: bash scripts/perf/gate.sh self-test ferroehr:perf ferroehr-postgres:perf
-      # Without a committed baseline the run writes one and fails, so the
-      # baseline is committed from this runner's artifact in a change of its own.
+      # The load phase is judged once perf/baseline.toml holds a baseline per
+      # CPU model of the runner pool (#5095); until then it is reported.
       - name: The gate
-        run: |
-          set -euo pipefail
-          if [ ! -f perf/baseline.toml ]; then
-            bash scripts/perf/gate.sh update ferroehr:perf ferroehr-postgres:perf
-            echo "::error::perf/baseline.toml is missing; commit the one in the perf-report artifact"
-            exit 1
-          fi
-          bash scripts/perf/gate.sh run ferroehr:perf ferroehr-postgres:perf
+        run: bash scripts/perf/gate.sh run ferroehr:perf ferroehr-postgres:perf
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

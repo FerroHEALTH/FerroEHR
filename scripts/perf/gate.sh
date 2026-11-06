@@ -214,9 +214,28 @@ gate() { # <update: true|false> <image> <pg-image>
   render "$ROOT/perf/plan.toml" "$OUT/plan.toml"
   local -a extra=()
   [[ "$update" == true ]] && extra=(--update)
+  local status=0
   "$bin" run --plan "$OUT/plan.toml" --baseline "$ROOT/perf/baseline.toml" "${TARGET[@]}" \
     --base-url "$SERVER_URL" --database-url "$DATABASE_URL" --out-dir "$OUT" \
-    --summary "$OUT/summary.md" ${extra[@]+"${extra[@]}"}
+    --summary "$OUT/summary.md" ${extra[@]+"${extra[@]}"} || status=$?
+  # TODO(#5095): commit the load baseline per CPU model with ferrohealth-perf
+  # 0.2.0; until then a run judges the idle limits and reports the load.
+  if [[ "$status" == 2 && "$update" == false && ! -f "$ROOT/perf/baseline.toml" ]] \
+    && unjudged_for_no_baseline "$OUT/summary.md"; then
+    echo "perf gate: the idle limits held; the load phase is reported, not judged, until perf/baseline.toml lands (#5095)"
+    return 0
+  fi
+  return "$status"
+}
+
+# Whether the run's only reason it could not be judged is the missing
+# baseline: every check passed, every request was answered as the plan
+# expects, and the generator and the window were sound.
+unjudged_for_no_baseline() { # <summary.md>
+  local reasons
+  reasons=$(awk '/^### Why it could not be judged/ { on = 1; next } /^### / { on = 0 } on && /^- / { print }' "$1")
+  [[ "$reasons" == "- there is no baseline; write one with --update" ]] || return 1
+  ! grep -qE '^### Breaches|^### Requests answered other than expected|\| FAIL \|$' "$1"
 }
 
 # The plan with a short idle window and a short load, so the self-test spends

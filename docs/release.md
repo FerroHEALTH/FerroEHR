@@ -138,11 +138,18 @@ script's header).
 
 ### Writing the baseline
 
-The baseline is measured on the runner the gate runs on (`ubuntu-26.04`),
-never on a developer machine. To write or lower it, run
+The load baseline is kept per CPU model of the runner pool the gate runs on
+(`ubuntu-26.04`), because one model's latencies say nothing about another's.
+`ferrohealth-perf` 0.2.0 adds that layout, and until it is on crates.io no load
+baseline is committed (#5095). A run then judges the idle limits, which are
+absolute, and reports the load phase without judging it: a run whose only
+reason it could not be judged is the missing baseline passes, and every other
+reason fails it.
+
+A baseline is measured on the runner, never on a developer machine:
 `scripts/perf/gate.sh update ferroehr:perf ferroehr-postgres:perf` in the
-`perf` job, or delete `perf/baseline.toml` in a branch: the job then writes
-one, fails, and uploads it in the `perf-report` artifact. Commit that file
-in a change of its own. `--update` only lowers a metric on the same plan.
-Raising one is a hand edit in a change that says why. Changing the rate,
-the windows or the request set writes the baseline afresh.
+`perf` job writes `perf/baseline.toml`, uploaded in the `perf-report`
+artifact, and you commit it in a change of its own. `--update` only lowers a
+metric on the same plan. Raising one is a hand edit in a change that says
+why. Changing the rate, the windows or the request set writes the baseline
+afresh.
