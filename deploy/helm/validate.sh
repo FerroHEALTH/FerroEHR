@@ -592,7 +592,6 @@ refusal_registry_gate() {
   local -a registry=(
     "deployment.yaml|no authentication mechanism is configured|${base}|--set config.auth.issuer=null|config.auth.basic.users;config.auth.issuer"
     "migration-job.yaml|requires migrations.job.existingSecret|${base}|--set migrations.job.enabled=true|migrations.job.existingSecret"
-    "deployment.yaml|is held by the replica that accepted it alone|${base}|--set config.auth.issuer[0].sender_constraint=required|replicaCount: 1;autoscaling.enabled: false"
     "deployment.yaml|server.tls.client_auth is|${tls}|--set config.server.tls.client_auth=required|config.server.tls.client_auth;optional"
     "ingress.yaml|ingress.backendTlsAnnotations is empty|${tls}|--set ingress.backendTlsAnnotations=null|ingress.backendTlsAnnotations;nginx.ingress.kubernetes.io/backend-protocol"
     "hpa.yaml|with every target utilisation at 0|${base}|--set autoscaling.enabled=true --set autoscaling.targetCPUUtilizationPercentage=0 --set autoscaling.targetMemoryUtilizationPercentage=0|autoscaling.targetCPUUtilizationPercentage;autoscaling.targetMemoryUtilizationPercentage"

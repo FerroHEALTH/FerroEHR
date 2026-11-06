@@ -84,9 +84,14 @@ fn config(person_key: Option<&str>) -> AppConfig {
 async fn router(svc: Arc<FerroEhrService>, person_key: Option<&str>) -> Router {
     let config = config(person_key);
     let source = Arc::new(svc.party_source("demographic"));
-    let authenticator = Authenticator::new(&config, None, Some(source))
-        .await
-        .expect("the binding builds");
+    let authenticator = Authenticator::new(
+        &config,
+        None,
+        Some(source),
+        Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
+    )
+    .await
+    .expect("the binding builds");
     let observability = Observability::default();
     observability.lifecycle.booted();
     let state = AppState::with_parts(config, svc, None, observability);

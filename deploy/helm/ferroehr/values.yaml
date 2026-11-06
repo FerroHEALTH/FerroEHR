@@ -676,8 +676,8 @@ config:
   # issuer is an https URL with no query/fragment, only asymmetric algorithms
   # are accepted, and every [[auth.basic.users]] password_hash must be
   # argon2id at m>=19456,t=2,p=1. All checked at boot. An issuer with
-  # `sender_constraint: required` runs on one replica: the chart refuses it
-  # beside replicaCount > 1 or autoscaling.
+  # `sender_constraint: required` runs on any number of replicas: they record
+  # the DPoP proofs they accept in the one database they share.
   #   issuer:
   #     - issuer: https://idp.example.com/realms/staff
   #       kind: persons

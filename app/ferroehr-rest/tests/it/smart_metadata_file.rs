@@ -87,9 +87,14 @@ async fn the_metadata_file_describes_the_issuer_it_names_behind_another() {
 #[tokio::test]
 async fn a_metadata_file_naming_no_issuer_refuses_the_boot() {
     let cfg = config(vec![file_issuer(BASIC_ISSUER, "ferroehr-basic-users")]);
-    let error = Authenticator::new(&cfg, None, None)
-        .await
-        .expect_err("metadata naming no [auth] issuer is refused");
+    let error = Authenticator::new(
+        &cfg,
+        None,
+        None,
+        std::sync::Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
+    )
+    .await
+    .expect_err("metadata naming no [auth] issuer is refused");
     assert!(
         error.contains("names the issuer https://as.cnf.test, which is no [auth] issuer"),
         "{error}"

@@ -314,9 +314,9 @@ scopeless_subjects = []      # e.g. [{ issuer = "https://idp.example/realms/staf
 #? issuer = "https://federation.example"
 #? mapping = "iua"
 
-# The DPoP proof check (RFC 9449) of a sender-constrained issuer. The proofs a
-# replica accepted are held in that replica alone, so the Helm chart refuses a
-# sender-constrained issuer on more than one replica.
+# The DPoP proof check (RFC 9449) of a sender-constrained issuer. Each accepted
+# proof is recorded in the database every replica shares, so a proof is
+# accepted once across all of them (RFC 9449 §11.1).
 #? [auth.dpop]
 #? external_url = "https://ehr.example"   # REQUIRED: the base URL clients address
 #? max_age_seconds = 60
