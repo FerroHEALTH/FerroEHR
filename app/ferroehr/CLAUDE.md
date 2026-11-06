@@ -9,8 +9,12 @@ scheduled hash-chain check `chain_check`), `support` (the release's support
 period, embedded from the changelog by `build.rs`), `privacy`,
 `identifier_protection` (national identifiers sealed out of party bodies and
 expanded for an authorised reader), `party_binding` (the local party source
-of the login binding: the binding side table derived in each party commit,
-its refill, and the `ferrohealth-smart` `PartySource` over it, no cache),
+of the login binding: the binding side table derived in each party commit
+with its selector unique indexes, the protection of the parties it relies on
+judged in that commit (`protect`), the first fill and refill under the
+mapping's digest with the replica leases (`fill`), and the
+`ferrohealth-smart` `PartySource` over it, no cache; the mapping's
+configuration is `config::binding::person`),
 `origins` (the
 `[origins]` register of recognised data origins, EHDS Annex II 3.4),
 `licence`, `ids`, `extensions`, `banner`, `decommission` (the `ferroehr db

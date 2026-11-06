@@ -27,6 +27,8 @@ use ferroehr_rest::extensions::management::Observability;
 use ferroehr_rest::state::AppState;
 use ferrohealth_smart::config::{AuthSection, IssuerEntry, IssuerKey};
 use ferrohealth_smart::party::config::PartySection;
+use ferrohealth_smart::party::source::{Lookup, PartyRecord, PartySource, Query, SourceError};
+use ferrohealth_smart::party::{Markers, PartyRef, PartyState};
 use http::StatusCode;
 use serde_json::{Value, json};
 
@@ -82,8 +84,17 @@ fn config(person_key: Option<&str>) -> AppConfig {
 
 /// The router over `svc`, looking every caller up in its party source.
 async fn router(svc: Arc<FerroEhrService>, person_key: Option<&str>) -> Router {
-    let config = config(person_key);
     let source = Arc::new(svc.party_source("demographic"));
+    router_over(svc, person_key, source).await
+}
+
+/// The router over `svc`, looking every caller up in `source`.
+async fn router_over(
+    svc: Arc<FerroEhrService>,
+    person_key: Option<&str>,
+    source: Arc<dyn PartySource>,
+) -> Router {
+    let config = config(person_key);
     let authenticator = Authenticator::new(&config, None, Some(source))
         .await
         .expect("the binding builds");
@@ -231,14 +242,64 @@ async fn refused(app: &Router, credential: &str, code: &str) {
     assert!(body.contains(code), "{code}: {body}");
 }
 
+/// A party source that reports two parties for every login: the unique index
+/// on live keys keeps the local source from holding one key twice, so the
+/// shared crate's ambiguous outcome is driven through this one.
+struct Twice;
+
+impl PartySource for Twice {
+    fn lookup<'a>(
+        &'a self,
+        _query: &'a Query<'a>,
+    ) -> std::pin::Pin<Box<dyn Future<Output = Result<Lookup, SourceError>> + Send + 'a>> {
+        let record = |id: &str| {
+            PartyRecord::new(
+                PartyRef::new("demographic", "PERSON", id),
+                PartyState::Active,
+                Markers {
+                    professional: true,
+                    representative: false,
+                },
+            )
+        };
+        Box::pin(async move {
+            Ok(Lookup::Parties(vec![
+                record("5a6b7c8d-9e0f-4a1b-8c2d-3e4f5a6b7c8d"),
+                record("6b7c8d9e-0f1a-4b2c-9d3e-4f5a6b7c8d9e"),
+            ]))
+        })
+    }
+}
+
+#[tokio::test]
+async fn a_login_matching_two_parties_is_refused_naming_the_caller() {
+    let (_db, svc) = service().await;
+    let app = router_over(svc, None, Arc::new(Twice)).await;
+    let twice = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
+    refused(&app, &token(twice, &json!({})), "refused-ambiguous").await;
+    // The refusal carries the refused caller, which the failed-authentication
+    // record names.
+    let response = tower::ServiceExt::oneshot(
+        app.clone(),
+        common::req("GET", format!("{BASE}/definition/template/adl1.4"))
+            .auth(token(twice, &json!({})))
+            .accept("application/json")
+            .build(),
+    )
+    .await
+    .expect("the router answers");
+    let principal = response
+        .extensions()
+        .get::<ferroehr_rest::extensions::access::authn::Principal>()
+        .expect("the refusal names its caller");
+    assert_eq!(principal.subject, twice);
+}
+
 #[tokio::test]
 async fn a_bound_professional_is_served_and_the_unusable_outcomes_are_refused() {
     let (_db, svc) = service().await;
     let bound = "0b9e6c2a-5d4f-4e8a-9b1c-2d3e4f5a6b7c";
     professional(&svc, &bound.to_ascii_uppercase(), "532").await;
-    let twice = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
-    professional(&svc, twice, "532").await;
-    professional(&svc, twice, "532").await;
     let inactive = "2d3e4f5a-6b7c-4d8e-9f0a-1b2c3d4e5f6a";
     professional(&svc, inactive, "800").await;
     let abandoned = "3e4f5a6b-7c8d-4e9f-8a1b-2c3d4e5f6a7b";
@@ -269,23 +330,6 @@ async fn a_bound_professional_is_served_and_the_unusable_outcomes_are_refused() 
         StatusCode::OK,
         "a bound professional is served: {body}"
     );
-    refused(&app, &token(twice, &json!({})), "refused-ambiguous").await;
-    // The refusal carries the refused caller, which the failed-authentication
-    // record names.
-    let response = tower::ServiceExt::oneshot(
-        app.clone(),
-        common::req("GET", format!("{BASE}/definition/template/adl1.4"))
-            .auth(token(twice, &json!({})))
-            .accept("application/json")
-            .build(),
-    )
-    .await
-    .expect("the router answers");
-    let principal = response
-        .extensions()
-        .get::<ferroehr_rest::extensions::access::authn::Principal>()
-        .expect("the refusal names its caller");
-    assert_eq!(principal.subject, twice);
     refused(&app, &token(inactive, &json!({})), "refused-inactive").await;
     refused(&app, &token(abandoned, &json!({})), "refused-abandoned").await;
     refused(&app, &token(deleted, &json!({})), "refused-deprovisioned").await;

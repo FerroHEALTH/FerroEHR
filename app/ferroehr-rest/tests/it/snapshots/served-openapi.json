@@ -2037,6 +2037,115 @@
         }
       }
     },
+    "/ferroehr/rest/extensions/v1/admin/party/binding-key": {
+      "post": {
+        "tags": [
+          "admin-identifiers"
+        ],
+        "summary": "Change a `PERSON`'s binding key (`POST /admin/party/binding-key`).",
+        "description": "**Our own extension — no ITS-REST operation governs this** (module docs).",
+        "operationId": "admin_rekey_party",
+        "requestBody": {
+          "description": "`{ \"party_id\": …, \"issuer\": …, \"id\": … }`: the `PERSON`'s container and the new key, under the `identifier_issuer` of its `[[auth.party]]` table.",
+          "content": {
+            "application/json": {
+              "schema": {},
+              "example": {
+                "party_id": "0d6c7f1e-3b7a-4c2e-9f61-2a8e5d4c3b21",
+                "issuer": "https://login.example/tenant",
+                "id": "5b0f2c1a-7d3e-4f6a-8b9c-0d1e2f3a4b5c"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The `PERSON` carries the new key in a new version, the old key no longer binds, and one access record carries both."
+          },
+          "400": {
+            "description": "The body is not the object above.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthenticated.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not in the Admin class, or the new key is the administrator's own login.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No live `PERSON` has that container.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The admin API is disabled on this server.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The `PERSON` is of no mapped template, carries no key of that issuer, or the new key is already bound to another party.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The request `Content-Type` is not `application/json`.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The new key names no issuer or no value.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/ferroehr/rest/extensions/v1/admin/party/identifiers": {
       "get": {
         "tags": [

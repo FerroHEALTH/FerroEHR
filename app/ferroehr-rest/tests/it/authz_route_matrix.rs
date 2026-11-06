@@ -438,6 +438,8 @@ const ADMIN_WRITE: &[(&str, &str)] = &[
     // recorded and reversed on the person's instruction (#4516).
     ("POST", "/admin/access-opt-out"),
     ("POST", "/admin/access-opt-out/reverse"),
+    // The administrator re-key of a PERSON's binding key (#5013).
+    ("POST", "/admin/party/binding-key"),
     // The repair of an EHR held closed by access settings that do not parse
     // commits a new EHR_ACCESS version (#4853).
     ("POST", "/admin/ehr-access/repair"),

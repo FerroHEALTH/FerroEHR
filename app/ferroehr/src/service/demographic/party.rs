@@ -44,10 +44,10 @@ use crate::versioning::read::{VersionRead, demographic_current, object_kind};
 pub(super) struct CurrentParty {
     kind: PartyKind,
     vo_id: VoId,
-    tree: TreeId,
+    pub(super) tree: TreeId,
     creating_system_id: String,
     time_committed: jiff::Timestamp,
-    deleted: bool,
+    pub(super) deleted: bool,
 }
 
 impl CurrentParty {
