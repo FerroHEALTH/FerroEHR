@@ -222,18 +222,18 @@ async-trait = "0.1"                 # still handy for dyn traits; native async-f
 # them; the viewer reads its scope grammar (`openehr-scopes`).
 # 0.8.9 holds `scopeless_subjects` and `role_claims` per issuer
 # (GHSA-pfgx-xq28-2629). Verified on crates.io 2026-11-05 (0.8.9).
-ferrohealth-smart = { version = "=0.8.9", default-features = false, features = ["fetch"] }
+ferrohealth-smart = { version = "=0.9.1", default-features = false, features = ["fetch"] }
 # The operator consoles' OpenID Connect sign-in and session (FerroAUTH, the
 # same Licensor's BUSL-1.1 code): the `[oidc]` and `[session]` sections, the
 # memory and sealed stores, and the sign-in routes (`axum`), over
 # ferrohealth-smart's relying party. Verified on crates.io 2026-11-03 (0.2.0).
-ferrohealth-session = { version = "=0.2.3", default-features = false }
+ferrohealth-session = { version = "=0.3.0", default-features = false }
 # The policy decision of the FerroHEALTH family (FerroAUTH, the same
 # Licensor's BUSL-1.1 code): the attribute-based request over the subject
 # ferrohealth-smart authenticates, the Cedar engine (`cedar`) and the remote
 # decision point (`remote`). Pinned exactly beside ferrohealth-smart.
 # Verified on crates.io 2026-10-27 (0.2.2).
-ferrohealth-authz = { version = "=0.2.2", default-features = false }
+ferrohealth-authz = { version = "=0.3.0", default-features = false }
 # The family's one secret mask (FerroSYS, the same Licensor's BUSL-1.1 code):
 # `Secret`, `SecretUrl` and `RedactedUrl`, so every FerroHEALTH product renders
 # a secret as `***` and a URL's userinfo and query masked. Pinned exactly.
@@ -243,7 +243,7 @@ ferrohealth-secret = "=0.2.0"
 # environment, the fallbacks and `--set`, strict with did-you-mean, and the
 # `config check` rendering, and the built-in defaults under the file
 # (`Loader::defaults`). Verified on crates.io 2026-10-27 (0.2.6).
-ferrohealth-config = "=0.2.9"
+ferrohealth-config = "=0.2.10"
 # The family's health document, indicator registry and process lifecycle
 # (FerroSYS): `/health/readiness` and `/management/health` serve its
 # `Readiness`, and the viewer reads the same document. The default build is the
@@ -257,7 +257,7 @@ ferrohealth-health = { version = "=0.1.1", default-features = false }
 # banner; `tls_client` reads the TLS material of an outbound HTTPS client and
 # sets it on a `reqwest::ClientBuilder` (feature `reqwest`). Verified on
 # crates.io 2026-10-30 (0.4.1).
-ferrohealth-server = { version = "=0.5.0", default-features = false }
+ferrohealth-server = { version = "=0.5.1", default-features = false }
 # The family's telemetry (FerroSYS): the `[telemetry]` section, the console,
 # the one OpenTelemetry provider read by Prometheus and pushed over OTLP, the
 # request log with its `http.server.request.duration` histogram, and the panic
@@ -290,8 +290,8 @@ ferrobridge-term = { version = "=0.1.141", features = ["smart"] }
 # writes its searchset Bundle. Features are chosen per member. Verified on
 # crates.io 2026-10-31 (0.3.3; the 0.3 line adds the data permit to the access
 # record).
-ihe-atna = { version = "=0.3.3", default-features = false }
-ehds-logging = { version = "=0.3.3", default-features = false }
+ihe-atna = { version = "=0.4.0", default-features = false }
+ehds-logging = { version = "=0.4.0", default-features = false }
 
 # ── Patient identity (the shared IHE ITI client library) ─────────────────────
 # The same Licensor's BUSL-1.1 code (deny.toml), pinned exactly. `pixm` is the
@@ -299,7 +299,7 @@ ehds-logging = { version = "=0.3.3", default-features = false }
 # identity source of the EHR index is asked through (`[ehr_index]`); `smart` is
 # its ferrohealth-smart token authorizer. Verified on crates.io 2026-10-27
 # (0.0.65).
-ihe-iti = { version = "=0.0.74", default-features = false }
+ihe-iti = { version = "=0.0.76", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["aws_lc_rs"] }   # JWT encode for the test fixtures that mint tokens; aws-lc-rs crypto provider (matches the rustls stack)
 argon2 = "0.6"                      # password hashing (Argon2id); its `password-hash` feature re-exports the PHC string traits
 secrecy = "0.10"                   # wrap secrets, avoid logging
@@ -400,7 +400,7 @@ csv = "1.4"                        # RESULT_SET → CSV export (viewer BFF; veri
 # after looking at its own screens. 0.6.0 renders every part on the server and
 # depends on no Leptos crate (FerroUI `docs/migration-0.6.md`; verified on
 # crates.io 2026-10-30).
-ferrohealth-ui = "=0.6.6"
+ferrohealth-ui = "=0.6.8"
 # The viewer's string catalogs (#300): Project Fluent messages embedded at
 # build time from app/ferroehr-viewer/locales/, the crate and version
 # ferrohealth-ui catalogs its own words with, so one locale drives both.
