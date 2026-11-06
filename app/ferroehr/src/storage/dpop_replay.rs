@@ -73,7 +73,11 @@ impl PgReplayStore {
     /// [`DpopReplayError::Instant`] for an `until` outside the range of an
     /// instant, and [`DpopReplayError::Database`] when the insert or the sweep
     /// fails.
-    pub async fn record(&self, proof: &ProofId, until: SystemTime) -> Result<bool, DpopReplayError> {
+    pub async fn record(
+        &self,
+        proof: &ProofId,
+        until: SystemTime,
+    ) -> Result<bool, DpopReplayError> {
         let until = jiff::Timestamp::try_from(until).map_err(DpopReplayError::Instant)?;
         let first: Option<bool> = sqlx::query_scalar(
             "INSERT INTO dpop_proof (proof, expires_at) VALUES ($1, $2) \
@@ -86,7 +90,11 @@ impl PgReplayStore {
         .fetch_optional(&self.pool)
         .await
         .map_err(DpopReplayError::Database)?;
-        if self.recorded.fetch_add(1, Ordering::Relaxed).is_multiple_of(SWEEP_EVERY) {
+        if self
+            .recorded
+            .fetch_add(1, Ordering::Relaxed)
+            .is_multiple_of(SWEEP_EVERY)
+        {
             self.sweep().await?;
         }
         Ok(first.is_some())

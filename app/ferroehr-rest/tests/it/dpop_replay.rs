@@ -57,9 +57,10 @@ struct Replica {
 impl Replica {
     /// A replica over a pool of its own to the database at `url`.
     async fn over(url: &str) -> Self {
-        let pool = PgPool::connect(url).await.expect("a pool of the replica's own");
-        let service =
-            FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+        let pool = PgPool::connect(url)
+            .await
+            .expect("a pool of the replica's own");
+        let service = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
         let store = Arc::new(PgReplayStore::of(&service));
         let settings = ProofSettings::new(EXTERNAL.parse().expect("the external URL"));
         let shared: Arc<dyn ReplayStore> = Arc::<PgReplayStore>::clone(&store);
@@ -146,7 +147,10 @@ async fn a_proof_one_replica_accepted_is_a_replay_on_another() {
     );
     let own = first.check.consume(&first.read(&jwt)).await;
     assert!(replayed(&own), "and so does the first: {own:?}");
-    let other = second.check.consume(&second.read(&proof("another-proof"))).await;
+    let other = second
+        .check
+        .consume(&second.read(&proof("another-proof")))
+        .await;
     assert!(other.is_ok(), "a proof of its own passes: {other:?}");
 }
 
@@ -170,7 +174,10 @@ async fn proofs_racing_over_two_replicas_admit_exactly_one() {
         if outcome.is_ok() {
             admitted += 1;
         } else {
-            assert!(replayed(&outcome), "every other one is a replay: {outcome:?}");
+            assert!(
+                replayed(&outcome),
+                "every other one is a replay: {outcome:?}"
+            );
         }
     }
     assert_eq!(admitted, 1, "one insert decides for every replica");
@@ -184,9 +191,19 @@ async fn a_record_past_its_window_is_replaced_and_swept() {
     let standing = replica.read(&proof("standing-proof"));
     let past = SystemTime::from(jiff::Timestamp::now() - jiff::SignedDuration::from_hours(1));
 
-    assert!(replica.store.record(ended.id(), past).await.expect("record"));
     assert!(
-        replica.store.record(ended.id(), past).await.expect("record"),
+        replica
+            .store
+            .record(ended.id(), past)
+            .await
+            .expect("record")
+    );
+    assert!(
+        replica
+            .store
+            .record(ended.id(), past)
+            .await
+            .expect("record"),
         "a record whose window ended is replaced, not held against the proof"
     );
     assert!(
@@ -196,7 +213,11 @@ async fn a_record_past_its_window_is_replaced_and_swept() {
             .await
             .expect("record")
     );
-    assert_eq!(replica.store.sweep().await.expect("sweep"), 1, "the ended record goes");
+    assert_eq!(
+        replica.store.sweep().await.expect("sweep"),
+        1,
+        "the ended record goes"
+    );
     assert!(
         !replica
             .store
@@ -215,7 +236,11 @@ async fn periodic_sweeps_bound_the_table() {
     let ended = SWEEP_EVERY * 2;
     for index in 0..ended {
         let proof = replica.read(&proof(&format!("ended-{index}")));
-        replica.store.record(proof.id(), past).await.expect("record");
+        replica
+            .store
+            .record(proof.id(), past)
+            .await
+            .expect("record");
     }
     let pool = db.pool();
     let held: i64 = sqlx::query_scalar("SELECT count(*) FROM dpop_proof")
