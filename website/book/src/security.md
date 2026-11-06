@@ -67,7 +67,10 @@ honour **refuses to boot** rather than degrading at the first request:
 | a `password_hash` below `m=19456,t=2,p=1` argon2id | error: the OWASP Argon2id floor |
 | `[authz.assurance] minimum` with an empty `levels` map, or with no mapped value at or above it | error: every patient-data request would be refused |
 | an `[authz.assurance] levels` value that is blank or carries whitespace, a quote or a backslash | error: the step-up challenge names the values in one quoted `acr_values` parameter (RFC 9470 §3) |
-| `[authz.professional]` with a blank `claim` or `acting_for_claim` | error: nothing to read the person from |
+| `[authz.professional]` | error: removed; the issuer's `kind` and profile classify the caller |
+| a `persons` issuer with no `[[auth.party]]` table, two issuers sharing an audience, or no `[authz.party_binding] provider` | error: every person is bound to a party, under the provider the deployment acts for |
+| a Basic user with no `[[authz.party_binding.basic_user]]` mapping | error: a Basic user is a person, bound by its key |
+| an `[authz.rbac] role_issuers` entry that is not a `persons` issuer | error: only a person holds an administrator or emergency role |
 
 Successfully verified Basic credentials are cached for
 `FERROEHR__AUTH__BASIC__CACHE_TTL_SECONDS` (default `0`, which checks every
@@ -170,15 +173,15 @@ asks an EHR system used by health professionals for reliable identification and
 authentication of them; Implementing Regulation (EU) 2026/2099 Art. 6(3) sets
 `substantial` for cross-border exchange, and `high` from 26 March 2032.
 
-**`[authz.professional]`** names the claim that identifies the natural
-person (`claim`, default `sub`). A token is a client token when it lacks that
-claim, or, under the default `client_tokens = "sub_is_client"`, when its `sub`
-equals its `client_id` or `azp` (RFC 9068 §2.2 has `sub` name the client when
-no resource owner is involved). With the block present, a client token is
-refused on patient data with `403`, unless `acting_for_claim` names a claim the
-token carries the professional's identifier in (a dotted path reaches into a
-JSON object, such as `act.sub`). The access record then names that
-professional; see [Audit trail](audit.md#the-ehds-logging-elements-mapped).
+**The natural person** behind a token is the issuer's to say. Each
+`[[auth.issuer]]` declares its `kind`, and `ferrohealth-smart` classifies every
+token by it and by the issuer's profile: a `persons` token through one of the
+issuer's `first_party_clients` is the person, a token through a client the
+issuer lists in `delegates` is that client acting for the person the token
+names, and an app-only token is a system. A `persons` token through any other
+client is refused with `401`. The access record names the person by the
+profile's `person_key`, and a delegated token as the client acting for that
+person; see [Audit trail](audit.md#the-ehds-logging-elements-mapped).
 
 What counts as **patient data**: every API route except the definition family
 (`/definition/...`: templates, archetypes, stored-query texts), terminology,
@@ -191,8 +194,8 @@ judged.
 
 **Basic credentials** carry no assurance level and no issuer-asserted person.
 With `minimum` set a Basic request for patient data gets the same `401` step-up
-challenge, and with `[authz.professional]` set it gets the `403`; definition
-routes stay reachable with Basic.
+challenge; definition routes stay reachable with Basic. A Basic user is a
+person, bound by its key (`[[authz.party_binding.basic_user]]`).
 
 The assurance level is judged before RBAC, so a caller below the level learns
 it must step up rather than that it lacks a role. A client token acting for a

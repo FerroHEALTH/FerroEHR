@@ -16,8 +16,8 @@
 # their own trust store (the CDR through `[auth] ca_file`, the viewer through
 # `[oidc] ca_file`). The CDR reads the issuer's metadata at
 # boot, so it waits for Keycloak. Keycloak's access tokens carry `typ: JWT`,
-# outside the RFC 9068 profile the CDR expects by default, hence
-# `token_profile = "jwt"`.
+# outside the RFC 9068 profile the CDR expects by default, which the
+# `keycloak` profile admits.
 #
 # The CDR block turns the terminology surface (`[terminology] api_enabled`) on
 # for the run; it answers `404` as if unmounted while it is off, so the
