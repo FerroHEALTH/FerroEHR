@@ -41,6 +41,9 @@ readonly ROOT
 # ci viewer_dockerfile (#4222): the viewer Dockerfile and the same ignore list.
 # ci helm (#2110): the chart and the recipe. ci chart_boot (#2159) is a
 # superset: the overlays and the configuration they are written against.
+# ci perf (#5081): what the performance gate measures or runs, the server
+# build (never the viewer), the server and database images, the plan, its
+# configuration and baseline, the gate script, the tool's pin and the recipe.
 # ci workflows (#2373): the recipe of the cargo lanes.
 # ci vex (#2370): the OpenVEX documents and the checks the deny job runs.
 # ci cache (#4546): what the rust-cache key hashes, every manifest, the
@@ -62,6 +65,7 @@ ci|server_dockerfile|^(docker/Dockerfile|\.dockerignore)$
 ci|viewer_dockerfile|^(docker/viewer/Dockerfile|\.dockerignore)$
 ci|helm|^(deploy/helm/|\.github/workflows/ci\.yml$)
 ci|chart_boot|^(deploy/helm/|\.github/workflows/ci\.yml$|docker/Dockerfile$|app/ferroehr/src/config/|app/ferroehr/assets/ferroehr\.default\.toml$|app/ferroehr-rest/src/config\.rs$|app/ferroehr/src/report\.rs$)
+ci|perf|^(app/ferroehr(-rest|-server|-ext)?/|crates/|\.cargo/|Cargo\.toml$|Cargo\.lock$|rust-toolchain\.toml$|\.dockerignore$|docker/Dockerfile$|docker/postgres/|perf/|scripts/perf/gate\.sh$|docs/VERSIONS\.md$|\.github/workflows/ci\.yml$)
 ci|workflows|^\.github/workflows/ci\.yml$
 ci|vex|^(security/vex/|scripts/checks/(vex-reachability|advisory-exceptions|vex-linkage)\.sh$)
 ci|cache|(^|/)Cargo\.(toml|lock)$|^rust-toolchain\.toml$|^\.cargo/config\.toml$|^\.github/workflows/ci\.yml$
@@ -183,23 +187,26 @@ self_test() {
       fi
     done
   done <<'CASES'
-a crate source runs the cargo lanes and the harnesses|ci|crates/openehr-rm/src/lib.rs|code,fuzz
-a crate the harnesses reach only through another builds them|ci|crates/openehr-lang/src/lib.rs|code,fuzz
-a crate the harnesses never build runs no harness build|ci|app/ferroehr/src/lib.rs|code
+a crate source runs the cargo lanes, the gate and the harnesses|ci|crates/openehr-rm/src/lib.rs|code,perf,fuzz
+a crate the harnesses reach only through another builds them|ci|crates/openehr-lang/src/lib.rs|code,perf,fuzz
+a crate the harnesses never build runs no harness build|ci|app/ferroehr/src/lib.rs|code,perf
 a harness runs the harness build alone|ci|fuzz/fuzz_targets/aql_query.rs|fuzz
-a nested manifest moves the msrv and the cache|ci|crates/openehr-rm/Cargo.toml|code,msrv,cache,fuzz
-the lockfile reaches the viewer, the msrv and the cache|ci|Cargo.lock|code,msrv,viewer,cache
-the cargo configuration moves the cache|ci|.cargo/config.toml|code,cache
+a nested manifest moves the msrv and the cache|ci|crates/openehr-rm/Cargo.toml|code,msrv,perf,cache,fuzz
+the lockfile reaches the viewer, the msrv, the gate and the cache|ci|Cargo.lock|code,msrv,viewer,perf,cache
+the cargo configuration moves the gate and the cache|ci|.cargo/config.toml|code,perf,cache
 the e2e harness runs the cargo lanes and the viewer|ci|scripts/ui-e2e.sh|code,viewer
 the sandbox viewer posture runs its viewer test|ci|deploy/hosted/ferroehr-viewer.sandbox.toml|code
 any other script runs no lane|ci|scripts/watch/eu-acts.sh|
 the deploy probe runs the deploy lane|ci|scripts/deploy-probe.sh|deploy
-the server Dockerfile reaches five lanes|ci|docker/Dockerfile|deploy,viewer,server_dockerfile,chart_boot
+the server Dockerfile reaches six lanes|ci|docker/Dockerfile|deploy,viewer,server_dockerfile,chart_boot,perf
 the viewer Dockerfile reaches its own image lane|ci|docker/viewer/Dockerfile|deploy,viewer,viewer_dockerfile
 the chart runs helm and chart boot|ci|deploy/helm/ferroehr/values.yaml|helm,chart_boot
-the configuration tree reboots the chart|ci|app/ferroehr/src/config/mod.rs|code,viewer,chart_boot
-the ci recipe reaches its recipe lanes|ci|.github/workflows/ci.yml|msrv,viewer,helm,chart_boot,workflows,cache,fuzz
+the configuration tree reboots the chart|ci|app/ferroehr/src/config/mod.rs|code,viewer,chart_boot,perf
+the ci recipe reaches its recipe lanes|ci|.github/workflows/ci.yml|msrv,viewer,helm,chart_boot,perf,workflows,cache,fuzz
 a VEX document runs the vex lane|ci|security/vex/rust.openvex.json|vex
+the plan runs the gate alone|ci|perf/plan.toml|perf
+the gate script runs the gate alone|ci|scripts/perf/gate.sh|perf
+the viewer runs no gate|ci|app/ferroehr-viewer/src/lib.rs|code,viewer
 a book page builds the site|docs|website/book/src/index.md|docs
 a crate source does not build the site|docs|crates/openehr-rm/src/lib.rs|
 a crate source runs the scan|sonar|crates/openehr-rm/src/lib.rs|code
@@ -247,7 +254,7 @@ CASES
     failures=1
   fi
   [[ "$failures" -eq 0 ]] || return 1
-  echo "change-lanes: self-test OK (27 paths classified first and last in a 2000-path list, the pipe form fails on it, and the fuzz closure follows fuzz/Cargo.toml)."
+  echo "change-lanes: self-test OK (30 paths classified first and last in a 2000-path list, the pipe form fails on it, and the fuzz closure follows fuzz/Cargo.toml)."
 }
 
 case "${1-}" in

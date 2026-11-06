@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: Cadasto B.V.
+# SPDX-License-Identifier: BUSL-1.1
+
+# The server configuration of the performance gate (scripts/perf/gate.sh):
+# the shipped defaults with one Basic user for the request set and the EHR
+# index kept local, so the gate measures FerroEHR and no FerroPIX. The
+# background workers run as the defaults start them.
+
+deployment_profile = "sandbox"
+
+[auth]
+enabled = true
+
+# ferroehr / ferroehr (Argon2id), the request set's one caller.
+[[auth.basic.users]]
+user = "ferroehr"
+password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
+scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
+roles = ["ADMIN", "USER"]
+
+[authz.rbac]
+enabled = false
+
+[ehr_index]
+provider = "local"

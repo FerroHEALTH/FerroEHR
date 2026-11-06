@@ -338,3 +338,12 @@ the new release counts differently.
 
 The archive sums are the `checksums.txt` of release v5.4.2, read on
 2026-10-31.
+
+The performance gate's measuring tool, `ferrohealth-perf` (FerroSYS #249),
+runs in CI and on a developer machine too, so its pin lives here and
+`scripts/perf/gate.sh` reads it: `install` builds exactly this version into
+`target/tools/perf/`, and the gate refuses a binary that answers another.
+
+| Tool | Pin | Read by |
+|---|---|---|
+| `ferrohealth-perf` | `0.1.0` (crates.io, 2026-11-06) | `scripts/perf/gate.sh` |
