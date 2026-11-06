@@ -80,6 +80,7 @@ use crate::error::ServiceError;
 use crate::error::refusal::{ArchiveDefect, Clash, Malformed, Refusal};
 use crate::identifier_protection::store::StoreError;
 use crate::ids::{EhrId, VoId};
+use crate::party_binding::store::reindex_loaded;
 use crate::service::FerroEhrService;
 use crate::service::admin::types::{
     CompressionFormat, DumpLoadFailReport, ExportFormat, ExportSpec,
@@ -1525,9 +1526,8 @@ impl FerroEhrService {
         dump_repo::write::insert_attestations(&mut tx, &record.attestations).await?;
         dump_repo::write::insert_item_tags(&mut tx, None, &record.item_tags).await?;
         dump_repo::write::restore_archives(&mut tx, &record.archives).await?;
-        // The archive carries no index row: the target side is rebuilt from
-        // the loaded current version, as every commit rebuilds it.
-        crate::storage::party_reverse::reindex(&mut tx, record.vo_id).await?;
+        // The archive carries no index row: each is rebuilt from the loaded head.
+        reindex_loaded(&mut tx, &self.binding, &record.kind, record.vo_id).await?;
         tx.commit().await?;
         Ok(None)
     }

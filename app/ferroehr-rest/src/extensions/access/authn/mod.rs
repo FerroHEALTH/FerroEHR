@@ -40,6 +40,7 @@
 pub(crate) mod assurance;
 mod build;
 mod issuer;
+mod party;
 
 use std::sync::Arc;
 
@@ -219,6 +220,19 @@ pub enum AuthError {
     /// rather than 401.
     #[error("credential verification unavailable: {0}")]
     VerificationUnavailable(String),
+    /// The login binding refused the caller, under the binding `code`.
+    #[error("{code}: {}", party::detail(code))]
+    PartyRefused {
+        /// The binding code, such as `refused-ambiguous`.
+        code: &'static str,
+    },
+    /// The party source or the identity provider could not answer, so the
+    /// server cannot decide (RFC 9110 §15.6.4).
+    #[error("the login binding could not be read")]
+    PartyUnavailable {
+        /// The `Retry-After` the identity provider gave, when it gave one.
+        retry_after: Option<std::time::Duration>,
+    },
 }
 
 impl AuthError {
@@ -253,7 +267,10 @@ impl AuthError {
             // the server cannot decide: RFC 9110 §15.6.4 makes that a 503. A 401
             // would tell a caller with a valid token its credential was
             // rejected.
-            AuthError::KeyResolution => ApiError::ServiceUnavailable(self.to_string()),
+            AuthError::KeyResolution | AuthError::PartyUnavailable { .. } => {
+                ApiError::ServiceUnavailable(self.to_string())
+            }
+            AuthError::PartyRefused { .. } => ApiError::Forbidden(self.to_string()),
             // The body says nothing about why: rendering the rejection would
             // tell an unauthenticated caller whether a token was expired or
             // forged. The reason stays in the debug log.
@@ -278,7 +295,10 @@ impl AuthError {
             AuthError::InvalidDpopProof => Some(Refusal::InvalidDpopProof),
             AuthError::MalformedRequest(_) => Some(Refusal::InvalidRequest),
             AuthError::Forbidden(_) => Some(Refusal::Forbidden),
-            AuthError::KeyResolution | AuthError::VerificationUnavailable(_) => None,
+            AuthError::KeyResolution
+            | AuthError::VerificationUnavailable(_)
+            | AuthError::PartyRefused { .. }
+            | AuthError::PartyUnavailable { .. } => None,
         }
     }
 
@@ -297,6 +317,8 @@ impl AuthError {
             AuthError::KeyResolution => "key_resolution",
             AuthError::Forbidden(_) => "forbidden",
             AuthError::VerificationUnavailable(_) => "verification_unavailable",
+            AuthError::PartyRefused { code } => code,
+            AuthError::PartyUnavailable { .. } => "party_unavailable",
         }
     }
 }
@@ -323,6 +345,9 @@ pub struct Authenticator {
     primary: Option<Primary>,
     /// The issuers whose tokens may grant a privileged role.
     role_issuers: build::RoleIssuers,
+    /// The party binding every admitted caller is looked up in, when an
+    /// `[[auth.party]]` table binds an issuer.
+    party: Option<Arc<ferrohealth_smart::party::binding::PartyBinding>>,
 }
 
 impl std::fmt::Debug for Authenticator {
@@ -380,6 +405,10 @@ impl Authenticator {
             .authenticate_request(parts)
             .await
             .map_err(|denied| AuthError::from_refusal(denied.refusal()))?;
+        let access = match &self.party {
+            Some(binding) => party::bind(binding, access).await?,
+            None => access,
+        };
         let caller = access.caller().ok_or(AuthError::MissingCredentials)?;
         let roles = self.role_issuers.roles(caller);
         let honoured = self.gate.honoured(&access);
@@ -671,6 +700,12 @@ fn committer_identity(principal: &Principal) -> ferroehr::versioning::committer:
         },
         client: client_of(principal),
         person: crate::smart::acts_as_person(principal),
+        party: principal
+            .access
+            .caller()
+            .and_then(Caller::party)
+            .and_then(ferrohealth_smart::party::Outcome::bound)
+            .cloned(),
     }
 }
 
@@ -719,6 +754,13 @@ fn refusal_response(auth: &Authenticator, headers: &header::HeaderMap, e: &AuthE
         );
     }
     let mut resp = RestError::from(api).into_response();
+    if let AuthError::PartyUnavailable {
+        retry_after: Some(after),
+    } = e
+    {
+        resp.headers_mut()
+            .insert(header::RETRY_AFTER, HeaderValue::from(after.as_secs()));
+    }
     if matches!(
         status,
         StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN | StatusCode::BAD_REQUEST
@@ -904,6 +946,7 @@ mod tests {
                 ..AppConfig::default()
             },
             None,
+            None,
         )
         .await
         .expect("an introspecting authenticator");
@@ -973,11 +1016,11 @@ mod tests {
         for bearer in [false, true] {
             let config =
                 introspecting_through(&issuer.base_url, bearer, Some(issuer.ca_file.clone()));
-            Authenticator::new(&config, None)
+            Authenticator::new(&config, None, None)
                 .await
                 .unwrap_or_else(|e| panic!("bearer={bearer}: read trusting ca_file: {e}"));
             let untrusted = introspecting_through(&issuer.base_url, bearer, None);
-            let refused = Authenticator::new(&untrusted, None)
+            let refused = Authenticator::new(&untrusted, None, None)
                 .await
                 .expect_err("the platform roots alone do not trust the private authority");
             assert!(
@@ -986,7 +1029,7 @@ mod tests {
             );
             let no_certificate =
                 introspecting_through(&issuer.base_url, bearer, Some(empty.clone()));
-            let refused = Authenticator::new(&no_certificate, None)
+            let refused = Authenticator::new(&no_certificate, None, None)
                 .await
                 .expect_err("a ca_file without a certificate refuses the start");
             assert!(
@@ -1045,7 +1088,7 @@ mod tests {
     }
 
     async fn basic_only() -> Arc<Authenticator> {
-        Authenticator::new(&basic_config(60), None)
+        Authenticator::new(&basic_config(60), None, None)
             .await
             .expect("a Basic-only authenticator")
     }
@@ -1056,6 +1099,7 @@ mod tests {
                 auth: test_support::bearer_auth(),
                 ..AppConfig::default()
             },
+            None,
             None,
         )
         .await
@@ -1083,7 +1127,9 @@ mod tests {
     #[tokio::test]
     async fn a_cached_credential_never_admits_a_wrong_password() {
         for ttl in [60, 0] {
-            let auth = Authenticator::new(&basic_config(ttl), None).await.unwrap();
+            let auth = Authenticator::new(&basic_config(ttl), None, None)
+                .await
+                .unwrap();
             let h = headers("Basic YWxpY2U6cHc="); // alice:pw
             let first = auth.authenticate(&h).await.expect("first verifies");
             let second = auth.authenticate(&h).await.expect("second verifies");
@@ -1194,7 +1240,7 @@ mod tests {
         {
             alice.roles = vec!["admin".to_owned(), "user".to_owned()];
         }
-        let auth = Authenticator::new(&config, None).await.unwrap();
+        let auth = Authenticator::new(&config, None, None).await.unwrap();
         let p = auth
             .authenticate(&headers("Basic YWxpY2U6cHc="))
             .await
@@ -1412,6 +1458,7 @@ mod tests {
                 auth,
                 ..AppConfig::default()
             },
+            None,
             None,
         )
         .await
@@ -1653,7 +1700,7 @@ mod tests {
             ..AppConfig::default()
         };
         let layer = AuthLayer {
-            authenticator: Authenticator::new(&config, None)
+            authenticator: Authenticator::new(&config, None, None)
                 .await
                 .expect("authenticator"),
             authz: None,
@@ -1750,7 +1797,7 @@ mod tests {
             ..AppConfig::default()
         };
         config.smart.issuer_metadata_file = file.map(|file| file.0.display().to_string());
-        Authenticator::new(&config, None).await
+        Authenticator::new(&config, None, None).await
     }
 
     /// SMART App Launch 2.2.0, Conformance, §Metadata requires a
@@ -1886,6 +1933,7 @@ mod tests {
                     auth: section,
                     ..AppConfig::default()
                 },
+                None,
                 None,
             )
             .await

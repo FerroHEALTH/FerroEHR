@@ -84,6 +84,7 @@ mod one_schema_per_statement;
 mod opt_resource_meta;
 mod outbox_feed;
 mod party_binding_config;
+mod party_binding_source;
 mod persistence;
 mod privacy_leak;
 mod privacy_policy;

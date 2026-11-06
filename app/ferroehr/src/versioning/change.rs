@@ -801,7 +801,7 @@ async fn apply_change(
     let committed = Box::pin(commit_resolved(tx, ctx, audit, contribution, resolved)).await?;
     crate::versioning::access_delay::hold_on_creation(tx, ctx, ehr_id, &committed.0).await?;
     if committed.0.kind.is_party() {
-        crate::storage::party_reverse::reindex(tx, committed.0.vo_id).await?;
+        crate::party_binding::store::reindex_committed(tx, ctx, &committed.0).await?;
     }
     Ok(committed)
 }

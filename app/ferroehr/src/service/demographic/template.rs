@@ -118,6 +118,41 @@ impl FerroEhrService {
         self
     }
 
+    /// Install the part of the shared party mapping the binding side table is
+    /// derived under ([`crate::party_binding::store`]).
+    ///
+    /// Without it no party has a row, so every login is unbound.
+    #[must_use]
+    pub fn with_binding_mapping(mut self, mapping: crate::party_binding::BindingMapping) -> Self {
+        self.binding = Arc::new(mapping);
+        self
+    }
+
+    /// The party source of the login binding, reading the side table on this
+    /// service's party pool and naming each party under `namespace`.
+    #[must_use]
+    pub fn party_source(
+        &self,
+        namespace: impl Into<String>,
+    ) -> crate::party_binding::source::LocalPartySource {
+        crate::party_binding::source::LocalPartySource::new(
+            self.demographic_pool.clone(),
+            namespace,
+        )
+    }
+
+    /// Rebuild the binding side table from the party versions alone, in one
+    /// transaction on the party pool.
+    ///
+    /// # Errors
+    /// [`ServiceError`] when the party pool fails.
+    pub async fn refill_binding_table(&self) -> Result<(), ServiceError> {
+        let mut tx = self.demographic_pool.begin().await?;
+        crate::party_binding::store::refill(&mut tx, &self.binding).await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
     /// Judge a demographic body against the definition `template_id` names,
     /// under both lifecycle readings of RM common master06 §Incomplete Content.
     ///

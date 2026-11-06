@@ -56,6 +56,7 @@ pub mod ids;
 pub mod licence;
 pub mod manufacturer;
 pub mod origins;
+pub mod party_binding;
 pub mod privacy;
 pub mod report;
 pub mod served_vocabulary;
