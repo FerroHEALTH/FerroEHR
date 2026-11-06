@@ -1238,6 +1238,35 @@ async fn a_template_predicate_reads_the_template_index() {
     );
 }
 
+/// A `LIKE` on a COMPOSITION's template id, literal or bound, reads the
+/// `version_hot.template_id` column through its index and walks no node
+/// fragment for the template id (#5082).
+#[tokio::test]
+async fn a_template_like_reads_the_template_index() {
+    let db = testkit::db().await.expect("testkit database");
+    let pool = db.pool();
+    let svc = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
+    seed(&svc, &pool).await;
+
+    let params = Params::default().with("pattern", ParamValue::Str("no.such.v1.*".to_owned()));
+    for aql in [
+        "SELECT c FROM EHR e CONTAINS COMPOSITION c \
+         WHERE c/archetype_details/template_id/value LIKE 'no.such.v1.*'",
+        "SELECT c FROM EHR e CONTAINS COMPOSITION c \
+         WHERE c/archetype_details/template_id/value LIKE $pattern",
+    ] {
+        let plan = explain_aql(&pool, aql_sql_with(aql, &params, Vec::new(), Some(500))).await;
+        let scans = scans(&plan);
+        assert!(
+            on(&scans, "version_hot")
+                .iter()
+                .any(|s| s.index.as_deref() == Some("idx_version_hot_template")),
+            "#5082: {aql} enters through the template index:\n{}",
+            render(&scans)
+        );
+    }
+}
+
 // ── the commit-time range ────────────────────────────────────────────────────
 
 /// A commit-time range over the append-only version store — the shape

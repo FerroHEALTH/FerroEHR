@@ -2891,6 +2891,30 @@ fn a_composition_template_predicate_reads_the_version_column() {
     assert!(!sql.contains(r#""v1"."template_id" = "#), "{sql}");
 }
 
+/// A `LIKE` on a COMPOSITION's template id, with a literal or a bound
+/// pattern, also compares the indexed `version.template_id` and walks no node
+/// (QUERY master03 §Operators/LIKE; #5082).
+#[test]
+fn a_composition_template_like_reads_the_version_column() {
+    let params = Params::default().with(
+        "pattern",
+        ParamValue::Str("discharge_report.v1.*".to_owned()),
+    );
+    for q in [
+        "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
+         WHERE c/archetype_details/template_id/value LIKE 'discharge_report.v1.*'",
+        "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
+         WHERE c/archetype_details/template_id/value LIKE 'discharge_report.v1.?.0'",
+        "SELECT c/uid/value FROM EHR e CONTAINS COMPOSITION c \
+         WHERE c/archetype_details/template_id/value LIKE $pattern",
+    ] {
+        let sql = build_sql_with(q, &params);
+        assert!(sql.contains(r#""v1"."template_id" LIKE "#), "{q}\n{sql}");
+        assert!(!sql.contains("jsonpath"), "{q}\n{sql}");
+        assert!(!sql.contains("node_archetype_details("), "{q}\n{sql}");
+    }
+}
+
 // ── a lookup by an ELEMENT value (#4437) ─────────────────────────────────────
 
 /// Plan `q` with `params` bound and lower it to SQL.
