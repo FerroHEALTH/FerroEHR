@@ -7,17 +7,19 @@
 #   curl -u ferroehr:ferroehr -X POST -i \
 #     http://localhost:8080/ferroehr/rest/openehr/v1/ehr
 #
-# It pulls the published images (ghcr.io/ferrohealth/*, pinned to the release
-# this file shipped with) and needs NO repo checkout, no bind mounts, and no
-# environment variables. The server configuration travels INLINE as the
+# It pulls the published images (ghcr.io/ferrohealth/*) and needs NO repo
+# checkout, no bind mounts, and no environment variables. This copy, on main,
+# pins the `:main` images built from main and carries the configuration main
+# reads; the copy attached to each GitHub release pins that release's images. The server configuration travels INLINE as the
 # `ferroehr-config` compose config below (requires Docker Compose >= 2.23.1 —
 # docs.docker.com/reference/compose-file/configs). The quickstart posture is
 # Basic auth with the dev user ferroehr/ferroehr and RBAC disabled — dev
 # credentials, NOT for production (see the config block for the ways out).
 #
-# The image tags below are bumped at every release cut (the Helm appVersion
-# treatment); scripts/checks/compose-image-tags.sh guards them against the
-# workspace version in CI.
+# The release lane writes the release's version in place of `:main` in the
+# copy it attaches (scripts/release/quickstart-compose.sh), and
+# scripts/checks/compose-image-tags.sh holds this file to `:main` and the
+# attached copy to the release.
 #
 # ── The patient identity source ───────────────────────────────────────────────
 # FerroEHR keeps no patient-to-record cross-reference of its own: it asks an IHE
@@ -126,7 +128,7 @@
 
 services:
   ferroehr-postgres:
-    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:5.6.3}
+    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:main}
     # Docker's default 64MB /dev/shm starves PostgreSQL's dynamic shared
     # memory under load (parallel workers error `could not resize shared
     # memory segment … No space left on device`), so measured runs keep this
@@ -250,7 +252,7 @@ services:
   # single credential.
   ferroehr-backup-clinical:
     profiles: [backup]
-    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:5.6.3}
+    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:main}
     depends_on:
       ferroehr-postgres:
         condition: service_healthy
@@ -288,7 +290,7 @@ services:
 
   ferroehr-backup-party:
     profiles: [backup]
-    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:5.6.3}
+    image: ${FERROEHR_POSTGRES_IMAGE:-ghcr.io/ferrohealth/ferroehr-postgres:main}
     depends_on:
       ferroehr-postgres:
         condition: service_healthy
@@ -436,7 +438,7 @@ services:
       start_period: 10s
 
   ferroehr:
-    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:5.7.0}
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:main}
     # The issuer's namespace (the header says why); the issuer publishes 8080
     # and answers to `ferroehr` on the compose network.
     network_mode: service:identity-issuer
@@ -564,7 +566,7 @@ services:
   # FERROEHR_VIEWER__OIDC__* and FERROEHR_VIEWER__AUTH__* variables at your identity provider.
   ferroehr-viewer:
     profiles: [viewer]
-    image: ${FERROEHR_VIEWER_IMAGE:-ghcr.io/ferrohealth/ferroehr-viewer:5.6.3}
+    image: ${FERROEHR_VIEWER_IMAGE:-ghcr.io/ferrohealth/ferroehr-viewer:main}
     depends_on:
       ferroehr:
         condition: service_healthy

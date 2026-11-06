@@ -108,6 +108,10 @@ curl -LO https://github.com/FerroHEALTH/FerroEHR/releases/latest/download/docker
 docker compose up
 ```
 
+That file is the one attached to the latest release and pulls that release's
+images. The `docker-compose.yml` in this repository pulls the images built
+from `main` and carries `main`'s configuration, for running `main`.
+
 Then create an EHR and query it with AQL (development credentials
 `ferroehr` / `ferroehr`):
 

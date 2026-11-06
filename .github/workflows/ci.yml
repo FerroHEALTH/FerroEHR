@@ -574,6 +574,8 @@ jobs:
         run: bash scripts/release/accompanying-documents.sh --self-test
       - name: The release milestone check refuses open items and closes only after every leg
         run: bash scripts/release/milestone.sh --self-test
+      - name: The release rewrite of the quickstart passes its check
+        run: bash scripts/release/quickstart-compose.sh --self-test
       - name: The crate stamp writes one version into the nine manifests, their internal requirements and both locks, with or without git, and refuses an unknown crate set
         run: bash scripts/release/publish-crates.sh --self-test
       - name: The release plan orders tags by version and counts the support period as GNU date does
@@ -2935,23 +2937,45 @@ jobs:
       - name: compose image tags match the workspace version
         run: bash scripts/checks/compose-image-tags.sh
 
-  # Quickstart config guard (#4380): the inline configurations of
-  # docker-compose.yml must be readable by the images the file pins, or a
-  # downloader gets a server that refuses its own configuration. Runs each
-  # pinned image's `config check` over its block, on no network.
+  # Quickstart config guard (#4380, #5003): the inline configurations of
+  # docker-compose.yml must be readable by the server that runs them, or a
+  # downloader gets a server that refuses its own configuration. On main the
+  # file pins the `:main` FerroEHR image and carries main's configuration, so
+  # the FerroEHR blocks are checked by the image this change builds: the
+  # ui-e2e-binary server packaged COPY-only, as chart-boot packages it.
+  # FerroPIX's block is checked by the image the file pins. Each `config
+  # check` runs on no network. The binary is built for every change to the
+  # server's code or to the compose files (the conformance and viewer lanes).
   quickstart-config:
     name: quickstart-config
-    needs: changes
+    needs: [changes, ui-e2e-binary]
     if: needs.changes.outputs.queue_verified != 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: The quickstart's inline configurations read under the pinned images
+      # The artifact download loses the executable bit; the Dockerfile COPYs the
+      # binary with `--chmod=0755`, which is why that does not matter here.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ui-e2e-server-binary
+          path: bin/amd64
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Package this change's server image (COPY-only, seconds)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: runtime-prebuilt
+          load: true
+          tags: ferroehr:quickstart-config
+      - name: The quickstart's inline configurations read under this change's server and the pinned FerroPIX
+        env:
+          FERROEHR_CONFIG_IMAGE: ferroehr:quickstart-config
         run: bash scripts/checks/quickstart-config-image.sh
 
   # FerroPIX pin guard (#4392): the quickstart, the Helm chart and the hosted
