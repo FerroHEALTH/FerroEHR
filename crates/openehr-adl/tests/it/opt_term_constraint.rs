@@ -215,13 +215,22 @@ fn category_code(opt: &mut OperationalTemplate) -> &mut CTerminologyCode {
 }
 
 /// Prints `opt`, parses the text back, and asserts the parse is the OPT it
-/// was printed from.
-fn assert_round_trips(opt: OperationalTemplate) {
-    let artefact = as_artefact(opt);
+/// was printed from, less the specialisation parent.
+///
+/// OPT2 `master03` §Artefact Structure gives the ADL form of an OPT no
+/// `specialize` section, so the parent the model carries (AOM2 §3.6.6) is the
+/// one part the text cannot hold.
+fn assert_round_trips(mut opt: OperationalTemplate) {
+    let artefact = as_artefact(opt.clone());
     let text = print(&artefact).expect("the OPT prints");
     let reparsed = parse_artefact(&text, Dialect::Adl2)
         .unwrap_or_else(|e| panic!("the printed OPT parses back: {e:?}\n{text}"));
-    assert_eq!(reparsed, artefact, "print then parse gives back the OPT");
+    opt.parent_archetype_id = None;
+    assert_eq!(
+        reparsed,
+        as_artefact(opt),
+        "print then parse gives back the OPT"
+    );
 }
 
 #[test]
