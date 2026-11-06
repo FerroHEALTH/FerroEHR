@@ -238,7 +238,7 @@ fn resolve_secret_files(config: &mut FerroEhrConfig, errors: &mut Vec<ConfigErro
         config.multimedia.secret_access_key_file.take().as_deref(),
         errors,
     );
-    if let Some(basic) = config.auth.basic.as_mut() {
+    if let Some(basic) = config.auth.shared.basic.as_mut() {
         for user in &mut basic.users {
             let key = format!("auth.basic.users[{:?}].password_hash", user.user);
             let file = user.password_hash_file.take();

@@ -27,7 +27,6 @@ use ferroehr::system_log::config::AuditConfig;
 use ferroehr::system_log::sender::{AuditHandle, start};
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::management::Observability;
-use ferrohealth_smart::config::AuthSection;
 use http::{Request, StatusCode, header};
 use serde_json::{Value, json};
 use sqlx::PgPool;
@@ -124,10 +123,7 @@ fn config() -> AppConfig {
             swagger_ui: AccessLevel::Off,
             ..Default::default()
         },
-        auth: AuthSection {
-            enabled: false,
-            ..AuthSection::default()
-        },
+        auth: common::auth_off(),
         ..Default::default()
     }
 }

@@ -20,7 +20,6 @@ use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 use ferroehr_rest::config::AppConfig;
-use ferrohealth_smart::config::{AuthSection, IssuerKey};
 
 use crate::common::{self, BASE, EXT};
 
@@ -59,11 +58,7 @@ async fn issuer() -> MockServer {
 /// A server trusting `issuer`, whose `patient/` grants count.
 async fn app(issuer: &str) -> (testkit::TestDb, Router) {
     let mut cfg = AppConfig {
-        auth: AuthSection {
-            issuer: IssuerKey::Flat(issuer.to_owned()),
-            audience: vec![AUDIENCE.to_owned()],
-            ..AuthSection::default()
-        },
+        auth: common::trusting(vec![common::entry(issuer, AUDIENCE)]),
         ..common::api_config(false)
     };
     cfg.smart.patient_issuers = vec![issuer.to_owned()];

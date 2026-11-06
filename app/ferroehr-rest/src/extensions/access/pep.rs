@@ -922,7 +922,7 @@ mod tests {
         claims: serde_json::Map<String, serde_json::Value>,
         roles: Vec<String>,
     ) -> Principal {
-        let caller = Caller::new(subject.to_owned(), None, "", None, false).with_claims(claims);
+        let caller = crate::test_support::person(subject, "").with_claims(claims);
         Principal::new(Access::Caller(Arc::new(caller)), roles, Honoured::default())
     }
 
@@ -1292,7 +1292,7 @@ mod tests {
         claims: &serde_json::Value,
         honoured: Honoured,
     ) -> Principal {
-        let caller = Caller::new("alice".to_owned(), None, scope, None, false)
+        let caller = crate::test_support::person("alice", scope)
             .with_issuer("https://as.example".to_owned())
             .with_claims(claims.as_object().cloned().unwrap_or_default());
         Principal::new(

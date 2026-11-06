@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //! The patient-data authentication gate over the real axum app: the
-//! `[authz.assurance]` step-up refusal (RFC 9470 §3), the
-//! `[authz.professional]` natural-person refusal, and the access record
-//! carrying the acting mode, the assurance level and the professional (EHDS
-//! Annex II 3.1 and 3.2(b), `docs/law/eu/ehds/text.html Annex II 3`).
+//! `[authz.assurance]` step-up refusal (RFC 9470 §3), the refusal of a
+//! `persons` token through a client its issuer does not list, and the access
+//! record carrying the acting mode, the assurance level and the professional
+//! (EHDS Annex II 3.1 and 3.2(b), `docs/law/eu/ehds/text.html Annex II 3`).
 //!
 //! The EHR the requests name does not exist, so a request the gate lets
 //! through answers `404` from the service; a gate refusal answers `401`/`403`
@@ -18,7 +18,9 @@ use axum::Router;
 use ferroehr::service::FerroEhrService;
 use ferroehr::system_log::config::{AuditConfig, FailMode, StoreConfig, SyslogConfig};
 use ferroehr::system_log::sender::start;
-use ferrohealth_smart::assurance::{AssuranceLevel, AssuranceSection, ProfessionalSection};
+use ferrohealth_smart::assurance::{AssuranceLevel, AssuranceSection};
+use ferrohealth_smart::config::IssuerEntry;
+use ferrohealth_smart::profile::Delegate;
 use http::{StatusCode, header};
 use serde_json::{Value, json};
 use sqlx::{PgPool, Row};
@@ -44,17 +46,17 @@ fn assurance() -> AssuranceSection {
     }
 }
 
-/// The app with the given gate configuration, auditing into the store when
-/// `pool` is given.
-async fn app(
-    professional: Option<ProfessionalSection>,
-    audited: bool,
-) -> (testkit::TestDb, PgPool, Router) {
+/// The app whose issuer lists `delegates`, auditing into the store when
+/// `audited`.
+async fn app(delegates: Vec<Delegate>, audited: bool) -> (testkit::TestDb, PgPool, Router) {
     let (db, pool) = common::migrated_pool().await;
     let mut config = common::api_config(false);
-    config.auth = common::issuer_auth(ISSUER, AUDIENCE);
+    config.auth = common::trusting(vec![IssuerEntry {
+        jwks_file: common::jwks_file().display().to_string(),
+        delegates: Some(delegates),
+        ..common::entry(ISSUER, AUDIENCE)
+    }]);
     config.assurance = assurance();
-    config.professional = professional;
     let mut service = FerroEhrService::new(&ferroehr::db::domain::DomainPools::from_shared(&pool));
     if audited {
         let audit = AuditConfig {
@@ -103,7 +105,7 @@ fn ehr_path() -> String {
 /// `401` and the step-up challenge naming the accepted values.
 #[tokio::test]
 async fn a_token_below_the_minimum_gets_the_step_up_challenge() {
-    let (_db, _pool, app) = app(None, false).await;
+    let (_db, _pool, app) = app(Vec::new(), false).await;
     for extra in [
         json!({ "sub": "dr-a", "acr": "loa-low" }),
         json!({ "sub": "dr-a", "acr": "not-mapped" }),
@@ -130,7 +132,7 @@ async fn a_token_below_the_minimum_gets_the_step_up_challenge() {
 /// reaches a definition route, which carries no patient data.
 #[tokio::test]
 async fn a_token_at_or_above_the_minimum_passes() {
-    let (_db, _pool, app) = app(None, false).await;
+    let (_db, _pool, app) = app(Vec::new(), false).await;
     for acr in ["loa-substantial", "loa-high"] {
         let status = common::send_status(
             &app,
@@ -150,42 +152,28 @@ async fn a_token_at_or_above_the_minimum_passes() {
     assert_eq!(status, StatusCode::OK);
 }
 
-/// A client token naming no professional is refused on patient data with
-/// `403` and problem details.
+/// A person's token through a client its issuer lists neither as first-party
+/// nor as a delegate is refused, and the same person through the first-party
+/// client passes.
 #[tokio::test]
-async fn a_client_token_without_acting_for_is_refused() {
-    let (_db, _pool, app) = app(Some(ProfessionalSection::default()), false).await;
-    let token = bearer(&json!({ "sub": "app-1", "client_id": "app-1", "acr": "loa-high" }));
-    let (status, headers, body) =
+async fn a_person_token_through_an_unlisted_client_is_refused() {
+    let (_db, _pool, app) = app(Vec::new(), false).await;
+    let token = bearer(&json!({ "sub": "dr-a", "client_id": "app-1", "acr": "loa-high" }));
+    let (status, _headers, body) =
         common::send(&app, common::get_authorized(&ehr_path(), &token)).await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
-    assert!(headers.get(header::WWW_AUTHENTICATE).is_none());
-    let body: Value = serde_json::from_str(&body).expect("problem details");
-    assert!(
-        body["detail"]
-            .as_str()
-            .is_some_and(|m| m.contains("natural person")),
-        "{body}"
-    );
-    // A person token passes the same gate.
-    let person = bearer(&json!({ "sub": "dr-a", "client_id": "app-1", "acr": "loa-high" }));
+    assert_eq!(status, StatusCode::UNAUTHORIZED, "{body}");
+    let person = bearer(&json!({ "sub": "dr-a", "acr": "loa-high" }));
     let status = common::send_status(&app, common::get_authorized(&ehr_path(), &person)).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
-/// A client token acting for a named professional passes, and the access
-/// record carries the client mode, the professional and the level.
+/// A third-party client the issuer lists as a delegate acts for the person
+/// its token names, and the access record carries the client mode, the
+/// professional and the level.
 #[tokio::test]
-async fn a_client_acting_for_a_professional_passes_and_is_recorded() {
-    let professional = ProfessionalSection {
-        acting_for_claim: Some("act.sub".to_owned()),
-        ..ProfessionalSection::default()
-    };
-    let (_db, pool, app) = app(Some(professional), true).await;
-    let token = bearer(&json!({
-        "sub": "app-1", "azp": "app-1", "acr": "loa-high",
-        "act": { "sub": "prof-007" },
-    }));
+async fn a_delegate_acting_for_a_professional_passes_and_is_recorded() {
+    let (_db, pool, app) = app(vec![Delegate::Client("app-1".to_owned())], true).await;
+    let token = bearer(&json!({ "sub": "prof-007", "client_id": "app-1", "acr": "loa-high" }));
     let status = common::send_status(&app, common::get_authorized(&ehr_path(), &token)).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 
@@ -206,7 +194,7 @@ async fn a_client_acting_for_a_professional_passes_and_is_recorded() {
     let row = row.expect("the access record was stored");
     assert_eq!(
         row.get::<Option<String>, _>("principal").as_deref(),
-        Some("app-1")
+        Some("prof-007")
     );
     assert_eq!(
         row.get::<Option<String>, _>("acting_mode").as_deref(),
@@ -233,7 +221,7 @@ async fn a_client_acting_for_a_professional_passes_and_is_recorded() {
         .iter()
         .find(|agent| agent["requestor"] == true)
         .expect("the agent:user");
-    assert_eq!(user["who"]["identifier"]["value"], "app-1", "{fhir}");
+    assert_eq!(user["who"]["identifier"]["value"], "prof-007", "{fhir}");
     let other_id = user["extension"]
         .as_array()
         .expect("the agent:user extensions")

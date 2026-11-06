@@ -42,12 +42,10 @@ fn config(enabled: bool) -> AppConfig {
     // Basic and bearer together: Basic users from `with_basic_users`, the
     // bearer issuer beside them.
     common::with_basic_users(&mut config, &[("alice", &["USER"])]);
-    let basic = config.auth.basic.take();
-    config.auth = ferrohealth_smart::config::AuthSection {
-        enabled,
-        basic,
-        ..common::issuer_auth(ISSUER, AUDIENCE)
-    };
+    let basic = config.auth.shared.basic.take();
+    config.auth = common::issuer_auth(ISSUER, AUDIENCE);
+    config.auth.shared.enabled = enabled;
+    config.auth.shared.basic = basic;
     config
 }
 

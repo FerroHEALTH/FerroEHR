@@ -202,7 +202,7 @@ pub fn extensions_document(cfg: &AppConfig) -> utoipa::openapi::OpenApi {
     let mut protected = management::openapi();
     protected.merge(crate::api::api_doc(&crate::api::Namespaces::of(&cfg.rest)));
 
-    let scheme = advertised_scheme(&cfg.auth);
+    let scheme = advertised_scheme(&cfg.auth.shared);
     if scheme.is_some() {
         require_auth(&mut protected);
     }

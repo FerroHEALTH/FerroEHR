@@ -61,7 +61,7 @@ fn rest_config(auth_enabled: bool) -> AppConfig {
             ("nadia", &["NURSE"]),
         ],
     );
-    config.auth.enabled = auth_enabled;
+    config.auth.shared.enabled = auth_enabled;
     config
 }
 

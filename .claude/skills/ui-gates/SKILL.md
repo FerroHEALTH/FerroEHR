@@ -19,7 +19,7 @@ failure; run the cheap gates first.
 
 FerroUI leads the viewer's UI, and its gates hold every component the
 viewer draws before a release reaches the pin (`ferrohealth-ui` in the root
-`Cargo.toml`, `=0.6.6` today):
+`Cargo.toml`, `=0.6.8` today):
 
 - the library gates of FerroUI's `.claude/rules/console-ui.md` §10 (fmt,
   clippy, nextest, the markup rules, the script budget, the gallery

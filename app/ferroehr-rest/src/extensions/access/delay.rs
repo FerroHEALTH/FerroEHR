@@ -17,7 +17,7 @@
 //! person's access: our own design/extension.
 
 use axum::response::{IntoResponse, Response};
-use ferrohealth_smart::resource::Caller;
+use ferrohealth_smart::kind::CallerKind;
 
 use super::authn::{Principal, current_principal};
 use crate::api::RequestParts;
@@ -36,16 +36,15 @@ pub(crate) fn applies(state: &AppState, op: &str) -> bool {
     current_principal().is_some_and(|principal| acts_for_the_person(&principal))
 }
 
-/// Whether `principal` may be the person's own access: a token carrying a
-/// SMART `patient/` grant or the configured patient claim, whatever else it
-/// carries (`Caller::acts_for_the_person` of `ferrohealth-smart`).
+/// Whether `principal` may be the person's own access: a caller
+/// `ferrohealth-smart` classifies as the patient, or one representing the
+/// person.
 pub(crate) fn acts_for_the_person(principal: &Principal) -> bool {
     // NOTE: EHDS Art. 3(3), the owner's ruling of 2026-10-31: a mixed token is withheld
     // from, so the person never reads held data early; the rule is the family crate's.
-    principal
-        .access
-        .caller()
-        .is_some_and(Caller::acts_for_the_person)
+    principal.access.caller().is_some_and(|caller| {
+        caller.is_the_person() || matches!(caller.kind(), CallerKind::Representative { .. })
+    })
 }
 
 /// Answer, as an unknown object would be answered, a request whose path names

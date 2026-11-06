@@ -415,6 +415,7 @@ mod tests {
             scope,
             None,
             false,
+            ferrohealth_smart::kind::CallerKind::Person,
         )
         .with_issuer("https://as.example".to_owned())
         .with_claims(claims);
@@ -586,7 +587,14 @@ mod tests {
     #[test]
     fn a_scopeless_subject_meets_an_openehr_requirement_only_without_scopes() {
         let caller = |scope: &str, scopeless: bool| {
-            let caller = Caller::new("svc".to_owned(), None, scope, None, scopeless);
+            let caller = Caller::new(
+                "svc".to_owned(),
+                None,
+                scope,
+                None,
+                scopeless,
+                ferrohealth_smart::kind::CallerKind::System,
+            );
             Principal::new(
                 Access::Caller(Arc::new(caller)),
                 Vec::new(),

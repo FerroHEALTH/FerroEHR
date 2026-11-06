@@ -53,11 +53,11 @@ use ferrohealth_health::registry::Registry;
 use std::sync::Arc;
 
 use axum::Router;
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, Query, Request, State};
 use axum::middleware::{Next, from_fn_with_state};
 use axum::response::{IntoResponse, Json, Response};
 use axum::routing::get;
-use http::{HeaderMap, StatusCode, header};
+use http::{StatusCode, header};
 use serde_json::Value;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -322,7 +322,7 @@ pub fn router(state: ManagementState) -> Router {
 /// Stamp the audit operation id on every management response (#3244), so the
 /// audit middleware records the request under a `management_*` operation the
 /// classification table names, rather than the anonymous default.
-async fn stamp_audit_op(req: axum::extract::Request, next: Next) -> Response {
+async fn stamp_audit_op(req: Request, next: Next) -> Response {
     let op = audit_op_for(req.method(), req.uri().path());
     let mut resp = next.run(req).await;
     resp.extensions_mut()
@@ -710,12 +710,13 @@ pub(crate) struct AccessGuard {
 /// closure in [`router`], and around the Swagger surface by the main router.
 pub(crate) async fn access_middleware(
     State(guard): State<AccessGuard>,
-    req: axum::extract::Request,
+    req: Request,
     next: Next,
 ) -> Response {
-    match guard.check(req.headers()).await {
+    let (parts, body) = req.into_parts();
+    match guard.check(&parts).await {
         Ok(principal) => {
-            let mut resp = next.run(req).await;
+            let mut resp = next.run(Request::from_parts(parts, body)).await;
             // Republished for the audit layer outside this router, which
             // names the person behind a management request from the response
             // extensions the way the API's authentication layer does (#3244).
@@ -729,11 +730,10 @@ pub(crate) async fn access_middleware(
 }
 
 impl AccessGuard {
-    /// Enforce the access level against the request headers, handing back the
-    /// authenticated principal where one was established.
+    /// Enforces the access level on the request, handing back its principal.
     async fn check(
         &self,
-        headers: &HeaderMap,
+        headers: &http::request::Parts,
     ) -> Result<Option<crate::extensions::access::authn::Principal>, Box<Response>> {
         match self.level {
             // Defensive: an `Off` endpoint is never mounted; if reached, 404.

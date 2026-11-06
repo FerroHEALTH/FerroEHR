@@ -80,6 +80,10 @@ pub struct BuildInfo {
     /// configuration was resolved (the compile-time default).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub audit: Option<crate::system_log::config::AuditPosture>,
+    /// The party binding the server runs under: absent only where no
+    /// configuration was resolved.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub binding: Option<crate::config::binding::BindingPosture>,
 }
 
 /// The pinned openEHR specification versions surfaced by `/management/info`.
@@ -133,7 +137,18 @@ impl BuildInfo {
             manufacturer: crate::manufacturer::MANUFACTURER,
             support: crate::support::SupportPeriod::current(),
             audit: None,
+            binding: None,
         }
+    }
+
+    /// The build info of the server `config` configures: its generation set,
+    /// its audit posture and its party binding.
+    #[must_use]
+    pub fn for_config(config: &crate::config::FerroEhrConfig) -> Self {
+        let mut info = Self::for_profile(config.spec_profile)
+            .with_audit(crate::system_log::config::AuditPosture::of(&config.audit));
+        info.binding = Some(crate::config::binding::BindingPosture::of(config));
+        info
     }
 
     /// The same build info carrying the resolved audit posture, so

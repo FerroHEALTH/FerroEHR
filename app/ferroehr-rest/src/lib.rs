@@ -149,7 +149,7 @@ async fn build_authenticator(
         .await
         .map_err(ServeError::Auth)?;
     if config.smart.enabled
-        && config.auth.enabled
+        && config.auth.shared.enabled
         && authenticator
             .smart_configuration(&smart::discovery::options(config))
             .is_none_or(|document| document.get("token_endpoint").is_none())
@@ -267,7 +267,9 @@ pub(crate) mod test_support {
     use std::path::PathBuf;
     use std::sync::OnceLock;
 
-    use ferrohealth_smart::config::{AuthSection, IssuerKey};
+    use ferroehr::config::auth_section::AuthConfig;
+    use ferrohealth_smart::config::{AuthSection, IssuerEntry, IssuerKey};
+    use ferrohealth_smart::kind::IssuerKind;
     use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
 
     /// The issuer the test tokens name.
@@ -295,15 +297,36 @@ pub(crate) mod test_support {
         .clone()
     }
 
-    /// An `[auth]` section trusting the test issuer from its key-set file.
-    pub(crate) fn bearer_auth() -> AuthSection {
-        AuthSection {
-            issuer: IssuerKey::Flat(ISSUER.to_owned()),
+    /// The `[[auth.issuer]]` table of a `persons` issuer at `issuer` for the
+    /// test audience, admitting the test client.
+    pub(crate) fn entry(issuer: &str) -> IssuerEntry {
+        IssuerEntry {
+            issuer: issuer.to_owned(),
+            kind: Some(IssuerKind::Persons),
             audience: vec![AUDIENCE.to_owned()],
-            jwks_file: jwks_file().display().to_string(),
-            role_claims: keycloak_role_claims(),
-            ..ferroehr::config::FerroEhrConfig::default().auth
+            role_claims: Some(keycloak_role_claims()),
+            first_party_clients: Some(vec!["unit-test-client".to_owned()]),
+            ..IssuerEntry::default()
         }
+    }
+
+    /// The `[auth]` table trusting the one issuer `entry`.
+    pub(crate) fn trusting(entry: IssuerEntry) -> AuthConfig {
+        AuthConfig {
+            shared: AuthSection {
+                issuer: IssuerKey::List(vec![entry]),
+                ..AuthSection::default()
+            },
+            ..AuthConfig::default()
+        }
+    }
+
+    /// An `[auth]` section trusting the test issuer from its key-set file.
+    pub(crate) fn bearer_auth() -> AuthConfig {
+        trusting(IssuerEntry {
+            jwks_file: jwks_file().display().to_string(),
+            ..entry(ISSUER)
+        })
     }
 
     /// The role claims a Keycloak deployment configures: the RFC 9068
@@ -324,6 +347,18 @@ pub(crate) mod test_support {
         ))
         .expect("the committed test key");
         encode(&header, claims, &key).expect("encode")
+    }
+
+    /// A bearer caller classified as a person, `subject` granted `scope`.
+    pub(crate) fn person(subject: &str, scope: &str) -> ferrohealth_smart::resource::Caller {
+        ferrohealth_smart::resource::Caller::new(
+            subject.to_owned(),
+            None,
+            scope,
+            None,
+            false,
+            ferrohealth_smart::kind::CallerKind::Person,
+        )
     }
 
     /// The claims of a valid access token for `sub` granting `scope`.
@@ -352,10 +387,11 @@ mod tests {
     #[tokio::test]
     async fn configured_role_claims_apply_without_an_authz_handle() {
         let config = AppConfig {
-            auth: ferrohealth_smart::config::AuthSection {
-                role_claims: vec!["app_roles".to_owned()],
-                ..test_support::bearer_auth()
-            },
+            auth: test_support::trusting(ferrohealth_smart::config::IssuerEntry {
+                role_claims: Some(vec!["app_roles".to_owned()]),
+                jwks_file: test_support::jwks_file().display().to_string(),
+                ..test_support::entry(test_support::ISSUER)
+            }),
             ..AppConfig::default()
         };
         let authenticator = build_authenticator(&config, None)
@@ -363,13 +399,15 @@ mod tests {
             .expect("authenticator");
         let mut claims = test_support::claims("alice", "user/composition-*.r");
         claims["app_roles"] = serde_json::json!(["CLINICIAN"]);
-        let mut headers = http::HeaderMap::new();
-        headers.insert(
-            http::header::AUTHORIZATION,
-            http::HeaderValue::from_str(&format!("Bearer {}", test_support::token(&claims)))
-                .expect("header"),
-        );
-        let authenticated = authenticator.authenticate(&headers).await.expect("valid");
+        let request = http::Request::get("/ferroehr/rest/openehr/v1/ehr")
+            .header(
+                http::header::AUTHORIZATION,
+                format!("Bearer {}", test_support::token(&claims)),
+            )
+            .body(())
+            .expect("request");
+        let (parts, ()) = request.into_parts();
+        let authenticated = authenticator.authenticate(&parts).await.expect("valid");
         assert_eq!(authenticated.principal.roles, vec!["CLINICIAN".to_owned()]);
     }
 }

@@ -25,9 +25,14 @@
 
 pub mod loader;
 
+pub mod abac_rules;
 pub mod access_delay;
+pub mod agreement;
 pub mod auth;
+pub mod auth_section;
 pub mod authz;
+pub mod binding;
+pub mod clients;
 pub mod deployment;
 pub mod management;
 pub mod profile;
@@ -81,8 +86,8 @@ pub struct FerroEhrConfig {
     /// export, the family's shared section.
     pub telemetry: ferrohealth_telemetry::section::TelemetrySection,
     /// `[auth]` — authentication: the `ferrohealth-smart` section, whose
-    /// serialization writes every secret as `***`.
-    pub auth: ferrohealth_smart::config::AuthSection,
+    /// serialization writes every secret as `***`, and `[auth.idp]`.
+    pub auth: auth_section::AuthConfig,
     /// `[authz]` — RBAC + ABAC.
     pub authz: authz::AuthzConfig,
     /// `[admin]` — the ADMIN API group.
@@ -149,7 +154,7 @@ impl Default for FerroEhrConfig {
             db: crate::db::DbConfig::default(),
             storage: crate::db::domain::StorageConfig::default(),
             telemetry: ferrohealth_telemetry::section::TelemetrySection::default(),
-            auth: ferrohealth_smart::config::AuthSection::default(),
+            auth: auth_section::AuthConfig::default(),
             authz: authz::AuthzConfig::default(),
             admin: rest::AdminConfig::default(),
             smart: smart::SmartConfig::default(),
@@ -502,7 +507,7 @@ impl FerroEhrConfig {
     /// the silent opposite of what the key says. The combination is refused
     /// instead. No openEHR spec governs configuration — our own design.
     fn validate_ehr_access(&self, errors: &mut Vec<ConfigError>) {
-        if !self.auth.enabled
+        if !self.auth.shared.enabled
             && self.authz.rbac.ehr_access_default == authz::EhrAccessDefault::Restricted
         {
             errors.push(ConfigError::semantic(
@@ -651,7 +656,7 @@ impl FerroEhrConfig {
     /// patient-data assurance blocks; SMART what the discovery document
     /// publishes.
     fn validate_mechanisms(&self, errors: &mut Vec<ConfigError>) {
-        if let Err(e) = auth::validate(&self.auth) {
+        if let Err(e) = auth::validate(&self.auth.shared) {
             errors.push(ConfigError::semantic(format!(
                 "auth: {}",
                 crate::error::ErrorChain::new(&e)
@@ -663,18 +668,15 @@ impl FerroEhrConfig {
         if let Err(e) = self.authz.assurance.validate() {
             errors.push(ConfigError::semantic(format!("authz: {e}")));
         }
-        if let Some(Err(e)) = self
-            .authz
-            .professional
-            .as_ref()
-            .map(ferrohealth_smart::assurance::ProfessionalSection::validate)
-        {
-            errors.push(ConfigError::semantic(format!("authz: {e}")));
-        }
+        errors.extend(
+            self.identity_errors()
+                .into_iter()
+                .map(ConfigError::semantic),
+        );
         if let Err(e) = self.smart.validate() {
             errors.push(ConfigError::semantic(format!("smart: {e}")));
         }
-        if self.smart.enabled && !auth::has_bearer(&self.auth) {
+        if self.smart.enabled && !auth::has_bearer(&self.auth.shared) {
             errors.push(ConfigError::semantic(
                 "smart.enabled = true requires an [auth] issuer: the discovery document is \
                  built from the issuer's metadata, and it directs applications to an \
@@ -1290,47 +1292,16 @@ mod tests {
 
     // ── 2. Mapping ────────────────────────────────────────────────────────────
 
-    /// The assurance and professional blocks are reachable from the env grammar
-    /// (the `levels` map is file-only: its keys are issuer URIs).
-    #[test]
-    fn env_mapping_reaches_the_assurance_and_professional_blocks() {
-        let c = assemble_ok(
-            None,
-            &env(&[
-                ("FERROEHR__AUTHZ__ASSURANCE__CLAIM", "loa"),
-                ("FERROEHR__AUTHZ__ASSURANCE__MINIMUM", "high"),
-                ("FERROEHR__AUTHZ__PROFESSIONAL__CLAIM", "uzi"),
-                (
-                    "FERROEHR__AUTHZ__PROFESSIONAL__CLIENT_TOKENS",
-                    "claim_absent",
-                ),
-                ("FERROEHR__AUTHZ__PROFESSIONAL__ACTING_FOR_CLAIM", "act.sub"),
-            ]),
-            &[],
-        );
-        assert_eq!(c.authz.assurance.claim, "loa");
-        assert_eq!(
-            c.authz.assurance.minimum,
-            Some(ferrohealth_smart::assurance::AssuranceLevel::High)
-        );
-        let professional = c.authz.professional.expect("professional table from env");
-        assert_eq!(professional.claim, "uzi");
-        assert_eq!(
-            professional.client_tokens,
-            ferrohealth_smart::assurance::ClientTokens::ClaimAbsent
-        );
-        assert_eq!(professional.acting_for_claim.as_deref(), Some("act.sub"));
-    }
-
     #[test]
     fn env_mapping_scalars_maps_and_lists() {
         let c = assemble_ok(
             None,
             &env(&[
                 ("FERROEHR__SERVER__MAX_CONCURRENT_REQUESTS", "64"),
-                ("FERROEHR__AUTH__ISSUER", "https://idp"),
-                ("FERROEHR__AUTH__AUDIENCE", "ferroehr,other"),
-                ("FERROEHR__AUTH__TIMEOUT_MS", "1500"),
+                ("FERROEHR__AUTH__ISSUER__0__ISSUER", "https://idp"),
+                ("FERROEHR__AUTH__ISSUER__0__KIND", "persons"),
+                ("FERROEHR__AUTH__ISSUER__0__AUDIENCE", "ferroehr,other"),
+                ("FERROEHR__AUTH__ISSUER__0__TIMEOUT_MS", "1500"),
                 ("FERROEHR__AUTHZ__ABAC__POLICY__EHR__NAME", "ehr-policy"),
             ]),
             &[],
@@ -1339,18 +1310,23 @@ mod tests {
             c.server.max_concurrent_requests,
             std::num::NonZeroUsize::new(64)
         );
-        assert!(
-            matches!(&c.auth.issuer, ferrohealth_smart::config::IssuerKey::Flat(issuer) if issuer == "https://idp")
+        let [issuer] = c.auth.shared.issuers() else {
+            panic!("one issuer table from the env");
+        };
+        assert_eq!(issuer.issuer, "https://idp");
+        assert_eq!(
+            issuer.kind,
+            Some(ferrohealth_smart::kind::IssuerKind::Persons)
         );
         assert_eq!(
-            c.auth.audience,
+            issuer.audience,
             vec!["ferroehr".to_owned(), "other".to_owned()]
         );
         // The key-set client keys: one overridden from the env, the other two at
         // their documented defaults.
-        assert_eq!(c.auth.timeout_ms, 1_500);
-        assert_eq!(c.auth.jwks_max_age_seconds, 600);
-        assert_eq!(c.auth.jwks_refresh_interval_seconds, 60);
+        assert_eq!(issuer.timeout_ms, 1_500);
+        assert_eq!(issuer.jwks_max_age_seconds, 600);
+        assert_eq!(issuer.jwks_refresh_interval_seconds, 60);
         assert_eq!(
             c.authz
                 .abac
@@ -1385,8 +1361,9 @@ mod tests {
                     "/etc/ferroehr/retired-2025.pub.asc",
                 ),
                 ("FERROEHR__AUTH__CAPABILITIES", "launch-ehr"),
-                ("FERROEHR__AUTH__AUDIENCE", "ferroehr"),
-                ("FERROEHR__AUTH__ALGORITHMS", "ES256"),
+                ("FERROEHR__AUTH__ISSUER__0__ISSUER", "https://idp"),
+                ("FERROEHR__AUTH__ISSUER__0__AUDIENCE", "ferroehr"),
+                ("FERROEHR__AUTH__ISSUER__0__ALGORITHMS", "ES256"),
                 ("FERROEHR__AUTH__SCOPES_SUPPORTED", "openid"),
                 ("FERROEHR__SMART__BACKEND_CLIENTS", "etl"),
                 ("FERROEHR__SMART__PATIENT_ISSUERS", "https://as.example"),
@@ -1400,10 +1377,13 @@ mod tests {
             vec![PathBuf::from("/etc/ferroehr/retired-2025.pub.asc")],
             "a single retired key path must parse as a one-element list"
         );
-        assert_eq!(c.auth.capabilities, vec!["launch-ehr".to_owned()]);
-        assert_eq!(c.auth.audience, vec!["ferroehr".to_owned()]);
-        assert_eq!(c.auth.algorithms.len(), 1);
-        assert_eq!(c.auth.scopes_supported, vec!["openid".to_owned()]);
+        assert_eq!(c.auth.shared.capabilities, vec!["launch-ehr".to_owned()]);
+        let [issuer] = c.auth.shared.issuers() else {
+            panic!("one issuer table from the env");
+        };
+        assert_eq!(issuer.audience, vec!["ferroehr".to_owned()]);
+        assert_eq!(issuer.algorithms.len(), 1);
+        assert_eq!(c.auth.shared.scopes_supported, vec!["openid".to_owned()]);
         assert_eq!(c.smart.backend_clients, vec!["etl".to_owned()]);
         assert_eq!(
             c.smart.patient_issuers,
@@ -1465,7 +1445,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            c.auth.capabilities,
+            c.auth.shared.capabilities,
             vec!["launch-ehr".to_owned(), "sso-openid-connect".to_owned()]
         );
     }
@@ -1478,10 +1458,10 @@ mod tests {
         let c = assemble_ok(
             None,
             &env(&[
-                ("FERROEHR__AUTH__ISSUER", "https://idp"),
-                ("FERROEHR__AUTH__AUDIENCE", "ferroehr"),
-                ("FERROEHR__AUTH__CLOCK_SKEW_SECONDS", "120"),
-                ("FERROEHR__AUTH__TOKEN_PROFILE", "jwt"),
+                ("FERROEHR__AUTH__ISSUER__0__ISSUER", "https://idp"),
+                ("FERROEHR__AUTH__ISSUER__0__AUDIENCE", "ferroehr"),
+                ("FERROEHR__AUTH__ISSUER__0__CLOCK_SKEW_SECONDS", "120"),
+                ("FERROEHR__AUTH__ISSUER__0__PROFILE", "keycloak"),
                 ("FERROEHR__AUTHZ__ABAC__CHECK_DIRECTORY", "true"),
                 (
                     "FERROEHR__AUTHZ__ABAC__PATIENT_NAMESPACE",
@@ -1490,11 +1470,11 @@ mod tests {
             ]),
             &[],
         );
-        assert_eq!(c.auth.clock_skew_seconds, 120);
-        assert_eq!(
-            c.auth.token_profile,
-            ferrohealth_smart::resource::TokenProfile::Jwt
-        );
+        let [issuer] = c.auth.shared.issuers() else {
+            panic!("one issuer table from the env");
+        };
+        assert_eq!(issuer.clock_skew_seconds, 120);
+        assert_eq!(issuer.profile, ferrohealth_smart::profile::Preset::Keycloak);
         assert!(c.authz.abac.check_directory);
         assert_eq!(
             c.authz.abac.patient_namespace(),
@@ -1505,14 +1485,13 @@ mod tests {
         let d = assemble_ok(None, &env(&[]), &[]);
         assert!(!d.authz.abac.check_directory);
         assert_eq!(d.authz.abac.patient_namespace(), None);
+        assert!(d.auth.shared.issuers().is_empty());
+        let entry = ferrohealth_smart::config::IssuerEntry::default();
         assert_eq!(
-            d.auth.clock_skew_seconds, 60,
+            entry.clock_skew_seconds, 60,
             "the default leeway is the conventional 60 s"
         );
-        assert_eq!(
-            d.auth.token_profile,
-            ferrohealth_smart::resource::TokenProfile::Rfc9068
-        );
+        assert_eq!(entry.profile, ferrohealth_smart::profile::Preset::Rfc9068);
     }
 
     /// `[rest] system_id` — the CDR's own openEHR system identifier (stamped
@@ -1759,7 +1738,7 @@ mod tests {
 
         assert_eq!(via_file.db.url.expose(), DSN);
         assert_eq!(via_file.db.url.expose(), via_inline.db.url.expose());
-        let user = &via_file.auth.basic.as_ref().expect("basic").users[0];
+        let user = &via_file.auth.shared.basic.as_ref().expect("basic").users[0];
         assert_eq!(
             user.password_hash
                 .as_ref()
@@ -1949,10 +1928,7 @@ mod tests {
         let mut c = standalone();
         c.smart.enabled = true;
         c.smart.public_base_url = Some("https://a:SMART_PW_SENTINEL@cdr.example".to_owned());
-        c.auth.issuer = ferrohealth_smart::config::IssuerKey::Flat(
-            "https://b:OIDC_PW_SENTINEL@idp.example/r".to_owned(),
-        );
-        c.auth.audience = vec!["ferroehr".to_owned()];
+        c.auth.shared.issuer = auth_section::machines("https://b:OIDC_PW_SENTINEL@idp.example/r");
         let text = c.validate().expect_err("refused").to_string();
         assert!(!text.contains("SMART_PW_SENTINEL"), "{text}");
         assert!(!text.contains("OIDC_PW_SENTINEL"), "{text}");
@@ -1981,7 +1957,7 @@ mod tests {
         c.db.url = SecretUrl::new(format!(
             "postgres://dbuser:{DB_PW}@db.internal:5432/ferroehr"
         ));
-        c.auth.basic = Some(BasicSection {
+        c.auth.shared.basic = Some(BasicSection {
             users: vec![BasicUser {
                 user: "alice".to_owned(),
                 password_hash: Some(secrecy::SecretString::from(BASIC_HASH)),
@@ -1991,8 +1967,7 @@ mod tests {
             }],
             cache_ttl_seconds: 0,
         });
-        c.auth.issuer =
-            ferrohealth_smart::config::IssuerKey::Flat("https://idp.example".to_owned());
+        c.auth.shared.issuer = auth_section::machines("https://idp.example");
         c.signing.key_passphrase = Some(Secret::new(PASSPHRASE));
         c.multimedia.secret_access_key = Some(Secret::new(S3_KEY));
         c.multimedia.access_key_id = Some("AKIA_PUBLIC_ID".to_owned());
@@ -2022,7 +1997,7 @@ mod tests {
             value["auth"]["basic"]["users"][0]["scopes"][0],
             "user/composition-*.r"
         );
-        assert_eq!(value["auth"]["issuer"], "https://idp.example");
+        assert_eq!(value["auth"]["issuer"][0]["issuer"], "https://idp.example");
         assert_eq!(value["multimedia"]["access_key_id"], "AKIA_PUBLIC_ID");
     }
 
@@ -2138,7 +2113,7 @@ mod tests {
             .validate()
             .expect("restricted with RBAC off validates: the per-EHR gate applies it");
 
-        config.auth.enabled = false;
+        config.auth.shared.enabled = false;
         let text = config
             .validate()
             .expect_err("restricted cannot be enforced without authentication")
@@ -2530,7 +2505,9 @@ mod tests {
         let sections = [
             (
                 "auth",
-                accepted_fields::<ferrohealth_smart::config::AuthSection>("auth"),
+                auth_section::live_fields(
+                    accepted_fields::<ferrohealth_smart::config::AuthSection>("auth"),
+                ),
             ),
             (
                 "authz.assurance",
@@ -2539,10 +2516,8 @@ mod tests {
                 ),
             ),
             (
-                "authz.professional",
-                accepted_fields::<ferrohealth_smart::assurance::ProfessionalSection>(
-                    "authz.professional",
-                ),
+                "authz.party_binding",
+                accepted_fields::<binding::PartyBindingConfig>("authz.party_binding"),
             ),
             ("db", accepted_fields::<crate::db::DbConfig>("db")),
             ("ehr_index", accepted_fields::<EhrIndexConfig>("ehr_index")),
@@ -2631,11 +2606,9 @@ mod tests {
             .validate()
             .expect_err("SMART without an [auth] issuer must refuse");
         assert!(format!("{err:?}").contains("[auth] issuer"), "{err:?}");
-        c.auth.issuer = ferrohealth_smart::config::IssuerKey::Flat(
-            "https://as.example/realms/ferroehr".to_owned(),
-        );
-        c.auth.audience = vec!["ferroehr".to_owned()];
-        assert!(c.validate().is_ok());
+        c.auth.shared.issuer = auth_section::machines("https://as.example/realms/ferroehr");
+        c.authz.party_binding.provider = binding::one_provider();
+        assert!(c.validate().is_ok(), "{:?}", c.validate());
     }
 
     /// The HMAC key source and the inline key set are gone: both are unknown
@@ -2666,10 +2639,11 @@ mod tests {
         jwks.write_str(&format!(r#"{{"keys":[{{"kty":"oct","k":"{secret_k}"}}]}}"#))
             .expect("write");
         let mut c = standalone();
-        c.auth.issuer =
-            ferrohealth_smart::config::IssuerKey::Flat("https://idp.example.test".to_owned());
-        c.auth.audience = vec!["ferroehr".to_owned()];
-        c.auth.jwks_file = jwks.path().display().to_string();
+        let mut issuer = auth_section::machines("https://idp.example.test");
+        if let ferrohealth_smart::config::IssuerKey::List(entries) = &mut issuer {
+            entries[0].jwks_file = jwks.path().display().to_string();
+        }
+        c.auth.shared.issuer = issuer;
         let err = c.validate().expect_err("an oct key must refuse the tree");
         let text = err.to_string();
         assert!(text.contains("auth.jwks_file"), "{text}");
@@ -2682,20 +2656,21 @@ mod tests {
     #[test]
     fn validate_reports_auth_section_errors() {
         let mut c = standalone();
-        c.auth.issuer =
-            ferrohealth_smart::config::IssuerKey::Flat("http://idp.example.test".to_owned());
-        c.auth.audience = vec!["ferroehr".to_owned()];
+        c.auth.shared.issuer = auth_section::machines("http://idp.example.test");
         let err = c.validate().expect_err("an http issuer must refuse");
         assert!(err.to_string().contains("auth:"), "{err}");
 
-        c.auth.issuer =
-            ferrohealth_smart::config::IssuerKey::Flat("https://idp.example.test".to_owned());
-        c.auth.audience = Vec::new();
+        let mut issuer = auth_section::machines("https://idp.example.test");
+        if let ferrohealth_smart::config::IssuerKey::List(entries) = &mut issuer {
+            entries[0].audience = Vec::new();
+        }
+        c.auth.shared.issuer = issuer;
         let err = c.validate().expect_err("no audience must refuse");
         assert!(err.to_string().contains("audience"), "{err}");
 
-        c.auth.audience = vec!["ferroehr".to_owned()];
-        assert!(c.validate().is_ok());
+        c.auth.shared.issuer = auth_section::machines("https://idp.example.test");
+        c.authz.party_binding.provider = binding::one_provider();
+        assert!(c.validate().is_ok(), "{:?}", c.validate());
     }
 
     #[test]
@@ -2977,19 +2952,19 @@ mod tests {
         .expect_err("moved env key");
         assert!(err.to_string().contains("ROLE_CLAIMS"), "{err}");
 
-        let file = toml_file("[auth]\nissuer = \"https://idp.example/r\"\n");
-        let c = assemble_ok(Some(file.path()), &env(&[]), &[]);
-        assert_eq!(
-            c.auth.role_claims,
-            ferrohealth_smart::roles::default_claims()
-        );
-        assert!(!c.auth.role_claims.iter().any(|claim| claim == "scope"));
         let c = assemble_ok(
             None,
-            &env(&[("FERROEHR__AUTH__ROLE_CLAIMS", "app_roles,roles")]),
+            &env(&[
+                ("FERROEHR__AUTH__ISSUER__0__ISSUER", "https://idp.example/r"),
+                ("FERROEHR__AUTH__ISSUER__0__ROLE_CLAIMS", "app_roles,roles"),
+            ]),
             &[],
         );
-        assert_eq!(c.auth.role_claims, ["app_roles", "roles"]);
+        let roles = c.auth.shared.issuers()[0].role_claims.as_deref();
+        assert_eq!(
+            roles,
+            Some(&["app_roles".to_owned(), "roles".to_owned()][..])
+        );
     }
 
     /// Every outbound grant is the `ferrohealth-smart` client table, so the

@@ -11,8 +11,8 @@
 //! the scopes each holds, and the product scope. The crate checks tokens and
 //! never issues them. This module holds what FerroEHR adds on top: the
 //! Argon2id cost floor, the issuer `userinfo` rule, the refusal of private or
-//! symmetric key material in a `jwks_file`, and the patient-data assurance types of `[authz.assurance]` and
-//! `[authz.professional]`. No openEHR spec governs authentication mechanics,
+//! symmetric key material in a `jwks_file`, and the patient-data assurance
+//! type of `[authz.assurance]`. No openEHR spec governs authentication mechanics,
 //! ITS-REST leaving the scheme open — our own design, with the IETF OAuth and
 //! JOSE RFCs as the authority for every rule enforced here.
 
@@ -46,7 +46,8 @@ pub const MIN_ARGON2_T_COST: u32 = 2;
 /// The minimum Argon2 parallelism.
 pub const MIN_ARGON2_P_COST: u32 = 1;
 
-/// Returns whether `[auth]` names at least one token issuer.
+/// Returns whether `[auth]` names at least one token issuer, in the table
+/// form or the removed flat form the crate refuses.
 #[must_use]
 pub fn has_bearer(section: &AuthSection) -> bool {
     match &section.issuer {
@@ -124,12 +125,9 @@ pub fn resolve(section: &AuthSection) -> Result<Resolved, AuthConfigError> {
 pub fn validate(section: &AuthSection) -> Result<(), AuthConfigError> {
     for entry in section.issuers() {
         check_issuer_userinfo(&entry.issuer)?;
-        if let Some(path) = entry.jwks_file.as_deref().filter(|path| !path.is_empty()) {
-            check_jwks_file(Path::new(path))?;
+        if !entry.jwks_file.is_empty() {
+            check_jwks_file(Path::new(&entry.jwks_file))?;
         }
-    }
-    if !section.jwks_file.is_empty() {
-        check_jwks_file(Path::new(&section.jwks_file))?;
     }
     if let Some(basic) = &section.basic {
         for user in &basic.users {
@@ -160,7 +158,7 @@ pub fn require_mechanism(section: &AuthSection) -> Result<(), AuthConfigError> {
     Ok(())
 }
 
-/// An `[auth]`, `[authz.assurance]` or `[authz.professional]` setting the
+/// An `[auth]` or `[authz.assurance]` setting the
 /// server refuses to start with.
 #[derive(Debug, thiserror::Error)]
 pub enum AuthConfigError {
@@ -420,22 +418,37 @@ fn check_password_hash(username: &str, phc: &str) -> Result<(), AuthConfigError>
 
 #[cfg(test)]
 mod tests {
-    use ferrohealth_smart::assurance::{
-        AssuranceError, AssuranceLevel, AssuranceSection, ClientTokens, ProfessionalSection,
-    };
-    use ferrohealth_smart::config::{BasicSection, BasicUser};
+    use ferrohealth_smart::assurance::{AssuranceError, AssuranceLevel, AssuranceSection};
+    use ferrohealth_smart::config::{BasicSection, BasicUser, IssuerEntry, ScopelessSubject};
+    use ferrohealth_smart::kind::IssuerKind;
     use secrecy::SecretString;
 
     use super::*;
 
-    /// An `[auth]` section trusting `issuer` for the `ferroehr` audience.
+    /// An `[auth]` section trusting the `machines` issuer `issuer` for the
+    /// `ferroehr` audience.
     fn section(issuer: &str) -> AuthSection {
         AuthSection {
-            issuer: IssuerKey::Flat(issuer.to_owned()),
-            audience: vec!["ferroehr".to_owned()],
+            issuer: IssuerKey::List(vec![IssuerEntry {
+                issuer: issuer.to_owned(),
+                kind: Some(IssuerKind::Machines),
+                audience: vec!["ferroehr".to_owned()],
+                ..IssuerEntry::default()
+            }]),
             ..AuthSection::default()
         }
     }
+
+    /// The one issuer table of a section [`section`] built.
+    fn entry(cfg: &mut AuthSection) -> &mut IssuerEntry {
+        match &mut cfg.issuer {
+            IssuerKey::List(entries) => entries.first_mut().expect("one issuer"),
+            IssuerKey::Flat(_) => panic!("the table form"),
+        }
+    }
+
+    /// The `[[auth.issuer]]` table head of the parsed cases.
+    const ISSUER: &str = "[[issuer]]\nissuer = \"https://idp.example\"\nkind = \"machines\"\naudience = [\"ferroehr\"]\n";
 
     /// A section that satisfies every boot rule.
     fn valid() -> AuthSection {
@@ -452,16 +465,15 @@ mod tests {
     /// so the table is never ignored while tokens are checked as JWTs.
     #[test]
     fn token_introspection_is_served_and_its_table_needs_the_mode() {
-        let served = parse(
-            "issuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\nmode = \"introspection\"\n\
-             [introspection.client]\nclient_id = \"cdr\"\nclient_secret = \"s3cret\"\n",
-        )
+        let served = parse(&format!(
+            "{ISSUER}mode = \"introspection\"\n\
+             [issuer.introspection.client]\nclient_id = \"cdr\"\nclient_secret = \"s3cret\"\n"
+        ))
         .expect("parses");
         assert!(validate(&served).is_ok(), "{:?}", validate(&served));
-        let ignored = parse(
-            "issuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\n\
-             [introspection]\nendpoint = \"https://idp.example/introspect\"\n",
-        )
+        let ignored = parse(&format!(
+            "{ISSUER}[issuer.introspection]\nendpoint = \"https://idp.example/introspect\"\n"
+        ))
         .expect("parses");
         assert!(
             matches!(validate(&ignored), Err(AuthConfigError::Section { .. })),
@@ -474,10 +486,8 @@ mod tests {
     /// would have verified, is refused at boot whatever the key source.
     #[test]
     fn a_symmetric_algorithm_is_a_boot_error() {
-        let cfg = parse(
-            "issuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\nalgorithms = [\"HS256\"]\n",
-        )
-        .expect("HS256 is a JOSE algorithm name");
+        let cfg = parse(&format!("{ISSUER}algorithms = [\"HS256\"]\n"))
+            .expect("HS256 is a JOSE algorithm name");
         assert!(matches!(
             validate(&cfg),
             Err(AuthConfigError::Section { .. })
@@ -527,7 +537,7 @@ mod tests {
         )
         .expect("write");
         let mut cfg = valid();
-        cfg.jwks_file = path.display().to_string();
+        entry(&mut cfg).jwks_file = path.display().to_string();
         assert!(
             matches!(
                 validate(&cfg),
@@ -573,9 +583,7 @@ mod tests {
     #[test]
     fn algorithm_none_is_unconfigurable() {
         for spelling in ["none", "None", "NONE"] {
-            let body = format!(
-                "issuer = \"https://idp.example\"\naudience = [\"ferroehr\"]\nalgorithms = [\"{spelling}\"]\n"
-            );
+            let body = format!("{ISSUER}algorithms = [\"{spelling}\"]\n");
             assert!(
                 parse(&body).is_err(),
                 "`{spelling}` must be refused at boot"
@@ -648,7 +656,7 @@ mod tests {
     fn an_issuer_without_an_audience_is_a_boot_error() {
         for audience in [vec![], vec![String::new()]] {
             let mut cfg = valid();
-            cfg.audience = audience;
+            entry(&mut cfg).audience = audience;
             assert!(matches!(
                 validate(&cfg),
                 Err(AuthConfigError::Section { .. })
@@ -660,14 +668,14 @@ mod tests {
     #[test]
     fn a_clock_skew_above_the_cap_is_a_boot_error() {
         let mut cfg = valid();
-        cfg.clock_skew_seconds = 301;
+        entry(&mut cfg).clock_skew_seconds = 301;
         assert!(matches!(
             validate(&cfg),
             Err(AuthConfigError::Section { .. })
         ));
-        cfg.clock_skew_seconds = 300;
+        entry(&mut cfg).clock_skew_seconds = 300;
         assert!(validate(&cfg).is_ok(), "the cap itself is accepted");
-        assert_eq!(AuthSection::default().clock_skew_seconds, 60);
+        assert_eq!(IssuerEntry::default().clock_skew_seconds, 60);
     }
 
     /// RFC 8414 §2 + §6.2: the issuer identifier is an `https` URL. Plain HTTP
@@ -723,14 +731,17 @@ mod tests {
         }
     }
 
-    /// A blank issuer names no issuer, so an enabled section without a Basic
-    /// user has no mechanism; text that is no URL is refused.
+    /// A blank issuer and text that is no URL are refused, and a section with
+    /// no issuer table and no Basic user has no mechanism.
     #[test]
     fn blank_and_unparsable_issuers_are_boot_errors() {
-        let blank = section("   ");
-        assert!(!has_bearer(&blank));
         assert!(matches!(
-            require_mechanism(&blank),
+            validate(&section("   ")),
+            Err(AuthConfigError::Section { .. })
+        ));
+        assert!(!has_bearer(&AuthSection::default()));
+        assert!(matches!(
+            require_mechanism(&AuthSection::default()),
             Err(AuthConfigError::NoMechanism)
         ));
         assert!(matches!(
@@ -808,8 +819,16 @@ mod tests {
     #[test]
     fn a_scopeless_subject_allowlist_boots() {
         let mut cfg = valid();
-        cfg.scopeless_subjects = vec!["svc".to_owned()];
-        assert!(validate(&cfg).is_ok());
+        cfg.scopeless_subjects = vec![ScopelessSubject::Qualified {
+            issuer: "https://idp.example/realms/ferroehr".to_owned(),
+            sub: "svc".to_owned(),
+        }];
+        assert!(validate(&cfg).is_ok(), "{:?}", validate(&cfg));
+        cfg.scopeless_subjects = vec![ScopelessSubject::Text("svc".to_owned())];
+        assert!(
+            matches!(validate(&cfg), Err(AuthConfigError::Section { .. })),
+            "the bare string form is removed"
+        );
     }
 
     /// An enabled section with Basic users and no issuer resolves to a
@@ -942,30 +961,7 @@ mod tests {
         assert!(AssuranceLevel::Substantial > AssuranceLevel::Low);
     }
 
-    /// The professional block refuses blank claim names at boot.
-    #[test]
-    fn blank_professional_claims_are_boot_errors() {
-        let professional = |claim: &str, acting_for: Option<&str>| ProfessionalSection {
-            claim: claim.to_owned(),
-            acting_for_claim: acting_for.map(str::to_owned),
-            ..ProfessionalSection::default()
-        };
-        assert!(matches!(
-            professional("", None).validate(),
-            Err(AssuranceError::Claim { .. })
-        ));
-        assert!(matches!(
-            professional("sub", Some(" ")).validate(),
-            Err(AssuranceError::Claim { .. })
-        ));
-        assert!(professional("sub", Some("act.sub")).validate().is_ok());
-        assert_eq!(
-            ProfessionalSection::default().client_tokens,
-            ClientTokens::SubIsClient
-        );
-    }
-
-    /// Both blocks deserialize from TOML in the documented spelling.
+    /// The assurance block deserializes from TOML in the documented spelling.
     #[test]
     fn the_blocks_deserialize_from_toml() {
         let assurance: AssuranceSection = toml::from_str(
@@ -979,15 +975,5 @@ mod tests {
         .expect("parses");
         assert_eq!(assurance.minimum, Some(AssuranceLevel::Substantial));
         assert_eq!(assurance.levels.len(), 2);
-        let professional: ProfessionalSection = toml::from_str(
-            r#"
-            claim = "professional_id"
-            client_tokens = "claim_absent"
-            acting_for_claim = "act.sub"
-            "#,
-        )
-        .expect("parses");
-        assert_eq!(professional.client_tokens, ClientTokens::ClaimAbsent);
-        assert_eq!(professional.acting_for_claim.as_deref(), Some("act.sub"));
     }
 }

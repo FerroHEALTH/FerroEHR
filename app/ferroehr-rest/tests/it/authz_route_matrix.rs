@@ -40,7 +40,6 @@ use ferroehr::config::rest::{AdminConfig, RestConfig};
 use ferroehr::config::smart::SmartConfig;
 use ferroehr_rest::config::AppConfig;
 use ferroehr_rest::extensions::access::authz::AuthzHandle;
-use ferrohealth_smart::config::{AuthSection, IssuerKey};
 use http::{Request, StatusCode};
 use serde_json::{Value, json};
 use tower::ServiceExt;
@@ -555,11 +554,7 @@ async fn served_config() -> AppConfig {
     let issuer = common::metadata_issuer().await;
     AppConfig {
         server: common::server(),
-        auth: AuthSection {
-            issuer: IssuerKey::Flat(issuer.to_owned()),
-            audience: vec![AUDIENCE.to_owned()],
-            ..AuthSection::default()
-        },
+        auth: common::trusting(vec![common::entry(issuer, AUDIENCE)]),
         ..matrix_config()
     }
 }

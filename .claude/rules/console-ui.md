@@ -9,24 +9,24 @@ repository FerroHEALTH/FerroUI) is the family's component library and the
 one source of its console design and its component rules. Read these first,
 before any viewer change:
 
-- the consumer guide, [`docs/consoles.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.6.6/docs/consoles.md):
+- the consumer guide, [`docs/consoles.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.6.8/docs/consoles.md):
   how a console takes the library, what it keeps local, the top bar's
   search wire, the session's end and how it moves to a new release;
 - the move from the Leptos releases,
-  [`docs/migration-0.6.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.6.6/docs/migration-0.6.md);
-- the component rules, [`.claude/rules/console-ui.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.6.6/.claude/rules/console-ui.md):
+  [`docs/migration-0.6.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.6.8/docs/migration-0.6.md);
+- the component rules, [`.claude/rules/console-ui.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.6.8/.claude/rules/console-ui.md):
   the mandates (§0), the interaction contract (§1), templates and markup,
   modules, forms, tables and paging, accessibility to WCAG 2.2 AA, tokens
   and themes, testing (§10), the script budget (§12) and the catalogs (§13);
-- the reviewed design, [`design/README.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.6.6/design/README.md),
-  [`design/COMPONENTS.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.6.6/design/COMPONENTS.md)
+- the reviewed design, [`design/README.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.6.8/design/README.md),
+  [`design/COMPONENTS.md`](https://github.com/FerroHEALTH/FerroUI/blob/v0.6.8/design/COMPONENTS.md)
   (the component IDs such as R9, F13 and E1 to E8, the family rules, the
   page templates) and the viewer's mockup under
-  [`design/consoles/ferroehr/`](https://github.com/FerroHEALTH/FerroUI/tree/v0.6.6/design/consoles/ferroehr).
+  [`design/consoles/ferroehr/`](https://github.com/FerroHEALTH/FerroUI/tree/v0.6.8/design/consoles/ferroehr).
 
 **The pin decides the version you read.** The viewer pins `ferrohealth-ui =
-"=0.6.6"` (root `Cargo.toml`), so every document above is read at the tag
-`v0.6.6`. FerroUI's `design/` is the only design source: a design folder
+"=0.6.8"` (root `Cargo.toml`), so every document above is read at the tag
+`v0.6.8`. FerroUI's `design/` is the only design source: a design folder
 anywhere else is stale and never synced from.
 
 **Nothing FerroUI has or should have is built here.** A missing component,

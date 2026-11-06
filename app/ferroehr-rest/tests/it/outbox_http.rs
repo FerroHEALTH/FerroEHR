@@ -54,7 +54,7 @@ async fn app() -> (testkit::TestDb, PgPool, Router) {
     );
     let mut config = common::api_config(true);
     common::with_basic_users(&mut config, &[("bridge", &[]), ("root", &[])]);
-    if let Some(basic) = config.auth.basic.as_mut() {
+    if let Some(basic) = config.auth.shared.basic.as_mut() {
         for user in basic.users.iter_mut().filter(|user| user.user == "bridge") {
             user.scopes = vec!["__ferroehr.outbox".to_owned()];
         }
