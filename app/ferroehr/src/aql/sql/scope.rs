@@ -88,7 +88,7 @@ impl Builder<'_> {
     /// stays inside the 65535-parameter wire limit (`PostgreSQL` 18
     /// §Frontend/Backend Protocol, Bind, whose parameter count is an `int16`,
     /// <https://www.postgresql.org/docs/18/protocol-message-formats.html>).
-    fn ehr_ids_cond(&self, target: Expr) -> Option<Expr> {
+    pub(super) fn ehr_ids_cond(&self, target: Expr) -> Option<Expr> {
         if self.ctx.ehr_ids.is_empty() {
             return None;
         }

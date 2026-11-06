@@ -7,12 +7,13 @@
 //! node source a `LATERAL` off that spine. No openEHR spec governs the join
 //! mechanics: our own design.
 
+use openehr_query::lexer::CompOp;
 use sea_query::{Alias, Asterisk, Expr, ExprTrait as _, JoinType, Query};
 
 use crate::aql::error::{AqlError, SqlError};
 use crate::aql::ir::{
-    AggFunc, Contained, ContainsTree, LeafPath, Link, PathTarget, QueryIr, RmSource, SelectValue,
-    Source, VersionScope,
+    self, AggFunc, Contained, ContainsTree, EhrField, LeafPath, Link, Operand, PathTarget, QueryIr,
+    RmSource, SelectValue, Source, TypedLit, VersionScope,
 };
 use crate::db::iden::{Ehr, Node, VersionRow, VoHead};
 
@@ -57,6 +58,45 @@ impl StreamPlan {
                 } => is_whole_root_object(target, self.root),
                 _ => false,
             })
+    }
+
+    /// Whether the chain's `EHR` source is pinned to one EHR by an
+    /// `ehr_id/value` equality, in its own predicate (`EHR e[ehr_id/value=$id]`)
+    /// or in a top-level conjunct of the WHERE clause. Such a query reads the
+    /// versions of one EHR, which the spine enters through the `ehr_id` index,
+    /// so it streams whatever its `ORDER BY`, `DISTINCT` or aggregates. No
+    /// openEHR spec governs the shape selection: our own design.
+    pub(super) fn pins_one_ehr(&self, ir: &QueryIr) -> bool {
+        let Some(ehr) = self.ehr else {
+            return false;
+        };
+        let in_predicate = matches!(ir.sources.get(ehr), Some(Source::Ehr(src))
+            if src.predicates.iter().any(|p| p.field == EhrField::EhrId && p.op == CompOp::Eq));
+        in_predicate
+            || ir
+                .filter
+                .as_ref()
+                .is_some_and(|f| conjunct_pins_ehr(f, ehr))
+    }
+}
+
+/// Whether a top-level conjunct of `filter` is `<ehr>/ehr_id/value = <value>`
+/// on the `EHR` source `ehr`, with a string literal or a parameter as value
+/// (QUERY `AqlParser.g4` `identifiedExpr`: the path is the left operand).
+fn conjunct_pins_ehr(filter: &ir::Expr, ehr: usize) -> bool {
+    match filter {
+        ir::Expr::And(a, b) => conjunct_pins_ehr(a, ehr) || conjunct_pins_ehr(b, ehr),
+        ir::Expr::Compare {
+            lhs:
+                Operand::Path(PathTarget::Ehr {
+                    source,
+                    field: EhrField::EhrId | EhrField::Whole,
+                }),
+            op: CompOp::Eq,
+            rhs: Operand::Literal(TypedLit::String(_)) | Operand::Param(_),
+            ..
+        } => source.0 == ehr,
+        _ => false,
     }
 }
 
@@ -264,6 +304,12 @@ impl Builder<'_> {
         let kinds: Vec<String> = root.rm_type.names().to_vec();
         self.q.and_where(col(&v, VersionRow::Kind).is_in(kinds));
         self.push_scope(&v, &root.scope)?;
+        // The `ehr_ids` scope also binds the spine itself: on the root node
+        // alone it would filter behind the lateral fence, after a walk of
+        // every version in the store.
+        if let Some(scoped) = self.ehr_ids_cond(col(&v, VersionRow::EhrId)) {
+            self.q.and_where(scoped);
+        }
 
         if let Some(esid) = plan.ehr {
             let e = format!("e{esid}");
