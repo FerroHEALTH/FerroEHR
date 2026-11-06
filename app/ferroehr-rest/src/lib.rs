@@ -63,8 +63,10 @@ use std::future::Future;
 use std::sync::Arc;
 
 use ferroehr::service::FerroEhrService;
+use ferroehr::storage::dpop_replay::PgReplayStore;
 use ferrohealth_server::serve::{Drained, Listener};
 use ferrohealth_smart::party::source::PartySource;
+use ferrohealth_smart::sender::replay::ReplayStore;
 use tokio::net::TcpListener;
 
 use crate::config::AppConfig;
@@ -101,8 +103,13 @@ pub async fn build_with(
     config: AppConfig,
     backend: Arc<FerroEhrService>,
 ) -> Result<axum::Router, ServeError> {
-    let authenticator =
-        build_authenticator(&config, None, Some(party_source(&config, &backend))).await?;
+    let authenticator = build_authenticator(
+        &config,
+        None,
+        Some(party_source(&config, &backend)),
+        Arc::new(PgReplayStore::of(&backend)),
+    )
+    .await?;
     let state = AppState::with_backend(config, backend);
     state.observability().lifecycle.booted();
     Ok(router(state, authenticator))
@@ -127,6 +134,7 @@ pub async fn build_full(
         &config,
         authz.as_deref(),
         Some(party_source(&config, &backend)),
+        Arc::new(PgReplayStore::of(&backend)),
     )
     .await?;
     let state = AppState::with_parts(config, backend, authz, observability);
@@ -149,11 +157,12 @@ async fn build_authenticator(
     config: &AppConfig,
     authz: Option<&AuthzHandle>,
     source: Option<Arc<dyn PartySource>>,
+    replay: Arc<dyn ReplayStore>,
 ) -> Result<Arc<Authenticator>, ServeError> {
     let claim = authz
         .and_then(AuthzHandle::abac)
         .and_then(|abac| abac.patient_claim.as_deref());
-    let authenticator = Authenticator::new(config, claim, source)
+    let authenticator = Authenticator::new(config, claim, source, replay)
         .await
         .map_err(ServeError::Auth)?;
     if config.smart.enabled
@@ -245,6 +254,7 @@ where
         &config,
         authz.as_deref(),
         Some(party_source(&config, &backend)),
+        Arc::new(PgReplayStore::of(&backend)),
     )
     .await?;
     let section = config.server.clone();
@@ -413,9 +423,14 @@ mod tests {
             }),
             ..AppConfig::default()
         };
-        let authenticator = build_authenticator(&config, None, None)
-            .await
-            .expect("authenticator");
+        let authenticator = build_authenticator(
+            &config,
+            None,
+            None,
+            Arc::new(ferrohealth_smart::sender::replay::MemoryReplayStore::new()),
+        )
+        .await
+        .expect("authenticator");
         let mut claims = test_support::claims("alice", "user/composition-*.r");
         claims["app_roles"] = serde_json::json!(["CLINICIAN"]);
         let request = http::Request::get("/ferroehr/rest/openehr/v1/ehr")

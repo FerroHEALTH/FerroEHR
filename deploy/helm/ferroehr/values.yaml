@@ -676,8 +676,8 @@ config:
   # issuer is an https URL with no query/fragment, only asymmetric algorithms
   # are accepted, and every [[auth.basic.users]] password_hash must be
   # argon2id at m>=19456,t=2,p=1. All checked at boot. An issuer with
-  # `sender_constraint: required` runs on one replica: the chart refuses it
-  # beside replicaCount > 1 or autoscaling.
+  # `sender_constraint: required` runs on any number of replicas: they record
+  # the DPoP proofs they accept in the one database they share.
   #   issuer:
   #     - issuer: https://idp.example.com/realms/staff
   #       kind: persons
@@ -1582,7 +1582,7 @@ terminology:
 #
 # One Deployment, one ClusterIP Service and a NetworkPolicy, with FerroBRIDGE's
 # config.toml rendered as a ConfigMap: [cdr] points at this release's CDR
-# Service, [cdr.credentials] reads a file mounted from bridge.cdr.existingSecret,
+# Service, [cdr.credentials.oauth] reads a file mounted from bridge.cdr.existingSecret,
 # and [terminology] points at this release's FerroTERM when terminology.enabled
 # is set. Off by default.
 #
@@ -1596,9 +1596,10 @@ terminology:
 # everything.
 # ─────────────────────────────────────────────────────────────────────────────
 bridge:
-  # -- Deploy FerroBRIDGE alongside the CDR. Needs `bridge.cdr.existingSecret`
-  # and at least one `bridge.networkPolicy.ingressFrom` peer; the render is
-  # refused without either.
+  # -- Deploy FerroBRIDGE alongside the CDR. Needs `bridge.cdr.oauth`, a client
+  # of a `machines` issuer in `config.auth.issuer`, `bridge.cdr.existingSecret`
+  # with its client secret, and at least one `bridge.networkPolicy.ingressFrom`
+  # peer; the render is refused without any of them.
   enabled: false
   # -- Replica count. FerroBRIDGE keeps no state of its own while its FHIR
   # facade is off, so replicas are a throughput choice. Above 1, turn
@@ -1633,14 +1634,35 @@ bridge:
     # listens on 8080.
     port: 8080
   cdr:
-    # -- Name of an EXISTING Secret holding FerroBRIDGE's credential for this
-    # release's CDR. Required. It must carry the keys `user` and `password`, a
-    # user of the CDR's `config.auth.basic.users` (RFC 7617) whose `scopes`
-    # grant what FerroBRIDGE calls. The password is mounted as a FILE and named
-    # by its `_file` key in config.toml, so it never enters the ConfigMap or the
-    # pod's environment; the user name, which FerroBRIDGE does not treat as a
-    # secret, reaches the container as `FERROBRIDGE__CDR__CREDENTIALS__USER`.
+    # -- Name of an EXISTING Secret holding the client secret of FerroBRIDGE's
+    # OAuth client for this release's CDR, under the key `client_secret`.
+    # Required. The secret is mounted as a FILE and named by
+    # `client_secret_file` in config.toml, so it never enters the ConfigMap or
+    # the pod's environment.
     existingSecret: ""
+    # FerroBRIDGE reaches the CDR as a machine, under a client credentials
+    # token (RFC 6749 §4.4) it obtains and renews itself
+    # ([cdr.credentials.oauth]). From ferrohealth-smart 0.9 a Basic credential
+    # is a person's and holds no `system/` scope, so there is no Basic mode.
+    oauth:
+      # -- The issuer identifier of the authorization server, an https URL
+      # (RFC 8414 §2); FerroBRIDGE reads its token endpoint from the
+      # issuer's metadata. Required, and it must be a `config.auth.issuer`
+      # entry with `kind: machines`, or the render is refused: the CDR trusts
+      # no token of an issuer it does not list.
+      issuer: ""
+      # -- FerroBRIDGE's client identifier at that issuer (RFC 6749 §2.2).
+      # Required.
+      clientId: ""
+      # -- The `scope` FerroBRIDGE asks for (RFC 6749 §3.3), the SMART
+      # `system/` scopes the CDR grants it. Empty sends none.
+      scope: ""
+      # -- An `audience` parameter, for an authorization server that selects
+      # the CDR's audience by it. Empty sends none.
+      audience: ""
+      # -- A `resource` parameter (RFC 8707 §2), for an authorization server
+      # that selects the CDR by it. Empty sends none.
+      resource: ""
   mappings:
     # -- Name of an EXISTING ConfigMap holding the FHIRconnect mapping files
     # FerroBRIDGE serves `$tofhir` and `$toopenehr` with. Empty means no mapping

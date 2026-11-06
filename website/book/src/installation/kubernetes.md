@@ -38,7 +38,7 @@ kubectl -n ferroehr create secret generic ferroehr-db \
   --from-literal=FERROEHR__DB__URL='postgres://ferroehr_clinical:***@pg-host:5432/ferroehr?sslmode=verify-full'
 
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 22.0.0 -n ferroehr \
+  --version 23.0.0 -n ferroehr \
   --set config.deployment_profile=sandbox \
   --set database.existingSecret=ferroehr-db \
   --set image.tag=5.6.3 \
@@ -68,7 +68,7 @@ boot would be.
 reference. To read the chart's metadata without installing it:
 
 ```shell
-helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 22.0.0
+helm show chart oci://ghcr.io/ferrohealth/charts/ferroehr --version 23.0.0
 ```
 
 ### Pin two versions, not one
@@ -81,7 +81,7 @@ against.
 
 | | Selects | Pin with | Line |
 |---|---|---|---|
-| Chart version | templates, values schema, defaults | `--version 22.0.0` | SemVer over the chart's own contract |
+| Chart version | templates, values schema, defaults | `--version 23.0.0` | SemVer over the chart's own contract |
 | Image tag | the server binary | `--set image.tag=5.6.3` (or `image.digest`) | the application's SemVer line |
 
 Always pin the image to an immutable version or, better, a `@sha256` digest,
@@ -181,7 +181,7 @@ image, and FerroTERM.
 > the image itself as the authority:
 >
 > ```shell
-> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 22.0.0 \
+> helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 23.0.0 \
 >   -s templates/configmap.yaml --set database.existingSecret=ferroehr-db \
 >   | sed -n '/ferroehr.toml/,$p' | sed '1d;s/^    //' > /tmp/ferroehr.toml
 > docker run --rm -v /tmp/ferroehr.toml:/etc/ferroehr/ferroehr.toml:ro \
@@ -334,7 +334,7 @@ are examples.
 Replace them in a values file of your own and pass both:
 
 ```shell
-helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 22.0.0 --untar
+helm pull oci://ghcr.io/ferrohealth/charts/ferroehr --version 23.0.0 --untar
 helm install ferroehr ./ferroehr -n ferroehr \
   -f ./ferroehr/values-production.yaml -f my-site-values.yaml
 ```
@@ -795,9 +795,10 @@ A Basic user is a person: each maps to the binding key of its `PERSON` under
 `config.authz.party_binding.basic_user`, under the identifier issuer of a
 `config.auth.party` table (see `deploy/helm/ci/basic-auth-values.yaml`).
 
-A `persons` issuer with `sender_constraint: required` runs on one replica: the
-chart refuses it beside `replicaCount` above 1 or autoscaling, because a DPoP
-proof is recorded by the replica that accepted it.
+A `persons` issuer with `sender_constraint: required` runs on any number of
+replicas: each records the DPoP proofs it accepts in the database they all
+share, so a proof replayed to another replica is refused there (RFC 9449
+§11.1).
 
 > [!WARNING]
 > `config.auth.enabled: false` makes the chart render, and serves **every**
@@ -824,7 +825,7 @@ config:
 
 ```shell
 helm upgrade ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 22.0.0 -n ferroehr --reuse-values \
+  --version 23.0.0 -n ferroehr --reuse-values \
   --set config.query.plan_cache_capacity=512
 ```
 
@@ -996,7 +997,7 @@ running. It is the Helm equivalent of the
 
 ```shell
 helm upgrade --install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 22.0.0 -n ferroehr --reuse-values \
+  --version 23.0.0 -n ferroehr --reuse-values \
   --set terminology.enabled=true
 ```
 
@@ -1128,26 +1129,54 @@ The chart writes three sections of that file for you:
 
 - **`[cdr]`:** `base_url` is this release's CDR Service with its REST base path
   (`http://<release>:<service.port><config.rest.base_path>`), and
-  `[cdr.credentials]` names a file mounted from your Secret.
+  `[cdr.credentials.oauth]` names the client of `bridge.cdr.oauth` and its
+  secret, a file mounted from your Secret.
 - **`[terminology]`:** with `terminology.enabled` on, `base_url` is the chart's
   FerroTERM Service at `/r4` and `wire_version` is `r4`. With it off the
   section is absent, and you may set your own under `bridge.config`.
 - **`[mappings]`:** `directory` is where the mapping files below are mounted.
 
-**The CDR credential comes from a Secret you create.** The chart never takes it
-as a value. The Secret carries the keys `user` and `password`, for a user of the
-CDR's `config.auth.basic.users` whose `scopes` grant what FerroBRIDGE calls. The
-password is mounted as a file and named by its `_file` key, so it is in neither
-the ConfigMap nor the environment. FerroBRIDGE does not treat the username as a
-secret, and the chart passes it as `FERROBRIDGE__CDR__CREDENTIALS__USER`.
-FerroBRIDGE reads an environment value as TOML when it parses as TOML, so a
-username made only of digits arrives as a number and is refused at boot. A static
-bearer token is no longer a choice: machine-to-machine authentication is HTTP
-Basic or the OAuth 2.0 client credentials grant.
+**FerroBRIDGE reaches the CDR as a machine.** It obtains and renews a token
+with the OAuth 2.0 client credentials grant (RFC 6749 §4.4) from a `machines`
+issuer the CDR trusts, and the CDR checks it as it checks every token. A Basic
+user is a person and holds no `system/` scope, so the chart has no Basic mode.
+Add the issuer to `config.auth.issuer` with `kind: machines`, name
+FerroBRIDGE's client in `bridge.cdr.oauth`, and declare the client in
+`config.authz.system_client` when it commits what `$toopenehr` maps. The
+render is refused when `bridge.cdr.oauth.issuer` is not a `machines` issuer of
+`config.auth.issuer`.
+
+```yaml
+config:
+  auth:
+    issuer:
+      - issuer: https://idp.example.org/realms/machines
+        kind: machines
+        audience: [ferroehr-machines]
+  authz:
+    system_client:
+      - issuer: https://idp.example.org/realms/machines
+        client_id: ferrobridge
+        provider: { issuer: "urn:oid:2.999.7.9", id: "clinic" }
+        origins: [relay]
+bridge:
+  cdr:
+    existingSecret: ferroehr-bridge-cdr
+    oauth:
+      issuer: https://idp.example.org/realms/machines
+      clientId: ferrobridge
+      scope: system/composition-*.cruds system/template-*.r system/aql-*.rs
+      audience: ferroehr-machines
+```
+
+**The client secret comes from a Secret you create.** The chart never takes it
+as a value. The Secret carries the key `client_secret`, which is mounted as a
+file and named by `client_secret_file`, so it is in neither the ConfigMap nor
+the environment.
 
 ```shell
 kubectl -n ferroehr create secret generic ferroehr-bridge-cdr \
-  --from-literal=user=bridge --from-file=password=./bridge-password
+  --from-file=client_secret=./bridge-client-secret
 ```
 
 **The mapping files come from a ConfigMap you create**, named in
@@ -1172,6 +1201,9 @@ bridge:
   enabled: true
   cdr:
     existingSecret: ferroehr-bridge-cdr
+    oauth:
+      issuer: https://idp.example.org/realms/machines
+      clientId: ferrobridge
   mappings:
     existingConfigMap: ferroehr-bridge-mappings
     files:
@@ -1189,7 +1221,7 @@ bridge:
 ```
 
 **It stays inside the cluster.** A caller FerroBRIDGE admits acts on the CDR
-with the credential above. So the chart
+under the client above. So the chart
 renders no Ingress for it and no value renders one, the Service is always
 ClusterIP, and the NetworkPolicy admits only the peers you list in
 `bridge.networkPolicy.ingressFrom`. An empty list is refused at render, and the
@@ -1339,7 +1371,7 @@ Preview an upgrade against what you have installed with
 `helm diff`, or render the new chart version and read it:
 
 ```shell
-helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 22.0.0 \
+helm template ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr --version 23.0.0 \
   -n ferroehr -f my-values.yaml | less
 ```
 

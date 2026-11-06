@@ -35,6 +35,12 @@ config:
         kind: persons
         audience: [ferroehr-basic-users]
         jwks_file: /opt/sandbox-posture/basic-users-jwks.json
+      # The machines issuer FerroBRIDGE's client credentials tokens come from
+      # (RFC 6749 §4.4): the CDR trusts its tokens, and bridge.cdr.oauth
+      # names FerroBRIDGE's client at it.
+      - issuer: https://machines.example.org/realms/ferroehr
+        kind: machines
+        audience: [ferroehr-machines]
     party:
       - issuer: https://basic-users.ferroehr.invalid
         identifier_issuer: urn:ferroehr:basic-user
@@ -53,6 +59,13 @@ config:
         - user: clinician
           key_issuer: urn:ferroehr:basic-user
           key: clinician
+    # FerroBRIDGE commits what $toopenehr maps, relaying the record of
+    # another system, as the healthcare provider this deployment acts for.
+    system_client:
+      - issuer: https://machines.example.org/realms/ferroehr
+        client_id: ferrobridge
+        provider: { issuer: "urn:oid:2.999.7.9", id: "server-tls" }
+        origins: [relay]
   server:
     tls:
       certificate_file: /etc/ferroehr-tls/tls.crt
@@ -91,6 +104,11 @@ bridge:
   enabled: true
   cdr:
     existingSecret: ferroehr-bridge-cdr
+    oauth:
+      issuer: https://machines.example.org/realms/ferroehr
+      clientId: ferrobridge
+      scope: system/composition-*.cruds system/template-*.r system/aql-*.rs
+      audience: ferroehr-machines
   networkPolicy:
     ingressFrom:
       - podSelector:

@@ -2,7 +2,7 @@
 
 Pure-Rust, openEHR-conformant clinical data repository (ITS-REST 1.1.0 + AQL 1.1). A single static binary that runs as a non-root, read-only-rootfs workload and connects to an EXTERNAL PostgreSQL 18 as an unprivileged app role, with schema preparation on its own credential. The default NetworkPolicy narrows ingress to the serving ports but admits every source until networkPolicy.ingressFrom is set, and the default-deny egress policy is off (networkPolicy.egress.enabled). The chart refuses to render until config.deployment_profile names the posture: sandbox, which must not hold real patient data, or production (start from values-production.yaml).
 
-![Version: 22.0.0](https://img.shields.io/badge/Version-22.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.6.3](https://img.shields.io/badge/AppVersion-5.6.3-informational?style=flat-square)
+![Version: 23.0.0](https://img.shields.io/badge/Version-23.0.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 5.6.3](https://img.shields.io/badge/AppVersion-5.6.3-informational?style=flat-square)
 
 FerroEHR is a pure-Rust openEHR Clinical Data Repository: ITS-REST 1.1.0 at the
 API, AQL 1.1 as the query language, PostgreSQL 18-native storage, shipped as a
@@ -44,7 +44,7 @@ to add; `helm repo add` does not apply to this chart:
 
 ```console
 helm install ferroehr oci://ghcr.io/ferrohealth/charts/ferroehr \
-  --version 22.0.0 \
+  --version 23.0.0 \
   --namespace ferroehr --create-namespace \
   --set config.deployment_profile=sandbox \
   --set database.existingSecret=ferroehr-db \
@@ -62,7 +62,7 @@ They are independent SemVer lines and they move independently:
 
 | What | Set with | This release |
 |---|---|---|
-| the **chart** (templates, defaults, this document) | `--version` | `22.0.0` |
+| the **chart** (templates, defaults, this document) | `--version` | `23.0.0` |
 | the **server image** | `image.tag` | `5.6.3` |
 
 `appVersion` is the image the chart defaults to; pinning `image.tag` explicitly
@@ -74,7 +74,7 @@ The chart carries two keyless Sigstore artifacts, and they answer different
 questions. A **cosign signature:** who signed this:
 
 ```console
-cosign verify ghcr.io/ferrohealth/charts/ferroehr:22.0.0 \
+cosign verify ghcr.io/ferrohealth/charts/ferroehr:23.0.0 \
   --certificate-identity-regexp '^https://github\.com/FerroHEALTH/FerroEHR/\.github/workflows/publish-chart\.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -82,7 +82,7 @@ cosign verify ghcr.io/ferrohealth/charts/ferroehr:22.0.0 \
 A **SLSA build provenance attestation:** what source it was built from, and how:
 
 ```console
-gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:22.0.0 \
+gh attestation verify oci://ghcr.io/ferrohealth/charts/ferroehr:23.0.0 \
   -R FerroHEALTH/FerroEHR
 gh attestation verify oci://ghcr.io/ferrohealth/ferroehr:5.6.3 \
   -R FerroHEALTH/FerroEHR
@@ -157,9 +157,10 @@ enforces NetworkPolicy**. Check yours; several do not.
 `bridge.enabled=true` deploys [FerroBRIDGE](https://github.com/FerroHEALTH/FerroBRIDGE),
 the FHIR and openEHR bridge, as its own workload pointed at this release's CDR
 Service (and at the chart's FerroTERM when `terminology.enabled` is set). It
-needs two things the render refuses to go without: `bridge.cdr.existingSecret`,
-a Secret holding its CDR credential (`user` and `password`, a Basic user of the
-CDR whose `scopes` grant what FerroBRIDGE calls), and at least one peer in
+needs three things the render refuses to go without: `bridge.cdr.oauth`, its
+client credentials client (RFC 6749 §4.4) at a `machines` issuer the CDR's
+`config.auth.issuer` lists, `bridge.cdr.existingSecret`, a Secret holding that
+client's `client_secret`, and at least one peer in
 `bridge.networkPolicy.ingressFrom`. FerroBRIDGE checks the caller of its
 FHIRconnect operations, FHIR facade and operator API through `[auth]`
 (`bridge.config.auth`), and a mapping set needs `auth.issuer` and
@@ -232,9 +233,14 @@ Kubernetes: `>=1.36.0-0`
 | backup.tolerations | list | `[]` | Tolerations for the dump pods. |
 | backup.ttlSecondsAfterFinished | int | `86400` | How long a finished dump's pod is kept for its logs. |
 | bridge.affinity | object | `{}` | Affinity. |
-| bridge.cdr.existingSecret | string | `""` | Name of an EXISTING Secret holding FerroBRIDGE's credential for this release's CDR. Required. It must carry the keys `user` and `password`, a user of the CDR's `config.auth.basic.users` (RFC 7617) whose `scopes` grant what FerroBRIDGE calls. The password is mounted as a FILE and named by its `_file` key in config.toml, so it never enters the ConfigMap or the pod's environment; the user name, which FerroBRIDGE does not treat as a secret, reaches the container as `FERROBRIDGE__CDR__CREDENTIALS__USER`. |
+| bridge.cdr.existingSecret | string | `""` | Name of an EXISTING Secret holding the client secret of FerroBRIDGE's OAuth client for this release's CDR, under the key `client_secret`. Required. The secret is mounted as a FILE and named by `client_secret_file` in config.toml, so it never enters the ConfigMap or the pod's environment. |
+| bridge.cdr.oauth.audience | string | `""` | An `audience` parameter, for an authorization server that selects the CDR's audience by it. Empty sends none. |
+| bridge.cdr.oauth.clientId | string | `""` | FerroBRIDGE's client identifier at that issuer (RFC 6749 §2.2). Required. |
+| bridge.cdr.oauth.issuer | string | `""` | The issuer identifier of the authorization server, an https URL (RFC 8414 §2); FerroBRIDGE reads its token endpoint from the issuer's metadata. Required, and it must be a `config.auth.issuer` entry with `kind: machines`, or the render is refused: the CDR trusts no token of an issuer it does not list. |
+| bridge.cdr.oauth.resource | string | `""` | A `resource` parameter (RFC 8707 §2), for an authorization server that selects the CDR by it. Empty sends none. |
+| bridge.cdr.oauth.scope | string | `""` | The `scope` FerroBRIDGE asks for (RFC 6749 §3.3), the SMART `system/` scopes the CDR grants it. Empty sends none. |
 | bridge.config | object | `{}` | Further FerroBRIDGE configuration, rendered into its config.toml beside the keys the chart writes (FerroBRIDGE's configuration reference: https://ferrobridge.eu/docs/operate/configuration.html). FerroBRIDGE refuses an unknown key at boot, so a typo here is a crash loop, not a silent default. Refused at render: `cdr.base_url`, `cdr.credentials`, `server.listen`, `terminology` while `terminology.enabled` is on, `mappings.directory` while `mappings.existingConfigMap` is set, and any secret-shaped key (a password, a token, `cdm.url`), whose `_file` sibling takes a file you mount with `extraVolumes`. A mapping set turns the FHIRconnect operations on, and FerroBRIDGE then refuses to start until `auth.issuer` and `auth.audience` name the issuer of its callers' tokens, or `auth.enabled` is false. |
-| bridge.enabled | bool | `false` | Deploy FerroBRIDGE alongside the CDR. Needs `bridge.cdr.existingSecret` and at least one `bridge.networkPolicy.ingressFrom` peer; the render is refused without either. |
+| bridge.enabled | bool | `false` | Deploy FerroBRIDGE alongside the CDR. Needs `bridge.cdr.oauth`, a client of a `machines` issuer in `config.auth.issuer`, `bridge.cdr.existingSecret` with its client secret, and at least one `bridge.networkPolicy.ingressFrom` peer; the render is refused without any of them. |
 | bridge.extraEnv | list | `[]` | Extra environment for FerroBRIDGE (escape hatch). |
 | bridge.extraVolumeMounts | list | `[]` | Extra volume mounts for the FerroBRIDGE container. |
 | bridge.extraVolumes | list | `[]` | Extra volumes for the FerroBRIDGE pod, such as a Secret holding a `_file` credential named in `config`. |
