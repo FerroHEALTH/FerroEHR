@@ -1,10 +1,12 @@
 // SPDX-FileCopyrightText: Cadasto B.V.
 // SPDX-License-Identifier: BUSL-1.1
 
-//! The templates the configuration declares writable: each id a federation
-//! agreement's or a system client's `writes` names is held to the store at
-//! boot, so a table cannot grant a template the server does not hold. No
-//! openEHR spec governs configuration: our own design.
+//! The templates the configuration declares writable, held to the store at
+//! boot.
+//!
+//! Each id a federation agreement's or a system client's `writes` names must
+//! be stored, so a table cannot grant a template the server does not hold.
+//! No openEHR spec governs configuration: our own design.
 
 use std::collections::BTreeSet;
 

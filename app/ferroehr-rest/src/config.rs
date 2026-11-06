@@ -20,7 +20,7 @@ use ferrohealth_smart::assurance::AssuranceSection;
 /// Not a serde root — it is built in code, so extension-group toggles are
 /// plain `bool`s lifted from their owning sections
 /// (`[terminology].api_enabled`).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct AppConfig {
     /// `[server]` — the listener and the stack around the routes: the
     /// family's section.
@@ -49,23 +49,6 @@ pub struct AppConfig {
     /// runs; the demographic ingress boundary reads it (the stable
     /// generation's released surface differs from the typed core's).
     pub spec_profile: ferroehr::config::profile::SpecProfile,
-}
-
-impl Default for AppConfig {
-    fn default() -> Self {
-        Self {
-            server: ServerSection::default(),
-            rest: RestConfig::default(),
-            auth: AuthConfig::default(),
-            admin: AdminConfig::default(),
-            smart: SmartConfig::default(),
-            terminology_api_enabled: false,
-            audit_organization_claim: None,
-            rbac: RbacConfig::default(),
-            assurance: AssuranceSection::default(),
-            spec_profile: ferroehr::config::profile::SpecProfile::default(),
-        }
-    }
 }
 
 #[cfg(test)]

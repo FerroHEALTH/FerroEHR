@@ -2607,7 +2607,7 @@ mod tests {
             .expect_err("SMART without an [auth] issuer must refuse");
         assert!(format!("{err:?}").contains("[auth] issuer"), "{err:?}");
         c.auth.shared.issuer = auth_section::machines("https://as.example/realms/ferroehr");
-        c.authz.party_binding.provider = binding::one_provider();
+        c.authz.party_binding.provider = Some(binding::one_provider());
         assert!(c.validate().is_ok(), "{:?}", c.validate());
     }
 
@@ -2669,7 +2669,7 @@ mod tests {
         assert!(err.to_string().contains("audience"), "{err}");
 
         c.auth.shared.issuer = auth_section::machines("https://idp.example.test");
-        c.authz.party_binding.provider = binding::one_provider();
+        c.authz.party_binding.provider = Some(binding::one_provider());
         assert!(c.validate().is_ok(), "{:?}", c.validate());
     }
 

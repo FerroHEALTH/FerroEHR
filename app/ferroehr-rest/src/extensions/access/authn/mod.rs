@@ -847,7 +847,7 @@ mod tests {
     fn basic_config(cache_ttl: u64) -> AppConfig {
         AppConfig {
             auth: ferroehr::config::auth_section::AuthConfig {
-                shared: AuthSection {
+                shared: Box::new(AuthSection {
                     basic: Some(BasicSection {
                         users: vec![BasicUser {
                             user: "alice".to_owned(),
@@ -859,7 +859,7 @@ mod tests {
                         cache_ttl_seconds: cache_ttl,
                     }),
                     ..AuthSection::default()
-                },
+                }),
                 ..ferroehr::config::auth_section::AuthConfig::default()
             },
             ..AppConfig::default()

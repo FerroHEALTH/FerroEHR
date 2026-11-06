@@ -436,7 +436,7 @@ services:
       start_period: 10s
 
   ferroehr:
-    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:5.6.3}
+    image: ${FERROEHR_IMAGE:-ghcr.io/ferrohealth/ferroehr:5.7.0}
     # The issuer's namespace (the header says why); the issuer publishes 8080
     # and answers to `ferroehr` on the compose network.
     network_mode: service:identity-issuer
@@ -746,6 +746,22 @@ configs:
       [auth]
       enabled = true
 
+      # The issuer the Basic users bind under. A Basic user is a person and
+      # maps to the PERSON carrying its binding key, which [[auth.party]]
+      # places under the identifier issuer of a persons issuer. This one signs
+      # nothing: its key set, in every FerroEHR image, is the public half of a
+      # key pair whose private key was discarded, for local lanes only.
+      [[auth.issuer]]
+      issuer = "https://basic-users.ferroehr.invalid"
+      kind = "persons"
+      audience = ["ferroehr-basic-users"]
+      jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
+
+      [[auth.party]]
+      issuer = "https://basic-users.ferroehr.invalid"
+      identifier_issuer = "urn:ferroehr:basic-user"
+      identifier_type = "login"
+
       # The quickstart user: ferroehr / ferroehr (the hash is Argon2id of
       # "ferroehr"). Replace with your own users — or an [auth] issuer — before
       # exposing the server to anything real. Every route checks the SMART on
@@ -756,6 +772,17 @@ configs:
       password_hash = "$$argon2id$$v=19$$m=19456,t=2,p=1$$ZmVycm9laHJEZXZTYWx0$$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
       scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
       roles = ["ADMIN", "USER"]
+
+      # The healthcare provider the quickstart acts for (an example id under
+      # the OID arc 2.999, which ITU-T X.660 reserves for examples), and the
+      # binding key of the quickstart user.
+      [authz.party_binding]
+      provider = { issuer = "urn:oid:2.999.7.9", id = "quickstart" }
+
+      [[authz.party_binding.basic_user]]
+      user = "ferroehr"
+      key_issuer = "urn:ferroehr:basic-user"
+      key = "ferroehr"
 
       # Quickstart: authentication only, no role gate — the one user above can
       # use the clinical API, the admin API and the management endpoints.
@@ -837,6 +864,22 @@ configs:
       [auth]
       enabled = true
 
+      # The issuer the Basic users bind under. A Basic user is a person and
+      # maps to the PERSON carrying its binding key, which [[auth.party]]
+      # places under the identifier issuer of a persons issuer. This one signs
+      # nothing: its key set, in every FerroEHR image, is the public half of a
+      # key pair whose private key was discarded, for local lanes only.
+      [[auth.issuer]]
+      issuer = "https://basic-users.ferroehr.invalid"
+      kind = "persons"
+      audience = ["ferroehr-basic-users"]
+      jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
+
+      [[auth.party]]
+      issuer = "https://basic-users.ferroehr.invalid"
+      identifier_issuer = "urn:ferroehr:basic-user"
+      identifier_type = "login"
+
       # The quickstart user: ferroehr / ferroehr (the hash is Argon2id of
       # "ferroehr"). Replace with your own users — or an [auth] issuer — before
       # exposing the server to anything real. Every route checks the SMART on
@@ -847,6 +890,17 @@ configs:
       password_hash = "$$argon2id$$v=19$$m=19456,t=2,p=1$$ZmVycm9laHJEZXZTYWx0$$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
       scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
       roles = ["ADMIN", "USER"]
+
+      # The healthcare provider the quickstart acts for (an example id under
+      # the OID arc 2.999, which ITU-T X.660 reserves for examples), and the
+      # binding key of the quickstart user.
+      [authz.party_binding]
+      provider = { issuer = "urn:oid:2.999.7.9", id = "quickstart" }
+
+      [[authz.party_binding.basic_user]]
+      user = "ferroehr"
+      key_issuer = "urn:ferroehr:basic-user"
+      key = "ferroehr"
 
       # Quickstart: authentication only, no role gate — the one user above can
       # use the clinical API, the admin API and the management endpoints.

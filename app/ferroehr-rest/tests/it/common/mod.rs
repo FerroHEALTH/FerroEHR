@@ -248,7 +248,7 @@ pub(crate) fn entry(issuer: &str, audience: &str) -> IssuerEntry {
 /// The `[auth]` table of `section`, with no vendor adapter table.
 pub(crate) fn auth(section: AuthSection) -> AuthConfig {
     AuthConfig {
-        shared: section,
+        shared: Box::new(section),
         ..AuthConfig::default()
     }
 }
@@ -324,6 +324,33 @@ pub(crate) fn started_metadata_issuer() -> &'static str {
     METADATA_ISSUER
         .get()
         .expect("metadata_issuer runs before a token names it")
+}
+
+/// Bearer authentication trusting the `persons` issuer `persons` and the
+/// `patients` issuer `patients`, both for `audience` and both reading the
+/// committed test key set: patients and professionals sign in at separate
+/// issuers.
+pub(crate) fn persons_and_patients(persons: &str, patients: &str, audience: &str) -> AuthConfig {
+    let jwks_file = jwks_file().display().to_string();
+    trusting(vec![
+        IssuerEntry {
+            jwks_file: jwks_file.clone(),
+            ..entry(persons, audience)
+        },
+        IssuerEntry {
+            kind: Some(IssuerKind::Patients),
+            jwks_file,
+            ..entry(patients, audience)
+        },
+    ])
+}
+
+/// The RBAC rules whose privileged roles the tokens of `issuer` may grant.
+pub(crate) fn rbac_trusting(issuer: &str) -> ferroehr::config::authz::RbacConfig {
+    ferroehr::config::authz::RbacConfig {
+        role_issuers: vec![issuer.to_owned()],
+        ..ferroehr::config::authz::RbacConfig::default()
+    }
 }
 
 /// Basic authentication admitting each `(user, Argon2id PHC hash, scopes)`.

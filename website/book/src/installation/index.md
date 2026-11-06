@@ -32,8 +32,8 @@ covers the three paths and the full configuration surface.
 **One configuration file, with environment overrides on top.** The server reads
 a single `ferroehr.toml` covering every subsystem; `FERROEHR__*` environment
 variables override individual keys, and repeatable `--set key=value` flags
-override those. Anything the environment grammar cannot spell (the Basic-auth
-user store, which is an array of tables) is file-only. `ferroehr config
+override those. An array of tables, such as `[[auth.issuer]]`, is set from the
+environment by element index (`FERROEHR__AUTH__ISSUER__0__ISSUER`). `ferroehr config
 default` writes an annotated template with every key at its default, and
 `ferroehr config check` validates the result without touching the database.
 

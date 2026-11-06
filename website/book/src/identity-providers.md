@@ -42,7 +42,7 @@ Three things do all the work:
    audience list is mandatory, so a server with none refuses to boot rather
    than accepting another service's token. See the
    [bearer settings table](security.md#authentication).
-2. **Role mining** (`[auth]`): `FERROEHR__AUTH__ROLE_CLAIMS`
+2. **Role mining** (`[[auth.issuer]]`): `FERROEHR__AUTH__ISSUER__0__ROLE_CLAIMS`
    (default `["roles","groups","entitlements"]`, the RFC 9068 §2.2.3.1
    carriers; a Keycloak realm adds `realm_access.roles`) names the
    JWT claim paths whose values become the caller's roles for the
@@ -73,11 +73,16 @@ Entra ID exposes a standards-compliant OIDC issuer per tenant.
 4. **Point the CDR at the tenant issuer** and mine the `roles` claim:
 
    ```bash
-   export FERROEHR__AUTH__ISSUER=https://login.microsoftonline.com/<tenant-id>/v2.0
-   export FERROEHR__AUTH__AUDIENCE=api://ferroehr
-   # Entra ID mints no RFC 9068 tokens (`typ` JWT, the scopes in `scp`).
-   export FERROEHR__AUTH__TOKEN_PROFILE=jwt
-   export FERROEHR__AUTH__ROLE_CLAIMS='["roles"]'
+   export FERROEHR__AUTH__ISSUER__0__ISSUER=https://login.microsoftonline.com/<tenant-id>/v2.0
+   export FERROEHR__AUTH__ISSUER__0__KIND=persons
+   # Entra ID mints no RFC 9068 tokens (`typ` JWT, the scopes in `scp`), which
+   # the `entra` profile reads.
+   export FERROEHR__AUTH__ISSUER__0__PROFILE=entra
+   export FERROEHR__AUTH__ISSUER__0__AUDIENCE=api://ferroehr
+   export FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS=<the client id of your app>
+   export FERROEHR__AUTH__ISSUER__0__ROLE_CLAIMS=roles
+   # Its roles may grant the administrator role.
+   export FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS=https://login.microsoftonline.com/<tenant-id>/v2.0
    ```
 
 5. **Verify**: request a token for the app (any OAuth2 client credential or
@@ -127,11 +132,15 @@ broker) rather than pointing anything at LDAP.
 3. **Point the CDR at the AD FS issuer** and mine the `role` claim:
 
    ```bash
-   export FERROEHR__AUTH__ISSUER=https://adfs.example.com/adfs
-   export FERROEHR__AUTH__AUDIENCE=ferroehr-api
-   # AD FS mints no RFC 9068 tokens.
-   export FERROEHR__AUTH__TOKEN_PROFILE=jwt
-   export FERROEHR__AUTH__ROLE_CLAIMS='["role"]'
+   export FERROEHR__AUTH__ISSUER__0__ISSUER=https://adfs.example.com/adfs
+   export FERROEHR__AUTH__ISSUER__0__KIND=persons
+   export FERROEHR__AUTH__ISSUER__0__AUDIENCE=ferroehr-api
+   # AD FS mints no RFC 9068 tokens: name the type and the claims its tokens carry.
+   export FERROEHR__AUTH__ISSUER__0__TOKEN_TYPES=JWT
+   export FERROEHR__AUTH__ISSUER__0__REQUIRED_CLAIMS=iss,sub,aud,exp
+   export FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS=<the client id of your app>
+   export FERROEHR__AUTH__ISSUER__0__ROLE_CLAIMS=role
+   export FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS=https://adfs.example.com/adfs
    ```
 
    Discovery works out of the box (`https://adfs.example.com/adfs/.well-known/openid-configuration`).

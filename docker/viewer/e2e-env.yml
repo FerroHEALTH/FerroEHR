@@ -31,10 +31,20 @@ services:
         condition: service_healthy
     environment:
       FERROEHR__TERMINOLOGY__API_ENABLED: "true"
-      FERROEHR__AUTH__ISSUER: https://keycloak:8443/auth/realms/ferroehr
-      FERROEHR__AUTH__AUDIENCE: ferroehr
-      FERROEHR__AUTH__TOKEN_PROFILE: jwt
-      FERROEHR__AUTH__ROLE_CLAIMS: roles,groups,entitlements,realm_access.roles
+      # The realm is the second [[auth.issuer]] table (index 1), beside the
+      # issuer the Basic users of docker/ferroehr.dev.toml bind under.
+      FERROEHR__AUTH__ISSUER__1__ISSUER: https://keycloak:8443/auth/realms/ferroehr
+      FERROEHR__AUTH__ISSUER__1__KIND: persons
+      FERROEHR__AUTH__ISSUER__1__PROFILE: keycloak
+      FERROEHR__AUTH__ISSUER__1__AUDIENCE: ferroehr
+      FERROEHR__AUTH__ISSUER__1__FIRST_PARTY_CLIENTS: ferroehr-viewer
+      FERROEHR__AUTH__ISSUER__1__APP_ONLY__0__CLAIM: client_id
+      FERROEHR__AUTH__ISSUER__1__APP_ONLY__0__VALUE: ferroehr-service
+      FERROEHR__AUTH__ISSUER__1__ROLE_CLAIMS: roles,groups,entitlements,realm_access.roles
+      FERROEHR__AUTH__PARTY__1__ISSUER: https://keycloak:8443/auth/realms/ferroehr
+      FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: urn:ferroehr:keycloak-dev-login
+      FERROEHR__AUTH__PARTY__1__IDENTIFIER_TYPE: uuid
+      FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS: https://keycloak:8443/auth/realms/ferroehr
       FERROEHR__AUTH__CA_FILE: /run/ferroehr-dev-tls/ca/ca.crt
       # The realm's service client, whose system/aql-* grant counts only when
       # it is named here (SMART on openEHR §Resource Scopes).

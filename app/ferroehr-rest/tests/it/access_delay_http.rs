@@ -35,6 +35,8 @@ use crate::common;
 use crate::common::{BASE, EXT};
 
 const ISSUER: &str = "https://issuer.example";
+/// The issuer of the person's own tokens: a `patients` issuer of its own.
+const PATIENTS: &str = "https://patients.example";
 const AUDIENCE: &str = "ferroehr";
 /// The professional's subject.
 const PROFESSIONAL: &str = "dr-jansen";
@@ -66,8 +68,8 @@ async fn app(delayed: bool) -> (testkit::TestDb, PgPool, Arc<FerroEhrService>, R
         .await
         .expect("mirror the category map");
     let mut config = common::api_config(true);
-    config.auth = common::issuer_auth(ISSUER, AUDIENCE);
-    config.smart.patient_issuers = vec![ISSUER.to_owned()];
+    config.auth = common::persons_and_patients(ISSUER, PATIENTS, AUDIENCE);
+    config.smart.patient_issuers = vec![ISSUER.to_owned(), PATIENTS.to_owned()];
     let app = ferroehr_rest::build_full(config, Arc::clone(&svc), None, Observability::default())
         .await
         .expect("build app");
@@ -94,9 +96,11 @@ fn professional() -> String {
 /// The person's token: `patient/` read and query grants in the launch context
 /// of `ehr`.
 fn patient(ehr: &str) -> String {
-    common::bearer(&json!({ "sub": "patient-7", "iss": ISSUER, "aud": AUDIENCE,
+    common::bearer(
+        &json!({ "sub": "patient-7", "iss": PATIENTS, "aud": AUDIENCE,
         "exp": jiff::Timestamp::now().as_second() + 3600,
-        "scope": "patient/composition-*.r patient/aql-*.s", "ehrId": ehr }))
+        "scope": "patient/composition-*.r patient/aql-*.s", "ehrId": ehr }),
+    )
 }
 
 /// Sends `method uri` with `credential` and an optional body.
@@ -366,22 +370,30 @@ async fn a_professional_holds_a_composition_within_the_limit() {
 }
 
 /// The treating professional releases a held composition from a clinical
-/// route on the EHR (the owner's ruling of 2026-10-31), and a token that may
-/// be the person's, a mixed one among them, neither reads it while held nor
-/// releases it.
+/// route on the EHR (the owner's ruling of 2026-10-31), and the person's token
+/// neither reads it while held nor releases it. A mixed grant is never the
+/// person's: the patients issuer refuses a token that carries a `user/` scope
+/// beside its `patient/` ones.
 #[tokio::test]
 async fn the_treating_professional_releases_from_a_clinical_route() {
     let (_db, _pool, _svc, app) = app(true).await;
     let (ehr, vo) = record(&app).await;
-    let mixed = common::bearer(&json!({ "sub": "patient-7", "iss": ISSUER, "aud": AUDIENCE,
+    let mixed = common::bearer(
+        &json!({ "sub": "patient-7", "iss": PATIENTS, "aud": AUDIENCE,
         "exp": jiff::Timestamp::now().as_second() + 3600,
-        "scope": "patient/composition-*.r user/composition-*.cruds", "ehrId": ehr }));
-    let person = common::bearer(&json!({ "sub": "patient-7", "iss": ISSUER, "aud": AUDIENCE,
+        "scope": "patient/composition-*.r user/composition-*.cruds", "ehrId": ehr }),
+    );
+    let person = common::bearer(
+        &json!({ "sub": "patient-7", "iss": PATIENTS, "aud": AUDIENCE,
         "exp": jiff::Timestamp::now().as_second() + 3600,
-        "scope": "patient/composition-*.ru", "ehrId": ehr }));
+        "scope": "patient/composition-*.ru", "ehrId": ehr }),
+    );
     let release = format!("{EXT}/ehr/{ehr}/versioned_composition/{vo}/access-delay/release");
 
-    assert_eq!(read(&app, &ehr, &vo, &mixed).await, StatusCode::NOT_FOUND);
+    assert_eq!(
+        read(&app, &ehr, &vo, &mixed).await,
+        StatusCode::UNAUTHORIZED
+    );
     let (status, body) = send(&app, "POST", &release, &person, None).await;
     assert_eq!(
         status,
@@ -393,7 +405,10 @@ async fn the_treating_professional_releases_from_a_clinical_route() {
     let (status, body) = send(&app, "POST", &release, &professional(), None).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "release: {body}");
     assert_eq!(read(&app, &ehr, &vo, &person).await, StatusCode::OK);
-    assert_eq!(read(&app, &ehr, &vo, &mixed).await, StatusCode::OK);
+    assert_eq!(
+        read(&app, &ehr, &vo, &mixed).await,
+        StatusCode::UNAUTHORIZED
+    );
 
     let (status, body) = send(&app, "POST", &release, &person, None).await;
     assert_eq!(
@@ -404,7 +419,7 @@ async fn the_treating_professional_releases_from_a_clinical_route() {
     let (status, body) = send(&app, "POST", &release, &mixed, None).await;
     assert_eq!(
         status,
-        StatusCode::FORBIDDEN,
+        StatusCode::UNAUTHORIZED,
         "nor does a mixed token: {body}"
     );
 }

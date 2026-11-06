@@ -313,10 +313,10 @@ pub(crate) mod test_support {
     /// The `[auth]` table trusting the one issuer `entry`.
     pub(crate) fn trusting(entry: IssuerEntry) -> AuthConfig {
         AuthConfig {
-            shared: AuthSection {
+            shared: Box::new(AuthSection {
                 issuer: IssuerKey::List(vec![entry]),
                 ..AuthSection::default()
-            },
+            }),
             ..AuthConfig::default()
         }
     }

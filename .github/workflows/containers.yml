@@ -124,6 +124,7 @@ jobs:
               - 'deploy/hosted/ferroehr-viewer.sandbox.toml'
               - 'deploy/hosted/ferropix.sandbox.toml'
               - 'deploy/hosted/ferropix-seed.sh'
+              - 'deploy/hosted/basic-users-jwks.json'
               - 'docker/terminology/seed/**'
               - 'docker/smoke-test.sh'
               - 'docker-compose.yml'

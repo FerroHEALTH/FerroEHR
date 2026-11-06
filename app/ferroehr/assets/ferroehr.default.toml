@@ -250,8 +250,7 @@ product_scope = ""
 # The `{ issuer, sub }` subjects whose token, when it carries no resource scope
 # of either grammar, meets every SMART on openEHR requirement; only a system
 # (app-only) caller of that issuer is admitted by an entry.
-scopeless_subjects = []
-#? scopeless_subjects = [{ issuer = "https://idp.example/realms/staff", sub = "etl-loader" }]
+scopeless_subjects = []      # e.g. [{ issuer = "https://idp.example/realms/staff", sub = "etl-loader" }]
 # A PEM bundle of certificate authorities trusted in addition to the platform
 # roots, for an issuer behind a private PKI: its metadata and key set, and
 # under mode = "introspection" the introspection and token calls too.
@@ -279,6 +278,8 @@ scopeless_subjects = []
 #? profile = "keycloak"            # rfc9068 | entra | keycloak | okta | nl
 #? audience = ["ferroehr"]         # REQUIRED, at least one (RFC 9068 §4)
 #? first_party_clients = ["ferroehr-viewer"]
+#? token_types = ["at+jwt", "application/at+jwt"]   # the accepted `typ` (RFC 9068 §4)
+#? required_claims = ["iss", "exp", "aud", "sub", "client_id", "iat", "jti"]
 #? algorithms = ["RS256", "RS384", "PS256", "PS384", "ES256", "ES384"]   # asymmetric only (RFC 8725 §3.1)
 #? clock_skew_seconds = 60         # at most 300 (RFC 9068 §4)
 #? jwks_max_age_seconds = 600      # a key set older than this is read again
@@ -381,10 +382,8 @@ claim = "acr"                 # dotted path into a JSON object allowed
 # OBJECT_REF.namespace pattern (BASE base_types).
 namespace = "demographic"
 #? provider = { issuer = "urn:oid:2.16.528.1.1007.3.3", id = "00000000" }   # issuer and id (in NL the URA)
-#? [[authz.party_binding.provider]]
-#? tenant = "<tenant_claim value>"
-#? issuer = "urn:oid:2.16.528.1.1007.3.3"
-#? id = "00000000"
+# The per-tenant form, in place of the line above:
+#   provider = [{ tenant = "<tenant_claim value>", issuer = "urn:oid:2.16.528.1.1007.3.3", id = "00000000" }]
 # Every Basic user is a person and maps to the PERSON carrying its binding
 # key: `key_issuer` is the identifier_issuer of an [[auth.party]] table. Boot
 # refuses a Basic user with no mapping, and a mapping naming no Basic user.

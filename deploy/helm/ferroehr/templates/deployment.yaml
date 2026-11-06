@@ -18,7 +18,15 @@ available as an explicit, visible choice.
 {{- $basic := (.Values.config.auth.basic).users }}
 {{- $issuer := .Values.config.auth.issuer }}
 {{- if and (empty $basic) (empty $issuer) }}
-{{- fail "config.auth.enabled is true but no authentication mechanism is configured, so the server would refuse to start (RFC 9110 §11.6.1: a 401 challenge must name a scheme the server implements).\n\nConfigure one:\n  config.auth.basic.users  — see deploy/helm/ci/basic-auth-values.yaml\n  config.auth.issuer       — with config.auth.audience\n\nOr, for a development install only, set config.auth.enabled=false to serve every request unauthenticated." }}
+{{- fail "config.auth.enabled is true but no authentication mechanism is configured, so the server would refuse to start (RFC 9110 §11.6.1: a 401 challenge must name a scheme the server implements).\n\nConfigure one:\n  config.auth.basic.users  — see deploy/helm/ci/basic-auth-values.yaml\n  config.auth.issuer       — a list of issuer tables, each with its kind and audience\n\nOr, for a development install only, set config.auth.enabled=false to serve every request unauthenticated." }}
+{{- end }}
+{{- end }}
+{{- /* A DPoP proof the server accepted is recorded by that replica alone
+       (RFC 9449 §11.1), so a proof replayed to another replica would pass;
+       the replay store the replicas share is FerroEHR #5072. */}}
+{{- range $issuer := (.Values.config.auth.issuer | default list) }}
+{{- if and (kindIs "map" $issuer) (eq (toString $issuer.sender_constraint) "required") (or $.Values.autoscaling.enabled (gt (int $.Values.replicaCount) 1)) }}
+{{- fail (printf "config.auth.issuer %s sets sender_constraint = \"required\", but a DPoP proof is held by the replica that accepted it alone (RFC 9449 §11.1), so another replica would accept its replay.\n\nRun one replica (replicaCount: 1, autoscaling.enabled: false) for a sender-constrained issuer." (toString $issuer.issuer)) }}
 {{- end }}
 {{- end }}
 {{- /* The kubelet's HTTPS probes present no client certificate

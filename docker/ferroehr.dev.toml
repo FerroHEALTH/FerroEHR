@@ -39,6 +39,23 @@ enabled = true
 [auth]
 enabled = true
 
+# The issuer the Basic users bind under. A Basic user is a person and maps to
+# the PERSON carrying its binding key, which [[auth.party]] places under the
+# identifier issuer of a persons issuer. This one signs nothing: its key set,
+# deploy/hosted/basic-users-jwks.json, which every FerroEHR image carries, is
+# the public half of a key pair whose private key was discarded, for local
+# lanes only, so no token of it exists.
+[[auth.issuer]]
+issuer = "https://basic-users.ferroehr.invalid"
+kind = "persons"
+audience = ["ferroehr-basic-users"]
+jwks_file = "/opt/sandbox-posture/basic-users-jwks.json"
+
+[[auth.party]]
+issuer = "https://basic-users.ferroehr.invalid"
+identifier_issuer = "urn:ferroehr:basic-user"
+identifier_type = "login"
+
 # Dev-only: expose the ops-introspection surface (`/management/...`) on the main
 # listener so the viewer's Operations panel has something to read and the
 # browser E2E battery can exercise it. The surface is OFF by default on the bare
@@ -64,8 +81,9 @@ loggers = "admin_only"
 health = "admin_only"
 status = "admin_only"
 
-# No [auth] issuer here: the CDR reads an issuer's metadata at boot, and the
-# dev stack starts Keycloak only under its `keycloak` profile. The trust of the
+# No token issuer beside the Basic users' one: the CDR reads an issuer's
+# metadata at boot, and the dev stack starts Keycloak only under its `keycloak`
+# profile. The trust of the
 # dev realm (https://keycloak:8443/auth/realms/ferroehr, served with the
 # development CA docker-compose.dev.yml generates) rides docker/viewer/e2e-env.yml,
 # the overlay the OIDC lanes add beside that profile.
@@ -115,6 +133,26 @@ user = "ferroehr-readonly"
 password_hash = "$argon2id$v=19$m=19456,t=2,p=1$ZmVycm9laHJEZXZTYWx0$be5nPwWjfUl1qvSrvkvqvdMOuCgM0VFcN/VN4MFLjT8"
 scopes = ["user/composition-*.cruds", "user/template-*.cruds", "user/aql-*.cruds", "__ferroehr.platform"]
 roles = ["READONLY"]
+
+# The healthcare provider the dev lanes act for (an example id under the OID
+# arc 2.999), and the binding key of each Basic user.
+[authz.party_binding]
+provider = { issuer = "urn:oid:2.999.7.9", id = "dev" }
+
+[[authz.party_binding.basic_user]]
+user = "ferroehr"
+key_issuer = "urn:ferroehr:basic-user"
+key = "ferroehr"
+
+[[authz.party_binding.basic_user]]
+user = "ferroehr-admin"
+key_issuer = "urn:ferroehr:basic-user"
+key = "ferroehr-admin"
+
+[[authz.party_binding.basic_user]]
+user = "ferroehr-readonly"
+key_issuer = "urn:ferroehr:basic-user"
+key = "ferroehr-readonly"
 
 # The in-instance subject-to-EHR map, the explicit opt-in of a FerroEHR run
 # on its own: development, the UI journeys and the conformance lanes ask no

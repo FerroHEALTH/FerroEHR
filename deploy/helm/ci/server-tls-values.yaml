@@ -27,11 +27,32 @@ config:
     provider: local
   auth:
     enabled: true
+    # The issuer the Basic users bind under. It signs nothing: its key set,
+    # which every FerroEHR image carries, is the public half of a key pair
+    # whose private key was discarded, for local lanes only.
+    issuer:
+      - issuer: https://basic-users.ferroehr.invalid
+        kind: persons
+        audience: [ferroehr-basic-users]
+        jwks_file: /opt/sandbox-posture/basic-users-jwks.json
+    party:
+      - issuer: https://basic-users.ferroehr.invalid
+        identifier_issuer: urn:ferroehr:basic-user
+        identifier_type: login
     basic:
       users:
         - user: clinician
           scopes: [user/composition-*.cruds, user/template-*.cruds, user/aql-*.cruds, __ferroehr.platform]
           roles: [ADMIN]
+  authz:
+    party_binding:
+      # The healthcare provider this deployment acts for (an example id
+      # under the OID arc 2.999).
+      provider: { issuer: "urn:oid:2.999.7.9", id: "server-tls" }
+      basic_user:
+        - user: clinician
+          key_issuer: urn:ferroehr:basic-user
+          key: clinician
   server:
     tls:
       certificate_file: /etc/ferroehr-tls/tls.crt

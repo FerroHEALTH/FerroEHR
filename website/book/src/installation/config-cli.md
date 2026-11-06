@@ -189,8 +189,9 @@ controller is asked for.
 
 ## What belongs in a mounted file (versus the environment)
 
-The environment cannot carry an array of tables, so the **Basic-auth user
-store** (`[[auth.basic.users]]`) is file-only.
+The environment sets an array of tables only by element index
+(`FERROEHR__AUTH__ISSUER__0__ISSUER`), so the **issuers**, the **party
+tables** and the **Basic-auth user store** read more clearly from a file.
 
 Genuinely file-shaped material (the **PGP signing key**, **Cedar policies**,
 **ATNA and terminology-server PEMs**, a **JWKS blob**) is referenced by an

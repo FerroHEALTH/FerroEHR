@@ -43,14 +43,23 @@ services:
       # ── trust the committed CNF test issuer ───────────────────────────────
       # The lane validates the runner-minted tokens against a STATIC key set, so
       # no Authorization Server has to be running for the scope cases to
-      # execute. The runner mints plain RS256 JWTs (`typ` JWT, no `client_id`
-      # or `jti`), which the `jwt` profile admits; RFC 9068 tokens would need
-      # the default `rfc9068` profile.
-      FERROEHR__AUTH__ISSUER: "https://as.cnf.test"
-      FERROEHR__AUTH__AUDIENCE: "cnf-smart-sut"
-      FERROEHR__AUTH__ALGORITHMS: "RS256"
-      FERROEHR__AUTH__TOKEN_PROFILE: "jwt"
-      FERROEHR__AUTH__JWKS_FILE: /etc/ferroehr/cnf-smart-jwks.json
+      # execute. It is the second [[auth.issuer]] table (index 1), beside the
+      # issuer the Basic users of docker/ferroehr.dev.toml bind under. The
+      # runner mints plain RS256 JWTs (`typ` JWT, no `client_id` or `jti`), so
+      # the issuer accepts that type and those claims, and its audience stands
+      # in for the client the tokens do not name.
+      FERROEHR__AUTH__ISSUER__1__ISSUER: "https://as.cnf.test"
+      FERROEHR__AUTH__ISSUER__1__KIND: "persons"
+      FERROEHR__AUTH__ISSUER__1__AUDIENCE: "cnf-smart-sut"
+      FERROEHR__AUTH__ISSUER__1__ALGORITHMS: "RS256"
+      FERROEHR__AUTH__ISSUER__1__TOKEN_TYPES: "JWT"
+      FERROEHR__AUTH__ISSUER__1__REQUIRED_CLAIMS: "iss,exp,aud,sub"
+      FERROEHR__AUTH__ISSUER__1__CLIENT_CLAIMS: "client_id,azp,aud"
+      FERROEHR__AUTH__ISSUER__1__FIRST_PARTY_CLIENTS: "cnf-smart-sut"
+      FERROEHR__AUTH__ISSUER__1__JWKS_FILE: /etc/ferroehr/cnf-smart-jwks.json
+      FERROEHR__AUTH__PARTY__1__ISSUER: "https://as.cnf.test"
+      FERROEHR__AUTH__PARTY__1__IDENTIFIER_ISSUER: "urn:ferroehr:cnf-smart-login"
+      FERROEHR__AUTH__PARTY__1__IDENTIFIER_TYPE: "login"
     volumes:
       - ./docs/conformance/party/smart/jwks.json:/etc/ferroehr/cnf-smart-jwks.json:ro
       - ./docs/conformance/party/smart/issuer-metadata.json:/etc/ferroehr/cnf-smart-issuer-metadata.json:ro

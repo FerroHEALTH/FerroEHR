@@ -65,6 +65,7 @@ fn rest_config() -> AppConfig {
     let basic = config.auth.shared.basic.take();
     config.auth = common::issuer_auth(ISSUER, AUDIENCE);
     config.auth.shared.basic = basic;
+    config.rbac.role_issuers = vec![ISSUER.to_owned()];
     config
 }
 

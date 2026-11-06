@@ -571,7 +571,7 @@ pub(super) fn nonempty(value: &str, fallback: &str) -> String {
 mod tests {
     use super::*;
     use crate::system_log::categories::{AccessedContent, Classifier, QueryConstraints};
-    use crate::system_log::event::ActorAuthentication;
+    use crate::system_log::event::{ActingMode, ActorAuthentication};
     use base64::Engine;
     use ferrohealth_smart::assurance::AssuranceLevel as Level;
     use jiff::Timestamp;

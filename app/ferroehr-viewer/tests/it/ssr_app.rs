@@ -1043,8 +1043,10 @@ async fn a_signed_in_page_carries_the_session_watch() {
         .and_then(|rest| rest.split('"').next())
         .and_then(|seconds| seconds.parse::<u32>().ok())
         .expect("the watch carries the lifetime left");
+    // NOTE: ferrohealth-session 0.3.1 rounds the sign-in up, so a lifetime lasts
+    // between its length and one second more.
     assert!(
-        (43_190..=43_200).contains(&absolute),
+        (43_190..=43_201).contains(&absolute),
         "the lifetime counts from the sign-in: {absolute}"
     );
     let login = viewer.send(http::Method::GET, "/sign-in", None, None).await;
@@ -1073,7 +1075,7 @@ async fn the_session_route_reads_extends_and_refuses() {
     assert_eq!(read.status, http::StatusCode::OK, "{}", read.body);
     let left: ferrohealth_ui::view::session::Left =
         serde_json::from_str(&read.body).expect("the route answers what is left");
-    assert!(left.idle <= 3600 && left.idle <= left.absolute, "{left:?}");
+    assert!(left.idle <= 3601 && left.idle <= left.absolute, "{left:?}");
     assert!(
         read.cookies().is_empty(),
         "a read never re-seals the session: {:?}",

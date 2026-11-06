@@ -22,8 +22,28 @@ config:
     # production-minimal has to name one. An IdP is the mechanism a real
     # deployment supplies; Basic would mean shipping a password hash, which
     # this file has no business carrying.
-    issuer: https://idp.example.com/realms/ferroehr
-    audience: [ferroehr]
+    issuer:
+      # One table per issuer: `kind` says whose tokens it signs, `profile`
+      # the preset of their shape, and a persons token is admitted only
+      # through a client in `first_party_clients`.
+      - issuer: https://idp.example.com/realms/ferroehr
+        kind: persons
+        profile: rfc9068
+        audience: [ferroehr]
+        first_party_clients: [ferroehr-viewer]
+    # The issuer's logins bind to the PERSON carrying their `sub` under this
+    # identifier issuer.
+    party:
+      - issuer: https://idp.example.com/realms/ferroehr
+        identifier_issuer: urn:example:ferroehr-login
+        identifier_type: uuid
+  authz:
+    rbac:
+      role_issuers: [https://idp.example.com/realms/ferroehr]
+    party_binding:
+      # The healthcare provider this deployment acts for (an example id
+      # under the OID arc 2.999).
+      provider: { issuer: "urn:oid:2.999.7.9", id: "default" }
   # The clinical domain FerroPIX mints pseudonyms in, and the grant the EHR
   # index asks it with; the chart injects the provider and the in-cluster
   # PIXm URL. The client secret is secrets.ehrIndexClientSecret.

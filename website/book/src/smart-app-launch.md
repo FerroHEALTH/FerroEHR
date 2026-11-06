@@ -121,8 +121,10 @@ metadata, which must name that issuer and hold every endpoint to `https` (a
 loopback host excepted). Without it, `enabled = true` refuses the start.
 
 ```bash
-export FERROEHR__AUTH__ISSUER=https://as.example/realms/ferroehr
-export FERROEHR__AUTH__AUDIENCE=ferroehr-api
+export FERROEHR__AUTH__ISSUER__0__ISSUER=https://as.example/realms/ferroehr
+export FERROEHR__AUTH__ISSUER__0__KIND=persons
+export FERROEHR__AUTH__ISSUER__0__AUDIENCE=ferroehr-api
+export FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS=my-smart-app
 export FERROEHR__SMART__ENABLED=true
 # The external origin absolute service URLs are built from; required.
 export FERROEHR__SMART__PUBLIC_BASE_URL=https://cdr.example.com

@@ -52,6 +52,7 @@ fn config() -> AppConfig {
     let mut config = AppConfig {
         server: common::server(),
         auth: common::issuer_auth(ISSUER, AUDIENCE),
+        rbac: common::rbac_trusting(ISSUER),
         admin: AdminConfig { enabled: true },
         ..Default::default()
     };

@@ -156,7 +156,7 @@ pub enum BindingError {
     Party(#[from] PartyError),
     /// The `[auth.idp.entra]` table is refused.
     #[error("auth.idp.entra is refused")]
-    Entra(#[source] GraphError),
+    Entra(#[source] Box<GraphError>),
 }
 
 /// Returns the party binding the configuration describes, looking logins up
@@ -176,7 +176,9 @@ pub fn party_binding(
 ) -> Result<PartyBinding, BindingError> {
     let mut built = PartyBinding::new(source);
     if let Some(entra) = &auth.idp.entra {
-        let adapter = entra.adapter().map_err(BindingError::Entra)?;
+        let adapter = entra
+            .adapter()
+            .map_err(|e| BindingError::Entra(Box::new(e)))?;
         built = built.with_adapter(ENTRA, Arc::new(adapter));
     }
     let mut built = built.with_resolved(resolved)?;
@@ -396,16 +398,19 @@ impl crate::config::FerroEhrConfig {
 /// Returns the one provider `urn:ura|1`, the provider the configuration
 /// tests declare.
 #[cfg(test)]
-pub(crate) fn one_provider() -> Option<Providers> {
-    Some(Providers::One(ProviderId {
+pub(crate) fn one_provider() -> Providers {
+    Providers::One(ProviderId {
         issuer: "urn:ura".to_owned(),
         id: "1".to_owned(),
-    }))
+    })
 }
 
 /// What the party binding binds, as the boot line and `/management/info`
-/// state it: the issuers with their kind and identifier issuer, the provider,
-/// and every federation agreement with its accessor and legal ground.
+/// state it.
+///
+/// It carries the issuers with their kind and identifier issuer, the
+/// provider, and every federation agreement with its accessor and legal
+/// ground.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct BindingPosture {
     /// Every trusted issuer.

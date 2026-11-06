@@ -30,7 +30,7 @@ pub struct AuthConfig {
     /// federation tables, the Basic users, `[auth.dpop]` and the discovery
     /// options.
     #[serde(flatten)]
-    pub shared: AuthSection,
+    pub shared: Box<AuthSection>,
     /// The vendor adapter tables (`[auth.idp]`).
     #[serde(skip_serializing_if = "IdpSection::is_empty")]
     pub idp: IdpSection,
@@ -42,7 +42,7 @@ pub struct AuthConfig {
 pub struct IdpSection {
     /// The Microsoft Graph access of the `idp-entra` adapter
     /// (`[auth.idp.entra]`), which resolves an Entra ID groups overage.
-    pub entra: Option<GraphSection>,
+    pub entra: Option<Box<GraphSection>>,
 }
 
 impl IdpSection {
@@ -76,7 +76,7 @@ impl<'de> Visitor<'de> for AuthVisitor {
             idp: &mut idp,
         }))?;
         Ok(AuthConfig {
-            shared,
+            shared: Box::new(shared),
             idp: idp.unwrap_or_default(),
         })
     }

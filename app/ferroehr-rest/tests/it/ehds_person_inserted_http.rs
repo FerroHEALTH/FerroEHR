@@ -55,13 +55,16 @@ async fn issuer() -> MockServer {
     server
 }
 
-/// A server trusting `issuer`, whose `patient/` grants count.
-async fn app(issuer: &str) -> (testkit::TestDb, Router) {
+/// A server trusting the professionals' issuer `persons` and the persons'
+/// own `patients` issuer, whose `patient/` grants count.
+async fn app(persons: &str, patients: &str) -> (testkit::TestDb, Router) {
+    let mut patient = common::entry(patients, AUDIENCE);
+    patient.kind = Some(ferrohealth_smart::kind::IssuerKind::Patients);
     let mut cfg = AppConfig {
-        auth: common::trusting(vec![common::entry(issuer, AUDIENCE)]),
+        auth: common::trusting(vec![common::entry(persons, AUDIENCE), patient]),
         ..common::api_config(false)
     };
-    cfg.smart.patient_issuers = vec![issuer.to_owned()];
+    cfg.smart.patient_issuers = vec![persons.to_owned(), patients.to_owned()];
     let (pg, service) = common::test_service().await;
     (pg, common::router_with(cfg, service).await)
 }
@@ -210,6 +213,7 @@ async fn committer(app: &Router, ehr: &str, credential: &str, version: &str) -> 
 struct Record {
     _pg: testkit::TestDb,
     _issuer: MockServer,
+    _patients: MockServer,
     app: Router,
     ehr: String,
     professional: String,
@@ -220,7 +224,8 @@ struct Record {
 async fn record() -> Record {
     let issuer = issuer().await;
     let uri = issuer.uri();
-    let (pg, app) = app(&uri).await;
+    let patients = self::issuer().await;
+    let (pg, app) = app(&uri, &patients.uri()).await;
     let professional = token(&uri, "dr-bob", PROFESSIONAL, None);
     let (status, headers, text) = common::send(
         &app,
@@ -243,10 +248,11 @@ async fn record() -> Record {
         &composition(&professional_composer()),
     )
     .await;
-    let person = token(&uri, "alice", PERSON, Some(&ehr));
+    let person = token(&patients.uri(), "alice", PERSON, Some(&ehr));
     Record {
         _pg: pg,
         _issuer: issuer,
+        _patients: patients,
         app,
         ehr,
         professional,

@@ -81,15 +81,17 @@ The bearer settings:
 
 | Environment variable | Default | Meaning |
 |---|---|---|
-| `FERROEHR__AUTH__ISSUER` | unset (required for bearer tokens) | expected `iss`, and where the metadata is read: RFC 8414 §3 first, OpenID Connect Discovery 1.0 §4 after a `404` |
-| `FERROEHR__AUTH__AUDIENCE` | unset (**required with an issuer**) | accepted `aud` values |
-| `FERROEHR__AUTH__ALGORITHMS` | `RS256,RS384,PS256,PS384,ES256,ES384` | accepted signing algorithms, asymmetric only |
-| `FERROEHR__AUTH__TOKEN_PROFILE` | `rfc9068` | `rfc9068` requires `typ` `at+jwt` and the `client_id`, `iat` and `jti` claims; `jwt` admits a plain JWT for an issuer that mints no RFC 9068 tokens |
-| `FERROEHR__AUTH__CLOCK_SKEW_SECONDS` | `60` | leeway on `exp`, `nbf` and `iat`; capped at `300` |
-| `FERROEHR__AUTH__JWKS_FILE` | unset | a static JWK Set of public keys, read instead of the issuer's metadata |
-| `FERROEHR__AUTH__JWKS_MAX_AGE_SECONDS` | `600` | a key set older than this is read again |
-| `FERROEHR__AUTH__JWKS_REFRESH_INTERVAL_SECONDS` | `60` | an unknown `kid` reads the key set again at most once per interval |
-| `FERROEHR__AUTH__TIMEOUT_MS` | `10000` | one call to the authorization server |
+| `FERROEHR__AUTH__ISSUER__0__ISSUER` | unset (required for bearer tokens) | the first `[[auth.issuer]]` table's expected `iss`, and where the metadata is read: RFC 8414 §3 first, OpenID Connect Discovery 1.0 §4 after a `404`; index `1` is the second table |
+| `FERROEHR__AUTH__ISSUER__0__KIND` | **required** | `persons`, `patients`, `machines` or `federation`: whose tokens the issuer signs |
+| `FERROEHR__AUTH__ISSUER__0__PROFILE` | `rfc9068` | the preset of the issuer's token shape: `rfc9068`, `entra`, `keycloak`, `okta` or `nl` |
+| `FERROEHR__AUTH__ISSUER__0__AUDIENCE` | unset (**required with an issuer**) | accepted `aud` values |
+| `FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS` | unset | the deployment's own clients, the only ones a `persons` token is admitted through beside `delegates` |
+| `FERROEHR__AUTH__ISSUER__0__ALGORITHMS` | `RS256,RS384,PS256,PS384,ES256,ES384` | accepted signing algorithms, asymmetric only |
+| `FERROEHR__AUTH__ISSUER__0__CLOCK_SKEW_SECONDS` | `60` | leeway on `exp`, `nbf` and `iat`; capped at `300` |
+| `FERROEHR__AUTH__ISSUER__0__JWKS_FILE` | unset | a static JWK Set of public keys, read instead of the issuer's metadata |
+| `FERROEHR__AUTH__ISSUER__0__JWKS_MAX_AGE_SECONDS` | `600` | a key set older than this is read again |
+| `FERROEHR__AUTH__ISSUER__0__JWKS_REFRESH_INTERVAL_SECONDS` | `60` | an unknown `kid` reads the key set again at most once per interval |
+| `FERROEHR__AUTH__ISSUER__0__TIMEOUT_MS` | `10000` | one call to the authorization server |
 | `FERROEHR__AUTH__REALM` | `ferroehr` | the realm every challenge names |
 | `FERROEHR__AUTH__PRODUCT_SCOPE` | `__ferroehr.platform` | the scope that admits the ADMIN and DEMOGRAPHIC APIs |
 
@@ -107,13 +109,15 @@ Basic user whose scopes do not grant the operation is refused with `403`. See
 > rest:
 >
 > ```bash
-> export FERROEHR__AUTH__ISSUER=https://keycloak.example/realms/ferroehr
-> export FERROEHR__AUTH__AUDIENCE=ferroehr-api
-> export FERROEHR__AUTH__TOKEN_PROFILE=jwt
+> export FERROEHR__AUTH__ISSUER__0__ISSUER=https://keycloak.example/realms/ferroehr
+> export FERROEHR__AUTH__ISSUER__0__KIND=persons
+> export FERROEHR__AUTH__ISSUER__0__PROFILE=keycloak
+> export FERROEHR__AUTH__ISSUER__0__AUDIENCE=ferroehr-api
+> export FERROEHR__AUTH__ISSUER__0__FIRST_PARTY_CLIENTS=ferroehr-viewer
 > ```
 >
 > Keycloak's access tokens carry `typ: JWT`, outside the RFC 9068 profile the
-> server expects by default, hence `token_profile = "jwt"`. The client's
+> server expects by default, which the `keycloak` profile admits. The client's
 > default client scopes put the SMART on openEHR scopes the routes need into
 > each token's `scope` claim.
 >
@@ -552,7 +556,8 @@ case-insensitive strings; the defaults are `USER` and `ADMIN`.
 | `FERROEHR__AUTHZ__RBAC__ENABLED` | `true` | the coarse role gate (active only when auth is enabled) |
 | `FERROEHR__AUTHZ__RBAC__ADMIN_ROLE` | `ADMIN` | role required for admin operations |
 | `FERROEHR__AUTHZ__RBAC__READONLY_ROLE` | `READONLY` | role marking a principal read-only: refused on every write |
-| `FERROEHR__AUTH__ROLE_CLAIMS` | `["roles","groups","entitlements"]` | JWT claim paths mined for roles; a Keycloak issuer adds `realm_access.roles` |
+| `FERROEHR__AUTH__ISSUER__0__ROLE_CLAIMS` | `["roles","groups","entitlements"]` | JWT claim paths mined for roles, per issuer; a Keycloak issuer adds `realm_access.roles` |
+| `FERROEHR__AUTHZ__RBAC__ROLE_ISSUERS` | empty | the `persons` issuers whose role claims may grant the administrator, emergency, import and identifier-reader roles; a token of any other issuer never holds them |
 | `FERROEHR__AUTHZ__RBAC__SUBJECT_AUDIT_ROLE` | unset | role that reads the access log for ONE subject at a time (`GET /fhir/r4/AuditEvent` with `patient` required). Unset, that log stays admin-only. See [Audit trail](audit.md#getting-the-log-out) |
 
 Roles come from the JWT claims listed in `ROLE_CLAIMS`, or from a Basic user's

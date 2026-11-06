@@ -285,7 +285,7 @@ unless its key is set, so add only the rows you have switched on:
 | Cluster DNS | always | UDP+TCP 53 | in-cluster (always allowed) |
 | PostgreSQL | the DSN, **never optional** | the DSN's (5432) | off-cluster (managed) |
 | OTLP collector | `config.telemetry.otlp.endpoint` | 4317 gRPC / 4318 HTTP | in-cluster |
-| Token issuer (metadata + key set) | `config.auth.issuer`, **unless** `config.auth.jwks_file` is supplied | 443 | off-cluster |
+| Token issuer (metadata + key set) | each `config.auth.issuer` table, **unless** it sets its own `jwks_file` | 443 | off-cluster |
 | External policy decision point | `config.authz.abac.engine: remote` plus `config.authz.abac.remote.server` | the URL's (3001) | in-cluster |
 | FHIR terminology server | `config.terminology.server.enabled` plus its `url` | 443 | off-cluster |
 | FerroTERM in the cluster | `terminology.enabled` | 8080 | in-cluster, and the **chart renders this rule itself** — it chose the destination when it wired the CDR at the Service, so you do not add it to `rules`. Omitted, terminology would fail silently: under the shipped fail-open posture an unresolvable binding is accepted, so nothing refuses and nothing logs. |

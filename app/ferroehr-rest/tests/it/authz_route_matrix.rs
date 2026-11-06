@@ -526,6 +526,7 @@ fn matrix_config() -> AppConfig {
             ..Default::default()
         },
         auth: common::issuer_auth(ISSUER, AUDIENCE),
+        rbac: common::rbac_trusting(ISSUER),
         admin: AdminConfig { enabled: true },
         // ON for the same reason as the Swagger pair: the PUBLIC table declares
         // the discovery document, and it is mounted only when SMART is enabled.
@@ -555,6 +556,7 @@ async fn served_config() -> AppConfig {
     AppConfig {
         server: common::server(),
         auth: common::trusting(vec![common::entry(issuer, AUDIENCE)]),
+        rbac: common::rbac_trusting(issuer),
         ..matrix_config()
     }
 }
