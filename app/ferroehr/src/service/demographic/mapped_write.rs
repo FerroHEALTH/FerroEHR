@@ -69,14 +69,14 @@ fn new_party(wt: &WebTemplate) -> Value {
     if let Some(object) = root.as_object_mut() {
         object.insert(
             "archetype_details".to_owned(),
-            serde_json::json!({
-                "_type": "ARCHETYPED",
-                "archetype_id": {
-                    "_type": "ARCHETYPE_ID",
-                    "value": wt.tree.node_id.clone().unwrap_or_default()
+            openehr_its::json::to_canonical_value(&openehr_rm::prelude::Archetyped {
+                archetype_id: openehr_base::prelude::ArchetypeId {
+                    value: wt.tree.node_id.clone().unwrap_or_default(),
                 },
-                "template_id": { "_type": "TEMPLATE_ID", "value": wt.template_id },
-                "rm_version": "1.1.0"
+                template_id: Some(openehr_base::prelude::TemplateId {
+                    value: wt.template_id.clone(),
+                }),
+                rm_version: "1.1.0".to_owned(),
             }),
         );
     }
@@ -109,7 +109,7 @@ fn node(wt: &WebTemplateNode) -> Value {
         .unwrap_or_else(|| wt.id.clone());
     object.insert(
         "name".to_owned(),
-        serde_json::json!({ "_type": "DV_TEXT", "value": name }),
+        openehr_its::json::to_canonical_value(&crate::versioning::audit::dv_text(&name)),
     );
     Value::Object(object)
 }
@@ -213,7 +213,7 @@ fn created(
     }
     object.insert(
         "name".to_owned(),
-        serde_json::json!({ "_type": "DV_TEXT", "value": name }),
+        openehr_its::json::to_canonical_value(&crate::versioning::audit::dv_text(&name)),
     );
     Value::Object(object)
 }
